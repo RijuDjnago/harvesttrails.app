@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+{% load static %}
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <!-- Bootstrap CSS -->
+    <title>Sustainable Product Claims</title>
+    
+</head>
+
+<body>
+
+    <div style="padding-left: 40px;padding-right: 40px;">
+        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%;font-family: Arial, sans-serif;">
+            <tbody>
+                <tr>
+                    <td colspan="3" valign="middle" style="padding:0 5px 10px">
+                        <h1 style="margin:0;padding:0;font-size:24px;font-weight: bold;">Sustainable Product Claims</h1>
+                    </td>
+                    <td align="right" valign="middle" style="padding:0 0 10px">
+                        {% comment %} <img src="{{ main_static_url }}/img/images/logo.jpg" alt=""> {% endcomment %}
+                        <img src="{{ main_static_url }}/img/images/logo.png" alt="">
+                    </td>
+                </tr>
+                <tr>
+                    <td width="25%" style="padding:0 5px"><strong style="font-family: Arial, sans-serif;font-size:14px">{{grower_name}}</strong></td>
+                    <td width="25%" style="padding:0 5px"><strong style="font-family: Arial, sans-serif;font-size:14px">{{field_name}}</strong></td>
+                    <td width="25%" style="padding:0 5px"><strong style="font-family: Arial, sans-serif;font-size:14px">Crop Year 2022 </strong></td>
+                    <td width="25%" style="padding:0 5px"><strong style="font-family: Arial, sans-serif;font-size:14px">{{corp}}</strong></td>
+                </tr>
+                <tr>
+                    <td colspan="4" style="padding:0 5px 5px">
+                        <hr style="margin:0; border-top:0; border-bottom: 2px solid #000000;">
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="4" style="padding:0 5px 10px">
+                        <p style="font-family: Arial, sans-serif;margin:0">The following claims are aggregate values derived from field level data from each compliant agricultural field enrolled in the Agreeta Solutons platform for the 2022 crop year. Data provided for the claims specified herein are the result of collaboraton between Growers, their Agricultural Consultants and the use of the Agreeta Platform. Supporting grower survey results, lab soil tests, tissue tests and water tests along with field specific input data entered into the Agreeta Platform were data points used to quantify the values required to supply the data to support claims. For savings calculations, these data points were then compared to published USDA National and Regional Crop Data, USDA COMET-FarmTM and OECD-FAO Agricultural Outlook 2022-2031.</p>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="4" style="padding:0 5px">
+                        <h3 style="font-family: Arial, sans-serif;margin:0;font-size: 20px;">Product Claims</h3>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="width: 100%;">
+            <tbody>
+                <tr>
+                    <td width="34%" style="padding:0 5px" valign="top">
+                        <h5 style="color:#1a65db;font-family: Arial, sans-serif;margin:0;padding:0 0 0 5px;font-size: 28px;font-weight: bold; line-height:28px;">{{water_savings_efficiency}}%</h5>
+                        <p style="font-family: Arial, sans-serif;margin:0">WATER SAVINGS</p>
+                        <small style="font-family: Arial, sans-serif;">**Based on regional averages</small>
+                    </td>
+                    <td width="33%" style="padding:0 5px" valign="top">
+                        <h5 style="color:#1a65db;font-family: Arial, sans-serif;margin:0;padding:0 0 0 5px;font-size: 28px;font-weight: bold; line-height:28px;">{{land_use_efficiency}}%</h5>
+                        <p style="font-family: Arial, sans-serif;margin:0">LAND USE EFFICIENCY</p>
+                        <small style="font-family: Arial, sans-serif;">**Based on average Upland Cotton production in the USA for the 2022 crop year</small>
+                    </td>
+                    <td width="33%" style="padding:0 5px" valign="top">
+                        <h5 style="color:#1a65db;font-family: Arial, sans-serif;margin:0;padding:0 0 0 5px;font-size: 28px;font-weight: bold; line-height:28px;">{{total_gallons_water_saved}}</h5>
+                        <p style="font-family: Arial, sans-serif;margin:0">GALLONS WATER SAVED PER</p>
+                        <small style="font-family: Arial, sans-serif;">POUND OF COTTON **Based on regional average yield per acre</small>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="3" style="padding:0px">&nbsp;</td>
+                </tr>
+                <tr>
+                    <td width="34%" style="padding:0 5px" valign="top">
+                        <h5 style="color:#1a65db;font-family: Arial, sans-serif;margin:0;padding:0 0 0 5px;font-size: 28px;font-weight: bold; line-height:28px;">{{less_ghg_value}}%</h5>
+                        <p style="font-family: Arial, sans-serif;margin:0">LESS GHG EMMISSIONS</p>
+                        <small style="font-family: Arial, sans-serif;">POUND OF COTTON **Based on regional average yield per acre</small>
+                    </td>
+                    <td width="33%" style="padding:0 5px" valign="top">
+                        <h5 style="color:#1a65db;font-family: Arial, sans-serif;margin:0;padding:0 0 0 5px;font-size: 28px;font-weight: bold; line-height:28px;">{{co2eq_claims}}</h5>
+                        <p style="font-family: Arial, sans-serif;margin:0">CO2 EQUIVALENT PER POUND</p>
+                        <small style="font-family: Arial, sans-serif;">POUND OF COTTON **Based on regional average yield per acre</small>
+                    </td>
+                    <td width="33%" style="padding:0 5px" valign="top">
+                        <h5 style="color:#1a65db;font-family: Arial, sans-serif;margin:0;padding:0 0 0 5px;font-size: 28px;font-weight: bold; line-height:28px;">{{grower_premium_percent1}}%</h5>
+                        <p style="font-family: Arial, sans-serif;margin:0">MORE GROWER PREMIUMS</p>
+                        <small style="font-family: Arial, sans-serif;">**Based on average premiums contracted with growers</small>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="3" style="padding:0 5px">
+                        <p style="font-family: Arial, sans-serif;margin:0;"><strong style="font-family: Arial, sans-serif;">ISO 14064-3:2019</strong></p>
+                        <p style="font-family: Arial, sans-serif;margin:0;"><strong style="font-family: Arial, sans-serif;"><i>Greenhouse Gas Verification Statement</i></strong></p>
+                        <p style="font-family: Arial, sans-serif;"><i>SGS Tecnos S.A.U (Spain) concluded that the claims presented are materially correct and is a fair representation of GHG data and information and has been prepared in accordance with the requirements of Agreeta's methodology, in relation to its quantification, control and notification.</i></p>
+                        <p style="font-family: Arial, sans-serif;"><i>The GHGs included are: carbon dioxide (CO2), methane (CH4), nitrogen oxide (N2O), hydrofluorocarbons (HFCs), perfluorocarbons (PFCs), sulfur hexafluoride (SF6). The CFP is based on the quantification of the greenhouse gases related to the entire product’s cycle of life.</i></p>
+                        <hr style="margin:0; border-top:0; border-bottom: 2px solid #000000;">
+                        <p style="font-family: Arial, sans-serif;">The Carbon footprint is the sum of emissions that a product generates during its life cycle. The study of the CFP allows to quantify in terms of CO2 the carbon footprint. The methodology underlying of the Product’s Carbon Footprint is based on the principle of responsibility towards the environment and the transparency of the communication of the results.</p>
+                        <br/><br/>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <table border="0" cellpadding="0" cellspacing="0">
+            <tbody>
+                <tr>
+                    <td align="left" style="text-align:left"><div><img src="{{ main_static_url }}/img/images/logo-2.png" alt="ISO" ></div></td>
+                </tr>
+            </tbody>
+        </table>
+        
+    </div>
+</body>
+
+</html>

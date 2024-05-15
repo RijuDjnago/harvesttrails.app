@@ -1,0 +1,213 @@
+{% extends "base.html" %} {% load static %}
+{% block title %} Growers Comparison{% endblock title %}
+{% load crispy_forms_tags %} {% block content %}
+{% include 'navbar.html' %}
+
+<div class="main-content">
+  {% include 'header.html' %}
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.5.2/css/bootstrap.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.11.0/css/dataTables.bootstrap4.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.2.9/css/responsive.bootstrap4.min.css">
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/fixedcolumns/4.2.1/css/fixedColumns.dataTables.min.css">
+    <style>
+      .dataTables_scrollHead,
+          .dataTables_scrollBody,
+          .dataTables_scrollFoot {
+              width: 100% !important;
+          }
+          table.dataTable>thead>tr>th:not(.sorting_disabled), table.dataTable>thead>tr>td:not(.sorting_disabled) {
+            padding-right:29px;
+          }
+      </style>
+  <main>
+    {% include '_alerts.html' %}
+    <div class="page-title-with-or-without-btn">
+      <span class="farm headingtop">Growers Comparison</span>
+      <!-- Create button for Account-->
+      <div class="flex-header-btn">
+        <div id="Export_CSV" style="margin-right: 10px;"></div>
+      </div>
+    </div>
+    <div class="card card-padding">
+      <div class="main-simple-table-with-search">
+        <div class="row">
+            <div class="col-md-6">
+              <div id="div_id_grower" class="form-group" style="margin-left: auto;">
+                <div class="serveytype">
+                    <select name="grower_n" class="select form-control" id="grower_n">
+                        <option value="">Grower</option>
+                        {% for grower_n in grower_obj %}
+                        <option value="{{grower_n.name}}">{{grower_n.name}} - {{grower_n.id}}</option>
+                        {% endfor %}
+                    </select>
+                    <!-- <small id="hint_id_name" class="form-text text-muted">ex: Fred Farmer</small> -->
+                </div>
+            </div>
+            </div>
+            <div class="col-md-6">
+              <div id="div_id_name" class="form-group" style="margin-left: auto;">
+                <!-- <div class="serveytype">
+                    <select name="survey_type" class="select form-control" id="survey_type">
+                        <option value="">Survey Type</option>
+                        {% for survey_type in type_survey_data %}
+                        <option value="{{survey_type.name}}">{{survey_type.name}}</option>
+                        {% endfor %}
+                    </select>
+                </div> -->
+              </div>
+            </div>
+        </div>
+        <div class="simple-responsive-table">
+          <table id="growerListtbl" class="table table-striped table-bordered dt-responsive nowrap table-fixed grower-compare" style="width: 100%">
+            <thead>
+              <tr style="border-bottom: 2px solid #e0e0e0;">
+                <th width="5%">Grower</th>
+                <th width="5%">Crop</th>
+                <!-- <th>Survey Type</th> -->
+               
+                <th width="5%">Farm</th>
+                <th width="5%">Field</th>
+                <th width="5%">Field ID</th>
+                <th width="5%" style="white-space: nowrap !important;">SURVEY-1</th>
+                <th width="5%">SURVEY-2</th>
+                <th width="5%">SURVEY-3</th>
+                <th width="5%">Composite Score</th>
+                <th width="5%">Certificate</th>
+                <th width="5%">State</th>
+                <th width="5%">City</th>
+                <th width="5%">Year</th>
+                <th width="5%">Acres</th>
+                <th width="5%">Projected Yield</th>
+                <th width="5%">Actual Yield</th>
+                <th width="5%">Yield Variance</th>
+                <th width="15%">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for comp in comparison_arr %}
+              <tr>
+                <td>{{comp.grower_name}}</td>
+                <td>{{comp.crop}}</td>
+                <!-- <td>{{comp.survey_type}}</td> -->
+                <td>{{comp.grower_farm}}</td>
+                <td>{{comp.grower_field}}</td>
+                <td>{{comp.field_id}}</td>
+                <td>{{comp.surveyscore1}}</td>
+                <td>{{comp.surveyscore2}}</td>
+                <td>{{comp.surveyscore3}}</td>
+                <td>{{comp.composite_score}}</td>
+                <td style="background-color: {% if comp.certificate == 'Fail' %} #991f14 {% elif comp.certificate == 'Pass' %} #257a3c {% else %} #000 {% endif %}; color:#fff" >
+                  {{comp.certificate}}
+                </td>
+                <td>{{comp.state}}</td>
+                <td>{{comp.city}}</td>
+                <td>{{comp.survey_year}}</td>
+                <td>{{comp.acres}}</td>
+                <td>
+                  {{comp.projected_yield}}
+                </td>
+                <td>{{comp.actual_yield}}</td>
+                <td>{{comp.yield_var}}</td>
+                <td class="backk1">
+                  <li>
+                    {% if comp.name_survey_type_id > 0 %}
+                    <a href="javascript:void(0);" alt="view" title="view" onclick="setComparisonParam('{{comp.survey_type}}','{{comp.survey_year}}','{{comp.name_survey_type_id}}','{{comp.grower_id}}','{{comp.farm_id}}','{{comp.field_id}}');" ><span class="fas fa-eye"></span></a>
+                    {% else %}
+                    <a href="javascript:void(0);"><span class="fas fa-eye" style="color: red;"></span></a>
+                    {% endif %}
+                  </li>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+  {% include 'footer.html' %}
+</div>
+
+<!-- Delete Popup -->
+
+
+<!-- end -->
+
+{% endblock content %} // Js for datatables {% block scripts %}
+
+<script src="https://cdn.datatables.net/1.11.0/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.0/js/dataTables.bootstrap4.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.2.9/js/dataTables.responsive.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.2.9/js/responsive.bootstrap4.min.js"></script>
+<script src="{% static 'js/dataTables.buttons.min.js' %}"></script>
+<script src="{% static 'js/buttons.html5.min.js' %}"></script>
+<script src="https://cdn.datatables.net/fixedcolumns/4.2.1/js/dataTables.fixedColumns.min.js"></script>
+<script type="text/javascript" src="{% static 'js/accounts/account_list.js' %}"> </script>
+
+<script>
+  $(document).ready(function () {
+    var data_table_odj = $("#growerListtbl").DataTable({
+      responsive: false,
+      "paging": true,
+      "pageLength": 100,
+			"autoWidth": true,
+      scrollY: "600px",
+      scrollX: true,
+      scrollCollapse: false,
+      fixedColumns: {
+          left: 3,
+          right: 1,
+      },
+        // columnDefs: [ 
+        //     { 
+        //         orderable: false, 
+        //         targets: [10] 
+        //     }
+        // ],
+        buttons: [ 
+            { 
+                extend: 'csv', 
+                text: 'CSV EXPORT',
+                title: 'Growers Comparison - {% now "jS F Y" %}', 
+                className: "btn-export", 
+                exportOptions: { 
+                    columns: 'th:not(:last-child)' 
+                } 
+            } 
+        ],
+    });
+
+    data_table_odj.buttons().container().appendTo( '#Export_CSV' );
+
+    $('#grower_n').on('change', function() {
+            console.log(this.value);
+            data_table_odj.column(0).search(this.value ? '\\b' + this.value + '\\b' : "", true, false).draw();
+        });
+
+    $('#survey_type').on('change', function() {
+            console.log(this.value);
+            data_table_odj.column(2).search(this.value ? '\\b' + this.value + '\\b' : "", true, false).draw();
+        });
+
+  });
+
+  function setComparisonParam(survey_type,survey_year,name_survey_type_id,grower_id,farm_id,field_id)
+  {
+      sessionStorage.setItem('survey_type', survey_type);
+      sessionStorage.setItem('survey_year', survey_year);
+      sessionStorage.setItem('name_survey_type_id', name_survey_type_id);
+      sessionStorage.setItem('grower_id', grower_id);
+      sessionStorage.setItem('farm_id', farm_id);
+      sessionStorage.setItem('field_id', field_id);
+      window.location.href = "{% url 'grower-sustainability' %}";
+  }
+</script>
+<script>
+  $('#Sustainability-active').addClass('activeLink');
+                
+  $('#Sustainability-down').addClass('down');
+  $('#Sustainability-sub').show();
+  
+  $('#Grower-Comparison').addClass('activeLink active-nav');
+</script>
+{% endblock scripts %}

@@ -1,0 +1,125 @@
+{% extends "base.html" %} 
+{% load static %} 
+{% block title %} Receive Delivery {% endblock title %} 
+{% block content %}
+{% include 'navbar.html' %}
+<div class="main-content">
+    {% include 'header.html' %} {% load crispy_forms_tags %}
+    <main>
+        <span class="farm headingtop">Receive Delivery</span>
+        <div class="card farm-fields-container">
+            <div class="container-fluid">
+               
+                <form method="post" class="farm-fields-form">
+                    {% csrf_token %}
+                    <div class="row" style="margin-bottom:10px">
+                        <div class="col-md-4 mb-2">
+                            <label for="id_grower">Grower<span class="asteriskField">*</span></label>
+                            <select id="id_grower" name="id_grower" class="textinput textInput form-control"
+                                style="width: 100%;padding-left:10px ;" required>
+                                <option value='all' >Select Grower</option>
+                                {% for grower in get_grower %}
+                                {% if grower == selected_grower %}
+                                <option value="{{ grower.pk }}" selected>{{grower.name}} - {{grower.pk }}</option>
+                                {% else %}
+                                <option value="{{ grower.pk }}">{{grower.name}} - {{grower.pk }}</option>                                
+                                {% endif %}
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <label for="id_storage">Storage</label>
+                            <select id="id_storage" name="id_storage" class="textinput textInput form-control"
+                                style="width: 100%;padding-left:10px ;">
+                                {% for storage in storage %}
+                                <option value="{{ storage.pk }}">{{storage.storage_name}} - {{storage.pk }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <label for="id_storage">Field<span class="asteriskField">*</span></label>
+                            <select id="id_field" name="id_field" class="textinput textInput form-control"
+                                style="width: 100%;padding-left:10px ;">
+                                <option value="select">Select Field</option>
+                                {% for field in field %}
+                                <option value="{{ field.pk }}">{{field.name}} - {{field.pk }}</option>
+                                {% endfor %}
+                            </select>
+                            <p id="disp0" style="color: red;"></p>
+                        </div>
+                        
+                        <div class="col-md-4 mb-2">
+                            <label for="module_number">Module Tag Number<span class="asteriskField">*</span></label>
+                            <input id="module_number" name="module_number" class="textinput textInput form-control" type="text">
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <label for="id_amount"># of Rolls<span class="asteriskField">*</span></label>
+                            <input type="text" name="amount" class="textinput textInput form-control" id="id_amount" >
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <label for="id_unit">Roll Type<span class="asteriskField">*</span></label>
+                            <select id="id_unit" name="id_unit" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" >
+                                <option value="LBS">LBS</option>
+                                <option value="TON">TON</option>
+                            </select>
+                        </div>
+                        
+                    </div>
+                    <div class="row">
+                        <div class="form-btn-row">
+                            <a href="{% url 'processor_inbound_management' %}" class="btn-close-cancel btn-space">Cancel</a>
+                            <input style="display: none;" id="hide_btn1" type="submit" class="btn-save-submit" value="Save">
+                            <!-- <input type="button" id="hide_btn2" class="btn-save-submit" value="Save" onclick="btnClick()"> -->
+                            <input type="button" class="btn-save-submit" value="Save" onclick="activityButton1()">
+                        </div>
+                    </div>
+                </form>
+                
+            </div>
+        </div>
+
+
+    </main>
+    {% include 'footer.html' %}
+</div>
+{% endblock %}
+
+{% block jquery %}
+<!-- <script>
+    $('#id_crop').on('change', function(e){
+        $('#id_variety').val('');
+        $('#id_variety').find('option').prop('disabled', false);
+        var crop_val = $(this).val();
+        if(crop_val == 'RICE')
+        {
+            $('#id_variety option').filter('[value="DG 2425 XF"],[value="DG 3450 B2XF"],[value="DG 3470 B3XF"],[value="DG 3570 B3XF"],[value="DG 3635 B2XF"],[value="DG 3544 B2XF"],[value="DG 3651NR B2XF"],[value="DG 3109 B2XF"],[value="DG 3387 B3XF"],[value="DG 3421 B3XF"],[value="DG H929 B3XF"],[value="DG 3555 B3XF"],[value="DG 3402 B3XF"],[value="DG H959 B3XF"],[value="DG 3469 B3XF"],[value="DG 3615 B3XF"],[value="DG P224 B3XF"],[value="DG 3385 B2XF"],[value="DG 3422 B3XF"],[value="DG 3799 B3XF"]').prop('disabled', true);
+        }
+
+        if(crop_val == 'COTTON')
+        {
+            $('#id_variety option').filter('[value="DG-263L"]').prop('disabled', true);
+        }
+    });
+    
+   
+</script> -->
+
+<script>
+$('#id_grower').on('change', function (e) {
+    var value = $(this).val();
+    console.log(value)
+    $('#hide_btn1').click()
+})
+function activityButton1(){
+    
+    var id_field = $('#id_field').val();
+    if(id_field != 'select'){
+        $('#hide_btn1').click();
+
+    }else{
+        $('#id_field').css('border-color', 'red');
+        document.getElementById("disp0").innerHTML = "*Please Select a Field";
+    }
+}
+</script>
+{% endblock jquery %}

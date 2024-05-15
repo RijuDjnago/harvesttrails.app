@@ -1,0 +1,177 @@
+{% extends "base.html" %} {% load static %} {% block title %} Add Tier 3 Processor {% endblock title %}
+
+{% block extrahead %}
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-Y3EWVPF7PQ"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+
+    gtag('config', 'G-Y3EWVPF7PQ');
+</script>
+{% endblock extrahead %}
+
+{% block content %} {% include 'navbar.html' %}
+<div class="main-content">
+    {% include 'header.html' %}
+    <main>
+        {% include '_alerts.html' %}
+        <span class="farm headingtop">Add Tier 3 Processor</span>
+        <div class="card farm-fields-container">
+            <div class="container-fluid">
+                <form method="post" class="farm-fields-form">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div>
+                                <label for="fein">FEIN <span class="asteriskField">*</span></label>
+                                <input type="text" name="fein" id="fein"  autocomplete="off"
+                                    class="textinput textInput form-control" required>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div>
+                                <label for="entity_name">Entity Name<span class="asteriskField">*</span></label>
+                                <input type="text" name="entity_name" id="entity_name" autocomplete="off"
+                                    class="textinput textInput form-control" required>
+                            </div>
+                        </div>
+
+                        <div class="col-md-3">
+                            <div>
+                                <label for="billing_address">Billing Address<span class="asteriskField">*</span></label>
+                                <input type="text" name="billing_address" id="billing_address" autocomplete="off"
+                                    class="textinput textInput form-control" required>
+                            </div>
+                        </div>
+
+                        <div class="col-md-3">
+                            <div>
+                                <label for="shipping_address">Shipping Address</label>
+                                <input type="text" name="shipping_address" id="shipping_address"  autocomplete="off"
+                                    class="textinput textInput form-control" required>
+                            </div>
+                        </div>
+
+                        <div class="col-md-3">
+                            <div>
+                                <label for="main_number">Main Number <span class="asteriskField">*</span></label>
+                                <input type="number" name="main_number" id="main_number"  autocomplete="off"
+                                    class="textinput textInput form-control" required> 
+                            </div>
+                        </div>
+
+                        <div class="col-md-3">
+                            <div>
+                                <label for="main_fax">Main Fax<span class="asteriskField">*</span></label>
+                                <input type="number" name="main_fax" id="main_fax"  autocomplete="off"
+                                    class="textinput textInput form-control"  required> 
+                            </div>
+                        </div>
+                    
+                        <div class="col-md-3">
+                            <div>
+                                <label for="website">Website</label>
+                                <input type="text" name="website" id="website"  autocomplete="off"
+                                    class="textinput textInput form-control" required>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row">
+                    <div class="col-md-3">
+                        <div>
+                            <label for="contact_name">Contact Name<span class="asteriskField">*</span></label>
+                            <input type="text" name="contact_name" id="contact_name" class="textinput textInput form-control" autocomplete="off" required>
+                        </div>
+                        
+                    </div>
+                    <div class="col-md-3">
+                        <div>
+                            <label for="contact_email">Contact Email<span class="asteriskField">*</span></label>
+                            <input type="email" name="contact_email" id="contact_email" class="textinput textInput form-control" autocomplete="off" required>
+                        </div>
+                        
+                    </div>
+                    <div class="col-md-3">
+                        <div>
+                            <label for="contact_phone">Contact Phone</label>
+                            <input type="number" name="contact_phone" id="contact_phone"  min="1000000000" max="9999999999"  class="textinput textInput form-control" autocomplete="off" required>
+                        </div>
+                       
+                    </div>
+                    <div class="col-md-3">
+                        <div>
+                            <label for="contact_fax">Contact Fax</label>
+                            <input type="number" name="contact_fax" id="contact_fax" class="textinput textInput form-control" autocomplete="off" required>
+                        </div>
+                    </div>
+                    </div>
+                    <div class="">
+                        <div class="form-btn-row" style="text-align:left">
+                            <input type="button" class="btn-close-cancel btn-space" value="+ Add Contact" onclick="createSelect()">
+                        </div>
+                        <div id="root"></div>
+                    
+                        <div class="">
+                        <div class="form-btn-row">
+                            <a href="{% url 'list_processor3' %}" class="btn-close-cancel btn-space">Cancel</a>
+                            <input type="submit" class="btn-save-submit" value="Save"> 
+                        </div>
+                        </div>
+                    </div>
+                
+                    <input style="display: none;" type="text" id="product_counter" value="0" name="counter">
+                </form>
+        </div>
+    </main>
+    {% include 'footer.html' %}
+</div>
+{% endblock %}
+
+{% block jquery %}
+<script>
+function createSelect(){
+    var counter = $('#product_counter').val();
+    var counter = eval(counter)+1;
+    $('#product_counter').val(counter);
+
+    document.querySelector('#root').insertAdjacentHTML("afterend",
+        `<div class="row">
+        <div class="col-md-3">
+            <div>
+                <label for="contact_name${counter}">Contact Name<span class="asteriskField">*</span></label>
+                <input type="text" name="contact_name${counter}" id="contact_name${counter}" class="textinput textInput form-control" autocomplete="off" required>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div>
+                <label for="contact_email${counter}">Contact Email<span class="asteriskField">*</span></label>
+                <input type="email" name="contact_email${counter}" id="contact_email${counter}" class="textinput textInput form-control" autocomplete="off" required>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div>
+                <label for="contact_phone${counter}">Contact Phone</label>
+                <input type="number" name="contact_phone${counter}" id="contact_phone${counter}"  min="1000000000" max="9999999999" class="textinput textInput form-control" autocomplete="off" required>
+            </div>
+        </div>
+        <div class="col-md-3" style="margin-bottom: 15px;">
+            <div>
+                <label for="contact_fax${counter}">Contact Fax</label>
+                <input type="number" name="contact_fax${counter}" id="contact_fax${counter}" class="textinput textInput form-control" autocomplete="off" required>
+            </div>
+        </div>
+    </div>`);
+}
+</script>
+
+<script>
+    $('#Processor3-Configuration-active').addClass('activeLink');
+    $('#Processor3-Configuration-down').addClass('down');
+    $('#Processor3-Configuration-sub').show();
+    $('#Processor3-List').addClass('activeLink active-nav');
+  </script>  
+{% endblock jquery %}
+

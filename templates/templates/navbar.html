@@ -1,0 +1,90 @@
+{% load static %}
+
+<div class="sidebar">
+    <div class="sidebar-brand"> <img src="{% static 'img/logo.png' %} " alt="logo" class="logoimmg"> <img src="{% static 'img/showlogo.png' %}" alt="logo" id="logoshow"> </div>
+    <div class="sidebar-menu">
+        <ul>
+            <li>
+                <a> <span class="mainn minenaviga">Main Navigation</span></a>
+            </li>
+            <!-- <li class="active">
+                <a class="for-brder" href="{% url 'dashboard' %}" id="fdb"> <span class="rightimg"><i
+              class="fa fa-home"></i></span> <span>agFarm</span> </a>
+            </li> -->
+
+            <li class="for-drop">
+                <a href="#"><span class="rightimg"><i class="fa fa-user"></i></span>
+          <span class="forn-none1">Grower Configuration
+            <span class="fas fa-chevron-right pull-right rotate"></span></span>
+          <ul class="dropdown-2">
+
+            {% if 'Grower Management' in user.get_role_perm or user.is_superuser %}
+            <li><a href="{% url 'account-list' %}">Grower Management</a></li>
+            {% endif %} 
+            {% if 'User Management' in user.get_role_perm or user.is_superuser  %}
+
+            <li><a href="{% url 'user-list' %}">User Management</a></li>
+            {% endif %} 
+            {% if 'Role Management' in user.get_role_perm or user.is_superuser %}
+
+            <li><a href="{% url 'role-list' %}">Role Management</a></li>
+            {% endif %}
+
+        </ul>
+        </a>
+        </li>
+
+
+        <li class="for-drop">
+            <a href="#"> <span class="rightimg"><i class="fa fa-users"></i></span>
+                <span class="forn-none2">Farm Configuration
+            <span class="fas fa-chevron-right pull-right rotate2"></span></span>
+
+                <ul class="dropdown-22">
+                    {% if 'Farm Management' in user.get_role_perm or user.is_superuser %}
+
+                    <li><a href="{% url 'farm-list' %}">Farm Management</a></li>
+                    {% endif %} 
+                    {% if 'Farm Grouping' in user.get_role_perm or user.is_superuser %}
+
+                    <li><a href="{% url 'grouping' %}">Farm Grouping</a></li>
+                    {% endif %} 
+                    {% if 'Field Management' in user.get_role_perm or user.is_superuser %}
+
+                    <li><a href="{% url 'field-list' %}">Field Management</a></li>
+                    {% endif %}
+
+                </ul>
+            </a>
+        </li>
+
+        <li class="for-drop">
+            <a href="#"> <span class="rightimg"><i class="fa fa-file"></i></span> <span class="forn-none3">Grower Dashboard
+            <span class="fas fa-chevron-right pull-right rotate3"></span>
+            </a>
+        </li>
+
+        {% if 'Survey Configuration' in user.get_role_perm or user.is_superuser %}
+
+        <li>
+            <a href="{% url 'survey' %}"> <span class="rightimg"><i class="fa fa-book"></i></span>
+                <span>Survey Configuration</span></a>
+        </li>
+
+        {% endif %} 
+        {% if 'Sustainbility' in user.get_role_perm or user.is_superuser %}
+
+        <li>
+            <a href="sustainbility.html"> <span class="rightimg"><i class="fa fa-file-word"></i></span>
+                <span>Sustainbility</span> </a>
+        </li>
+        {% endif %} 
+        {% if 'Gallery' in user.get_role_perm or user.is_superuser %}
+
+        <li><a href="{% url 'gallery' %}"><span class="rightimg"><i class="fa fa-file-alt"></i></span>
+          <span>Documents and Photos</span></a> 
+          {% endif %}
+        </li>
+        </ul>
+    </div>
+</div>

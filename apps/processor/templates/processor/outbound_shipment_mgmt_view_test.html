@@ -1,0 +1,188 @@
+{% extends "base.html" %} {% load static %}
+{% block title %} Shipment Management View {% endblock title %}
+
+{% block extrahead %}
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-Y3EWVPF7PQ"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-Y3EWVPF7PQ');
+</script>
+{% endblock extrahead %}
+
+{% load crispy_forms_tags %}
+{% block content %}
+{% include 'navbar.html' %}
+
+<div class="main-content">
+    {% include 'header.html' %}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.5.2/css/bootstrap.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.11.0/css/dataTables.bootstrap4.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.2.9/css/responsive.bootstrap4.min.css">
+
+    <main>
+        {% include '_alerts.html' %}
+        <div class="page-title-with-or-without-btn">
+            <span class="farm headingtop">Shipment Detail</span>
+            <!-- Create button for Account-->
+            
+        </div>
+
+        <div class="card farm-fields-container">
+            <div class="container-fluid">
+                {% for i in report %}
+                    <div class="row" style="margin-bottom: 20px;">
+                        <div class="col-md-4" style="margin-bottom: 10px;">
+                            <label for="shipment">Bin Location</label>
+                            <input type="text" value="{{i.bin_location}}"
+                                class="textinput textInput form-control" readonly>
+                        </div>
+                        <div class="col-md-4" style="margin-bottom: 10px;">
+                            <label for="shipment">Processor</label>
+                            <input type="text" value="{{i.processor_e_name}}"
+                                class="textinput textInput form-control" readonly>
+                        </div>
+                        
+                        <div class="col-md-4" style="margin-bottom: 10px;">
+                            <label for="shipment">Milled Volume</label>
+                            <input type="text" value="{{i.milled_volume}}"
+                                class="textinput textInput form-control" readonly>
+                        </div>
+
+                        <div class="col-md-4" style="margin-bottom: 10px;">
+                            <label for="shipment">Date Pulled</label>
+                            <input type="text" value="{{i.date_pulled}}"
+                                class="textinput textInput form-control" readonly>
+                        </div>
+                        
+                        <div class="col-md-4" style="margin-bottom: 10px;">
+                            <label for="shipment">Equipment Type</label>
+                            <input type="text" value="{{i.equipment_type}}"
+                                class="textinput textInput form-control" readonly>
+                        </div> 
+                        
+                        <div class="col-md-4" style="margin-bottom: 10px;">
+                            <label for="shipment">Equipment ID</label>
+                            <input type="text" value="{{i.equipment_id}}"
+                                class="textinput textInput form-control" readonly>
+                        </div>
+
+                        <div class="col-md-4" style="margin-bottom: 10px;">
+                            <label for="shipment">Storage Bin (SKU ID)</label>
+                            <input type="text" value="{{i.storage_bin}}"
+                                class="textinput textInput form-control" readonly>
+                        </div>
+
+                        <div class="col-md-4" style="margin-bottom: 10px;">
+                            <label for="shipment">Weight Of Product</label>
+                            <input type="text" value="{{i.weight_of_product}} {{i.weight_of_product_unit}}"
+                                class="textinput textInput form-control" readonly>
+                        </div>
+
+                        <div class="col-md-4" style="margin-bottom: 10px;">
+                            <label for="shipment">Expected Yield</label>
+                            <input type="text" value="{{i.excepted_yield}} {{i.excepted_yield_unit}}"
+                                class="textinput textInput form-control" readonly>
+                        </div>
+
+                        <div class="col-md-4" style="margin-bottom: 10px;">
+                            <label for="shipment">Moisture Percentage (%)</label>
+                            <input type="text" value="{{i.moisture_percent}}"
+                                class="textinput textInput form-control" readonly>
+                        </div>
+
+                        <div class="col-md-4" style="margin-bottom: 10px;">
+                            <label for="shipment">Purchase Order Number</label>
+                            <input type="text" value="{{i.purchase_order_number}}"
+                                class="textinput textInput form-control" readonly>
+                        </div>
+
+                        <div class="col-md-4" style="margin-bottom: 10px;">
+                            <label for="shipment">Lot Number</label>
+                            <input type="text" value="{{i.lot_number}}"
+                                class="textinput textInput form-control" readonly>
+                        </div>
+
+                        <div class="col-md-4" style="margin-bottom: 10px;">
+                            <label for="shipment">Volume Shipped</label>
+                            <input type="text" value="{{i.volume_shipped}} Lbs"
+                                class="textinput textInput form-control" readonly>
+                        </div>
+
+                        <div class="col-md-4" style="margin-bottom: 10px;">
+                            <label for="shipment">Destination</label>
+                            <input type="text" value="{{i.processor2_name}} / ({{i.processor2_idd}})"
+                                class="textinput textInput form-control" readonly>
+                        </div>
+
+                        <div class="col-md-4" style="margin-bottom: 10px;">
+                            <label for="Balance">Balance</label>
+                            <input type="text" value="{{i.volume_left}} Lbs"
+                                class="textinput textInput form-control" readonly>
+                        </div>
+                        
+                        {% comment %} {% for file in file_data %}
+                        <div class="col-md-4" style="margin-bottom: 10px;">
+                            <label for="UploadedFiles">Uploaded File</label>
+                            <input type="text" value="{{ file }}" class="textinput textInput form-control" readonly>
+                        </div>
+                        {% endfor %}  {% endcomment %}
+
+                        
+                        <div class="col-md-4" >
+                            <label for="UploadedFiles">Uploaded Files</label>
+                            {% for file in file_data %}
+                            <div>
+                                <a href="{{ file.file }}" download style="cursor: pointer;">
+                                <p class="textinput textInput form-control" style="height: 48px !important;margin-top: 5px;box-shadow: none;padding-left: 20px !important;border: solid 1px #ccc !important;
+                                padding: .33em .75em; background:#e9ecef; border-radius: 500px;">{{ file.name }}</p>
+                                </a>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        
+                    </div>
+                    {% endfor %} 
+                    <div class="row" style="margin-top: 10px;">
+                        <div class="form-btn-row">
+                            <a href="{% url 'outbound_shipment_mgmt' %}" class="btn-close-cancel btn-space">Back</a>
+                        </div>
+                    </div> 
+            </div>
+        </div>
+</div>
+</main>
+{% include 'footer.html' %}
+</div>
+
+
+{% endblock content %}
+
+{% block scripts %}
+<script src="https://cdn.datatables.net/1.11.0/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.0/js/dataTables.bootstrap4.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.2.9/js/dataTables.responsive.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.2.9/js/responsive.bootstrap4.min.js"></script>
+
+<script src="{% static 'js/farm/farm_list.js' %}"></script>
+
+<script>
+    $(document).ready(function () {
+        $('#processorList_tbl').DataTable();
+    });
+
+
+</script>
+<script>
+    $('#Processor-active').addClass('activeLink');
+  
+    $('#Processor-down').addClass('down');
+    $('#Processor-sub').show();
+  
+    $('#-Management').addClass('activeLink active-nav');
+  
+  </script>
+{% endblock scripts %}
