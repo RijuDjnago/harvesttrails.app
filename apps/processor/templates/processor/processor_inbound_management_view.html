@@ -152,15 +152,21 @@
                         </div>
                         {% endif %}
 
-                        <div class="col-md-4" >
+                        <div class="col-md-4" style="margin-bottom: 10px;">
                             <label for="UploadedFiles">Uploaded Files</label>
                             <div class="scroll_box_main">
-                                {% for file in file_data %} 
-                                <a href="{{ file.file }}" download style="cursor: pointer;"> {{ file.name }}</a>
-                                {% endfor %}
+                                {% if file_data %}
+                                    {% for file in file_data %}
+                                        {% if file.file %}
+                                            <a href="{{ file.file }}" download style="cursor: pointer;">{{ file.name }}</a>
+                                        {% endif %}
+                                    {% endfor %}
+                                {% else %}
+                                    <p>No files available</p>
+                                {% endif %}
                             </div>
-                            </div>
-                        </div> 
+                        </div>
+                        
 
 
                         <!-- <div class="col-md-12" style="margin-bottom: 10px;">
