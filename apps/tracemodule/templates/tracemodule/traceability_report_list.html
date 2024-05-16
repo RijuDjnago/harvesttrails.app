@@ -118,7 +118,12 @@
 .clickcss{
     cursor: pointer;
 }
-
+tr:nth-child(even) {
+    background-color: #D3E3BB; 
+}
+.table th {
+    text-transform: capitalize;
+}
 </style>
 
 <div class="page-title-with-or-without-btn">
@@ -236,27 +241,27 @@
     <!-- Origin -->
     <div class="both-data-in" style="display: inherit;">
         <div class="row">
-            <div class="col-10" style="background-color: #4473c5;padding: 12px 0px 0px 20px;text-align: left;color: #fff;font-size: 20px;">
+            <div class="col-10" style="background-color: #81A179;padding: 12px 0px 0px 20px;text-align: left;color: #fff;font-size: 20px;">
                 <p>Origin</p>
             </div>
-            <div class="col-2" style="background-color: #999;padding: 12px 0px 0px 0px;text-align: center;font-size: 16px;">
+            <div class="col-2" style="background-color: #957292;padding: 12px 0px 0px 0px;text-align: center;font-size: 16px;">
                 <a target="_blank" href="{% url 'traceability_report_Origin_csv_download' select_crop get_search_by  search_text from_date to_date %}" style="color: #000000;font-weight: bold;font-size: 20px;">Csv Download</a>
             </div>
         </div>
         <div class="simple-responsive-table">
             <table id="" class="table table-striped dt-responsive nowrap text-center" style="width:100%">
                 <thead>
-                    <tr>
+                    <tr style="background-color: #B0C69F;">
                         <th>Crop</th>
-                        <th>Variety</th>
-                        <th>Field</th>
                         <th>Grower</th>
                         <th>Farm</th>
+                        <th>Field</th>                       
                         <th>Harvest Date</th>
                         <th>Projected Yield</th>
                         <th>Actual Yield</th>
                         <th>Yield Delta</th>
-                        <th>Storage Quanitty</th>
+                        <th>Storage Quantity</th>
+                        <th>Variety</th>
                         <th>Sustainability Metrics</th>
                     </tr>
                 </thead>
@@ -264,15 +269,15 @@
                     {% for i in origin_context %}
                     <tr>
                         <td>{{ i.get_select_crop }}</td>
-                        <td>{{ i.variety}}</td>
-                        <td>{{ i.field_name}} - {{ i.field_id }}</td>
                         <td>{{ i.grower_name}} - {{ i.grower_id }}</td>
                         <td>{{ i.farm_name}} - {{ i.farm_id}}</td>
+                        <td>{{ i.field_name}} - {{ i.field_id }}</td>
                         <td>{{ i.harvest_date }}</td>
                         <td>{{ i.projected_yeild }}</td>
                         <td>{{ i.reported_yeild }}</td>
                         <td>{{ i.yield_delta }}</td>
                         <td>{{ i.storage_quanitty }}</td>
+                        <td>{{ i.variety}}</td>
                         <td>
                             <a onclick="showTraceability({{i.field_id}})" class="update-btn-link" alt="view" title="view" style="cursor: pointer;" data-mdb-toggle="modal" data-mdb-target="#addqueModal"><span class="fas fa-eye"></span> </a>
                             <p style="display: none;" id="search_by">{{search_by}}</p>
@@ -286,10 +291,10 @@
     <!-- Outbound 1 WIP -->
     <div class="both-data-in" style="display: inherit; margin-top: 25px;">
         <div class="row">
-            <div class="col-10" style="background-color: #4473c5;padding: 12px 0px 0px 20px;text-align: left;color: #fff;font-size: 20px;">
+            <div class="col-10" style="background-color: #81A179;padding: 12px 0px 0px 20px;text-align: left;color: #fff;font-size: 20px;">
                 <p>Outbound 1 WIP</p>
             </div>
-            <div class="col-2" style="background-color: #999;padding: 12px 0px 0px 0px;text-align: center;font-size: 16px;">
+            <div class="col-2" style="background-color: #957292;padding: 12px 0px 0px 0px;text-align: center;font-size: 16px;">
                 <a target="_blank" href="{% url 'traceability_report_WIP1_csv_download' select_crop get_search_by  search_text from_date to_date %}" style="color: #000000;font-weight: bold;font-size: 20px;">Csv Download</a>
             </div>
         </div>
@@ -297,24 +302,24 @@
         <div class="simple-responsive-table">
             <table id="" class="table table-striped dt-responsive nowrap text-center" style="width:100%">
                 <thead>
-                    <tr>
-                        <th>Delivery ID Outbound</th>
-                        <th>Source</th>
-                        <th>Date</th>
-                        <th>Quantity Pounds</th>
-                        <th>Transportation Mode (Rail or Truck)</th>
+                    <tr style="background-color: #B0C69F;">
+                        <th>Delivery ID</th>
                         <th>Destination</th>
+                        <th>Date</th>
+                        <th>Quantity</th>
+                        <th>Transportation Mode</th>
+                        
                     </tr>
                 </thead>
                 <tbody>
                     {% for i in outbound1_wip %}
                     <tr>
                         <td>{{ i.deliveryid }}</td>
-                        <td>{{ i.source }}</td>
+                        <td>{{ i.destination }}</td>
                         <td>{{ i.date }}</td>
                         <td>{{ i.quantity }}</td>
                         <td>{{ i.transportation }}</td>
-                        <td>{{ i.destination }}</td>
+                        
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -324,26 +329,25 @@
     <!-- T1 Processor -->
     <div class="both-data-in" style="display: inherit; margin-top: 25px;">
         <div class="row">
-            <div class="col-10" style="background-color: #4473c5;padding: 12px 0px 0px 20px;text-align: left;color: #fff;font-size: 20px;">
+            <div class="col-10" style="background-color: #81A179;padding: 12px 0px 0px 20px;text-align: left;color: #fff;font-size: 20px;">
                 <p>T1 Processor</p>
             </div>
-            <div class="col-2" style="background-color: #999;padding: 12px 0px 0px 0px;text-align: center;font-size: 16px;">
+            <div class="col-2" style="background-color: #957292;padding: 12px 0px 0px 0px;text-align: center;font-size: 16px;">
                 <a target="_blank" href="{% url 'traceability_report_T1_Processor_csv_download' select_crop get_search_by  search_text from_date to_date %}" style="color: #000000;font-weight: bold;font-size: 20px;">Csv Download</a>
             </div>
         </div>
         <div class="simple-responsive-table">
             <table id="" class="table table-striped dt-responsive nowrap text-center" style="width:100%">
                 <thead>
-                    <tr>
-                        <th>Processor Name / ID #</th>
+                    <tr style="background-color: #B0C69F;">
+                        <th>Processor Name</th>
                         <th>Delivery ID</th>
-                        <th>SKU ID</th>
+                        <th>Date</th>
                         <th>Grower</th>
                         <th>Farm</th>
                         <th>Field</th>
-                        <th>Date</th>
-                        <th>Quantity Pounds Shipped</th>
-                        <th>Quantity Pounds Received</th>
+                        <th>Quantity Shipped</th>
+                        <th>Quantity Received</th>
                         <th>Quantity Delta</th>
                         <th>Quality Metrics</th>
                     </tr>
@@ -351,13 +355,12 @@
                 <tbody>
                     {% for i in t1_processor %}
                     <tr>
-                        <td>{{ i.processor_name }} / {{ i.processor_id }}</td>
+                        <td>{{ i.processor_name }}</td>
                         <td>{{ i.deliveryid }}</td>
-                        <td>{{ i.skuid}}</td>
+                        <td>{{ i.date }}</td>
                         <td>{{ i.grower }}</td>
                         <td>{{ i.farm }}</td>
                         <td>{{ i.field }}</td>
-                        <td>{{ i.date }}</td>
                         <td>{{ i.pounds_shipped }}</td>
                         <td>{{ i.pounds_received }}</td>
                         <td>{{ i.pounds_delta }}</td>
@@ -374,34 +377,34 @@
     <!-- Outbound 2 WIP -->
     <div class="both-data-in" style="display: inherit; margin-top: 25px;">
         <div class="row">
-            <div class="col-10" style="background-color: #4473c5;padding: 12px 0px 0px 20px;text-align: left;color: #fff;font-size: 20px;">
+            <div class="col-10" style="background-color: #81A179;padding: 12px 0px 0px 20px;text-align: left;color: #fff;font-size: 20px;">
                 <p>Outbound 2 WIP</p>
             </div>
-            <div class="col-2" style="background-color: #999;padding: 12px 0px 0px 0px;text-align: center;font-size: 16px;">
+            <div class="col-2" style="background-color: #957292;padding: 12px 0px 0px 0px;text-align: center;font-size: 16px;">
                 <a href="{% url 'traceability_report_WIP2_csv_download' select_crop get_search_by  search_text from_date to_date %}" style="color: #000000;font-weight: bold;font-size: 20px;">Csv Download</a>
             </div>
         </div>
         <div class="simple-responsive-table">
             <table id="" class="table table-striped dt-responsive nowrap text-center" style="width:100%">
                 <thead>
-                    <tr>
-                        <th>Delivery ID Outbound</th>
-                        <th>T1 SKU ID</th>
-                        <th>Date</th>
-                        <th>Quantity Pounds</th>
-                        <th>Transportation Mode (Rail or Truck)/Equipment ID</th>
+                    <tr style="background-color: #B0C69F;">
+                        <th>Delivery ID</th>
                         <th>Destination</th>
+                        <th>Date</th>
+                        <th>Quantity</th>
+                        <th>Transportation Mode/Equipment ID</th>
+                        
                     </tr>
                 </thead>
                 <tbody>
                     {% for i in outbound2_wip %}
                     <tr>
                         <td>{{ i.deliveryid }}</td>
-                        <td>{{ i.storage_skuid }}</td>
+                        <td>{{ i.destination }}</td>
                         <td>{{ i.date }}</td>
                         <td>{{ i.quantity }}</td>
                         <td>{{ i.transportation }}  / {{i.equ_id}}</td>
-                        <td>{{ i.destination }}</td>
+                        
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -411,20 +414,19 @@
     <!-- T2 Processor -->
     <div class="both-data-in" style="display: inherit; margin-top: 25px;">
         <div class="row">
-            <div class="col-10" style="background-color: #4473c5;padding: 12px 0px 0px 20px;text-align: left;color: #fff;font-size: 20px;">
+            <div class="col-10" style="background-color: #81A179;padding: 12px 0px 0px 20px;text-align: left;color: #fff;font-size: 20px;">
                 <p>T2 Processor</p>
             </div>
-            <div class="col-2" style="background-color: #999;padding: 12px 0px 0px 0px;text-align: center;font-size: 16px;">
+            <div class="col-2" style="background-color: #957292;padding: 12px 0px 0px 0px;text-align: center;font-size: 16px;">
                 <a href="{% url 'traceability_report_T2_Processor_csv_download' select_crop get_search_by  search_text from_date to_date %}" style="color: #000000;font-weight: bold;font-size: 20px;">Csv Download</a>
             </div>
         </div>
         <div class="simple-responsive-table">
             <table id="" class="table table-striped dt-responsive nowrap text-center" style="width:100%">
                 <thead>
-                    <tr>
-                        <th>Processor Name / ID #</th>
+                    <tr style="background-color: #B0C69F;">
+                        <th>Processor Name</th>
                         <th>Delivery ID</th>
-                        <th>SKU ID</th>
                         <th>Date</th>
                         <th>Quantity Pounds Shipped</th>
                         <th>Quantity Pounds Received</th>
@@ -434,9 +436,8 @@
                 <tbody>
                     {% for i in t2_processor %}
                     <tr>
-                        <td>{{ i.processor_name }} / {{ i.processor_id }}</td>
+                        <td>{{ i.processor_name }}</td>
                         <td>{{ i.deliveryid }}</td>
-                        <td>{{ i.skuid }}</td>
                         <td>{{ i.date }}</td>
                         <td>{{ i.pounds_shipped }}</td>
                         <td>{{ i.pounds_received }}</td>
@@ -450,23 +451,23 @@
     <!-- Outbound 3 WIP -->
     <div class="both-data-in" style="display: inherit; margin-top: 25px;">
         <div class="row">
-            <div class="col-10" style="background-color: #4473c5;padding: 12px 0px 0px 20px;text-align: left;color: #fff;font-size: 20px;">
+            <div class="col-10" style="background-color: #81A179;padding: 12px 0px 0px 20px;text-align: left;color: #fff;font-size: 20px;">
                 <p>Outbound 3 WIP</p>
             </div>
-            <div class="col-2" style="background-color: #999;padding: 12px 0px 0px 0px;text-align: center;font-size: 16px;">
+            <div class="col-2" style="background-color: #957292;padding: 12px 0px 0px 0px;text-align: center;font-size: 16px;">
                 <a href="" style="color: #000000;font-weight: bold;font-size: 20px;">Csv Download</a>
             </div>
         </div>
         <div class="simple-responsive-table">
             <table id="" class="table table-striped dt-responsive nowrap text-center" style="width:100%">
                 <thead>
-                    <tr>
-                        <th>Delivery ID Outbound</th>
-                        <th>T2 SKU ID</th>
-                        <th>Date</th>
-                        <th>Quantity Pounds</th>
-                        <th>Transportation Mode (Rail or Truck)</th>
+                    <tr style="background-color: #B0C69F;">
+                        <th>Delivery ID</th>
                         <th>Destination</th>
+                        <th>Date</th>
+                        <th>Quantity</th>
+                        <th>Transportation Mode</th>
+                        
                     </tr>
                 </thead>
                 <tbody>
@@ -486,18 +487,18 @@
     <!-- T3 Processor -->
     <div class="both-data-in" style="display: inherit; margin-top: 25px;">
         <div class="row">
-            <div class="col-10" style="background-color: #4473c5;padding: 12px 0px 0px 20px;text-align: left;color: #fff;font-size: 20px;">
+            <div class="col-10" style="background-color: #81A179;padding: 12px 0px 0px 20px;text-align: left;color: #fff;font-size: 20px;">
                 <p>T3 Processor</p>
             </div>
-            <div class="col-2" style="background-color: #999;padding: 12px 0px 0px 0px;text-align: center;font-size: 16px;">
+            <div class="col-2" style="background-color: #957292;padding: 12px 0px 0px 0px;text-align: center;font-size: 16px;">
                 <a href="" style="color: #000000;font-weight: bold;font-size: 20px;">Csv Download</a>
             </div>
         </div>
         <div class="simple-responsive-table">
             <table id="" class="table table-striped dt-responsive nowrap text-center" style="width:100%">
                 <thead>
-                    <tr>
-                        <th>Processor Name / ID #</th>
+                    <tr style="background-color: #B0C69F;">
+                        <th>Processor Name</th>
                         <th>Delivery ID</th>
                         <th>Date</th>
                         <th>Quantity Pounds Shipped</th>
@@ -523,22 +524,22 @@
     <!-- Outbound 4 WIP -->
     <div class="both-data-in" style="display: inherit; margin-top: 25px;">
         <div class="row">
-            <div class="col-10" style="background-color: #4473c5;padding: 12px 0px 0px 20px;text-align: left;color: #fff;font-size: 20px;">
+            <div class="col-10" style="background-color: #81A179;padding: 12px 0px 0px 20px;text-align: left;color: #fff;font-size: 20px;">
                 <p>Outbound 4 WIP</p>
             </div>
-            <div class="col-2" style="background-color: #999;padding: 12px 0px 0px 0px;text-align: center;font-size: 16px;">
+            <div class="col-2" style="background-color: #957292;padding: 12px 0px 0px 0px;text-align: center;font-size: 16px;">
                 <a href="" style="color: #000000;font-weight: bold;font-size: 20px;">Csv Download</a>
             </div>
         </div>
         <div class="simple-responsive-table">
             <table id="" class="table table-striped dt-responsive nowrap text-center" style="width:100%">
                 <thead>
-                    <tr>
-                        <th>Delivery ID Outbound</th>
-                        <th>Date</th>
-                        <th>Quantity Pounds</th>
-                        <th>Transportation Mode (Rail or Truck)</th>
+                    <tr style="background-color: #B0C69F;">
+                        <th>Delivery ID</th>
                         <th>Destination</th>
+                        <th>Date</th>
+                        <th>Quantity</th>
+                        <th>Transportation Mode</th>                        
                     </tr>
                 </thead>
                 <tbody>
@@ -558,17 +559,17 @@
     <!-- Buyer -->
     <div class="both-data-in" style="display: inherit; margin-top: 25px;">
         <div class="row">
-            <div class="col-10" style="background-color: #4473c5;padding: 12px 0px 0px 20px;text-align: left;color: #fff;font-size: 20px;">
+            <div class="col-10" style="background-color: #81A179;padding: 12px 0px 0px 20px;text-align: left;color: #fff;font-size: 20px;">
                 <p>Buyer</p>
             </div>
-            <div class="col-2" style="background-color: #999;padding: 12px 0px 0px 0px;text-align: center;font-size: 16px;">
+            <div class="col-2" style="background-color: #957292;padding: 12px 0px 0px 0px;text-align: center;font-size: 16px;">
                 <a href="" style="color: #000000;font-weight: bold;font-size: 20px;">Csv Download</a>
             </div>
         </div>
         <div class="simple-responsive-table">
             <table id="" class="table table-striped dt-responsive nowrap text-center" style="width:100%">
                 <thead>
-                    <tr>
+                    <tr style="background-color: #B0C69F;">
                         <th>Buyer Name / ID #</th>
                         <th>Delivery ID</th>
                         <th>Date</th>
