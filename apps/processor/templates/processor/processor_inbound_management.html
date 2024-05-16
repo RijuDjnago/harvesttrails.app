@@ -177,150 +177,152 @@
 
         </div>
 
+        
         <form action="" method="get" class="">
-        <div class="card card-padding">
-            <div class="main-simple-table-with-search col-12">
-                <div class="row d-flex">
-                        <div class="col-8">
-                                <div class="inline-apply-filter">
-                                    <div class="three-fields-with-label">
-                                        <select id="growerSelction" name="selectgrower_id" class="form-control selectpicker" data-live-search="true">
-                                            <option value='All' selected> Select All Growers </option>
-                                            {% for i in grower %}
-                                            {% if i == selectedGrower %}
-                                            <option value="{{ i.pk }}" selected>{{i.name}} - {{ i.pk }}
-                                            </option>
-                                            {% else %}
-                                            <option value="{{ i.pk }}">{{i.name}} - {{ i.pk }}</option>
-                                            {% endif %}
-                                            {% endfor %}
-                                        </select>
+            <div class="card card-padding">
+                <div class="main-simple-table-with-search col-12">
+                    <div class="row d-flex">
+                            <div class="col-8">
+                                    <div class="inline-apply-filter">
+                                        <div class="three-fields-with-label">
+                                            <select id="growerSelction" name="selectgrower_id" class="form-control selectpicker" data-live-search="true">
+                                                <option value='All' selected> Select All Growers </option>
+                                                {% for i in grower %}
+                                                {% if i == selectedGrower %}
+                                                <option value="{{ i.pk }}" selected>{{i.name}} - {{ i.pk }}
+                                                </option>
+                                                {% else %}
+                                                <option value="{{ i.pk }}">{{i.name}} - {{ i.pk }}</option>
+                                                {% endif %}
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <input style="display : none;" id="submitBtn" type="submit"
+                                            class="apply-filter-btn primary-btn" value="Apply Filter" />
                                     </div>
-                                    <input style="display : none;" id="submitBtn" type="submit"
-                                        class="apply-filter-btn primary-btn" value="Apply Filter" />
-                                </div>
-                        </div>
-                        <div class="col-4">
-                            <div class="row">
-                                <div class="col-8">
-                                    <input class="form-control" name="search_name" type="search" placeholder="Search" autocomplete="off" aria-label="Search" id="search_name" value="{{get_search_name}}">
-                                </div>
-                                <div class="col-4">
-                                    <button class="btn btn-outline-success btn-block" type="submit">Search</button>
-                                </div>
                             </div>
-                            
-                        </div>
-                </div>
-
-                <div class="both-data-in" style="display: inherit;">
-                    <div class="simple-responsive-table">
-                        <table id="" class="table table-striped dt-responsive nowrap"
-                            style="width:100%">
-                            <thead>
-                                <tr style="border-bottom: 2px solid #e0e0e0;">
-                                    <th width="5%">Shipment ID</th>
-                                    <th width="5%">Shipment Date</th>
-                                    <th width="10%">MODULE TAG #</th>
-                                    <th width="10%">SKU ID</th>
-                                    <th width="10%">Item , Variety</th>
-                                    <th width="10%">Field</th>
-                                    <th width="10%">Weight</th>
-                                    <th width="10%">Grower</th>
-                                    {% if request.user.is_processor %}
-                                    {% else %}
-                                    <th width="10%">Processor</th>
-                                    <th width="10%">Status Date</th>
-                                    <th width="10%">Status</th>
-                                    {% endif %}
-                                    <th width="10%">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for grower_shipment in grower_shipment %}
-                                <tr>
-                                    <td>{{grower_shipment.shipment_id}}</td>
-                                    <td>{{grower_shipment.date_time|date:"M d, Y"}}</td>
-                                    <td>{{grower_shipment.module_number}}</td>
-                                    <td>{{grower_shipment.sku}}</td>
-                                    <td>{{grower_shipment.crop}} , {{grower_shipment.variety}} </td>
-                                    <!-- <td>{{grower_shipment.storage.storage_name}}</td> -->
-                                    <td>{{grower_shipment.field.name}}</td>
-                                    <td>{% if grower_shipment.received_amount %}{{grower_shipment.received_amount}} Lbs{% else %}{{grower_shipment.amount}} {{grower_shipment.unit_type}}{% if grower_shipment.amount2|length > 0 %} + {{grower_shipment.amount2}} {{grower_shipment.unit_type2}}{% endif %}{% endif %}</td>
-                                    <td>{{grower_shipment.grower.name}}</td>
-                                    {% if request.user.is_processor %}
-                                    {% else %}
-                                    <td>{{grower_shipment.processor.entity_name}}</td>
-                                    <td>{% if grower_shipment.crop == 'RICE' and grower_shipment.status == 'APPROVED' %}{{grower_shipment.approval_date|date:"M d, Y"}}{% elif grower_shipment.crop == 'RICE' and grower_shipment.status == '' %}{% elif grower_shipment.crop == 'RICE' and grower_shipment.status == 'DISAPPROVED' %}{{grower_shipment.approval_date|date:"M d, Y"}}{% elif grower_shipment.crop == 'COTTON' %}{{grower_shipment.date_time|date:"M d, Y"}}{% endif %}</td>
-                                    <td>{{grower_shipment.status}}</td>
-                                    {% endif %}
-
-                                    <td class="backk action-td rmv-bd">
-                                    <ul>
-                                        <li>
-                                            <a class="map-icon-link" onclick="showQR({{grower_shipment.pk}})"><span
-                                                    class="fas fa-qrcode" alt="view QR code" title="view QR code"></span></a>
-                                        </li>
-                                        <li>
-                                            <a href="{% url 'processor_inbound_management_view' grower_shipment.id %}"
-                                                class="update-btn-link" alt="view inbound management" title="view inbound management"> <span class="fas fa-eye"></span> </a>
-                                        </li>
-                                        
-                                        {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
-                                        
-                                        
-                                        <li>
-                                            <a href="{% url 'processor_inbound_management_edit' grower_shipment.id %}" class="update-btn-link" alt="edit inbound management" title="edit inbound management"> <span class="fas fa-edit"></span></a>
-                                        </li>
-                                        
-                                        <li>
-                                            <a onclick="delShipment('{% url 'processor_inbound_management_delete' grower_shipment.id %}')"
-                                                href="{% url 'processor_inbound_management_delete' grower_shipment.id %}"
-                                                data-mdb-toggle="modal" data-mdb-target="#deleteModal" alt="delete inbound management" title="delete inbound management">
-                                                <span class="fas fa-trash"></span></a>
-                                        </li>
-                                        {% endif %}
-                                    </ul>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+                            <div class="col-4">
+                                <div class="row">
+                                    <div class="col-8">
+                                        <input class="form-control" name="search_name" type="search" placeholder="Search" autocomplete="off" aria-label="Search" id="search_name" value="{{get_search_name}}">
+                                    </div>
+                                    <div class="col-4">
+                                        <button class="btn btn-outline-success btn-block" type="submit">Search</button>
+                                    </div>
+                                </div>
+                                
+                            </div>
                     </div>
 
-                    <div class="row align-items-center">
-                        <div class="col-md-12 col-sm-12 col-12 text-center">
-                            {% if grower_shipment.has_other_pages %}
-                            <ul class="pagination" id="nav_1">
-                            {% if grower_shipment.has_previous %}
-                                <li><a href="?selectgrower_id={% if selectedGrower.id  %}{{selectedGrower.id}}{% else %}{{selectedGrower}}{% endif %}&search_name={% if get_search_name  %}{{get_search_name}}{% endif %}&page={{ grower_shipment.previous_page_number }}">&laquo;</a></li>
-                                {% else %}
-                                <li class="disabled"><span>&laquo;</span></li>
-                                {% endif %}
-                                {% for i in grower_shipment.paginator.page_range %}
-                                {% if grower_shipment.number == i %}
-                                <li class="active pagi" id="getactive"><span>{{ i }} <span class="sr-only">(current)</span></span></li>
-                                {% else %}
-                                <li><a href="?selectgrower_id={% if selectedGrower.id  %}{{selectedGrower.id}}{% else %}{{selectedGrower}}{% endif %}&search_name={% if get_search_name  %}{{get_search_name}}{% endif %}&page={{ i }}">{{ i }}</a></li>
-                                {% endif %}
-                                {% endfor %}
-                                {% if grower_shipment.has_next %}
-                                <li><a href="?selectgrower_id={% if selectedGrower.id  %}{{selectedGrower.id}}{% else %}{{selectedGrower}}{% endif %}&search_name={% if get_search_name  %}{{get_search_name}}{% endif %}&page={{ grower_shipment.next_page_number }}">&raquo;</a></li>
-                                {% else %}
-                                <li class="disabled"><span>&raquo;</span></li>
-                            {% endif %}
-                            </ul>
-                        {% endif %}
+                    <div class="both-data-in" style="display: inherit;">
+                        <div class="table-responsive">
+                            <table id="" class="table table-striped dt-responsive nowrap"
+                                style="width:100%">
+                                <thead>
+                                    <tr style="border-bottom: 2px solid #e0e0e0;">
+                                        <th width="5%">Shipment ID</th>
+                                        <th width="5%">Shipment Date</th>
+                                        <th width="10%">MODULE TAG #</th>
+                                        <th width="10%">SKU ID</th>
+                                        <th width="10%">Item , Variety</th>
+                                        <th width="10%">Field</th>
+                                        <th width="10%">Weight</th>
+                                        <th width="10%">Grower</th>
+                                        {% if request.user.is_processor %}
+                                        {% else %}
+                                        <th width="10%">Processor</th>
+                                        <th width="10%">Status Date</th>
+                                        <th width="10%">Status</th>
+                                        {% endif %}
+                                        <th width="10%">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for grower_shipment in grower_shipment %}
+                                    <tr>
+                                        <td>{{grower_shipment.shipment_id}}</td>
+                                        <td>{{grower_shipment.date_time|date:"M d, Y"}}</td>
+                                        <td>{{grower_shipment.module_number}}</td>
+                                        <td>{{grower_shipment.sku}}</td>
+                                        <td>{{grower_shipment.crop}} , {{grower_shipment.variety}} </td>
+                                        <!-- <td>{{grower_shipment.storage.storage_name}}</td> -->
+                                        <td>{{grower_shipment.field.name}}</td>
+                                        <td>{% if grower_shipment.received_amount %}{{grower_shipment.received_amount}} Lbs{% else %}{{grower_shipment.amount}} {{grower_shipment.unit_type}}{% if grower_shipment.amount2|length > 0 %} + {{grower_shipment.amount2}} {{grower_shipment.unit_type2}}{% endif %}{% endif %}</td>
+                                        <td>{{grower_shipment.grower.name}}</td>
+                                        {% if request.user.is_processor %}
+                                        {% else %}
+                                        <td>{{grower_shipment.processor.entity_name}}</td>
+                                        <td>{% if grower_shipment.crop == 'RICE' and grower_shipment.status == 'APPROVED' %}{{grower_shipment.approval_date|date:"M d, Y"}}{% elif grower_shipment.crop == 'RICE' and grower_shipment.status == '' %}{% elif grower_shipment.crop == 'RICE' and grower_shipment.status == 'DISAPPROVED' %}{{grower_shipment.approval_date|date:"M d, Y"}}{% elif grower_shipment.crop == 'COTTON' %}{{grower_shipment.date_time|date:"M d, Y"}}{% endif %}</td>
+                                        <td>{{grower_shipment.status}}</td>
+                                        {% endif %}
+
+                                        <td class="backk action-td rmv-bd">
+                                        <ul>
+                                            <li>
+                                                <a class="map-icon-link" onclick="showQR({{grower_shipment.pk}})"><span
+                                                        class="fas fa-qrcode" alt="view QR code" title="view QR code"></span></a>
+                                            </li>
+                                            <li>
+                                                <a href="{% url 'processor_inbound_management_view' grower_shipment.id %}"
+                                                    class="update-btn-link" alt="view inbound management" title="view inbound management"> <span class="fas fa-eye"></span> </a>
+                                            </li>
+                                            
+                                            {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
+                                            
+                                            
+                                            <li>
+                                                <a href="{% url 'processor_inbound_management_edit' grower_shipment.id %}" class="update-btn-link" alt="edit inbound management" title="edit inbound management"> <span class="fas fa-edit"></span></a>
+                                            </li>
+                                            
+                                            <li>
+                                                <a onclick="delShipment('{% url 'processor_inbound_management_delete' grower_shipment.id %}')"
+                                                    href="{% url 'processor_inbound_management_delete' grower_shipment.id %}"
+                                                    data-mdb-toggle="modal" data-mdb-target="#deleteModal" alt="delete inbound management" title="delete inbound management">
+                                                    <span class="fas fa-trash"></span></a>
+                                            </li>
+                                            {% endif %}
+                                        </ul>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
                         </div>
-                        <div class="col-md-12 col-sm-12 col-12 text-center mt-2" style="text-align:right">
-                            <span>Showing  {{ grower_shipment.start_index }} - {{ grower_shipment.end_index }} of {{ grower_shipment.paginator.count }} entries
-                            </span>
+
+                        <div class="row align-items-center">
+                            <div class="col-md-12 col-sm-12 col-12 text-center">
+                                {% if grower_shipment.has_other_pages %}
+                                <ul class="pagination" id="nav_1">
+                                {% if grower_shipment.has_previous %}
+                                    <li><a href="?selectgrower_id={% if selectedGrower.id  %}{{selectedGrower.id}}{% else %}{{selectedGrower}}{% endif %}&search_name={% if get_search_name  %}{{get_search_name}}{% endif %}&page={{ grower_shipment.previous_page_number }}">&laquo;</a></li>
+                                    {% else %}
+                                    <li class="disabled"><span>&laquo;</span></li>
+                                    {% endif %}
+                                    {% for i in grower_shipment.paginator.page_range %}
+                                    {% if grower_shipment.number == i %}
+                                    <li class="active pagi" id="getactive"><span>{{ i }} <span class="sr-only">(current)</span></span></li>
+                                    {% else %}
+                                    <li><a href="?selectgrower_id={% if selectedGrower.id  %}{{selectedGrower.id}}{% else %}{{selectedGrower}}{% endif %}&search_name={% if get_search_name  %}{{get_search_name}}{% endif %}&page={{ i }}">{{ i }}</a></li>
+                                    {% endif %}
+                                    {% endfor %}
+                                    {% if grower_shipment.has_next %}
+                                    <li><a href="?selectgrower_id={% if selectedGrower.id  %}{{selectedGrower.id}}{% else %}{{selectedGrower}}{% endif %}&search_name={% if get_search_name  %}{{get_search_name}}{% endif %}&page={{ grower_shipment.next_page_number }}">&raquo;</a></li>
+                                    {% else %}
+                                    <li class="disabled"><span>&raquo;</span></li>
+                                {% endif %}
+                                </ul>
+                            {% endif %}
+                            </div>
+                            <div class="col-md-12 col-sm-12 col-12 text-center mt-2" style="text-align:right">
+                                <span>Showing  {{ grower_shipment.start_index }} - {{ grower_shipment.end_index }} of {{ grower_shipment.paginator.count }} entries
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-        </form>
+        </form>   
+
 </div>
 </main>
 {% include 'footer.html' %}
