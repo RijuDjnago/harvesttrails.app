@@ -273,10 +273,10 @@ tr:nth-child(even) {
                         <td>{{ i.farm_name}} - {{ i.farm_id}}</td>
                         <td>{{ i.field_name}} - {{ i.field_id }}</td>
                         <td>{{ i.harvest_date }}</td>
-                        <td>{{ i.projected_yeild }}</td>
-                        <td>{{ i.reported_yeild }}</td>
-                        <td>{{ i.yield_delta }}</td>
-                        <td>{{ i.storage_quanitty }}</td>
+                        <td>{{ i.projected_yeild|floatformat:0}}</td>
+                        <td>{{ i.reported_yeild|floatformat:0 }}</td>
+                        <td>{{ i.yield_delta|floatformat:0 }}</td>
+                        <td>{{ i.storage_quanitty|floatformat:0 }}</td>
                         <td>{{ i.variety}}</td>
                         <td>
                             <a onclick="showTraceability({{i.field_id}})" class="update-btn-link" alt="view" title="view" style="cursor: pointer;" data-mdb-toggle="modal" data-mdb-target="#addqueModal"><span class="fas fa-eye"></span> </a>
@@ -317,7 +317,7 @@ tr:nth-child(even) {
                         <td>{{ i.deliveryid }}</td>
                         <td>{{ i.destination }}</td>
                         <td>{{ i.date }}</td>
-                        <td>{{ i.quantity }}</td>
+                        <td>{{ i.quantity|floatformat:0 }}</td>
                         <td>{{ i.transportation }}</td>
                         
                     </tr>
@@ -361,9 +361,9 @@ tr:nth-child(even) {
                         <td>{{ i.grower }}</td>
                         <td>{{ i.farm }}</td>
                         <td>{{ i.field }}</td>
-                        <td>{{ i.pounds_shipped }}</td>
-                        <td>{{ i.pounds_received }}</td>
-                        <td>{{ i.pounds_delta }}</td>
+                        <td>{{ i.pounds_shipped|floatformat:0 }}</td>
+                        <td>{{ i.pounds_received|floatformat:0 }}</td>
+                        <td>{{ i.pounds_delta|floatformat:0}}</td>
                         <td>
                             <a onclick="showQuality({{i.deliveryid}})" class="update-btn-link" alt="view" title="view" style="cursor: pointer;" data-mdb-toggle="modal" data-mdb-target="#addQualityModal"><span class="fas fa-eye"></span> </a>
                             <p style="display: none;" id="deliveryid">{{i.deliveryid}}</p>
@@ -402,7 +402,7 @@ tr:nth-child(even) {
                         <td>{{ i.deliveryid }}</td>
                         <td>{{ i.destination }}</td>
                         <td>{{ i.date }}</td>
-                        <td>{{ i.quantity }}</td>
+                        <td>{{ i.quantity|floatformat:0 }}</td>
                         <td>{{ i.transportation }}  / {{i.equ_id}}</td>
                         
                     </tr>
@@ -439,9 +439,9 @@ tr:nth-child(even) {
                         <td>{{ i.processor_name }}</td>
                         <td>{{ i.deliveryid }}</td>
                         <td>{{ i.date }}</td>
-                        <td>{{ i.pounds_shipped }}</td>
-                        <td>{{ i.pounds_received }}</td>
-                        <td>{{ i.pounds_delta }}</td>
+                        <td>{{ i.pounds_shipped|floatformat:0 }}</td>
+                        <td>{{ i.pounds_received|floatformat:0 }}</td>
+                        <td>{{ i.pounds_delta|floatformat:0 }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -466,8 +466,7 @@ tr:nth-child(even) {
                         <th>Destination</th>
                         <th>Date</th>
                         <th>Quantity</th>
-                        <th>Transportation Mode</th>
-                        
+                        <th>Transportation Mode</th>                        
                     </tr>
                 </thead>
                 <tbody>
