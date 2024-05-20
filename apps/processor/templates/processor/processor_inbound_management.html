@@ -485,4 +485,11 @@ $(function() {
     $('#Inbound-Management').addClass('activeLink active-nav');
   
   </script>
+  <script>
+    $(document).ready(function() {
+        $('#my_table').DataTable({
+            "order": [[0, "desc"]]  // Sort by first column (ID) in descending order
+        });
+    });
+</script>
 {% endblock jquery %}

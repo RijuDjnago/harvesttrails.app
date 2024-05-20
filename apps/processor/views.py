@@ -1363,6 +1363,7 @@ def grower_shipment_list(request):
             context ={}
             grower_id= request.user.grower.id
             grower_shipment = GrowerShipment.objects.filter(grower_id=grower_id)
+            
             context['grower_shipment'] = grower_shipment            
             return render(request, 'processor/grower_shipment_list.html',context)
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
@@ -1474,6 +1475,9 @@ def qr_code_view(request,pk):
     else:
         return redirect('login')
 
+###update
+import qrcode  # Ensure you have the qrcode library installed
+from django.core.files.base import ContentFile
 
 def grower_shipment_view(request,pk):
     if request.user.is_authenticated:
@@ -1523,12 +1527,26 @@ def grower_shipment_view(request,pk):
         "processor_name": processor_name,"grower_name": grower_name,"storage_name": storage_name,"field_name": field_name,
         "crop_name": crop_name,"variety_name": variety_name,"echelon_number": echelon_number,"sustainability": sustainability,
         "shipment_date": shipment_date}
-        data=json.dumps(datapy)
-        img = make(data)
-        img_name = 'qr' + str(time.time()) + '.png'
-        # img.save(settings.MEDIA_ROOT + '/' + img_name)
-        img.save(str(settings.MEDIA_ROOT) + '/' + img_name)
-        context['img_name'] = img_name
+        data = json.dumps(datapy)
+
+        # Generate QR code
+        img = qrcode.make(data)
+
+        # Create a unique image name
+        img_name = 'qr1_' + str(int(time.time())) + '.png'
+
+        # Save the image to a BytesIO object
+        from io import BytesIO
+        buffer = BytesIO()
+        img.save(buffer, format='PNG')
+        buffer.seek(0)
+
+        # Create a ContentFile from the BytesIO object
+        file = ContentFile(buffer.read(), name=img_name)
+
+        # Save the image to the model instance
+        grower_shipment1.qr_code.save(img_name, file, save=True)
+        context['img_name'] = grower_shipment1.qr_code
         return render(request, 'processor/grower_shipment_view.html',context)
     else:
         return redirect('login')
@@ -1952,15 +1970,18 @@ def processor_inbound_management_edit(request,pk):
     if request.user.is_authenticated:
         context = {}
         # Processor Location Add ..
-        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
-            shipment = GrowerShipment.objects.get(pk=pk)
-            selected_grower = shipment.grower
-            id_grower = selected_grower.id
+        shipment = GrowerShipment.objects.get(pk=pk)
+        selected_grower = shipment.grower       
+        id_grower = selected_grower.id
+        selected_processor = shipment.processor        
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role() or "Processor" in request.user.get_role():
+           
             # grower = LinkGrowerToProcessor.objects.all()
             # grower_id = [i.grower_id for i in grower]
             # get_grower = Grower.objects.filter(id__in = grower_id)
             # context['get_grower'] = get_grower
             context['selected_grower'] = selected_grower
+            context["selected_processor"] = selected_processor
 
             storage_obj = Storage.objects.filter(grower_id=id_grower)
             context['storage'] = storage_obj
@@ -2006,7 +2027,21 @@ def processor_inbound_management_edit(request,pk):
             get_crop = shipment.crop
             context['get_crop'] = get_crop
             
-            context['files'] = shipment.files.all()
+            # context['files'] = shipment.files.all()
+            file_data = list(shipment.files.all().values())
+
+            for fff in range(len(file_data)):
+                base_url = request.scheme + '://' + request.get_host()
+                if file_data[fff]["file"] is not None: 
+                    name = file_data[fff]["file"].split("/")[-1]  # Extract the filename
+                    file_data[fff]["name"] = name
+                    file_data[fff]["file_url"] = base_url + settings.MEDIA_URL + file_data[fff]["file"]
+                else:
+                    file_data[fff]["name"] = None
+                    file_data[fff]["file_url"] = None
+
+            context['files'] = file_data
+            print(file_data)
 
             aapproval_date = shipment.approval_date
             if aapproval_date :
@@ -2184,6 +2219,10 @@ def processor_inbound_management_edit(request,pk):
                                         log_device=log_device)
                     logtable.save()
                     return redirect('processor_inbound_management')
+            print(context)
+            return render(request, 'processor/processor_inbound_management_edit.html',context)
+        else:
+            context["message"] = "User does not have permission for edit."
             return render(request, 'processor/processor_inbound_management_edit.html',context)
     else:
         return redirect('login')
@@ -2681,8 +2720,7 @@ def processor_receive_delivery(request):
                     id_storage = request.POST.get('id_storage')
                     id_field = request.POST.get('id_field')
                     module_number = request.POST.get('module_number')
-
-
+                    
                     amount1 = request.POST.get('amount1')
                     amount2 = request.POST.get('amount2')
 
@@ -2807,6 +2845,7 @@ def processor_receive_delivery(request):
             grower_id = [i.grower_id for i in grower]
             get_grower = Grower.objects.filter(id__in = grower_id).order_by('name')
             context['get_grower'] = get_grower
+            
             if request.method == 'POST':
                 id_grower = request.POST.get('id_grower')
                 # files = request.FILES.getlist('files')   #add file

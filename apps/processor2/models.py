@@ -74,3 +74,9 @@ class AssignedBaleProcessor2(models.Model):
     crop_variety = models.CharField(max_length=200, null=True, blank=True)
     mark_id = models.CharField(max_length=200, null=True, blank=True)
     gin_id = models.CharField(max_length=200, null=True, blank=True)
+
+
+class LinkToProcessor2(models.Model):    
+    grower = models.ForeignKey(Grower, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Select grower")
+    processor1 = models.ForeignKey(Processor, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Select processor")
+    processor2 = models.ForeignKey(Processor2, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Select processor2")

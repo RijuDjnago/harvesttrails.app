@@ -119,6 +119,29 @@
                                         {% endif %}
                                     </td>
                                 </tr>
+                                <!-- Add Que Popup ##update -->
+                                <div class="modal fade" id="addqueModal" aria-hidden="true" aria-labelledby="exampleModalToggleLabel22" tabindex="-1">
+                                    <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header" style="text-align: center;">
+                                        <button type="button" class="btn-close cust-close-ds-btn close_modal_addqueModal" data-mdb-dismiss="modal"
+                                            aria-label="Close" onclick="closeAddModal()"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="modal-center-btn-footer">
+                                            <div class="row">
+                                                <div class="col-lg-12">
+                                                    <div>
+                                                    <h5 class="text-decoration-underline">QR CODE</h5>
+                                                    </div>
+                                                    <img id="qr_id" src="/media/{{grower_shipment.qr_code}}" alt="qr code" style="max-width: 100%;">
+                                            </div>
+                                            </div>  
+                                        </div>
+                                    </div>
+                                    </div>
+                                </div>
+                                <!-- end -->
                                 {% endfor %}
                             </tbody>
                            
@@ -161,7 +184,7 @@
     </div>
 </div>
 
-!-- Add Que Popup -->
+<!-- Add Que Popup -->
 <div class="modal fade" id="addqueModal" aria-hidden="true" aria-labelledby="exampleModalToggleLabel22" tabindex="-1">
   <div class="modal-dialog">
     <div class="modal-content">
@@ -196,8 +219,13 @@
 <script src="{% static 'js/farm/farm_list.js' %}"></script>
 
 <script>
-    $(document).ready(function () {
+    {% comment %} $(document).ready(function () {
         $('#processorList_tbl').DataTable();
+    }); {% endcomment %}
+    $(document).ready(function () {
+        $('#processorList_tbl').DataTable({
+            "ordering": false  // Disable initial ordering
+        });
     });
 
     $(document).ready(function () {
@@ -250,4 +278,11 @@
       $('#addqueModal').modal('hide');
   }
 </script>
+{% comment %} <script>
+    $(document).ready(function() {
+        $('#processorList_tbl').DataTable({
+            "order": [[0, "desc"]]  // Sort by first column (ID) in descending order
+        });
+    });
+</script> {% endcomment %}
 {% endblock scripts %}

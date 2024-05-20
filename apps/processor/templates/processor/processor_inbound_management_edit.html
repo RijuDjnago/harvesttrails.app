@@ -12,6 +12,39 @@
 
   gtag('config', 'G-Y3EWVPF7PQ');
 </script>
+<style>
+    .file-item {
+        display: flex; /* Display file info and button in a row */
+        align-items: center; /* Center align items vertically */
+        padding: 10px; /* Add padding for spacing */
+        background-color: #f0f0f0; /* Light background color */
+        border-radius: 5px; /* Rounded corners */
+    }
+
+    .file-info {
+        flex: 1; /* Take remaining space */
+    }
+
+    .remove-file {
+        background-color: transparent;
+        border: none;
+        cursor: pointer;
+        padding: 5px;
+        border-radius: 50%; /* Make the button circular */
+    }
+
+    /* Responsive Styling */
+    @media (max-width: 768px) {
+        .file-item {
+            flex-direction: column; /* Stack items vertically on smaller screens */
+            text-align: center; /* Center align text */
+        }
+
+        .file-info {
+            margin-bottom: 10px; /* Add spacing between file info and button */
+        }
+    }
+</style>
 {% endblock extrahead %}
 
 {% block content %}
@@ -21,12 +54,13 @@
     <main>
         <span class="farm headingtop">Receive Delivery Edit</span>
         <div class="card farm-fields-container">
-            <div class="container-fluid">
+            <div class="container-fluid">             
 
                 <form method="post" class="farm-fields-form" enctype="multipart/form-data">
                     {% csrf_token %}
                     <div class="row" style="margin-bottom:10px">
                         <div class="col-md-3 mb-2">
+                            
                             <label for="id_grower">Grower<span class="asteriskField">*</span></label>
                             <input value="{{selected_grower.name}}" type="text" name="" id="id_grower" class="textinput textInput form-control" readonly>
                             <!-- <select id="id_grower" name="id_grower" class="textinput textInput form-control"
@@ -327,21 +361,82 @@
                         {% endif %}
                         {% endif %}
 
-                        <div class="col-md-4 mb-2">
+                        <div class="col-md-10 mb-2">
                             <label for="multi_file">Upload File <span class="asteriskField">*</span></label>
                             <input type="file" name="files" multiple accept=".jpg,.png,.xlsx,.csv,.pdf" id="multi_file" class="textinput textInput form-control">
-                            <div id="file_names_container">
+                        </div>  
+                        <div class="col-md-8 mb-2"> 
+                            <div id="file_names_container" style="margin-bottom: 10px;">
+                            </div>
+                            <div id="file_names_container2" style="margin-bottom: 10px;">
                                 {% for file in files %}
-                                    <div class="file-item">
-                                        <input type="hidden" name="files" value="{{ file.file.name }}">
-                                        <input type="hidden" name="file_id" value="{{ file.id }}">
-                                        <span>{{ file.file.name }}</span>
-                                        <button type="submit" name ="remove" value="remove" class="remove-file" data-file="{{ file.file.name }}"><span style="color:red;">&#10060;</span></button>
+                                <div class="file-item" style="margin-bottom: 10px;">
+                                    <div class="file-info">
+                                        <input type="hidden" name="files" value="{{ file.name }}">
+                                        <span>{{ file.name }}</span>
                                     </div>
+                                    <button type="button" class="remove-file" data-file="{{ file.name }}"><span style="color:black;"><b>X</b></span></button>
+                                </div>
                                 {% endfor %}
                             </div>
+                            
+                            
+                            
+                            <script>
+                                document.addEventListener("DOMContentLoaded", function() {
+                                    // Function to handle remove file button click
+                                    function handleRemoveButtonClick(button) {
+                                        let parent = button.parentElement;
+                                        parent.style.display = 'none'; // Hide the file-item div
+                                        let input = parent.querySelector('input[name="files"]');
+                                        let span = parent.querySelector('span');
+                                        span.style.display = 'none';
+                                        input.setAttribute('name', 'remove_file');
+                                        parent.closest('form').submit();
+                                    }
+                            
+                                    // Add event listener to all remove buttons
+                                    document.querySelectorAll('.remove-file').forEach(button => {
+                                        button.addEventListener('click', function() {
+                                            handleRemoveButtonClick(this);
+                                        });
+                                    });
+                            
+                                    function removeFileName(fileName) {
+                                        var fileItem = document.querySelector('[data-file="' + fileName + '"]').parentNode;
+                                        fileItem.parentNode.removeChild(fileItem);
+                                    }
+                            
+                                    function updateFileList(files) {
+                                        var fileNamesContainer = document.getElementById('file_names_container');
+                                        fileNamesContainer.innerHTML = ''; // Clear the container
+                                        files.forEach(function(file) {
+                                            var fileItem = document.createElement('div');
+                                            fileItem.classList.add('file-item');
+                                            fileItem.innerHTML = `
+                                                <div class="file-info">
+                                                    <input type="hidden" name="files" value="${file.name}">
+                                                    <span>${file.name}</span>
+                                                </div>
+                                                <button type="button" class="remove-file" data-file="${file.name}"><span style="color:red;">&#10060;</span></button>
+                                            `;
+                                            fileNamesContainer.appendChild(fileItem);
+                                        });
+                                    }
+                            
+                                    var fileInput = document.getElementById('multi_file');
+                                    fileInput.addEventListener('change', function() {
+                                        var files = Array.from(fileInput.files);
+                                        updateFileList(files);
+                                    });
+                                });
+                            </script>
+                            
+                            
                             <p id="alert_msg8" style="color:red"></p>
                         </div>
+                        
+                        
                     </div>
                         
                     <div class="row">
@@ -499,35 +594,7 @@
     }
 </script>
 
-<script>
-    document.addEventListener("DOMContentLoaded", function() {
-        // Function to remove file name from the list
-        function removeFileName(fileName) {
-            var fileItem = document.querySelector('[data-file="' + fileName + '"]').parentNode;
-            fileItem.parentNode.removeChild(fileItem);
-        }
 
-        
-        // Function to update the list of file names
-        function updateFileList(files) {
-            var fileNamesContainer = document.getElementById('file_names_container');
-            fileNamesContainer.innerHTML = ''; // Clear the container
-            files.forEach(function(file) {
-                var fileItem = document.createElement('div');
-                fileItem.classList.add('file-item');
-                fileItem.innerHTML = '<input type="hidden" name="files" value="' + file.name + '"><span>' + file.name + '</span><button type="button" class="remove-file" data-file="' + file.name + '">Remove</button>';
-                fileNamesContainer.appendChild(fileItem);
-            });
-        }
-
-        // Event listener for file input change
-        var fileInput = document.getElementById('multi_file');
-        fileInput.addEventListener('change', function() {
-            var files = Array.from(fileInput.files);
-            updateFileList(files);
-        });
-    });
-</script>
 
 <script>
     $('#Processor-active').addClass('activeLink');
