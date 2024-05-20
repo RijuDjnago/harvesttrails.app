@@ -68,7 +68,7 @@ STATUS_CHOICES = (
 
 class GrowerShipmentFile(models.Model):
     # file = models.FileField(upload_to='uploads_grower_shipment/')
-    file = models.FileField(upload_to='')
+    file = models.FileField(upload_to='grower_shipment_file',null=True, blank=True,verbose_name='Shipmentfile ID')
     uploaded_at = models.DateTimeField(auto_now_add=True)
     
     def __str__(self):
@@ -111,6 +111,7 @@ class GrowerShipment(models.Model):
     files = models.ManyToManyField(GrowerShipmentFile, related_name='growershipments', blank=True)
     processor2_idd = models.CharField(max_length=200, null=True, blank=True)
     processor2_name = models.CharField(max_length=250, null=True, blank=True)
+    qr_code = models.FileField(upload_to='qr_code/',null=True, blank=True)
     # lot_number = models.CharField(max_length=200, null=True, blank=True)
     # volume_shipped = models.CharField(max_length=200, null=True, blank=True)
     # sender = models.CharField(max_length=200,choices=SENDER_CHOICES,default="")
