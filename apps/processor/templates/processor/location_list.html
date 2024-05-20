@@ -189,10 +189,14 @@
 <script src="{% static 'js/farm/farm_list.js' %}"></script>
 
 <script>
-    $(document).ready(function () {
+    {% comment %} $(document).ready(function () {
         $('#processorList_tbl').DataTable();
-    });
-    
+    }); {% endcomment %}
+    $(document).ready(function () {
+      $('#processorList_tbl').DataTable({
+          "ordering": false  // Disable initial ordering
+      });
+  });
     $(document).ready(function () {
         $('#growerSelction').change(function () {
             $('#submitBtn').click();

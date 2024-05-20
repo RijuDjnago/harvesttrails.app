@@ -1363,6 +1363,7 @@ def grower_shipment_list(request):
             context ={}
             grower_id= request.user.grower.id
             grower_shipment = GrowerShipment.objects.filter(grower_id=grower_id)
+            
             context['grower_shipment'] = grower_shipment            
             return render(request, 'processor/grower_shipment_list.html',context)
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
@@ -1952,15 +1953,18 @@ def processor_inbound_management_edit(request,pk):
     if request.user.is_authenticated:
         context = {}
         # Processor Location Add ..
-        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
-            shipment = GrowerShipment.objects.get(pk=pk)
-            selected_grower = shipment.grower
-            id_grower = selected_grower.id
+        shipment = GrowerShipment.objects.get(pk=pk)
+        selected_grower = shipment.grower       
+        id_grower = selected_grower.id
+        selected_processor = shipment.processor        
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role() or "Processor" in request.user.get_role():
+           
             # grower = LinkGrowerToProcessor.objects.all()
             # grower_id = [i.grower_id for i in grower]
             # get_grower = Grower.objects.filter(id__in = grower_id)
             # context['get_grower'] = get_grower
             context['selected_grower'] = selected_grower
+            context["selected_processor"] = selected_processor
 
             storage_obj = Storage.objects.filter(grower_id=id_grower)
             context['storage'] = storage_obj
@@ -2006,7 +2010,21 @@ def processor_inbound_management_edit(request,pk):
             get_crop = shipment.crop
             context['get_crop'] = get_crop
             
-            context['files'] = shipment.files.all()
+            # context['files'] = shipment.files.all()
+            file_data = list(shipment.files.all().values())
+
+            for fff in range(len(file_data)):
+                base_url = request.scheme + '://' + request.get_host()
+                if file_data[fff]["file"] is not None: 
+                    name = file_data[fff]["file"].split("/")[-1]  # Extract the filename
+                    file_data[fff]["name"] = name
+                    file_data[fff]["file_url"] = base_url + settings.MEDIA_URL + file_data[fff]["file"]
+                else:
+                    file_data[fff]["name"] = None
+                    file_data[fff]["file_url"] = None
+
+            context['files'] = file_data
+            print(file_data)
 
             aapproval_date = shipment.approval_date
             if aapproval_date :
@@ -2184,6 +2202,10 @@ def processor_inbound_management_edit(request,pk):
                                         log_device=log_device)
                     logtable.save()
                     return redirect('processor_inbound_management')
+            print(context)
+            return render(request, 'processor/processor_inbound_management_edit.html',context)
+        else:
+            context["message"] = "User does not have permission for edit."
             return render(request, 'processor/processor_inbound_management_edit.html',context)
     else:
         return redirect('login')
@@ -2681,8 +2703,7 @@ def processor_receive_delivery(request):
                     id_storage = request.POST.get('id_storage')
                     id_field = request.POST.get('id_field')
                     module_number = request.POST.get('module_number')
-
-
+                    
                     amount1 = request.POST.get('amount1')
                     amount2 = request.POST.get('amount2')
 
@@ -2807,6 +2828,7 @@ def processor_receive_delivery(request):
             grower_id = [i.grower_id for i in grower]
             get_grower = Grower.objects.filter(id__in = grower_id).order_by('name')
             context['get_grower'] = get_grower
+            
             if request.method == 'POST':
                 id_grower = request.POST.get('id_grower')
                 # files = request.FILES.getlist('files')   #add file

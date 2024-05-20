@@ -196,8 +196,13 @@
 <script src="{% static 'js/farm/farm_list.js' %}"></script>
 
 <script>
-    $(document).ready(function () {
+    {% comment %} $(document).ready(function () {
         $('#processorList_tbl').DataTable();
+    }); {% endcomment %}
+    $(document).ready(function () {
+        $('#processorList_tbl').DataTable({
+            "ordering": false  // Disable initial ordering
+        });
     });
 
     $(document).ready(function () {
@@ -250,4 +255,11 @@
       $('#addqueModal').modal('hide');
   }
 </script>
+{% comment %} <script>
+    $(document).ready(function() {
+        $('#processorList_tbl').DataTable({
+            "order": [[0, "desc"]]  // Sort by first column (ID) in descending order
+        });
+    });
+</script> {% endcomment %}
 {% endblock scripts %}

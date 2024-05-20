@@ -1033,6 +1033,174 @@ def processor2_add_receive_delivery(request):
     else:
         return redirect('login')
 
+def processor2_receive_delivery(request):
+    if request.user.is_authenticated:
+        context = {}
+        status = ""        
+        if request.method == "POST":
+            selected_source = request.POST.get('selected_source')
+            if selected_source == "grower":
+                if request.user.is_processor2:            
+                    user_email = request.user.email
+                    p = ProcessorUser2.objects.get(contact_email=user_email)
+                    processor_id = Processor2.objects.get(id=p.processor_id).id
+                    growers = LinkToProcessor2.objects.filter(processor2_id=processor_id)
+                    growers_id = [i.grower_id for i in growers if i.grower]
+                    get_growers = Grower.objects.filter(id__in=growers_id)
+                    context["get_grower"] = get_growers
+                if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+                    growers = LinkToProcessor2.objects.all()
+                    growers_id = [i.grower_id for i in growers if i.grower]
+                    get_growers = Grower.objects.filter(id__in=growers_id)
+                    context["get_grower"] = get_growers
+                id_grower = request.POST.get("id_grower")
+                if id_grower == 'all':
+                    context["message"] = "Select any one grower."
+                else:
+                    selected_grower = Grower.objects.get(id=id_grower)
+                    context['selected_grower'] = selected_grower
 
-    
- 
+                    storage_obj = Storage.objects.filter(grower_id=id_grower)
+                    context['storage'] = storage_obj
+
+                    field_obj = Field.objects.filter(grower_id=id_grower)
+                    context['field'] = field_obj
+
+                    id_storage = request.POST.get('id_storage')
+                    id_field = request.POST.get('id_field')
+                    module_number = request.POST.get('module_number')
+                    
+                    amount1 = request.POST.get('amount1')
+                    amount2 = request.POST.get('amount2')
+
+                    id_unit1 = request.POST.get('id_unit1')
+                    id_unit2= request.POST.get('id_unit2')
+                    
+                    # code
+                    shipment_id = generate_shipment_id()
+                    get_output= request.POST.get('get_output')
+                    files = request.FILES.getlist('files')
+                    
+                    recieved_weight= request.POST.get('recieved_weight')
+                    sku_id = request.POST.get('sku_id')
+                    ticket_number= request.POST.get('ticket_number')
+                    approval_date= request.POST.get('approval_date')
+
+                    moisture_level= request.POST.get('moisture_level')
+                    fancy_count= request.POST.get('fancy_count')
+                    head_count= request.POST.get('head_count')
+                    bin_location_processor= request.POST.get('bin_location_processor')
+                    if len(amount1) > 0 and len(amount2) == 0:
+                        if id_unit1 == '1':
+                            id_unit1 = 'LBS'
+                            id_unit2 = ''
+                        if id_unit1 == '38000':
+                            id_unit1 = 'MODULES (8 ROLLS)'
+                            id_unit2 = ''
+                        if id_unit1 == '19000':
+                            id_unit1 = 'SETS (4 ROLLS)'
+                            id_unit2 = ''
+                        if id_unit1 == '4750':
+                            id_unit1 = 'ROLLS'
+                            id_unit2 = ''
+                    
+                    if len(amount1) > 0 and len(amount2) > 0:
+                        if id_unit1 == '1':
+                            id_unit1 = 'LBS'
+                        if id_unit1 == '38000':
+                            id_unit1 = 'MODULES (8 ROLLS)'
+                        if id_unit1 == '19000':
+                            id_unit1 = 'SETS (4 ROLLS)'
+                        if id_unit1 == '4750':
+                            id_unit1 = 'ROLLS'
+                        if id_unit2 == '1':
+                            id_unit2 = 'LBS'
+                        if id_unit2 == '38000':
+                            id_unit2 = 'MODULES (8 ROLLS)'
+                        if id_unit2 == '19000':
+                            id_unit2 = 'SETS (4 ROLLS)'
+                        if id_unit2 == '4750':
+                            id_unit2 = 'ROLLS'
+
+                    if id_storage == None :
+                        id_storage = None
+                        
+                    else:
+                        id_storage = id_storage
+                                            
+                    if id_field and module_number:
+                        field = Field.objects.get(id=id_field)
+                        crop = field.crop
+                        # if crop == "RICE":
+                        #     status = ""
+                        if crop == "RICE":
+                            status = "APPROVED"
+                        if crop == "WHEAT":
+                            status = ""
+                        if crop == "COTTON":
+                            status = "APPROVED"
+                        # sustainabilitySurvey = SustainabilitySurvey.objects.filter(grower_id=selected_grower.id)
+                        # if len(sustainabilitySurvey) == 0:
+                        #     surveyscore = 0
+                        # else:
+                        #     surveyscore = [i.surveyscore for i in sustainabilitySurvey][0]
+                        sustain_data = SustainabilitySurvey.objects.filter(grower_id=selected_grower.id,field_id=id_field)
+
+                        if sustain_data.count() > 0:
+                            Avg_Percentage_Score_data = sustain_data.aggregate(Avg('sustainabilityscore'))
+                            surveyscore = int(Avg_Percentage_Score_data['sustainabilityscore__avg'])
+                        else:
+                            surveyscore = 0
+                        # shipment = GrowerShipment(status=status,total_amount=get_output,unit_type2=id_unit2,amount2=amount2,echelon_id=field.eschlon_id,sustainability_score=surveyscore,amount=amount1,variety=field.variety,crop=field.crop,shipment_id=shipment_id,processor_id=processor_id,grower_id=selected_grower.id,storage_id=id_storage,field_id=id_field,module_number=module_number,unit_type=id_unit1)
+                        # shipment.save()
+                        
+                        shipment = GrowerShipment(status=status,total_amount=get_output,unit_type2=id_unit2,amount2=amount2,echelon_id=field.eschlon_id,
+                                                        sustainability_score=surveyscore,amount=amount1,variety=field.variety,crop=field.crop,shipment_id=shipment_id,processor_id=processor_id,grower_id=selected_grower.id,
+                                                        storage_id=id_storage,field_id=id_field,module_number=module_number,unit_type=id_unit1,received_amount =recieved_weight,sku = sku_id,token_id=ticket_number,approval_date = approval_date,moisture_level=moisture_level,fancy_count=fancy_count,head_count=head_count,bin_location_processor=bin_location_processor)
+                        shipment.save()
+                        for file in files:
+                            new_file = GrowerShipmentFile.objects.create(file=file)
+                            shipment.files.add(new_file)
+                        
+                        
+                        
+                        # 07-04-23 Log Table
+                        log_type, log_status, log_device = "GrowerShipment", "Added", "Web"
+                        log_idd, log_name = shipment.id, shipment.shipment_id
+                        log_details = f"status = {status} | total_amount = {get_output} | unit_type2 = {id_unit2} | amount2 = {amount2} | echelon_id = {field.eschlon_id} | sustainability_score = {surveyscore} | amount = {amount1} | variety = {field.variety} | crop = {field.crop} | shipment_id = {shipment_id} | processor_id = {processor_id} | grower_id = {selected_grower.id} | storage_id = {id_storage} | field_id = {id_field} | module_number = {module_number} | unit_type = {id_unit1} | "
+                        action_by_userid = request.user.id
+                        user = User.objects.get(pk=action_by_userid)
+                        user_role = user.role.all()
+                        action_by_username = f'{user.first_name} {user.last_name}'
+                        action_by_email = user.username
+                        if request.user.id == 1 :
+                            action_by_role = "superuser"
+                        else:
+                            action_by_role = str(','.join([str(i.role) for i in user_role]))
+                        logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+                                            action_by_userid=action_by_userid,action_by_username=action_by_username,
+                                            action_by_email=action_by_email,action_by_role=action_by_role,log_details=log_details,
+                                            log_device=log_device)
+                        logtable.save()
+
+                        return redirect('processor2_inbound_management')
+            if selected_source == "processor":
+                if request.user.is_processor2:            
+                    user_email = request.user.email
+                    p = ProcessorUser2.objects.get(contact_email=user_email)
+                    processor_id = Processor2.objects.get(id=p.processor_id).id
+                    processors = LinkToProcessor2.objects.filter(processor2_id=processor_id)
+                    processors_id = [i.grower_id for i in processors if i.processor]
+                    get_processors = Processor.objects.filter(id__in=processors_id)
+                    context["get_processor"] = get_processors
+                if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+                    processors = LinkToProcessor2.objects.all()
+                    processors_id = [i.grower_id for i in processors if i.processor]
+                    get_processors = Processor.objects.filter(id__in=processors_id)
+                    context["get_processor"] = get_processors
+                id_processor = request.POST.get("id_processor")
+
+                    
+
+
+

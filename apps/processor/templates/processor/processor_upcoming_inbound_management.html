@@ -65,9 +65,10 @@
                                     {% if request.user.is_processor %}
                                     {% else %}
                                     <th width="10%">Processor</th>
-                                    <th width="10%">Status</th>
+                                    
                                     {% endif %}
-                                    <!-- <th width="20%">Action</th> -->
+                                    <th width="10%">Status</th>
+                                    <th width="20%">Action</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -89,10 +90,26 @@
                                     {% if request.user.is_processor %}
                                     {% else %}
                                     <td>{{grower_shipment.processor.entity_name}}</td>
-                                    <td>{{grower_shipment.status}}</td>
-                                    {% endif %}
-
                                     
+                                    {% endif %}
+                                    <td>{{grower_shipment.status}}</td>
+                                    <td class="backk action-td rmv-bd">
+                                        <ul>
+                                            <li>
+                                                <a class="map-icon-link" onclick="showQR({{grower_shipment.pk}})"><span
+                                                        class="fas fa-qrcode" alt="view QR code" title="view QR code"></span></a>
+                                            </li>
+                                            <li>
+                                                <a href="{% url 'processor_inbound_management_view' grower_shipment.id %}"
+                                                    class="update-btn-link" alt="view inbound management" title="view inbound management"> <span class="fas fa-eye"></span> </a>
+                                            </li>
+                                            
+                                            
+                                            <li>
+                                                <a href="{% url 'processor_inbound_management_edit' grower_shipment.id %}" class="update-btn-link" alt="edit inbound management" title="edit inbound management"> <span class="fas fa-edit"></span></a>
+                                            </li>
+                                        </ul>
+                                    </td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -192,10 +209,14 @@
     </script>
 
     <script>
-        $(document).ready(function () {
+        {% comment %} $(document).ready(function () {
             $('#processorList_tbl').DataTable();
+        }); {% endcomment %}
+        $(document).ready(function () {
+            $('#processorList_tbl').DataTable({
+                "ordering": false  // Disable initial ordering
+            });
         });
-
         function showQR(grower_shipment_pk) {
             console.log(grower_shipment_pk)
             $.ajax({

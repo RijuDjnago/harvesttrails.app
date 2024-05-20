@@ -21,12 +21,13 @@
     <main>
         <span class="farm headingtop">Receive Delivery Edit</span>
         <div class="card farm-fields-container">
-            <div class="container-fluid">
+            <div class="container-fluid">             
 
                 <form method="post" class="farm-fields-form" enctype="multipart/form-data">
                     {% csrf_token %}
                     <div class="row" style="margin-bottom:10px">
                         <div class="col-md-3 mb-2">
+                            
                             <label for="id_grower">Grower<span class="asteriskField">*</span></label>
                             <input value="{{selected_grower.name}}" type="text" name="" id="id_grower" class="textinput textInput form-control" readonly>
                             <!-- <select id="id_grower" name="id_grower" class="textinput textInput form-control"
@@ -327,15 +328,15 @@
                         {% endif %}
                         {% endif %}
 
-                        <div class="col-md-4 mb-2">
+                        <div class="col-md-12 mb-2">
                             <label for="multi_file">Upload File <span class="asteriskField">*</span></label>
                             <input type="file" name="files" multiple accept=".jpg,.png,.xlsx,.csv,.pdf" id="multi_file" class="textinput textInput form-control">
                             <div id="file_names_container">
                                 {% for file in files %}
                                     <div class="file-item">
-                                        <input type="hidden" name="files" value="{{ file.file.name }}">
+                                        <input type="hidden" name="files" value="{{ file.name }}">
                                         <input type="hidden" name="file_id" value="{{ file.id }}">
-                                        <span>{{ file.file.name }}</span>
+                                        <span>{{ file.name }}</span>
                                         <button type="submit" name ="remove" value="remove" class="remove-file" data-file="{{ file.file.name }}"><span style="color:red;">&#10060;</span></button>
                                     </div>
                                 {% endfor %}

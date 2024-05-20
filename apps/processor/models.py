@@ -68,7 +68,7 @@ STATUS_CHOICES = (
 
 class GrowerShipmentFile(models.Model):
     # file = models.FileField(upload_to='uploads_grower_shipment/')
-    file = models.FileField(upload_to='')
+    file = models.FileField(upload_to='grower_shipment_file',null=True, blank=True,verbose_name='Shipmentfile ID')
     uploaded_at = models.DateTimeField(auto_now_add=True)
     
     def __str__(self):

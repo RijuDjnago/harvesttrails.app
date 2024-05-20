@@ -59,108 +59,104 @@
             <div class="container-fluid">
                 {% for grower_shipment in grower_shipment %}
                     <div class="row" style="margin-bottom: 20px;">
-                        <div class="col-md-4" style="margin-bottom: 10px;">
-                            <label for="shipment">SHIPMENT ID</label>
-                            <input type="text" value="{{grower_shipment.shipment_id}}"
-                                class="textinput textInput form-control" readonly>
+                        <div class="col-md-3" style="margin-bottom: 10px;">
+                            <label for="shipment" style="font-weight:bold;">SHIPMENT ID</label>
+                            <p>{{grower_shipment.shipment_id}}</p>
+                            
                         </div>
-                        <div class="col-md-4" style="margin-bottom: 10px;">
-                            <label for="shipment">MODULE TAG #</label>
-                            <input type="text" value="{{grower_shipment.module_number}}"
-                                class="textinput textInput form-control" readonly>
+                        <div class="col-md-3" style="margin-bottom: 10px;">
+                            <label for="shipment" style="font-weight:bold;">MODULE TAG #</label>
+                            <p>{{grower_shipment.module_number}}</p>
+                            
                         </div>
                         
-                        <div class="col-md-4" style="margin-bottom: 10px;">
-                            <label for="shipment">GROWER</label>
-                            <input type="text" value="{{grower_shipment.grower.name}}"
-                                class="textinput textInput form-control" readonly>
+                        <div class="col-md-3" style="margin-bottom: 10px;">
+                            <label for="shipment" style="font-weight:bold;">GROWER</label>
+                            <p>{{grower_shipment.grower.name}}</p>
+                            
                         </div>
 
-                        <div class="col-md-4" style="margin-bottom: 10px;">
-                            <label for="shipment">FIELD</label>
-                            <input type="text" value="{{grower_shipment.field.name}}"
-                                class="textinput textInput form-control" readonly>
+                        <div class="col-md-3" style="margin-bottom: 10px;">
+                            <label for="shipment" style="font-weight:bold;">FIELD</label>
+                            <p>{{grower_shipment.field.name}}</p>
+                            
                         </div>
                         
-                        <div class="col-md-4" style="margin-bottom: 10px;">
-                            <label for="shipment">STORAGE</label>
-                            <input type="text" value="{{grower_shipment.storage.storage_name}}"
-                                class="textinput textInput form-control" readonly>
+                        <div class="col-md-3" style="margin-bottom: 10px;">
+                            <label for="shipment" style="font-weight:bold;">STORAGE</label>
+                            <p>{{grower_shipment.storage.storage_name}}</p>
+                           
                         </div>
 
                         {% if request.user.is_processor %}
                         {% else %}
-                        <div class="col-md-4" style="margin-bottom: 10px;">
-                            <label for="shipment">PROCESSOR</label>
-                            <input type="text" value="{{grower_shipment.processor.entity_name}}"
-                                class="textinput textInput form-control" readonly>
+                        <div class="col-md-3" style="margin-bottom: 10px;">
+                            <label for="shipment" style="font-weight:bold;">PROCESSOR</label>
+                            <p>{{grower_shipment.processor.entity_name}}</p>
+                            
                         </div>
                         {% endif %}
-                        <div class="col-md-4" style="margin-bottom: 10px;">
-                            <label for="shipment">CROP</label>
-                            <input type="text" value="{{grower_shipment.crop}}" class="textinput textInput form-control"
-                                readonly>
+                        <div class="col-md-3" style="margin-bottom: 10px;">
+                            <label for="shipment" style="font-weight:bold;">CROP</label>
+                            <p>{{grower_shipment.crop}}</p>
+                            
                         </div>
-                        <div class="col-md-4" style="margin-bottom: 10px;">
-                            <label for="shipment">VARIETY</label>
-                            <input type="text" value="{{grower_shipment.variety}}"
-                                class="textinput textInput form-control" readonly>
+                        <div class="col-md-3" style="margin-bottom: 10px;">
+                            <label for="shipment" style="font-weight:bold;">VARIETY</label>
+                            <p>{{grower_shipment.variety}}</p>
+                            
                         </div>
-                        <div class="col-md-4" style="margin-bottom: 10px;">
-                            <label for="shipment">SUSTAINABILITY SCORE </label>
-                            <input type="text" value="{{grower_shipment.sustainability_score}}"
-                                class="textinput textInput form-control" readonly>
+                        <div class="col-md-3" style="margin-bottom: 10px;">
+                            <label for="shipment" style="font-weight:bold;">SUSTAINABILITY SCORE </label>
+                            <p>{{grower_shipment.sustainability_score}}</p>
+                            
                         </div>
-                        <div class="col-md-4" style="margin-bottom: 10px;">
-                            <label for="shipment">DATE AND TIME</label>
-                            <input type="text" value="{{grower_shipment.date_time}}"
-                                class="textinput textInput form-control" readonly>
+                        <div class="col-md-3" style="margin-bottom: 10px;">
+                            <label for="shipment" style="font-weight:bold;">DATE AND TIME</label>
+                            <p>{{grower_shipment.date_time}}</p>
                         </div>
-                        <div class="col-md-4" style="margin-bottom: 10px;">
-                            <label for="shipment"> ECHELON ID </label>
-                            <input type="text" value="{{grower_shipment.echelon_id}}"
-                                class="textinput textInput form-control" readonly>
+                        <div class="col-md-3" style="margin-bottom: 10px;">
+                            <label for="shipment" style="font-weight:bold;"> ECHELON ID </label>
+                            <p>{{grower_shipment.echelon_id}}</p>
                         </div>
 
                         {% if grower_shipment.crop != "COTTON" %}
-                        <div class="col-md-4" style="margin-bottom: 10px;">
-                            <label for="shipment"> SKU ID </label>
-                            <input type="text" value="{{grower_shipment.sku}}"
-                                class="textinput textInput form-control" readonly>
+                        <div class="col-md-3" style="margin-bottom: 10px;">
+                            <label for="shipment" style="font-weight:bold;"> SKU ID </label>
+                            <p>{{grower_shipment.sku}}</p>
                         </div>
-                        <div class="col-md-4" style="margin-bottom: 10px;">
-                            <label for="shipment"> TICKET ID </label>
-                            <input type="text" value="{{grower_shipment.token_id}}"
-                                class="textinput textInput form-control" readonly>
+                        <div class="col-md-3" style="margin-bottom: 10px;">
+                            <label for="shipment" style="font-weight:bold;"> TICKET ID </label>
+                            <p>{{grower_shipment.token_id}}</p>
                         </div>
                         {% endif %}
-                        <div class="col-md-4" style="margin-bottom: 10px;">
-                            <label for="shipment"> Weight </label>
-                            <input type="text" value="{{grower_shipment.total_amount}} LBS"
-                                class="textinput textInput form-control" readonly>
+                        <div class="col-md-3" style="margin-bottom: 10px;">
+                            <label for="shipment" style="font-weight:bold;"> Weight </label>
+                            <p>{{grower_shipment.total_amount}} LBS</p>
                         </div>
                         {% if grower_shipment.received_amount %}
-                        <div class="col-md-4" style="margin-bottom: 10px;">
-                            <label for="shipment"> Recieved Weight </label>
-                            <input type="text" value="{{grower_shipment.received_amount}} LBS"
-                                class="textinput textInput form-control" readonly>
+                        <div class="col-md-3" style="margin-bottom: 10px;">
+                            <label for="shipment" style="font-weight:bold;"> Recieved Weight </label>
+                            <p>{{grower_shipment.received_amount}} LBS</p>
                         </div>
-                        <div class="col-md-4" style="margin-bottom: 10px;">
-                            <label for="shipment"> Approval Date </label>
-                            <input type="text" value="{{grower_shipment.approval_date}}"
-                                class="textinput textInput form-control" readonly>
+                        <div class="col-md-3" style="margin-bottom: 10px;">
+                            <label for="shipment" style="font-weight:bold;"> Approval Date </label>
+                            <p>{{grower_shipment.approval_date}}</p>
                         </div>
                         {% endif %}
 
-                        <div class="col-md-4" >
-                            <label for="UploadedFiles">Uploaded Files</label>
-                            <div class="scroll_box_main">
-                                {% for file in file_data %} 
-                                <a href="{{ file.file }}" download style="cursor: pointer;"> {{ file.name }}</a>
+                        <div class="col-md-3">
+                            {% if file_data %}
+                            <label for="UploadedFiles" style="font-weight:bold;">Uploaded Files</label>
+                            <div class="">
+                                {% for file in file_data %}
+                                {% if file.file and file.name %}
+                                <a href="{{ file.file }}" download style="cursor: pointer;">{{ file.name }}</a>
+                                {% endif %}
                                 {% endfor %}
                             </div>
-                            </div>
-                        </div> 
+                            {% endif %}
+                        </div>
 
 
                         <!-- <div class="col-md-12" style="margin-bottom: 10px;">
@@ -182,7 +178,7 @@
                        
                         
                         <div class="col-md-12" style="margin-bottom: 10px;">
-                            <label for="shipment">QR CODE</label>
+                            <label for="shipment" style="font-weight:bold;">QR CODE</label>
                             <div>
                                 <img src="/media/{{img_name}}" alt="qr code" style="max-width: 350px;">
                             </div>
@@ -191,6 +187,10 @@
                     {% endfor %} 
                     <div class="row" style="margin-top: 10px;">
                         <div class="form-btn-row">
+                            {% for shipment in grower_shipment %}
+                            <a href="{% url 'processor_inbound_management_edit' shipment.id %}" class="btn-close-cancel btn-space">Take Action</a>
+                            {% endfor %}
+                        
                             <a href="{% url 'processor_inbound_management' %}" class="btn-close-cancel btn-space">Back</a>
                         </div>
                     </div> 

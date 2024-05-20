@@ -215,7 +215,7 @@
 
                 <div class="both-data-in" style="display: inherit;">
                     <div class="simple-responsive-table">
-                        <table id="" class="table table-striped dt-responsive nowrap"
+                        <table id="my_table" class="table table-striped dt-responsive nowrap"
                             style="width:100%">
                             <thead>
                                 <tr style="border-bottom: 2px solid #e0e0e0;">
@@ -229,10 +229,10 @@
                                     <th width="10%">Grower</th>
                                     {% if request.user.is_processor %}
                                     {% else %}
-                                    <th width="10%">Processor</th>
+                                    <th width="10%">Processor</th>                                    
+                                    {% endif %}
                                     <th width="10%">Status Date</th>
                                     <th width="10%">Status</th>
-                                    {% endif %}
                                     <th width="10%">Action</th>
                                 </tr>
                             </thead>
@@ -251,10 +251,10 @@
                                     {% if request.user.is_processor %}
                                     {% else %}
                                     <td>{{grower_shipment.processor.entity_name}}</td>
-                                    <td>{% if grower_shipment.crop == 'RICE' and grower_shipment.status == 'APPROVED' %}{{grower_shipment.approval_date|date:"M d, Y"}}{% elif grower_shipment.crop == 'RICE' and grower_shipment.status == '' %}{% elif grower_shipment.crop == 'RICE' and grower_shipment.status == 'DISAPPROVED' %}{{grower_shipment.approval_date|date:"M d, Y"}}{% elif grower_shipment.crop == 'COTTON' %}{{grower_shipment.date_time|date:"M d, Y"}}{% endif %}</td>
-                                    <td>{{grower_shipment.status}}</td>
+                                    
                                     {% endif %}
-
+                                    <td>{% if grower_shipment.crop == 'RICE' and grower_shipment.status == 'APPROVED' %}{{grower_shipment.approval_date|date:"M d, Y"}}{% elif grower_shipment.crop == 'RICE' and grower_shipment.status == '' %}{% elif grower_shipment.crop == 'RICE' and grower_shipment.status == 'DISAPPROVED' %}{{grower_shipment.approval_date|date:"M d, Y"}}{% elif grower_shipment.crop == 'COTTON' %}{{grower_shipment.date_time|date:"M d, Y"}}{% elif grower_shipment.crop == 'WHEAT' and grower_shipment.status == 'APPROVED' %}{{grower_shipment.date_time|date:"M d, Y"}}{% endif %}</td>
+                                    <td>{{grower_shipment.status}}</td>
                                     <td class="backk action-td rmv-bd">
                                     <ul>
                                         <li>
@@ -483,4 +483,11 @@ $(function() {
     $('#Inbound-Management').addClass('activeLink active-nav');
   
   </script>
+  <script>
+    $(document).ready(function() {
+        $('#my_table').DataTable({
+            "order": [[0, "desc"]]  // Sort by first column (ID) in descending order
+        });
+    });
+</script>
 {% endblock jquery %}
