@@ -145,13 +145,13 @@
                         </div>
                         {% endif %}
 
-                        <div class="col-md-4" style="margin-bottom: 10px;">
-                            <label for="UploadedFiles">Uploaded Files</label>
-                            <div class="scroll_box_main">
+                        <div class="col-md-6" style="margin-bottom: 10px;">
+                            <label for="UploadedFiles" style="font-weight:bold;">Uploaded Files</label>
+                            <div>
                                 {% if file_data %}
                                     {% for file in file_data %}
                                         {% if file.file %}
-                                            <a href="{{ file.file }}" download style="cursor: pointer;">{{ file.name }}</a>
+                                            <p><a href="{{ file.file }}" download style="cursor: pointer;">{{ file.name }}</a></p>
                                         {% endif %}
                                     {% endfor %}
                                 {% else %}
@@ -178,7 +178,7 @@
                     
                        
                         
-                        <div class="col-md-12" style="margin-bottom: 10px;">
+                        <div class="col-md-6" style="margin-bottom: 10px;">
                             <label for="shipment" style="font-weight:bold;">QR CODE</label>
                             <div>
                                 <img src="/media/{{img_name}}" alt="qr code" style="max-width: 350px;">

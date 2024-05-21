@@ -1030,6 +1030,8 @@ def processor2_add_receive_delivery(request):
                     
                         
             return render(request, 'processor2/add_p2_receive_delivery.html',context)
+        else:
+            return render(request, 'processor2/add_p2_receive_delivery.html',context)
     else:
         return redirect('login')
 
@@ -1154,9 +1156,10 @@ def processor2_receive_delivery(request):
                         # shipment = GrowerShipment(status=status,total_amount=get_output,unit_type2=id_unit2,amount2=amount2,echelon_id=field.eschlon_id,sustainability_score=surveyscore,amount=amount1,variety=field.variety,crop=field.crop,shipment_id=shipment_id,processor_id=processor_id,grower_id=selected_grower.id,storage_id=id_storage,field_id=id_field,module_number=module_number,unit_type=id_unit1)
                         # shipment.save()
                         
-                        shipment = GrowerShipment(status=status,total_amount=get_output,unit_type2=id_unit2,amount2=amount2,echelon_id=field.eschlon_id,
+                        shipment = GrowerShipmentToProcessor2(status=status,total_amount=get_output,unit_type2=id_unit2,amount2=amount2,echelon_id=field.eschlon_id,
                                                         sustainability_score=surveyscore,amount=amount1,variety=field.variety,crop=field.crop,shipment_id=shipment_id,processor_id=processor_id,grower_id=selected_grower.id,
-                                                        storage_id=id_storage,field_id=id_field,module_number=module_number,unit_type=id_unit1,received_amount =recieved_weight,sku = sku_id,token_id=ticket_number,approval_date = approval_date,moisture_level=moisture_level,fancy_count=fancy_count,head_count=head_count,bin_location_processor=bin_location_processor)
+                                                        storage_id=id_storage,field_id=id_field,module_number=module_number,unit_type=id_unit1,received_amount =recieved_weight,sku = sku_id,token_id=ticket_number,
+                                                        approval_date = approval_date,moisture_level=moisture_level,fancy_count=fancy_count,head_count=head_count,bin_location_processor=bin_location_processor)
                         shipment.save()
                         for file in files:
                             new_file = GrowerShipmentFile.objects.create(file=file)
@@ -1199,7 +1202,12 @@ def processor2_receive_delivery(request):
                     get_processors = Processor.objects.filter(id__in=processors_id)
                     context["get_processor"] = get_processors
                 id_processor = request.POST.get("id_processor")
-
+                selected_processor = Processor.objects.filter(id=id_processor)
+                context["selected_processor"] = selected_processor
+        else:
+            return render(request, "processor2/processor2_receive_delivery.html", context)
+    else:
+        return redirect('login')
                     
 
 

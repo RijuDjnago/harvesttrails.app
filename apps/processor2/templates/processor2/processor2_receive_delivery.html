@@ -1,0 +1,300 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %} Receive Delivery {% endblock title %}
+
+{% block extrahead %}
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-Y3EWVPF7PQ"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-Y3EWVPF7PQ');
+</script>
+{% endblock extrahead %}
+
+{% block content %}
+{% include 'navbar.html' %}
+
+<style>
+    .bootstrap-select .btn {
+        box-shadow: none;
+        border: 1px solid #ddd;
+    }
+
+    .bootstrap-select:not([class*=col-]):not([class*=form-control]):not(.input-group-btn) {
+        width: 100%
+    }
+
+    .dropdown.bootstrap-select.form-control .btn {
+        border-radius: 4px !important;
+        outline: 1px solid #ddd;
+    }
+    
+    .selected.active{
+                margin-top: 0 !important;
+                margin-left: 0 !important;
+                padding-top: 4px !important;
+                padding-left: 8px !important;
+                padding-bottom: 4px !important;
+                padding-right: 8x !important;
+                font-size: 16px !important;
+                background: #00b258 !important;
+                border: 0 !important
+            }
+
+    .dropdown.bootstrap-select .btn {
+        border-radius: 0;
+        padding-top:0.933rem;
+        padding-bottom:0.933rem;
+      }
+
+      .textinput.form-control {
+        padding-top: 11px;
+        padding-bottom: 11px;
+      }
+</style>
+
+<div class="main-content">
+    {% include 'header.html' %} {% load crispy_forms_tags %}
+    <main>
+        <span class="farm headingtop">Receive Delivery</span>
+        <div class="card farm-fields-container">
+            <div class="container-fluid">
+                <form method="post" class="farm-fields-form" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="row" style="margin-bottom:10px">
+                        <div class="col-md-3 mb-2">
+                            <div class="form-group">
+                                <lable>Select Source<span class="asteriskField">*</span></lable>
+                                <select id="id_source" name="selected_source" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;">
+                                    <option value="blank" selected disabled>Select Source</option>
+                                    <option value="grower"> Grower </option>
+                                    <option value="processor"> Processor </option>
+                            </div>
+                        </div>
+                    </div>
+                    
+                        <div id="grower-show" style="display:;" style="margin-bottom:10px">
+                            <div class="row" style="margin-bottom:10px">
+                                <div class="col-md-3 mb-2">
+                                    <div class="form-group">
+                                        <label>Select Growers<span class="asteriskField">*</span></label>
+                                        <select id="id_grower" name="id_grower" class="textinput textInput form-control" data-live-search="true">
+                                            <option value="all"> Select All Growers </option>
+                                            {% for grower in get_grower %}
+                                            {% if grower == selected_grower %}
+                                            <option value="{{ grower.pk }}" selected>{{grower.name}} - {{ grower.pk }}</option>
+                                            {% else %}
+                                            <option value="{{ grower.pk }}">{{grower.name}} - {{ grower.pk }}</option>
+                                            {% endif %}
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                            
+                            <div class="col-md-3 mb-2">
+                                <div class="form-group">
+                                    <label for="id_storage">Storage</label>
+                                    <select  id="id_storage" name="id_storage" class="selectpicker " data-live-search="true" >
+                                        <option>Select Storage</option>
+                                        {% for storage in storage %}
+                                        <option value="{{ storage.pk }}">{{storage.storage_name}} - {{storage.pk }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-2">
+                                <div class="form-group">
+                                    <label for="id_storage">Field<span class="asteriskField">*</span></label>
+                                    <select id="id_field" onchange="custom_option_deselect()" name="id_field" class="selectpicker " data-live-search="true">
+                                    <option value="select">Select Field</option>
+                                    {% for field in field %}
+                                    <option value="{{ field.pk }}" data-crop="{{field.crop}}">{{field.name}} - {{field.pk}}</option>
+                                    {% endfor %}
+                                </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-2">
+                                <div id="module_number_id">
+                                    <label for="module_number">Module Tag Number<span class="asteriskField">*</span></label>
+                                    <input id="module_number" name="module_number" class="textinput textInput form-control"
+                                        type="text">
+                                </div>
+                                <p id="disp1" style="color: red;"></p>
+                            </div>
+                        </div>
+                        <div id="processor-show" style="display:;" style="margin-bottom:10px">
+                            <div class="row" style="margin-bottom:10px">
+                                <div class="col-md-3 mb-2">
+                                    <div class="form-group">
+                                        <lable>Select Processor<span class="asteriskField">*</span></lable>
+                                        <select id="id_processor" name="id_processor" class="selectpicker " data-live-search="true" >
+                                            <option value="all"> Select All Processor </option>
+                                            {% for processor in get_processor %}
+                                            {% if processor == selected_processor %}
+                                            <option value="{{ processor.pk }}" selected>{{processor.entity_name}} - {{ processor.pk }}</option>
+                                            {% else %}
+                                            <option value="{{ processor.pk }}">{{processor.entity_name}} - {{ processor.pk }}</option>
+                                            {% endif %}
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>                                
+                                <div class="col-md-3 mb-2">
+                                    <div id="module_number_id">
+                                        <label for="module_number">Lot Number<span class="asteriskField">*</span></label>
+                                        <input id="module_number" name="module_number" class="textinput textInput form-control"
+                                            type="text">
+                                    </div>
+                                    <p id="disp1" style="color: red;"></p>
+                                </div>                                
+                                <div class="col-md-3 mb-2">
+                                    <div id="module_number_id">
+                                        <label for="module_number">Volume Received<span class="asteriskField">*</span></label>
+                                        <input id="module_number" name="module_number" class="textinput textInput form-control"
+                                            type="text">
+                                    </div>
+                                    <p id="disp1" style="color: red;"></p>
+                                </div>
+                            </div>
+                        </div>
+                    <div class="row" style="margin-bottom:10px">
+                        <div class="col-md-2 mb-2">
+                            <div>
+                                <label for="id_amount1">Weight 1<span class="asteriskField">*</span></label>
+                                <input oninput="funcamount2()" type="number" name="amount1"
+                                    class="textinput textInput form-control" id="id_amount1">
+                            </div>
+                            <p id="disp2" style="color: red;"></p>
+                        </div>
+                        <div class="col-md-2 mb-2">
+                            <label for="id_unit">Weight Type 1<span class="asteriskField">*</span></label>
+                            <select onchange="funcamount2()" id="id_unit1" name="id_unit1"
+                                class="textinput textInput form-control" style="width: 100%;padding-left:10px ;">
+                                <option value=1>LBS</option>
+                                <option value=38000>MODULES (8 ROLLS)</option>
+                                <option value=19000>SETS (4 ROLLS)</option>
+                                <option value=4750>ROLLS</option>
+                            </select>
+                        </div>
+                        <div class="col-md-1 mb-2 text-center">
+                            <label for="">&nbsp;</label>
+                            <div style="font-size: 30px">+</div>
+                        </div>
+                        <div class="col-md-2 mb-2">
+                            <label for="id_amount2">Weight 2</label>
+                            <input oninput="funcamount2()" type="number" name="amount2"
+                                class="textinput textInput form-control" id="id_amount2">
+                        </div>
+                        <div class="col-md-2 mb-2">
+                            <label for="id_unit2">Weight Type 2</label>
+                            <select onchange="funcamount2(this.value)" id="id_unit2" name="id_unit2"
+                                class="textinput textInput form-control" style="width: 100%;padding-left:10px ;">
+                                <option value=1>LBS</option>
+                                <option value=38000>MODULES (8 ROLLS)</option>
+                                <option value=19000>SETS (4 ROLLS)</option>
+                                <option value=4750>ROLLS</option>
+                            </select>
+                        </div>
+                        <div class="col-md-1 mb-2 text-center">
+                            <label for="">&nbsp;</label>
+                            <div style="font-size: 30px">=</div>
+                        </div>
+                        <div class="col-md-1 mb-2">
+                            <label for="id_unit">Total</label>
+                            <div style="font-size: 20px; margin-top: 10px;display: flex;" ><span id="output">0</span>&nbsp;<span> LBS</span></div>
+                            <input type="text" value="" id="get_output" style="display: none;" name="get_output">
+                        </div>
+                    </div>
+                    <div class="row" style="margin-bottom:10px">
+                        <div class="col-md-3 mb-2">  
+                            <label for="">SKU ID<span class="asteriskField">*</span></label>
+                            <input type="text" name="sku_id" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;">
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <label for="">Recieved Weight<span class="asteriskField">*</span></label>
+                            <input type="number" name="recieved_weight" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;">
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <label for="">Ticket Number<span class="asteriskField">*</span></label>
+                            <input type="text" name="ticket_number" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;">
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <label for="">Approval Date<span class="asteriskField">*</span></label>
+                            <input type="date"  name="approval_date" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;">
+                        </div>
+                    </div>
+                    <div class="row" style="margin-bottom:10px">
+                        <div class="col-md-3 mb-2">
+                            <label for="">Moisture Level ( 0- 100 %)</label>
+                            <input type="number" min="0" max="100" step="0.0001"  name="moisture_level" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;">
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <label for="">Fancy Count</label>
+                            <input type="number"  name="fancy_count" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;">
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <label for="">Head Count</label>
+                            <input type="number"  name="head_count" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;">
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <label for="">Bin Location at Processor</label>
+                            <input type="text"  name="bin_location_processor" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;">
+                        </div>
+                    </div>
+                    <div class="row" style="margin-bottom:10px">
+                        <div class="col-md-4 mb-2">
+                            <label for="multi_file">Upload File <span class="asteriskField">*</span></label>
+                            {% comment %} <input type="file" name="files" multiple accept=".jpg,.png,.xlsx,.csv,.pdf" id="multi_file" class="textinput textInput form-control" required> {% endcomment %}
+                            <input type="file" name="files" multiple accept=".jpg,.png,.xlsx,.csv,.pdf" id="multi_file" class="textinput textInput form-control" >
+                            <p id="file_name_show" style="color:gray"></p>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="form-btn-row">
+                            <a href="{% url 'processor_inbound_management' %}"
+                                class="btn-close-cancel btn-space">Cancel</a>
+                            <input style="display: none;" id="hide_btn1" type="submit" class="btn-save-submit"
+                                value="Save">
+                            <input style="display: none;" id="hide_btn2" type="submit" class="btn-save-submit"
+                                value="Save">
+                            <!-- <input type="button" id="hide_btn2" class="btn-save-submit" value="Save" onclick="btnClick()"> -->
+                            <input type="button" class="btn-save-submit" value="Save" onclick="activityButton1()">
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+
+{% include 'footer.html' %}
+</div>
+{% endblock %}
+
+{% block jquery %}
+<script>
+    function toggleSource() {
+        var source = document.getElementById('id_source').value;
+        var growerSection = document.getElementById('grower-show');
+        var processorSection = document.getElementById('processor-show');
+        
+        if (source === 'grower') {
+            growerSection.style.display = 'block';
+            processorSection.style.display = 'none';
+        } else if (source === 'processor') {
+            growerSection.style.display = 'none';
+            processorSection.style.display = 'block';
+        } else {
+            growerSection.style.display = 'none';
+            processorSection.style.display = 'none';
+        }
+    }
+
+    // Call toggleSource on page load to set the initial state based on any pre-selected value
+    document.addEventListener('DOMContentLoaded', function() {
+        toggleSource();
+    });
+</script>
+{% endblock jquery %}

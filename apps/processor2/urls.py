@@ -16,5 +16,6 @@ urlpatterns = [
     # 19-05-23 t2_classing_ewr_report_list
     path('t2_classing_ewr_report_list/', views.t2_classing_ewr_report_list, name='t2_classing_ewr_report_list'),
     path('t2_classing_ewr_report_all_downlaod/<str:p2_id>/<str:level>', views.t2_classing_ewr_report_all_downlaod, name='t2_classing_ewr_report_all_downlaod'),
-    path('add_processor2_receive_delivery', views.processor2_add_receive_delivery, name='add_processor2_receive_delivery'),
+    path('add_processor2_receive_delivery/', views.processor2_add_receive_delivery, name='add_processor2_receive_delivery'),
+    path('processor2_receive_delivery/', views.processor2_receive_delivery, name="processor2_receive_delivery"),
 ]

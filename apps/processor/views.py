@@ -1503,6 +1503,21 @@ def grower_shipment_view(request,pk):
         shipment_id = grower_shipment1.shipment_id
         module_tag_no = grower_shipment1.module_number
 
+        file_data = list(GrowerShipment.objects.filter(id=pk).values_list("files__file", flat=True).order_by('id'))
+            # print("file_data=====================",file_data) 
+            
+        for fff in range(len(file_data)):
+            base_url = request.scheme + '://' + request.get_host()
+            ff = {"name": None, "file": None}
+            if file_data[fff] is not None: 
+                name = file_data[fff].split("/")
+                ff["name"] = name[-1]
+                ff["file"] = base_url + settings.MEDIA_URL + file_data[fff]
+            file_data[fff] = ff
+
+        # print(file_data)
+        context['file_data'] = file_data
+
         if grower_shipment1.amount2 == None:
             a1 = grower_shipment1.amount
             unit_type1 = grower_shipment1.unit_type
@@ -2063,12 +2078,15 @@ def processor_inbound_management_edit(request,pk):
 
             if request.method == 'POST':
                 if request.method == 'POST' :
-                    button_value = request.POST.get('remove')
-                    if button_value :
-                        file_id = request.POST.get('file_id')
-                        file_obj = GrowerShipmentFile.objects.get(id=file_id)
-                        file_obj.delete()
-                        return render (request, 'processor/processor_inbound_management_edit.html', context)
+                    button_value = request.POST.getlist('remove_files')
+                    print(button_value)
+                    if button_value:
+                        for file_id in button_value:
+                            try:
+                                file_obj = GrowerShipmentFile.objects.get(id=file_id)
+                                file_obj.delete()
+                            except GrowerShipmentFile.DoesNotExist:
+                                pass 
                 id_storage = request.POST.get('id_storage')
                 id_field = request.POST.get('id_field')
                 module_number = request.POST.get('module_number')
@@ -2196,10 +2214,11 @@ def processor_inbound_management_edit(request,pk):
                     shipment.module_number=module_number
                     shipment.unit_type=id_unit1
 
-                    shipment.save()
+                    
                     for file in files:
                         new_file = GrowerShipmentFile.objects.create(file=file)
                         shipment.files.add(new_file)
+                    shipment.save()
                     # 07-04-23 Log Table
                     log_type, log_status, log_device = "GrowerShipment", "Edited", "Web"
                     log_idd, log_name = shipment.id, shipment.shipment_id
