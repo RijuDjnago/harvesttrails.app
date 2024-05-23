@@ -838,6 +838,249 @@ def t2_classing_ewr_report_all_downlaod(request,p2_id,level):
 
     return response
 
+print(Processor2.objects.all())
+
+import shapefile
+@login_required()
+def addlocation_processor2(request):
+    if request.user.is_authenticated:
+        context ={}
+        # Processor ....
+        if request.user.is_processor2 :
+            context = {}
+            form = Processor2LocationForm()
+            context['form']=form
+            user_id = request.user.id
+            user = User.objects.get(id=user_id)
+            processor_email =user.username
+
+            p = ProcessorUser2.objects.get(contact_email=processor_email)
+            processor_obj = Processor2.objects.get(id=p.processor_id)
+
+            # processor_obj = Processor.objects.get(contact_email=processor_email)
+            print(processor_obj.id)
+            if request.method == 'POST':
+                form = Processor2LocationForm(request.POST)
+                name = request.POST.get('name')
+                upload_type = request.POST.get('upload_type')
+                processor = processor_obj.id
+                if request.FILES.get('zip_file'):
+                    zip_file = request.FILES.get('zip_file')
+                    Processor2Location(processor_id=processor, name=name,upload_type=upload_type,shapefile_id=zip_file).save()
+                    location_obj = Processor2Location.objects.filter(processor_id=processor).filter(name=name)        
+                    location_var = [i.id for i in location_obj][0]
+                    location_id = Processor2Location.objects.get(id=location_var)
+                    sf = shapefile.Reader(location_id.shapefile_id.path)
+                    features = sf.shapeRecords()
+                    for feat in features:
+                        eschlon_id = feat.record["id"]
+                        location_id.eschlon_id = eschlon_id
+                        location_id.save()
+
+                if request.POST.get('latitude') and request.POST.get('longitude'):
+                    latitude = request.POST.get('latitude')
+                    longitude = request.POST.get('longitude')
+                    Processor2Location(processor_id=processor, name=name,upload_type=upload_type,latitude=latitude,longitude=longitude).save()
+                
+                return redirect('location_list_processor2')
+
+            return render(request, 'processor2/add_location_processor2.html',context)
+        # Super User ...
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+            form = Processor2LocationForm()
+            processor = Processor2.objects.all()
+            print(processor)
+            context['form']=form
+            context['processor']=processor
+            if request.method == 'POST':
+                form = Processor2LocationForm(request.POST)
+                name = request.POST.get('name')
+                upload_type = request.POST.get('upload_type')
+                processor = int(request.POST.get('processor_id'))  
+                if request.FILES.get('zip_file'):
+                    zip_file = request.FILES.get('zip_file')
+                    Processor2Location(processor_id=processor, name=name,upload_type=upload_type,shapefile_id=zip_file).save()
+                    location_obj = Processor2Location.objects.filter(name=name).filter(processor=processor)          
+                    location_var = [i.id for i in location_obj][0]
+                    location_id = Processor2Location.objects.get(id=location_var)
+                    sf = shapefile.Reader(location_id.shapefile_id.path)
+                    features = sf.shapeRecords()
+                    for feat in features:
+                        eschlon_id = feat.record["id"]
+                        location_id.eschlon_id = eschlon_id
+                        location_id.save()
+
+                if request.POST.get('latitude') and request.POST.get('longitude'):
+                    latitude = request.POST.get('latitude')
+                    longitude = request.POST.get('longitude')
+                    Processor2Location(processor_id=processor, name=name,upload_type=upload_type,latitude=latitude,longitude=longitude).save()
+                    
+                return redirect('location_list_processor2')
+            return render(request, 'processor2/add_location_processor2.html',context)
+        else:
+            context["message"] = "You are not allowed to add location."
+            return render(request, 'processor2/add_location_processor2.html',context)
+    else:
+        return redirect('login')
+    
+
+@login_required()   
+def location_list_processor2(request):
+    if request.user.is_authenticated:
+        # processor ...
+        if request.user.is_processor2 :
+            context ={}
+            user_email = request.user.email
+            p = ProcessorUser2.objects.get(contact_email=user_email)
+            processor = Processor2.objects.get(id=p.processor_id)
+            location = Processor2Location.objects.filter(processor= processor)
+            context['location'] = location
+            return render(request, 'processor2/list_location.html',context)
+
+        # superuser ...
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+            context ={}
+            location = Processor2Location.objects.all()
+            processor = Processor2.objects.all()
+            context['location'] = location
+            context['processor'] = processor
+            if request.method == 'POST':
+                value = request.POST.get('processor_id')
+                print(value)
+                if value == 'all' :
+                    location = Processor2Location.objects.all()
+                    processor = Processor2.objects.all()
+                    context['location'] = location
+                    context['processor'] = processor
+                    return render(request, 'processor2/list_location.html',context)
+
+                else:
+                    processor_id = request.POST.get('processor_id')
+                    processor = Processor2.objects.all()
+                    location = Processor2Location.objects.filter(processor_id=processor_id)
+                    context['location'] = location
+                    context['processor'] = processor
+                    context['selectedprocessor'] = Processor2.objects.get(id=processor_id)
+                    return render(request, 'processor2/list_location.html',context)
+                   
+            return render(request, 'processor2/list_location.html',context)
+        
+        return render(request, 'processor2/list_location.html',context)
+    else:
+        return redirect('login')
+
+def location_edit_processor2(request,pk):
+    if request.user.is_authenticated:
+        # processor ...
+        if request.user.is_processor2 :
+            context = {}
+            location = Processor2Location.objects.get(id=pk)
+            form = Processor2LocationForm(instance=location)
+            user_email = request.user.email
+            p = ProcessorUser2.objects.get(contact_email=user_email)
+            processor = Processor2.objects.filter(id=p.processor_id)
+            context['form'] = form
+            context['processor'] = processor
+            context['selectedprocessor'] = location.processor_id
+            context['uploadtypeselect'] = location.upload_type
+            location = Processor2Location.objects.filter(id=pk)
+            context['location'] = location
+            if request.method == 'POST':
+                name = request.POST.get('name')
+                uploadtypeSelction = request.POST.get('uploadtypeSelction')
+                shapefile_id = request.FILES.get('zip_file')
+                latitude = request.POST.get('latitude')
+                longitude = request.POST.get('longitude')
+                location_update = Processor2Location.objects.get(id=pk)
+                if uploadtypeSelction == 'shapefile':
+                    if request.FILES.get('zip_file'):
+                        location_update.name = name
+                        location_update.upload_type = 'shapefile'
+                        location_update.shapefile_id = shapefile_id
+                        location_update.latitude = None
+                        location_update.longitude = None
+                        location_update.save()
+                        
+                        sf = shapefile.Reader(location_update.shapefile_id.path)
+                        features = sf.shapeRecords()
+                        for feat in features:
+                            eschlon_id = feat.record["id"]
+                            location_update.eschlon_id = eschlon_id
+                            location_update.save()
+                    
+                else:
+                    location_update.name = name
+                    location_update.upload_type = 'coordinates'
+                    location_update.shapefile_id = None
+                    location_update.eschlon_id = None
+                    location_update.latitude = latitude
+                    location_update.longitude = longitude
+                    location_update.save()
+
+                return redirect('location_list_processor2')
+
+            return render(request, 'processor2/location_edit.html',context)
+        # superuser ....
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+            context ={}
+            location = Processor2Location.objects.get(id=pk)
+            form = Processor2LocationForm(instance=location)
+            processor = Processor2.objects.all()
+            context['form'] = form
+            context['processor'] = processor
+            context['selectedprocessor'] = location.processor_id
+            context['uploadtypeselect'] = location.upload_type
+            location = Processor2Location.objects.filter(id=pk)
+            context['location'] = location
+            if request.method == 'POST':
+                name = request.POST.get('name')
+                processorSelction = int(request.POST.get('processor_name'))
+                uploadtypeSelction = request.POST.get('uploadtypeSelction')
+                shapefile_id = request.FILES.get('zip_file')
+                latitude = request.POST.get('latitude')
+                longitude = request.POST.get('longitude')
+                location_update = Processor2Location.objects.get(id=pk)
+                location_update.name = name
+                location_update.save()
+                if uploadtypeSelction == 'shapefile':
+                    if request.FILES.get('zip_file'):
+                        location_update.name = name
+                        location_update.processor_id = processorSelction
+                        location_update.upload_type = 'shapefile'
+                        location_update.shapefile_id = shapefile_id
+                        location_update.latitude = None
+                        location_update.longitude = None
+                        location_update.save()
+                        
+                        sf = shapefile.Reader(location_update.shapefile_id.path)
+                        features = sf.shapeRecords()
+                        for feat in features:
+                            eschlon_id = feat.record["id"]
+                            location_update.eschlon_id = eschlon_id
+                            location_update.save()
+
+                else:
+                    print(name)
+                    location_update.name = name
+                    location_update.processor_id = processorSelction
+                    location_update.upload_type = 'coordinates'
+                    location_update.shapefile_id = None
+                    location_update.eschlon_id = None
+                    location_update.latitude = latitude
+                    location_update.longitude = longitude
+                    location_update.save()
+                return redirect('location_list_processor2')
+            return render(request, 'processor2/location_edit.html',context)
+        else:
+            return render(request, 'processor2/location_edit.html',context)
+    else:
+        return redirect('login')
+
+@login_required()
+def location_delete_processor2(request,pk):
+    location = Location.objects.get(id=pk)
+    location.delete()
+    return redirect('location_list_processor2')  
 
 @login_required()
 def processor2_add_receive_delivery(request):
@@ -1035,6 +1278,126 @@ def processor2_add_receive_delivery(request):
     else:
         return redirect('login')
 
+@login_required()
+def inbound_management_processor2(request):
+    if request.user.is_authenticated:
+        context = {}
+        status = ""
+        if not request.user.is_processor2 or not request.user.is_superuser or 'SubAdmin' not in request.user.get_role() or 'SuperUser' not in request.user.get_role():
+            context["message"] = "User is not processor2 or not superuser."
+        selected_source = request.GET.get('selected_source')
+        if selected_source == "grower":
+            if request.user.is_processor2:
+                user_email = request.user.email
+                p = ProcessorUser2.objects.get(contact_email=user_email)
+                processor_id = Processor2.objects.get(id=p.processor_id).id
+                shipment = GrowerShipmentToProcessor2.objects.filter(processor_id=processor_id) 
+                var_id = []
+                for i in range(len(shipment)):
+                    location = shipment[i].location
+                    if location == None:
+                        var = shipment[i].id
+                        var_id.append(var)
+
+                grower_shipment = GrowerShipmentToProcessor2.objects.filter(id__in = var_id).filter(status="APPROVED")               
+               
+            if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+                shipment = GrowerShipmentToProcessor2.objects.all()
+                for i in range(len(shipment)):
+                    location = shipment[i].location
+                    if location == None:
+                        var = shipment[i].id
+                        var_id.append(var)
+
+                grower_shipment = GrowerShipmentToProcessor2.objects.filter(id__in = var_id)
+            
+            
+            grower_id = [i.grower_id for i in grower_shipment]
+            grower = Grower.objects.filter(id__in=grower_id).order_by('name')
+            context['grower'] = grower
+
+            context['selectedGrower'] = 'All'
+            selectgrower_id = request.GET.get('selectgrower_id')
+            search_name = request.GET.get('search_name') 
+            #========================================= |auto complete suggestion|==============================
+            get_shipment_id = [f"{i.shipment_id}" for i in grower_shipment]
+            get_module_no = [f"{i.module_number}" for i in grower_shipment]
+            get_crop = [f"{i.crop}" for i in grower_shipment]
+            get_variety = [f"{i.variety}" for i in grower_shipment]
+            get_status = [f"{i.status}" for i in grower_shipment]
+            get_date = [datetime.strftime(i.date_time,"%m/%d/%Y") for i in grower_shipment]
+            context["get_date"] = get_date
+            get_grower_name = [f"{i.name}" for i in Grower.objects.only('name')]
+            get_field_name = [f"{i.name}" for i in Field.objects.only('name')]
+
+            lst = list(set(get_shipment_id + get_module_no  + get_crop  + get_variety + get_status + get_grower_name + get_field_name  + get_date))
+            select_search_json = json.dumps(lst)
+            context['select_search_json'] = select_search_json 
+
+            if selectgrower_id !='All' and selectgrower_id != None :
+                grower_shipment = GrowerShipmentToProcessor2.objects.filter(id__in = var_id).filter(status="APPROVED").filter(grower_id=selectgrower_id)
+                var_id = []
+                for i in range(len(grower_shipment)):
+                    location = grower_shipment[i].location
+                    if location == None:
+                        var = grower_shipment[i].id
+                        var_id.append(var)
+                grower_shipment = GrowerShipmentToProcessor2.objects.filter(id__in = var_id)
+                context['selectedGrower'] = Grower.objects.get(id=selectgrower_id)
+            elif search_name :
+                check_grower = Grower.objects.filter(name__icontains=search_name)
+                check_field = Field.objects.filter(name__icontains=search_name)
+                check_processor = Processor2.objects.filter(entity_name__icontains=search_name)
+
+                if check_grower.exists() :
+                    check_grower_id = [i.id for i in check_grower]
+                    grower_shipment = grower_shipment.filter(grower_id__in=check_grower_id)
+                    context['get_search_name'] = search_name
+
+                elif check_field.exists() :
+                    check_field_id = [i.id for i in check_field]
+                    grower_shipment = grower_shipment.filter(field_id__in=check_field_id)
+                    context['get_search_name'] = search_name
+
+                elif check_processor.exists() :
+                    check_processor_id = [i.id for i in check_processor]
+                    grower_shipment = grower_shipment.filter(processor_id__in=check_processor_id)
+                    context['get_search_name'] = search_name
+                else:
+                    if "/" in search_name :
+                        try:
+                            search_date = [datetime.strptime(search_name,"%m/%d/%Y")]
+                        except:
+                            search_date = []
+                        grower_shipment = grower_shipment.filter(date_time__date__in=search_date)
+                    else:
+                        grower_shipment = grower_shipment.filter(status="APPROVED",processor_id = processor_id).filter(Q(shipment_id__icontains=search_name) | Q(date_time__icontains=search_name) | 
+                        Q(module_number__icontains=search_name) | Q(crop__icontains=search_name) | Q(variety__icontains=search_name) | 
+                        Q(approval_date__icontains=search_name) | Q(total_amount__icontains=search_name) )
+                context['get_search_name'] = search_name    
+            
+            else:
+                grower_shipment = grower_shipment
+            
+            paginator = Paginator(grower_shipment, 100)
+            page = request.GET.get('page')
+            try:
+                report = paginator.page(page)
+            except PageNotAnInteger:
+                report = paginator.page(1)
+            except EmptyPage:
+                report = paginator.page(paginator.num_pages)
+
+            context['grower_shipment'] = report
+        else:
+            pass
+            
+        return render(request, 'processor2/processor2_inbound_management.html',context)
+    else:
+        return redirect('login')       
+
+
+@login_required()
 def processor2_receive_delivery(request):
     if request.user.is_authenticated:
         context = {}
@@ -1204,6 +1567,61 @@ def processor2_receive_delivery(request):
                 id_processor = request.POST.get("id_processor")
                 selected_processor = Processor.objects.filter(id=id_processor)
                 context["selected_processor"] = selected_processor
+                lot_number = request.POST.get("lot_number")
+                volume_received = request.POST.get("volume_received")
+                amount1 = request.POST.get('amount1')
+                amount2 = request.POST.get('amount2')
+
+                id_unit1 = request.POST.get('id_unit1')
+                id_unit2= request.POST.get('id_unit2')
+                
+                # code
+                shipment_id = generate_shipment_id()
+                get_output= request.POST.get('get_output')
+                files = request.FILES.getlist('files')
+                
+                recieved_weight= request.POST.get('recieved_weight')
+                sku_id = request.POST.get('sku_id')
+                ticket_number= request.POST.get('ticket_number')
+                approval_date= request.POST.get('approval_date')
+
+                moisture_level= request.POST.get('moisture_level')
+                fancy_count= request.POST.get('fancy_count')
+                head_count= request.POST.get('head_count')
+                bin_location_processor= request.POST.get('bin_location_processor')
+
+                if len(amount1) > 0 and len(amount2) == 0:
+                    if id_unit1 == '1':
+                        id_unit1 = 'LBS'
+                        id_unit2 = ''
+                    if id_unit1 == '38000':
+                        id_unit1 = 'MODULES (8 ROLLS)'
+                        id_unit2 = ''
+                    if id_unit1 == '19000':
+                        id_unit1 = 'SETS (4 ROLLS)'
+                        id_unit2 = ''
+                    if id_unit1 == '4750':
+                        id_unit1 = 'ROLLS'
+                        id_unit2 = ''
+                    
+                if len(amount1) > 0 and len(amount2) > 0:
+                    if id_unit1 == '1':
+                        id_unit1 = 'LBS'
+                    if id_unit1 == '38000':
+                        id_unit1 = 'MODULES (8 ROLLS)'
+                    if id_unit1 == '19000':
+                        id_unit1 = 'SETS (4 ROLLS)'
+                    if id_unit1 == '4750':
+                        id_unit1 = 'ROLLS'
+                    if id_unit2 == '1':
+                        id_unit2 = 'LBS'
+                    if id_unit2 == '38000':
+                        id_unit2 = 'MODULES (8 ROLLS)'
+                    if id_unit2 == '19000':
+                        id_unit2 = 'SETS (4 ROLLS)'
+                    if id_unit2 == '4750':
+                        id_unit2 = 'ROLLS'
+
         else:
             return render(request, "processor2/processor2_receive_delivery.html", context)
     else:

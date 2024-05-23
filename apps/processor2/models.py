@@ -29,6 +29,21 @@ class ProcessorUser2(models.Model):
     def __str__(self):
         return self.contact_email
 
+
+class Processor2Location(models.Model):
+    upload_choice = [
+        ("shapefile", "Shapefile"),
+        ("coordinates", "Coordinates"),
+    ]
+    processor = models.ForeignKey(Processor2, on_delete=models.CASCADE, null=True, blank=True,verbose_name='Select Processor2')
+    name =  models.CharField(max_length=250, null=True, blank=True,verbose_name='Location2 Name')
+    upload_type = models.CharField(max_length=11,choices=upload_choice,verbose_name='Upload2 Type')
+    shapefile_id = models.FileField(upload_to='processor2_shapefile',null=True, blank=True,verbose_name='Shapefile ID2')
+    latitude = models.CharField(max_length=200,null=True, blank=True,verbose_name='Latitude2')
+    longitude = models.CharField(max_length=200,null=True, blank=True,verbose_name='Longitude2')
+    eschlon_id = models.CharField(max_length=200, null=True, blank=True)
+    
+
 class AssignedBaleProcessor2(models.Model):
     processor2 = models.ForeignKey(Processor2, on_delete=models.CASCADE, null=True, blank=True,verbose_name='Select Processor2')
     bale = models.ForeignKey(BaleReportFarmField, on_delete=models.CASCADE, null=True, blank=True,verbose_name='Select Bale')
@@ -96,7 +111,7 @@ class GrowerShipmentToProcessor2(models.Model):
     date_time = models.DateTimeField(auto_created=True, auto_now_add=True,verbose_name='Shipment Date')
     shipment_id = models.CharField(max_length=200, null=True, blank=True,verbose_name='Shipment Id')
     qr_code = models.TextField(null=True, blank=True,verbose_name='QR code')
-    location = models.ForeignKey(Location, on_delete=models.CASCADE, null=True, blank=True,verbose_name='Select Location')
+    location = models.ForeignKey(Processor2Location, on_delete=models.CASCADE, null=True, blank=True,verbose_name='Select Location')
     date_time_location = models.DateTimeField(auto_created=True, auto_now_add=True,verbose_name='Location Date')
     process_amount = models.CharField(max_length=200, null=True, blank=True,verbose_name='Processed Amount')
     process_date = models.DateField(auto_created=True, auto_now_add=True,verbose_name='Processed Date')
@@ -129,3 +144,5 @@ class GrowerShipmentToProcessor2(models.Model):
 
     def __str__(self):
         return f"Shipment Id = {self.shipment_id}, Grower = {self.grower.name}, Processor = {self.processor.entity_name}"
+
+

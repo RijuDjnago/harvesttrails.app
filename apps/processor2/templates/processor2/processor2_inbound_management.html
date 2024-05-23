@@ -1,0 +1,532 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %} Receive Delivery {% endblock title %}
+
+{% block extrahead %}
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-Y3EWVPF7PQ"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-Y3EWVPF7PQ');
+</script>
+{% endblock extrahead %}
+
+{% block content %}
+{% include 'navbar.html' %}
+
+<style>
+    .dataTables_scrollHead,
+        .dataTables_scrollBody,
+        .dataTables_scrollFoot {
+            width: 100% !important;
+        }
+    </style>
+    <style>
+        table.classing tbody tr td {
+            vertical-align: top;
+        }
+    
+        ul.pagination {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+        }
+    
+        ul.pagination li {
+            list-style: none;
+            line-height: 45px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: 500;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.3s ease;
+        }
+    
+        ul.pagination li {
+            display: none;
+            position: relative;
+        }
+    
+    
+        ul.pagination li:first-of-type,
+        ul.pagination li:nth-of-type(2),
+        ul.pagination li:last-of-type,
+        ul.pagination li:has( + li:last-of-type),
+        ul.pagination li.active,
+        ul.pagination li.active + li,
+        ul.pagination li.active + li + li,
+        ul.pagination li:has(+ li.active),
+        ul.pagination li:has(+ li + li.active){
+            display: block;
+        }
+    
+        ul.pagination li:has(+ li + li.active){
+            padding-left: 35px;
+        }
+    
+        ul.pagination li.active + li + li {
+            padding-right: 35px;
+        }
+    
+        ul.pagination li:has( + li + li.active) a:before,
+        ul.pagination li.active + li + li a:after {
+            content: "...";
+            font-size: 16px;
+            display: inline-block;
+            width: 35px;
+            height: 40px;
+            position: absolute;
+            top: -1px;
+            background-color: #fff;
+            border: 1px solid #ddd;
+        }
+    
+        ul.pagination li:has( + li + li.active) a:before {
+            left: -35px;
+        }
+    
+        ul.pagination li.active + li + li a:after {
+            right: -35px;
+        }
+    
+        ul.pagination li:nth-of-type(1) a:before,
+        ul.pagination li:nth-of-type(2) a:before,
+        ul.pagination li:nth-of-type(3) a:before {
+            display: none !important;
+        }
+    
+        ul.pagination li:nth-of-type(1),
+        ul.pagination li:nth-of-type(2),
+        ul.pagination li:nth-of-type(3) {
+            padding-left: 0 !important;
+        }
+    
+        ul.pagination li:nth-of-type(1) a:after,
+        ul.pagination li:nth-of-type(2) a:after,
+        ul.pagination li:nth-of-type(3) a:after {
+            display: none !important;
+        }
+    
+        ul.pagination li:nth-of-type(1),
+        ul.pagination li:nth-of-type(2),
+        ul.pagination li:nth-of-type(3) {
+            padding-left: 0 !important;
+        }
+
+        .ui-menu{height: 20vh;overflow-y: auto;padding: 0px 10px;margin: 0px 15px;}
+        .ui-menu::-webkit-scrollbar{width:6px;max-height:20px;padding-right: 10px;}
+        .ui-menu::-webkit-scrollbar-track{background:#ccc}
+        .ui-menu:-webkit-scrollbar-thumb{background-color:#000;border-radius:20px;min-height:20px}
+            
+        .dropdown.bootstrap-select.form-control .btn {
+            border-radius: 8px !important;
+            outline: 0px !important;
+            
+        }
+        
+        .selected {
+            margin-top: 0;
+            margin-left: 0;
+            padding-left: 12px;
+            padding-right: 10px;
+            font-size: 16px;
+            padding: 5px 10px 5px 5px;
+        }
+        .dropdown-item {
+            display: block;
+            width: 100%;
+            padding: 0.25rem 0.4rem;
+            clear: both;
+            font-weight: 400;
+            color: #212529;
+            text-align: inherit;
+            white-space: nowrap;
+            background-color: transparent;
+            border: 0;
+        }
+    </style>
+
+<div class="main-content">
+    {% include 'header.html' %} {% load crispy_forms_tags %}
+    <main>
+        {% include '_alerts.html' %}
+        <div class="page-title-with-or-without-btn">
+            <span class="farm headingtop">Inbound Management</span>
+            <!-- Create button for Account-->
+            <div class="flex-header-btn">
+                {% if request.user.is_processor %}
+                    <a href="" class="btn-close-cancel">Upcoming Inbound</a>
+                {% endif %}
+                &nbsp;
+                    <a href="{% url 'processor2_receive_delivery' %}" class="btn-close-cancel">Receive Delivery</a>
+                &nbsp;
+                {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
+                    <a href="" class="btn-close-cancel" target="_blank">Rejected Shipments CSV</a>
+                    &nbsp;
+                    <a href="" class="btn-close-cancel" target="_blank">All Shipments CSV</a>
+                {% endif %}
+            </div>
+        </div>
+        <div class="card farm-fields-container">
+            <div class="container-fluid">
+                <form action="" method="get" class="">
+                    <div class="card card-padding">
+                        <div class="main-simple-table-with-search col-12">
+                            <div class="row" style="margin-bottom:10px">
+                                <div class="col-md-6 mb-2">
+                                    <div class="form-group">
+                                        <label>Select Source<span class="asteriskField">*</span></label>
+                                        <select id="id_source" name="selected_source" class="textinput textInput form-control" style="width: 100%;padding-left:10px;" onchange="toggleSections()">
+                                            <option value="blank" selected disabled>Select Source</option>
+                                            <option value="grower"> Grower </option>
+                                            <option value="processor"> Processor </option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="grower-show" style="display: none; margin-bottom:10px">
+                                <div class="row d-flex">
+                                    <div class="col-8">
+                                        <div class="inline-apply-filter">
+                                            <div class="three-fields-with-label">
+                                                <select id="growerSelction" name="selectgrower_id" class="form-control selectpicker" data-live-search="true">
+                                                    <option value='All' selected> Select All Growers </option>
+                                                    {% for i in grower %}
+                                                    {% if i == selectedGrower %}
+                                                    <option value="{{ i.pk }}" selected>{{i.name}} - {{ i.pk }}</option>
+                                                    {% else %}
+                                                    <option value="{{ i.pk }}">{{i.name}} - {{ i.pk }}</option>
+                                                    {% endif %}
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                            <input style="display : none;" id="submitBtn" type="submit" class="apply-filter-btn primary-btn" value="Apply Filter" />
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="row">
+                                            <div class="col-8">
+                                                <input class="form-control" name="search_name" type="search" placeholder="Search" autocomplete="off" aria-label="Search" id="search_name" value="{{get_search_name}}">
+                                            </div>
+                                            <div class="col-4">
+                                                <button class="btn btn-outline-success btn-block" type="submit">Search</button>
+                                            </div>
+                                        </div>                                    
+                                    </div>
+                                </div>        
+                                <div class="both-data-in" style="display: inherit;">
+                                    <div class="table-responsive">
+                                        <table id="" class="table table-striped dt-responsive nowrap" style="width:100%">
+                                            <thead>
+                                                <tr style="border-bottom: 2px solid #e0e0e0;">
+                                                    <th width="5%">Shipment ID</th>
+                                                    <th width="5%">Shipment Date</th>
+                                                    <th width="10%">MODULE TAG #</th>
+                                                    <th width="10%">SKU ID</th>
+                                                    <th width="10%">Item , Variety</th>
+                                                    <th width="10%">Field</th>
+                                                    <th width="10%">Weight</th>
+                                                    <th width="10%">Grower</th>
+                                                    {% if request.user.is_processor %}
+                                                    {% else %}
+                                                    <th width="10%">Processor</th>
+                                                    <th width="10%">Status Date</th>
+                                                    <th width="10%">Status</th>
+                                                    {% endif %}
+                                                    <th width="10%">Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for grower_shipment in grower_shipment %}
+                                                <tr>
+                                                    <td>{{grower_shipment.shipment_id}}</td>
+                                                    <td>{{grower_shipment.date_time|date:"M d, Y"}}</td>
+                                                    <td>{{grower_shipment.module_number}}</td>
+                                                    <td>{{grower_shipment.sku}}</td>
+                                                    <td>{{grower_shipment.crop}} , {{grower_shipment.variety}} </td>
+                                                    <!-- <td>{{grower_shipment.storage.storage_name}}</td> -->
+                                                    <td>{{grower_shipment.field.name}}</td>
+                                                    <td>{% if grower_shipment.received_amount %}{{grower_shipment.received_amount}} Lbs{% else %}{{grower_shipment.amount}} {{grower_shipment.unit_type}}{% if grower_shipment.amount2|length > 0 %} + {{grower_shipment.amount2}} {{grower_shipment.unit_type2}}{% endif %}{% endif %}</td>
+                                                    <td>{{grower_shipment.grower.name}}</td>
+                                                    {% if request.user.is_processor %}
+                                                    {% else %}
+                                                    <td>{{grower_shipment.processor.entity_name}}</td>
+                                                    <td>{% if grower_shipment.approval_date %} {{grower_shipment.date_time|date:"M d, Y"}}{% endif %}</td>
+                                                    <td>{{grower_shipment.status}}</td>
+                                                    {% endif %}
+        
+                                                    <td class="backk action-td rmv-bd">
+                                                    <ul>
+                                                        <li>
+                                                        <a class="map-icon-link" onclick="showQR({{grower_shipment.pk}})"><span class="fas fa-qrcode" alt="view QR code" title="view QR code"></span></a>
+                                                        </li>
+                                                        <li>
+                                                            <a href=""
+                                                            class="update-btn-link" alt="view inbound management" title="view inbound management"> <span class="fas fa-eye"></span> </a>
+                                                        </li>
+                                                    
+                                                        {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role or 'Processor' in request.user.get_role %}
+                                                    
+                                                        <li>
+                                                            <a href="" class="update-btn-link" alt="edit inbound management" title="edit inbound management"> <span class="fas fa-edit"></span></a>
+                                                        </li>
+                                                        {% endif %}
+                                                        {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
+                                                        <li>
+                                                            <a onclick="delShipment('')"
+                                                            href=""
+                                                            data-mdb-toggle="modal" data-mdb-target="#deleteModal" alt="delete inbound management" title="delete inbound management">
+                                                            <span class="fas fa-trash"></span></a>
+                                                        </li>
+                                                        {% endif %}
+                                                    </ul>
+                                                    </td>
+                                                </tr>
+                                                <div class="modal fade" id="addqueModal" aria-hidden="true" aria-labelledby="exampleModalToggleLabel22" tabindex="-1">
+                                                    <div class="modal-dialog">
+                                                        <div class="modal-content">
+                                                            <div class="modal-header" style="text-align: center;">
+                                                                <button type="button" class="btn-close cust-close-ds-btn close_modal_addqueModal"
+                                                                data-mdb-dismiss="modal" aria-label="Close" onclick="closeAddModal()"></button>
+                                                            </div>
+                                                            <div class="modal-body">
+                                                                <div class="modal-center-btn-footer">
+                                                                    <div class="row">
+                                                                        <div class="col-lg-12">
+                                                                            <div>
+                                                                                <h5 class="text-decoration-underline">QR CODE</h5>
+                                                                            </div>
+                                                                            <img id="qr_id" src="/media/{{grower_shipment.qr_code}}" alt="qr code" style="max-width: 100%;">
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>        
+                                    <div class="row align-items-center">
+                                        <div class="col-md-12 col-sm-12 col-12 text-center">
+                                            {% if grower_shipment.has_other_pages %}
+                                            <ul class="pagination" id="nav_1">
+                                                {% if grower_shipment.has_previous %}
+                                                    <li><a href="?selectgrower_id={% if selectedGrower.id  %}{{selectedGrower.id}}{% else %}{{selectedGrower}}{% endif %}&search_name={% if get_search_name  %}{{get_search_name}}{% endif %}&page={{ grower_shipment.previous_page_number }}">&laquo;</a></li>
+                                                {% else %}
+                                                    <li class="disabled"><span>&laquo;</span></li>
+                                                {% endif %}
+                                                {% for i in grower_shipment.paginator.page_range %}
+                                                    {% if grower_shipment.number == i %}
+                                                        <li class="active pagi" id="getactive"><span>{{ i }} <span class="sr-only">(current)</span></span></li>
+                                                    {% else %}
+                                                        <li><a href="?selectgrower_id={% if selectedGrower.id  %}{{selectedGrower.id}}{% else %}{{selectedGrower}}{% endif %}&search_name={% if get_search_name  %}{{get_search_name}}{% endif %}&page={{ i }}">{{ i }}</a></li>
+                                                    {% endif %}
+                                                {% endfor %}
+                                                {% if grower_shipment.has_next %}
+                                                    <li><a href="?selectgrower_id={% if selectedGrower.id  %}{{selectedGrower.id}}{% else %}{{selectedGrower}}{% endif %}&search_name={% if get_search_name  %}{{get_search_name}}{% endif %}&page={{ grower_shipment.next_page_number }}">&raquo;</a></li>
+                                                {% else %}
+                                                    <li class="disabled"><span>&raquo;</span></li>
+                                                {% endif %}
+                                            </ul>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-12 col-sm-12 col-12 text-center mt-2" style="text-align:right">
+                                            <span>Showing  {{ grower_shipment.start_index }} - {{ grower_shipment.end_index }} of {{ grower_shipment.paginator.count }} entries
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="processor-show" style="display: none; margin-bottom:10px">
+                                <div class="row d-flex">
+                                    <div class="col-8">
+                                        <div class="inline-apply-filter">
+                                            <div class="three-fields-with-label">
+                                                <select id="processorSelction" name="selectprocessor_id" class="form-control selectpicker" data-live-search="true">
+                                                    <option value='All' selected> Select All Processors </option>
+                                                    {% for i in processor %}
+                                                    {% if i == selectedProcessor %}
+                                                    <option value="{{ i.pk }}" selected>{{i.entity_name}} - {{ i.pk }}</option>
+                                                    {% else %}
+                                                    <option value="{{ i.pk }}">{{i.entity_name}} - {{ i.pk }}</option>
+                                                    {% endif %}
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                            <input style="display : none;" id="submitBtn" type="submit" class="apply-filter-btn primary-btn" value="Apply Filter" />
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="row">
+                                            <div class="col-8">
+                                                <input class="form-control" name="search_name" type="search" placeholder="Search" autocomplete="off" aria-label="Search" id="search_name" value="{{get_search_name}}">
+                                            </div>
+                                            <div class="col-4">
+                                                <button class="btn btn-outline-success btn-block" type="submit">Search</button>
+                                            </div>
+                                        </div>                                    
+                                    </div>
+                                </div>        
+                                <div class="both-data-in" style="display: inherit;">
+                                    <div class="table-responsive">
+                                        <table id="" class="table table-striped dt-responsive nowrap" style="width:100%">
+                                            <thead>
+                                                <tr style="border-bottom: 2px solid #e0e0e0;">
+                                                    <th width="5%">Shipment ID</th>
+                                                    <th width="5%">Shipment Date</th>
+                                                    <th width="10%">MODULE TAG #</th>
+                                                    <th width="10%">SKU ID</th>
+                                                    <th width="10%">Item , Variety</th>
+                                                    <th width="10%">Field</th>
+                                                    <th width="10%">Weight</th>
+                                                    <th width="10%">Grower</th>
+                                                    {% if request.user.is_processor %}
+                                                    {% else %}
+                                                    <th width="10%">Processor</th>
+                                                    <th width="10%">Status Date</th>
+                                                    <th width="10%">Status</th>
+                                                    {% endif %}
+                                                    <th width="10%">Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for grower_shipment in grower_shipment %}
+                                                <tr>
+                                                    <td>{{grower_shipment.shipment_id}}</td>
+                                                    <td>{{grower_shipment.date_time|date:"M d, Y"}}</td>
+                                                    <td>{{grower_shipment.module_number}}</td>
+                                                    <td>{{grower_shipment.sku}}</td>
+                                                    <td>{{grower_shipment.crop}} , {{grower_shipment.variety}} </td>
+                                                    <!-- <td>{{grower_shipment.storage.storage_name}}</td> -->
+                                                    <td>{{grower_shipment.field.name}}</td>
+                                                    <td>{% if grower_shipment.received_amount %}{{grower_shipment.received_amount}} Lbs{% else %}{{grower_shipment.amount}} {{grower_shipment.unit_type}}{% if grower_shipment.amount2|length > 0 %} + {{grower_shipment.amount2}} {{grower_shipment.unit_type2}}{% endif %}{% endif %}</td>
+                                                    <td>{{grower_shipment.grower.name}}</td>
+                                                    {% if request.user.is_processor %}
+                                                    {% else %}
+                                                    <td>{{grower_shipment.processor.entity_name}}</td>
+                                                    <td>{% if grower_shipment.approval_date %} {{grower_shipment.date_time|date:"M d, Y"}}{% endif %}</td>
+                                                    <td>{{grower_shipment.status}}</td>
+                                                    {% endif %}
+        
+                                                    <td class="backk action-td rmv-bd">
+                                                    <ul>
+                                                        <li>
+                                                        <a class="map-icon-link" onclick="showQR({{grower_shipment.pk}})"><span class="fas fa-qrcode" alt="view QR code" title="view QR code"></span></a>
+                                                        </li>
+                                                        <li>
+                                                            <a href=""
+                                                            class="update-btn-link" alt="view inbound management" title="view inbound management"> <span class="fas fa-eye"></span> </a>
+                                                        </li>
+                                                    
+                                                        {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role or 'Processor' in request.user.get_role %}
+                                                    
+                                                        <li>
+                                                            <a href="" class="update-btn-link" alt="edit inbound management" title="edit inbound management"> <span class="fas fa-edit"></span></a>
+                                                        </li>
+                                                        {% endif %}
+                                                        {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
+                                                        <li>
+                                                            <a onclick="delShipment('')"
+                                                            href=""
+                                                            data-mdb-toggle="modal" data-mdb-target="#deleteModal" alt="delete inbound management" title="delete inbound management">
+                                                            <span class="fas fa-trash"></span></a>
+                                                        </li>
+                                                        {% endif %}
+                                                    </ul>
+                                                    </td>
+                                                </tr>
+                                                <div class="modal fade" id="addqueModal" aria-hidden="true" aria-labelledby="exampleModalToggleLabel22" tabindex="-1">
+                                                    <div class="modal-dialog">
+                                                        <div class="modal-content">
+                                                            <div class="modal-header" style="text-align: center;">
+                                                                <button type="button" class="btn-close cust-close-ds-btn close_modal_addqueModal"
+                                                                data-mdb-dismiss="modal" aria-label="Close" onclick="closeAddModal()"></button>
+                                                            </div>
+                                                            <div class="modal-body">
+                                                                <div class="modal-center-btn-footer">
+                                                                    <div class="row">
+                                                                        <div class="col-lg-12">
+                                                                            <div>
+                                                                                <h5 class="text-decoration-underline">QR CODE</h5>
+                                                                            </div>
+                                                                            <img id="qr_id" src="/media/{{grower_shipment.qr_code}}" alt="qr code" style="max-width: 100%;">
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>        
+                                    <div class="row align-items-center">
+                                        <div class="col-md-12 col-sm-12 col-12 text-center">
+                                            {% if grower_shipment.has_other_pages %}
+                                            <ul class="pagination" id="nav_1">
+                                                {% if grower_shipment.has_previous %}
+                                                    <li><a href="?selectgrower_id={% if selectedGrower.id  %}{{selectedGrower.id}}{% else %}{{selectedGrower}}{% endif %}&search_name={% if get_search_name  %}{{get_search_name}}{% endif %}&page={{ grower_shipment.previous_page_number }}">&laquo;</a></li>
+                                                {% else %}
+                                                    <li class="disabled"><span>&laquo;</span></li>
+                                                {% endif %}
+                                                {% for i in grower_shipment.paginator.page_range %}
+                                                    {% if grower_shipment.number == i %}
+                                                        <li class="active pagi" id="getactive"><span>{{ i }} <span class="sr-only">(current)</span></span></li>
+                                                    {% else %}
+                                                        <li><a href="?selectgrower_id={% if selectedGrower.id  %}{{selectedGrower.id}}{% else %}{{selectedGrower}}{% endif %}&search_name={% if get_search_name  %}{{get_search_name}}{% endif %}&page={{ i }}">{{ i }}</a></li>
+                                                    {% endif %}
+                                                {% endfor %}
+                                                {% if grower_shipment.has_next %}
+                                                    <li><a href="?selectgrower_id={% if selectedGrower.id  %}{{selectedGrower.id}}{% else %}{{selectedGrower}}{% endif %}&search_name={% if get_search_name  %}{{get_search_name}}{% endif %}&page={{ grower_shipment.next_page_number }}">&raquo;</a></li>
+                                                {% else %}
+                                                    <li class="disabled"><span>&raquo;</span></li>
+                                                {% endif %}
+                                            </ul>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-12 col-sm-12 col-12 text-center mt-2" style="text-align:right">
+                                            <span>Showing  {{ grower_shipment.start_index }} - {{ grower_shipment.end_index }} of {{ grower_shipment.paginator.count }} entries
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+                <script>
+                    function toggleSections() {
+                        var selectedSource = document.getElementById('id_source').value;
+                        var growerShow = document.getElementById('grower-show');
+                        var processorShow = document.getElementById('processor-show');
+                
+                        if (selectedSource === 'grower') {
+                            growerShow.style.display = 'block';
+                            processorShow.style.display = 'none';
+                        } else if (selectedSource === 'processor') {
+                            growerShow.style.display = 'none';
+                            processorShow.style.display = 'block';
+                        } else {
+                            growerShow.style.display = 'none';
+                            processorShow.style.display = 'none';
+                        }
+                    }
+                </script>  
+            </div>            
+        </div>
+    </main>
+    {% include 'footer.html' %}
+</div>
+{% endblock %}
+
+{% block jquery %}
+
+{% endblock jquery %}

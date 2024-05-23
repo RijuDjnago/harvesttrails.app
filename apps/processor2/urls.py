@@ -18,4 +18,11 @@ urlpatterns = [
     path('t2_classing_ewr_report_all_downlaod/<str:p2_id>/<str:level>', views.t2_classing_ewr_report_all_downlaod, name='t2_classing_ewr_report_all_downlaod'),
     path('add_processor2_receive_delivery/', views.processor2_add_receive_delivery, name='add_processor2_receive_delivery'),
     path('processor2_receive_delivery/', views.processor2_receive_delivery, name="processor2_receive_delivery"),
+
+    path('addlocation_processor2/', views.addlocation_processor2, name="addlocation_processor2"),
+    path('location_list_processor2/', views.location_list_processor2, name="location_list_processor2"),
+    path('location_edit_processor2/<int:pk>/', views.location_edit_processor2, name="location_edit_processor2"),
+    path('location_delete_processor2/<int:pk>/', views.location_delete_processor2, name="location_delete_processor2"),
+
+    path('inbound_management_processor2/', views.inbound_management_processor2, name="inbound_management_processor2",)
 ]

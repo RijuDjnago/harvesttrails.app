@@ -595,7 +595,7 @@ Processor_Type =[
 
 class File(models.Model):
     # file = models.FileField(upload_to='uploads_shipment/')
-    file = models.FileField(upload_to='')
+    file = models.FileField(upload_to='processor_shipment_files', null=True, blank=True, verbose_name="ProcessorShipment Id")
     uploaded_at = models.DateTimeField(auto_now_add=True)
     
     def __str__(self):
