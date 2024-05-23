@@ -143,6 +143,6 @@ class GrowerShipmentToProcessor2(models.Model):
         ordering = ('-date_time',)
 
     def __str__(self):
-        return f"Shipment Id = {self.shipment_id}, Grower = {self.grower.name}, Processor = {self.processor.entity_name}"
+        return f"Shipment Id = {self.shipment_id}, Grower = {self.grower.name}"
 
 

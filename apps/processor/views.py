@@ -1058,7 +1058,7 @@ def grower_map_to_processor(request,pk):
     else:
         return redirect('login')
 
-  
+from apps.processor import * 
 def grower_shipment(request):    # login grower & consultant , to see the send shipment -> add grower_shipment
     if request.user.is_authenticated:
         status = ""
@@ -1071,13 +1071,13 @@ def grower_shipment(request):    # login grower & consultant , to see the send s
                 grower_processor = LinkGrowerToProcessor.objects.get(grower_id=grower_id)
                 processor = grower_processor.processor.entity_name
                 p_user = ProcessorUser.objects.filter(processor_id=grower_processor.processor.id)
-                processor_id = grower_processor.processor.id
+                
                 context ['processor']=processor
                 storage = Storage.objects.filter(grower_id=grower_id)
                 context ['storage']=storage
                 field = Field.objects.filter(grower_id=grower_id)
                 context ['field']=field
-                
+                context ['processor2'] = Processor2.objects.values().distinct()
                 if request.method == 'POST':
                     id_storage = request.POST.get('id_storage')
                     module_number = request.POST.get('module_number')
@@ -1089,8 +1089,10 @@ def grower_shipment(request):    # login grower & consultant , to see the send s
 
                     id_unit1 = request.POST.get('id_unit1')
                     id_unit2= request.POST.get('id_unit2')
-                    
+                    processor_type = request.POST.get('processor_type')
                     get_output= request.POST.get('get_output')
+                    
+                    print(processor_type)
 
                     sustain_data = SustainabilitySurvey.objects.filter(grower_id=grower_id,field_id=id_field)
 
@@ -1152,8 +1154,17 @@ def grower_shipment(request):    # login grower & consultant , to see the send s
                             id_storage = id_storage
                             s = Storage.objects.get(id=id_storage)
                             storage_name = s.storage_name
-                        shipment = GrowerShipment(status=status,total_amount=get_output,unit_type2=id_unit2,amount2=amount2,shipment_id=shipment_id,processor_id=processor_id,grower_id=grower_id,storage_id=id_storage,field_id=id_field,crop=crop,variety=variety,amount=amount1,sustainability_score=surveyscore,echelon_id=field_eschlon_id,module_number=module_number,unit_type=id_unit1)
-                        shipment.save()
+                        if processor_type == "T1":
+                            processor_id = grower_processor.processor.id
+                            shipment = GrowerShipment(status=status,total_amount=get_output,unit_type2=id_unit2,amount2=amount2,shipment_id=shipment_id,processor_id=processor_id,grower_id=grower_id,storage_id=id_storage,field_id=id_field,crop=crop,variety=variety,amount=amount1,sustainability_score=surveyscore,echelon_id=field_eschlon_id,module_number=module_number,unit_type=id_unit1)
+                            shipment.save()
+                        if processor_type == "T2":
+                            processor_id = request.POST.get('processor2_id')
+                            print(processor_id)
+                            shipment = GrowerShipmentToProcessor2(status=status,total_amount=get_output,unit_type2=id_unit2,amount2=amount2,shipment_id=shipment_id,processor_id=processor_id,grower_id=grower_id,storage_id=id_storage,field_id=id_field,crop=crop,variety=variety,amount=amount1,sustainability_score=surveyscore,echelon_id=field_eschlon_id,module_number=module_number,unit_type=id_unit1)
+                            shipment.save()
+                        
+                        
                         for file in files:
                             new_file = GrowerShipmentFile.objects.create(file=file)
                             shipment.files.add(new_file)  # add files
@@ -1360,12 +1371,29 @@ def grower_shipment_delete(request,pk):
 def grower_shipment_list(request):
     if request.user.is_authenticated:
         if 'Grower' in request.user.get_role() and not request.user.is_superuser:
+            
             context ={}
             grower_id= request.user.grower.id
             grower_shipment = GrowerShipment.objects.filter(grower_id=grower_id)
-            
-            context['grower_shipment'] = grower_shipment            
-            return render(request, 'processor/grower_shipment_list.html',context)
+            if request.method == 'POST':
+                print(request.POST.get('selectp_id'))
+                if request.POST.get('selectp_id') == 't1':
+                    context['grower_shipment'] = grower_shipment 
+                    context['processor'] = "Processor 1"    
+                    context['processor_val'] = "t1"       
+                    return render(request, 'processor/grower_shipment_list.html',context)
+                if request.POST.get('selectp_id') == 't2':
+                    grower_shipment = GrowerShipmentToProcessor2.objects.filter(grower_id=grower_id)
+                    context['grower_shipment'] = grower_shipment
+                    context['processor'] = "Processor 2"  
+                    context['processor_val'] = "t2"           
+                    return render(request, 'processor/grower_shipment_list.html',context)
+            else:
+                context['grower_shipment'] = grower_shipment  
+                context['processor'] = "Processor 1"    
+                context['processor_val'] = "t1"  
+                return render(request, 'processor/grower_shipment_list.html',context)
+
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
             context ={}
             grower_shipment = GrowerShipment.objects.all()
@@ -1374,6 +1402,8 @@ def grower_shipment_list(request):
             grower = Grower.objects.filter(id__in=grower_id)
             context['grower'] = grower
             if request.method == 'POST':
+                selectp_id = request.POST.get('selectp_id')
+                print(selectp_id)
                 selectgrower_id = request.POST.get('selectgrower_id')
                 if selectgrower_id !='0':
                     grower_shipment = GrowerShipment.objects.filter(grower_id=selectgrower_id)
