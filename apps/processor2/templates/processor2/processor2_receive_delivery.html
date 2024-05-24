@@ -59,6 +59,9 @@
 <div class="main-content">
     {% include 'header.html' %} {% load crispy_forms_tags %}
     <main>
+        <p>{{storage}}</p>
+        <p>{{field}}</p>
+        <p>{{display}}</p>
         <span class="farm headingtop">Receive Delivery</span>
         <div class="card farm-fields-container">
             <div class="container-fluid">
@@ -77,12 +80,31 @@
                         </div>
                     </div>
                     
-                    <div id="grower-show" style="display: none; margin-bottom:10px">
-                        <div class="row" style="margin-bottom:10px">
+                    <div id="grower-show" style="display: {{display}}; margin-bottom:10px">
+                         <div class="row" style="margin-bottom:10px">
+                            {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
+                            <div class="col-md-3 mb-2">
+                                <div class="form-group">
+                                    
+                                    <label> Select Tier2 Processor<span class="asteriskField">*</span></label>
+                                    <select id="selected_processor2" name="selected_processor2" class="selectpicker" data-live-search="true">
+                                        <option value="all"> Select Tier2 Processor </option>
+                                        {% for processor in get_processor2 %}
+                                        {% if processor == selected_processor2 %}
+                                        <option value="{{ processor.pk }}" selected>{{processor.entity_name}} - {{ processor.pk }}</option>
+                                        {% else %}
+                                        <option value="{{ processor.pk }}">{{processor.entity_name}} - {{ processor.pk }}</option>
+                                        {% endif %}
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            {% endif %}
+                           
                             <div class="col-md-3 mb-2">
                                 <div class="form-group">
                                     <label>Select Growers<span class="asteriskField">*</span></label>
-                                    <select id="id_grower" name="id_grower" class="selectpicker" data-live-search="true">
+                                    <select id="id_grower" name="id_grower" class="selectpicker" data-live-search="true" onchange="this.form.submit()">
                                         <option value="all"> Select All Growers </option>
                                         {% for grower in get_grower %}
                                         {% if grower == selected_grower %}
@@ -221,6 +243,23 @@
                     
                     <div id="processor-show" style="display: none; margin-bottom:10px">
                         <div class="row" style="margin-bottom:10px">
+                            {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
+                            <div class="col-md-3 mb-2">
+                                <div class="form-group">
+                                    <label> Select Tier2 Processor<span class="asteriskField">*</span></label>
+                                    <select id="selected_processor2" name="selected_processor2" class="selectpicker" data-live-search="true">
+                                        <option value="all"> Select Tier2 Processor </option>
+                                        {% for processor in get_processor2 %}
+                                        {% if processor == selected_processor2 %}
+                                        <option value="{{ processor.pk }}" selected>{{processor.entity_name}} - {{ processor.pk }}</option>
+                                        {% else %}
+                                        <option value="{{ processor.pk }}">{{processor.entity_name}} - {{ processor.pk }}</option>
+                                        {% endif %}
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            {% endif %}
                             <div class="col-md-3 mb-2">
                                 <div class="form-group">
                                     <label>Select Processor<span class="asteriskField">*</span></label>
@@ -236,25 +275,112 @@
                                     </select>
                                 </div>
                             </div>                                
-                            <div class="col-md-3 mb-2">
-                                <div id="lot_number_id">
-                                    <label for="lot_number">Lot Number<span class="asteriskField">*</span></label>
-                                    <input id="lot_number" name="lot_number" class="textinput textInput form-control"
-                                        type="text">
+                            <div class="col-md-5 mb-2">
+                                <label for="id_bin_location_pull">Bin Location Pulled from<span class="asteriskField">*</span></label>
+                                <input type="text" name="id_bin_location_pull" id="id_bin_location_pull" value="{{id_bin_location_pull}}" class="textinput textInput form-control"  autocomplete="off" >
+                            </div>
+                            <div class="col-md-1 mb-2">
+                                <div class="shipment-custom-btn">
+                                    <input id="submitBtn2" type="submit" class="btn-save-submit" value="Load">
                                 </div>
-                                <p id="disp1" style="color: red;"></p>
-                            </div>                                
-                            <div class="col-md-3 mb-2">
-                                <div id="volume_received_id">
-                                    <label for="volume_received">Volume Received<span class="asteriskField">*</span></label>
-                                    <input id="volume_received" name="volume_received" class="textinput textInput form-control"
-                                        type="text">
+                                
+                            </div>
+                            
+                            <div class="col-md-6 mb-2 text-center">
+                                <label for="id_storage"><strong>Milled Volume</strong></label>
+                                <div style="padding: 10px 5px;font-size: 18px;">{{sum_total_bin_location_milled_volume}}</div>
+                                <input type="text" name="" id="sum_total_bin_location_milled_volume_java" style="display: none;" value="{{sum_total_bin_location_milled_volume_java}}">
+                            </div>
+                            {% if sum_total_bin_location_milled_volume %}
+                            <hr class="mt-2"> 
+                            <div class="col-md-4 mb-2">
+                                <div>
+                                    <label for="storage_bin_id">Storage Bin ID (SKU ID)<span class="asteriskField">*</span></label>
+                                    <input type="text" id="storage_bin_id" name="storage_bin_id" class="textinput textInput form-control" autocomplete="off" >
+                                    <p id="alert_msg3" style="color:red"></p>
                                 </div>
-                                <p id="disp1" style="color: red;"></p>
+                            </div>                           
+                            <div class="col-md-4 mb-2">
+                                <div>
+                                    <label for="equipment_type">Equipment Type<span class="asteriskField">*</span></label>
+                                    <select name="equipment_type" id="equipment_type" class="textinput textInput form-control">
+                                        <option value="All" selected disabled>Select Equipment Type</option>
+                                        <option value="Truck">Truck</option>
+                                        <option value="Hopper Car">Hopper Car</option>
+                                        <option value="Rail Car">Rail Car</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-2">
+                                <div>
+                                    <label for="equipment_id">Equipment ID<span class="asteriskField">*</span></label>
+                                    <input type="text" id="equipment_id" name="equipment_id" class="textinput textInput form-control">
+                                    <p id="alert_msg1" style="color:red"></p>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4 mb-2">
+                                    <label for="weight_prod">Weight Of Product<span class="asteriskField">*</span></label>
+                                <div class="d-flex" >
+                                    <input type="text" id="weight_prod" name="weight_prod" class="textinput textInput form-control" autocomplete="off" style="margin-top:0; border-top-right-radius:0 !important; border-bottom-right-radius:0 !important" >
+                                <select id="unitSelction" name="weight_prod_unit_id" class="form-select" style="border-top-left-radius:0 !important; border-bottom-left-radius:0 !important; border-left:0; width:90px; ">
+                                    <option value="LBS">LBS</option>
+                                    <option value="BU">BU</option>
+                                </select>
+                                </div>
+                                <p id="alert_msg4" style="color:red"></p>
+                            </div>
+                            <div class="col-md-4 mb-2">
+                                    <label for="exp_yield">Expected Yield<span class="asteriskField">*</span></label>
+                                <div class="d-flex" >
+                                    <input type="text" id="exp_yield" name="exp_yield" class="textinput textInput form-control" autocomplete="off" style="margin-top:0; border-top-right-radius:0 !important; border-bottom-right-radius:0 !important" >
+                                <select id="unitSelction" name="exp_yield_unit_id" class="form-select" style="border-top-left-radius:0 !important; border-bottom-left-radius:0 !important; border-left:0; width:90px; ">
+                                    <option value="LBS">LBS</option>
+                                    <option value="BU">BU</option>
+                                </select>
+                                </div>
+                                <p id="alert_msg5" style="color:red"></p>
+                            </div>
+                            <div class="col-md-4 mb-2">
+                                <label for="moist_percentage">Moisture Measurement (%)<span class="asteriskField">*</span></label>
+                                {% comment %} <input type="text" class="textinput textInput form-control" name="lien_split_payee_percentage" placeholder="0.00"> {% endcomment %}
+                                <input type="text" class="textinput textInput form-control" id="moist_percentage" name="moist_percentage">
+                                {% comment %} <i>%</i> {% endcomment %}
+                                <p id="alert_msg6" style="color:red"></p>
+                            </div>
+                            <div class="col-md-4 mb-2">
+                                <div>
+                                    <label for="purchase_number">Purchase Order number</label>
+                                    <input type="text" name="purchase_number" class="textinput textInput form-control" id="purchase_number">
+                                    {% comment %} <p id="alert_msg7" style="color:red"></p> {% endcomment %}
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-2">
+                                <label for="lot_number">Lot Number<span class="asteriskField">*</span></label>
+                                <input type="text" name="lot_number" class="textinput textInput form-control" id="lot_number">
+                                <p id="alert_msg2" style="color:red"></p>
+                            </div>
+                            <div class="col-md-4 mb-2">
+                                <label for="volume_shipped">Volume Shipped<span class="asteriskField">*</span></label>
+                                <input type="number" name="volume_shipped" class="textinput textInput form-control" id="volume_shipped">
+                                <p id="alert_msg" style="color:red"></p>
+                            </div>
+                            <div class="col-md-4 mb-2">
+                                <label for="id_date">Date Pulled<span class="asteriskField">*</span></label>
+                                <input type="date" name="id_date" id="id_date" class="textinput textInput form-control">
+                                <p id="alert_msg0" style="color:red"></p>
+                            </div>
+                            <div class="col-md-4 mb-2">
+                                <label for="multi_file">Upload File <span class="asteriskField">*</span></label>
+                                {% comment %} <input type="file" name="files" multiple accept=".jpg,.png,.xlsx,.csv,.pdf" id="multi_file" class="textinput textInput form-control" required> {% endcomment %}
+                                <input type="file" name="files" multiple accept=".jpg,.png,.xlsx,.csv,.pdf" id="multi_file" class="textinput textInput form-control" >
+                                {% comment %} <input type="file" id="fileInput" multiple> {% endcomment %}
+                                <p id="file_name_show" style="color:gray"></p>
+                                {% comment %} <p id="alert_msg8" style="color:red"></p> {% endcomment %}
                             </div>
                         </div>
                     </div>
-                    
+                    {% endif %}
                     
                     <div class="row">
                         <div class="form-btn-row">

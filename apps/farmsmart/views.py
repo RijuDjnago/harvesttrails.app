@@ -4,7 +4,8 @@ from rest_framework.decorators import api_view
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from apps.processor.models import Processor, ProcessorUser, Location, LinkGrowerToProcessor, GrowerShipment, ClassingReport, BaleReportFarmField, ProductionManagement, ShipmentManagement
+from apps.processor.models import *
+from apps.processor2.models import *
 from apps.processor.serializer import GrowerShipmentSerializer
 from apps.storage.models import ShapeFileDataCo as StorageShapeFileDataCo, Storage
 from apps.field.models import Field, FieldUpdated, ShapeFileDataCo, FieldActivity

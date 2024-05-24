@@ -339,9 +339,6 @@
                      {% if 'Processor2 Location' in request.user.get_role_perm or request.user.is_superuser or request.user.is_processor %}
                      <li><a id="Location-Management-Processor2" href="{% url 'location_list_processor2' %}">Location Management</a></li>
                      {% endif %}
-                     {% if 'Processor2 Management' in request.user.get_role_perm or request.user.is_superuser or request.user.is_processor %}
-                     <li><a id="Inbound-Management-Processor2" href="{% url 'inbound_management_processor2' %}">Inbound Management</a></li>
-                     {% endif %}
                      {% if not request.user.is_processor2 %}
                      <li><a id="Tier2-Processor-Management" href="{% url 'list_processor2' %}">T2 Processor Management</a></li>  <!-- Tier 2 Processor Management-->
                      <li><a id="Assign-Bale-To-Tier2" href="{% url 'add_bale_processor2' %}">Assign Bale To T2 </a></li>  <!--Assign Bale To T2 Tier 2-->
