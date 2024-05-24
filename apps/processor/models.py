@@ -8,6 +8,7 @@ from apps.storage.models import Storage
 from apps.field.models import Field
 
 
+
 class Processor(models.Model):
     """Database model for processor"""
     fein = models.CharField(max_length=250, null=True, blank=True,verbose_name='FEIN')
@@ -601,31 +602,3 @@ class File(models.Model):
     def __str__(self):
         return self.file.name
 
-
-class ShipmentManagement(models.Model):
-    processor_idd = models.CharField(max_length=200, null=True, blank=True)
-    processor_e_name = models.CharField(max_length=200, null=True, blank=True)
-    production_management = models.ForeignKey(ProductionManagement,on_delete=models.CASCADE, null=True, blank=True)
-    bin_location = models.CharField(max_length=200, null=True, blank=True, verbose_name='MILLED STORAGE BIN')
-    date_pulled = models.DateField(null=True, blank=True)
-    milled_volume = models.CharField(max_length=200, null=True, blank=True)
-    equipment_type = models.CharField(max_length=200,choices=EquipmentType, null=True, blank=True)
-    equipment_id = models.CharField(max_length=200, null=True, blank=True)
-    purchase_order_number = models.CharField(max_length=200, null=True, blank=True)
-    lot_number = models.CharField(max_length=200, null=True, blank=True)
-    volume_shipped = models.CharField(max_length=200, null=True, blank=True)
-    volume_left = models.CharField(max_length=200, null=True, blank=True)
-    editable_obj = models.BooleanField(null=True, blank=True)
-    storage_bin = models.CharField(max_length=200, null=True, blank=True,verbose_name='Storage Bin ID(SKU ID)')
-    weight_of_product = models.CharField(max_length =200,null=True, blank=True,default=0,help_text ='default unit is pound')
-    weight_of_product_raw = models.CharField(max_length =200,null=True, blank=True,default=0,help_text ='if unit is pound, then weight_of_product_raw and weight_of_product is same' )
-    weight_of_product_unit =   models.CharField(max_length=200,choices=unit_choice, null=True, blank=True,verbose_name='Unit')
-    excepted_yield = models.CharField(max_length =200,null=True, blank=True,default=0,help_text ='default unit is pound')
-    excepted_yield_raw = models.CharField(max_length =200,null=True, blank=True,default=0,help_text ='if unit is pound, then excepted_yield_raw and excepted_yield is same' )
-    excepted_yield_unit =   models.CharField(max_length=200,choices=unit_choice, null=True, blank=True,verbose_name='Unit')
-    moisture_percent = models.CharField(max_length=200, null=True, blank=True)
-    files = models.ManyToManyField(File, related_name='shipments', blank=True)
-    processor_type = models.CharField(max_length=200,choices=Processor_Type, null=True, blank=True)
-    processor2_idd = models.CharField(max_length=200, null=True, blank=True)
-    processor2_name = models.CharField(max_length=250, null=True, blank=True)
-    

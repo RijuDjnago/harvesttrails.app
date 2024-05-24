@@ -3,6 +3,15 @@ from apps.processor.models import *
 # from apps.processor.models import BaleReportFarmField
 
 # Create your models here.
+TYPE_CHOICES = (
+    ("T1","T1"),
+    ("T2","T2"),
+    ("T3","T3"),
+    ("T4","T4"),
+)
+class ProcessorType(models.Model):
+    type_name = models.CharField(choices=TYPE_CHOICES, max_length=5, null=True, blank=True)
+
 
 class Processor2(models.Model):
     """Database model for processor"""
@@ -13,6 +22,7 @@ class Processor2(models.Model):
     main_number = models.CharField(max_length=250, null=True, blank=True,verbose_name='Main Number')
     main_fax = models.CharField(max_length=250, null=True, blank=True,verbose_name='Main Fax')
     website = models.TextField(null=True, blank=True,verbose_name='Website')
+    processor_type = models.ManyToManyField(ProcessorType, blank=True)
 
     def __str__(self):
         return self.entity_name
@@ -91,58 +101,56 @@ class AssignedBaleProcessor2(models.Model):
     gin_id = models.CharField(max_length=200, null=True, blank=True)
 
 
-class LinkToProcessor2(models.Model):    
-    grower = models.ForeignKey(Grower, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Select grower")
-    processor1 = models.ForeignKey(Processor, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Select processor")
-    processor2 = models.ForeignKey(Processor2, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Select processor2")
+
+class LinkProcessorToProcessor(models.Model):
+    processor = models.ForeignKey(Processor2, on_delete=models.CASCADE, null=True, blank=True, related_name="processor")
+    linked_processor = models.ForeignKey(Processor2, on_delete=models.CASCADE, null=True, blank=True, related_name="linked_procesor")
 
 
-class GrowerShipmentToProcessor2(models.Model):
-    processor = models.ForeignKey(Processor2, on_delete=models.CASCADE, null=True, blank=True,verbose_name='Select Processor')
-    grower = models.ForeignKey(Grower, on_delete=models.CASCADE, null=True, blank=True,verbose_name='Select Grower')
-    storage = models.ForeignKey(Storage, on_delete=models.CASCADE, null=True, blank=True,verbose_name='Select Storage')
-    field = models.ForeignKey(Field, on_delete=models.CASCADE, null=True, blank=True,verbose_name='Select Field')
-    crop = models.CharField(max_length=200, null=True, blank=True,verbose_name='Select Item')
-    variety = models.CharField(max_length=200, null=True, blank=True,verbose_name='Select Variety')
-    amount = models.CharField(max_length=200, null=True, blank=True,verbose_name='Amount')
-    amount2 = models.CharField(max_length=200, null=True, blank=True,verbose_name='Amount2')
-    sustainability_score = models.CharField(max_length=200, null=True, blank=True,verbose_name='Sustainability Score')
-    echelon_id = models.CharField(max_length=200, null=True, blank=True,verbose_name='Echelon Id')
-    date_time = models.DateTimeField(auto_created=True, auto_now_add=True,verbose_name='Shipment Date')
-    shipment_id = models.CharField(max_length=200, null=True, blank=True,verbose_name='Shipment Id')
-    qr_code = models.TextField(null=True, blank=True,verbose_name='QR code')
-    location = models.ForeignKey(Processor2Location, on_delete=models.CASCADE, null=True, blank=True,verbose_name='Select Location')
-    date_time_location = models.DateTimeField(auto_created=True, auto_now_add=True,verbose_name='Location Date')
-    process_amount = models.CharField(max_length=200, null=True, blank=True,verbose_name='Processed Amount')
-    process_date = models.DateField(auto_created=True, auto_now_add=True,verbose_name='Processed Date')
-    process_time = models.TimeField(auto_created=True, auto_now_add=True,verbose_name='Processed Time')
-    sku = models.CharField(max_length=200, null=True, blank=True,verbose_name='SKU ID')
-    module_number = models.CharField(max_length=200, null=True, blank=True,verbose_name='Module Tag #')
-    unit_type = models.CharField(max_length=200, null=True, blank=True,verbose_name='Unit Type')
-    unit_type2 = models.CharField(max_length=200, null=True, blank=True,verbose_name='Unit Type2')
-    total_amount = models.CharField(max_length=200, null=True, blank=True,verbose_name='Total Amount')
-    received_amount = models.CharField(max_length=200, null=True, blank=True,verbose_name='Received Amount')
-    token_id = models.CharField(max_length=200, null=True, blank=True,verbose_name='Token Id')
-    approval_date = models.DateField(verbose_name='Approval Date', null=True, blank=True)
-    status = models.CharField(max_length=200,choices=STATUS_CHOICES,default="")
-    #30-02-23
-    reason_for_disapproval = models.CharField(max_length=200, null=True, blank=True,verbose_name='Reason For Disapproval')
-    moisture_level = models.CharField(max_length=200, null=True, blank=True,verbose_name='Moisture Level')
-    fancy_count = models.CharField(max_length=200, null=True, blank=True,verbose_name='Fancy Count')
-    head_count = models.CharField(max_length=200, null=True, blank=True,verbose_name='Head Count')
-    bin_location_processor = models.CharField(max_length=200, null=True, blank=True,verbose_name='Bin Location at Processor')
-    files = models.ManyToManyField(GrowerShipmentFile, related_name='growershipmentfile', blank=True)
+class ProductionManagementProcessor2(models.Model):
+    processor = models.ForeignKey(Processor2, on_delete=models.CASCADE, null=True, blank=True)
+    processor_e_name = models.CharField(max_length=200, null=True, blank=True)
+    total_volume = models.CharField(max_length=200, null=True, blank=True)
+    inbound = models.CharField(max_length=200, null=True, blank=True)
+    date_pulled = models.DateField(null=True, blank=True)
+    bin_location = models.CharField(max_length=200, null=True, blank=True)
+    volume_pulled = models.CharField(max_length=200, null=True, blank=True)
+    milled_volume = models.CharField(max_length=200, null=True, blank=True)
+    volume_left = models.CharField(max_length=200, null=True, blank=True)
+    milled_storage_bin = models.CharField(max_length=200, null=True, blank=True)
+    editable_obj = models.BooleanField(null=True, blank=True)
+
+
+class ShipmentManagement(models.Model):
+    processor_idd = models.CharField(max_length=200, null=True, blank=True)
+    processor_e_name = models.CharField(max_length=200, null=True, blank=True)
+    sender_processor_type = models.CharField(max_length=5, choices=Processor_Type, null=True, blank=True)
+    production_management = models.ForeignKey(ProductionManagement,on_delete=models.CASCADE, null=True, blank=True)
+    prod_mgmt_processor2 = models.ForeignKey(ProductionManagementProcessor2, on_delete=models.CASCADE, null=True, blank=True)
+    bin_location = models.CharField(max_length=200, null=True, blank=True, verbose_name='MILLED STORAGE BIN')
+    date_pulled = models.DateField(null=True, blank=True)
+    milled_volume = models.CharField(max_length=200, null=True, blank=True)
+    equipment_type = models.CharField(max_length=200,choices=EquipmentType, null=True, blank=True)
+    equipment_id = models.CharField(max_length=200, null=True, blank=True)
+    purchase_order_number = models.CharField(max_length=200, null=True, blank=True)
+    lot_number = models.CharField(max_length=200, null=True, blank=True)
+    volume_shipped = models.CharField(max_length=200, null=True, blank=True)
+    volume_left = models.CharField(max_length=200, null=True, blank=True)
+    editable_obj = models.BooleanField(null=True, blank=True)
+    storage_bin = models.CharField(max_length=200, null=True, blank=True,verbose_name='Storage Bin ID(SKU ID)')
+    weight_of_product = models.CharField(max_length =200,null=True, blank=True,default=0,help_text ='default unit is pound')
+    weight_of_product_raw = models.CharField(max_length =200,null=True, blank=True,default=0,help_text ='if unit is pound, then weight_of_product_raw and weight_of_product is same' )
+    weight_of_product_unit =   models.CharField(max_length=200,choices=unit_choice, null=True, blank=True,verbose_name='Unit')
+    excepted_yield = models.CharField(max_length =200,null=True, blank=True,default=0,help_text ='default unit is pound')
+    excepted_yield_raw = models.CharField(max_length =200,null=True, blank=True,default=0,help_text ='if unit is pound, then excepted_yield_raw and excepted_yield is same' )
+    excepted_yield_unit =   models.CharField(max_length=200,choices=unit_choice, null=True, blank=True,verbose_name='Unit')
+    moisture_percent = models.CharField(max_length=200, null=True, blank=True)
+    files = models.ManyToManyField(File, related_name='shipments', blank=True)
+    receiver_processor_type = models.CharField(max_length=200, choices=Processor_Type, null=True, blank=True)
     processor2_idd = models.CharField(max_length=200, null=True, blank=True)
     processor2_name = models.CharField(max_length=250, null=True, blank=True)
-    qr_code = models.FileField(upload_to='qr_code/',null=True, blank=True)
-    # lot_number = models.CharField(max_length=200, null=True, blank=True)
-    # volume_shipped = models.CharField(max_length=200, null=True, blank=True)
-    # sender = models.CharField(max_length=200,choices=SENDER_CHOICES,default="")
     
-    class Meta:
-        ordering = ('-date_time',)
 
-    def __str__(self):
-        return f"Shipment Id = {self.shipment_id}, Grower = {self.grower.name}, Processor = {self.processor.entity_name}"
-
-
+class LinkProcessor1ToProcessor(models.Model):
+    processor1 = models.ForeignKey(Processor, on_delete=models.CASCADE, null=True,blank=True)
+    processor2 = models.ForeignKey(Processor2, on_delete=models.CASCADE, null=True, blank=True)

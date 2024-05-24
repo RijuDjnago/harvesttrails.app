@@ -13,7 +13,8 @@ from django.db.utils import IntegrityError
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from django.http import JsonResponse
-from apps.processor.models import Processor, ProcessorUser, Location, LinkGrowerToProcessor, GrowerShipment, ClassingReport, ProductionReport, BaleReportProducer, GinReportbyday, GinLoadBalebydate, BaleReportFarmField, CertificateCalc, ProductionManagement, ShipmentManagement
+from apps.processor.models import *
+from apps.processor2.models import *
 from apps.processor.forms import ProcessorForm, LocationForm, GrowerShipmentForm
 from apps.accounts.models import User, Role, ShowNotification, LogTable
 from apps.grower.models import Grower, Consultant
