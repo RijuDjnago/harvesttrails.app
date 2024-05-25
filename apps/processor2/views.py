@@ -77,8 +77,19 @@ def add_processor2(request):
                 main_fax = request.POST.get('main_fax')
                 website = request.POST.get('website')
                 counter = request.POST.get('counter')
+                processor_type = request.POST.getlist('processor_type')
+                print(processor_type)
+                print(fein, entity_name, billing_address, shipping_address)
+                if not counter:
+                    counter = 0
+                print(counter)
                 processor2 = Processor2(fein=fein,entity_name=entity_name,billing_address=billing_address,shipping_address=shipping_address,main_number=main_number,main_fax=main_fax,website=website)
                 processor2.save()
+                print(processor2)
+                for type in processor_type:
+                    check_type = ProcessorType.objects.filter(id=type).first()
+                    processor2.processor_type.add(check_type)
+                
                 
                 # 20-04-23 Log Table
                 log_type, log_status, log_device = "Processor2", "Added", "Web"
@@ -1080,5 +1091,68 @@ def location_delete_processor2(request,pk):
     location = Location.objects.get(id=pk)
     location.delete()
     return redirect('location_list_processor2')  
+
+
+@login_required()
+def inbound_shipment_list(request):  
+    try:
+        context = {}
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+            #inbound management list for admin
+            context["table_data"] = list(ShipmentManagement.objects.filter().values())
+            print(context)
+            return render (request, 'processor2/inbound_management_table.html', context)
+        elif request.user.is_processor :
+            #inbound management list for processor
+            context["table_data"] = list(ShipmentManagement.objects.filter().values())
+            return render (request, 'processor2/inbound_management_table.html', context)
+        else:
+            return redirect('login')  
+    except:
+        return render (request, 'processor2/inbound_management_table.html') 
+    
+@login_required()
+def recive_shipment(request):  
+    try:
+        context = {}
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+            processor= Processor2.objects.filter(processor_type__type_name="T2").values("entity_name","id").order_by('entity_name')
+            context["processor"] = processor
+            processor3= Processor2.objects.filter(processor_type__type_name="T3").values("entity_name","id").order_by('entity_name')
+            context["processor3"] = processor3
+            processor4= Processor2.objects.filter(processor_type__type_name="T4").values("entity_name","id").order_by('entity_name')
+            context["processor3"] = processor4
+
+            context.update({
+            "select_processor_name": None,
+            "select_processor_id": None,
+            "milled_value": "None",
+            })
+            if request.method == "POST":
+                data = request.POST
+                bin_pull = data.get("bin_pull")
+                milled_value = data.get("milled_value")
+                context.update({
+                    "select_processor_name": Processor2.objects.filter(id=int(bin_pull)).first().entity_name,
+                    "select_processor_id": bin_pull,
+                    "processor2_id": data.get("processor2_id"),
+                    "exp_yield": data.get("exp_yield"),
+                    "exp_yield_unit_id": data.get("exp_yield_unit_id"),
+                    "moist_percentage": data.get("moist_percentage"),
+                    "purchase_number": data.get("purchase_number"),
+                    "weight_prod_unit_id": data.get("weight_prod_unit_id"),
+                    "weight_prod": data.get("weight_prod"),
+                    "storage_bin_id": data.get("storage_bin_id"),
+                    "equipment_id": data.get("equipment_id"),
+                    "equipment_type": data.get("equipment_type"),
+                    "lot_number": data.get("lot_number"),
+                    "volume_shipped": data.get("volume_shipped"),
+                    "id_date": data.get("id_date"),
+                })
+            return render (request, 'processor2/recive_delevery.html', context)
+        else:
+            return render (request, 'processor2/recive_delevery.html', context) 
+    except:
+        return render (request, 'processor2/recive_delevery.html') 
 
 

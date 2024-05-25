@@ -12,6 +12,9 @@ TYPE_CHOICES = (
 class ProcessorType(models.Model):
     type_name = models.CharField(choices=TYPE_CHOICES, max_length=5, null=True, blank=True)
 
+    def __str__(self):
+        return self.type_name
+
 
 class Processor2(models.Model):
     """Database model for processor"""
@@ -120,15 +123,29 @@ class ProductionManagementProcessor2(models.Model):
     milled_storage_bin = models.CharField(max_length=200, null=True, blank=True)
     editable_obj = models.BooleanField(null=True, blank=True)
 
+STATUS_CHOICES = (
+    ("APPROVED", "APPROVED"),
+    ("DISAPPROVED", "DISAPPROVED"),
+    ("", ""),
+)
+
+Processor_Type =[
+    ("T1","T1"),
+    ("T2","T2"),
+    ("T3","T3"),
+    ("T4","T4"),
+    ("Buyer","Buyer"),
+]
 
 class ShipmentManagement(models.Model):
+    shipment_id = models.CharField(max_length=200, null=True, blank=True)
     processor_idd = models.CharField(max_length=200, null=True, blank=True)
     processor_e_name = models.CharField(max_length=200, null=True, blank=True)
     sender_processor_type = models.CharField(max_length=5, choices=Processor_Type, null=True, blank=True)
     production_management = models.ForeignKey(ProductionManagement,on_delete=models.CASCADE, null=True, blank=True)
     prod_mgmt_processor2 = models.ForeignKey(ProductionManagementProcessor2, on_delete=models.CASCADE, null=True, blank=True)
     bin_location = models.CharField(max_length=200, null=True, blank=True, verbose_name='MILLED STORAGE BIN')
-    date_pulled = models.DateField(null=True, blank=True)
+    date_pulled = models.DateTimeField(auto_now_add=True)
     milled_volume = models.CharField(max_length=200, null=True, blank=True)
     equipment_type = models.CharField(max_length=200,choices=EquipmentType, null=True, blank=True)
     equipment_id = models.CharField(max_length=200, null=True, blank=True)
@@ -137,7 +154,8 @@ class ShipmentManagement(models.Model):
     volume_shipped = models.CharField(max_length=200, null=True, blank=True)
     volume_left = models.CharField(max_length=200, null=True, blank=True)
     editable_obj = models.BooleanField(null=True, blank=True)
-    storage_bin = models.CharField(max_length=200, null=True, blank=True,verbose_name='Storage Bin ID(SKU ID)')
+    storage_bin_send = models.CharField(max_length=200, null=True, blank=True,verbose_name='Storage Bin ID(SKU ID)(storage_bin_send)')
+    storage_bin_recive = models.CharField(max_length=200, null=True, blank=True,verbose_name='Storage Bin ID(SKU ID)(storage_bin_recive)')
     weight_of_product = models.CharField(max_length =200,null=True, blank=True,default=0,help_text ='default unit is pound')
     weight_of_product_raw = models.CharField(max_length =200,null=True, blank=True,default=0,help_text ='if unit is pound, then weight_of_product_raw and weight_of_product is same' )
     weight_of_product_unit =   models.CharField(max_length=200,choices=unit_choice, null=True, blank=True,verbose_name='Unit')
@@ -149,7 +167,8 @@ class ShipmentManagement(models.Model):
     receiver_processor_type = models.CharField(max_length=200, choices=Processor_Type, null=True, blank=True)
     processor2_idd = models.CharField(max_length=200, null=True, blank=True)
     processor2_name = models.CharField(max_length=250, null=True, blank=True)
-    
+    recive_delivery_date = models.DateTimeField(null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, null=True, blank=True)
 
 class LinkProcessor1ToProcessor(models.Model):
     processor1 = models.ForeignKey(Processor, on_delete=models.CASCADE, null=True,blank=True)

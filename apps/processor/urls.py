@@ -109,7 +109,7 @@ urlpatterns = [
     path('delete_volume_pulled/<int:pk>/', views.delete_volume_pulled, name='delete_volume_pulled'),
     path('inbound_production_mgmt_csv_download/', views.inbound_production_mgmt_csv_download, name='inbound_production_mgmt_csv_download'),
     path('outbound_shipment_mgmt/', views.outbound_shipment_mgmt, name='outbound_shipment_mgmt'),
-    path('add_outbound_shipment/', views.add_outbound_shipment, name='add_outbound_shipment'),
+    # path('add_outbound_shipment/', views.add_outbound_shipment, name='add_outbound_shipment'),
     path('delete_outbound_shipment/<int:pk>/', views.delete_outbound_shipment, name='delete_outbound_shipment'),
     path('edit_outbound_shipment/<int:pk>/', views.edit_outbound_shipment, name='edit_outbound_shipment'),
     path('outbound_shipment_mgmt_csv_download/', views.outbound_shipment_mgmt_csv_download, name='outbound_shipment_mgmt_csv_download'),
@@ -119,5 +119,8 @@ urlpatterns = [
     path('all_shipments_csv_download/', views.all_shipments_csv_download, name='all_shipments_csv_download'),
     #15-03-2024
     path('outbound_shipment_mgmt_view/<int:pk>/detail/', views.outbound_shipment_mgmt_view, name='outbound_shipment_mgmt_view'),
+    
+    path('link_processor1_to_processor/', views.link_processor1_to_processor, name="link_processor1_to_processor"),
+    path('add_outbound_shipment/', views.add_outbound_shipment_processor1, name="add_outbound_shipment"),
 
 ]

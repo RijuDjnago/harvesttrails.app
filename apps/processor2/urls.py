@@ -24,4 +24,8 @@ urlpatterns = [
 
 
     # path('load_subcategories/', views.load_subcategories, name="load_subcategories"),
+
+    path('inbound_shipment_list/', views.inbound_shipment_list, name="inbound_shipment_list"),
+    
+    path('recive_shipment/', views.recive_shipment, name="recive_shipment"),
 ]

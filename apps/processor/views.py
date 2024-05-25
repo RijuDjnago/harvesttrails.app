@@ -6655,6 +6655,42 @@ def outbound_shipment_mgmt_view(request,pk):
     except:
         return render (request, 'processor/outbound_shipment_mgmt_view_test.html')   
 
+@login_required()
+def link_processor1_to_processor(request):
+    context = {}
+    if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+        processor1 = Processor.objects.all()
+        context["processor1"] = processor1
+        if request.method == "POST":
+            selected_processor1 = request.POST.get('selected_processor1')
+            print("jsdhj", selected_processor1)
+            print("jsdhj", request.POST.get("save"))
+            if selected_processor1 and not request.POST.get("save"): 
+                context["selected_processor"] = selected_processor1
+                get_processor1 = Processor.objects.filter(id=selected_processor1).first()
+                linked_processor2 = list(LinkProcessor1ToProcessor.objects.filter(processor1_id=selected_processor1).values_list("id", flat=True))
+                processor2 = Processor2.objects.filter(processor_type__type_name="T2").exclude(id__in=linked_processor2)
+                context["processor2"] = processor2
+                processor3 = Processor2.objects.filter(processor_type__type_name="T3").exclude(id__in=linked_processor2)
+                context["processor3"] = processor3
+                processor4 = Processor2.objects.filter(processor_type__type_name="T4").exclude(id__in=linked_processor2)
+                context["processor4"] = processor4
+                processor_ids = request.POST.getlist('processor_ids')
+                if len(processor_ids) != 0:
+                    print(processor_ids)
+                    
+                return render (request, 'processor/link_processor1.html', context)
+            
+            counter = request.POST.get('counter')
+            for i in range(1,int(counter)+1):
+                selected_processor = request.POST.get("processor_id{}".format(i))
+                processor2 = Processor2.objects.filter(id=selected_processor).first()
+                LinkProcessor1ToProcessor.objects.create(processor1=get_processor1, processor2=processor2)
+            print(context)
+        return render (request, 'processor/link_processor1.html', context)
+    
+    else:
+        return redirect('login')
 
 
 @login_required()
@@ -6680,18 +6716,20 @@ def add_outbound_shipment(request):
             select_search_sku_json = json.dumps(lst2)
             context['select_search_sku_json'] = select_search_sku_json
             
-            get_processor2 = Processor2.objects.all()
+            get_processor2 = Processor2.objects.filter(processor_type__type_name="T2")
             context['get_processor2'] = get_processor2  #context processor 2 data 
             
-            get_processor3 = Processor3.objects.all()
+            get_processor3 = Processor2.objects.filter(processor_type__type_name="T3")
             context['get_processor3'] = get_processor3  #context processor 3 data 
             
+            get_processor4 = Processor2.objects.filter(processor_type__type_name="T4")
+            context['get_processor4'] = get_processor4
             if request.method == 'POST' :
                 id_bin_location_pull = request.POST.get('id_bin_location_pull')
-                # print("id_bin_location_pull==================",id_bin_location_pull)
+                print("id_bin_location_pull==================",id_bin_location_pull)
                 # get_bin_location = ProductionManagement.objects.filter(milled_storage_bin=id_bin_location_pull).values('milled_volume','id','processor_id','processor_e_name')
                 get_bin_location = ProductionManagement.objects.filter(processor_e_name=id_bin_location_pull).values('milled_volume','id','processor_id','processor_e_name')
-                # print("get_bin_location============================",get_bin_location)
+                print("get_bin_location============================",get_bin_location)
                 if id_bin_location_pull and get_bin_location.exists() :
                     total_bin_location_milled_volume = []
                     total_shiped_volume = []
@@ -6699,17 +6737,19 @@ def add_outbound_shipment(request):
                         total_bin_location_milled_volume.append(float(i['milled_volume']))
 
                     shiped_volume = ShipmentManagement.objects.filter(bin_location=id_bin_location_pull).values('volume_shipped')
+                    print(shiped_volume)
                     for i in shiped_volume :
                         total_shiped_volume.append(float(i['volume_shipped']))
 
                     sum_total__volume = sum(total_bin_location_milled_volume)
                     sum_shiped_volume = sum(total_shiped_volume)
                     sum_total_bin_location_milled_volume = float(sum_total__volume) - float(sum_shiped_volume)
+                    print(sum_total_bin_location_milled_volume)
                     context['id_bin_location_pull'] = id_bin_location_pull
                     context['sum_total_bin_location_milled_volume'] = f'{sum_total_bin_location_milled_volume} Lbs'
                     context['sum_total_bin_location_milled_volume_java'] = sum_total_bin_location_milled_volume
-                    
-                    id_date = request.POST.get('id_date')
+                    shipment_id = request.POST.get('shipment_id')
+
                     equipment_type = request.POST.get('equipment_type')
                     equipment_id = request.POST.get('equipment_id')
                     storage_bin_id = request.POST.get('storage_bin_id')
@@ -6748,14 +6788,22 @@ def add_outbound_shipment(request):
                         select_proc_id, processor_type = processor2_id.split()
                         if processor_type == 'T2':
                             select_destination_ = Processor2.objects.get(id=select_proc_id).entity_name
+                            receiver_processor_type = "T2"
                             # print("select_destination_-----",select_destination_)
                         elif processor_type == 'T3':
-                            select_destination_ = Processor3.objects.get(id=select_proc_id).entity_name
+                            select_destination_ = Processor2.objects.get(id=select_proc_id).entity_name
+                            receiver_processor_type = "T3"
+                            # print("select_destination_-----",select_destination_)
+                        elif processor_type == 'T4':
+                            select_destination_ = Processor2.objects.get(id=select_proc_id).entity_name
+                            receiver_processor_type = "T4"
                             # print("select_destination_-----",select_destination_)
                        
-                        save_shipment_management = ShipmentManagement(processor_idd=processor_id,processor_e_name=processor_e_name,bin_location=bin_location,
-                        date_pulled=id_date,equipment_type=equipment_type,equipment_id=equipment_id,storage_bin=storage_bin_id,moisture_percent = moist_percentage,weight_of_product_raw = weight_prod,weight_of_product=cal_weight,weight_of_product_unit=weight_prod_unit_id, excepted_yield_raw = exp_yield,excepted_yield=cal_exp_yield,excepted_yield_unit=exp_yield_unit_id,   purchase_order_number=purchase_number,
-                        lot_number=lot_number,volume_shipped=volume_shipped,milled_volume=milled_volume,volume_left=volume_left,editable_obj=True,processor2_idd=select_proc_id,processor2_name=select_destination_)
+                        save_shipment_management = ShipmentManagement(shipment_id=shipment_id,processor_idd=processor_id,processor_e_name=processor_e_name, sender_processor_type="T1", bin_location=bin_location,
+                        date_pulled=id_date,equipment_type=equipment_type,equipment_id=equipment_id,storage_bin_send=storage_bin_id,moisture_percent = moist_percentage,weight_of_product_raw = weight_prod,
+                        weight_of_product=cal_weight,weight_of_product_unit=weight_prod_unit_id, excepted_yield_raw = exp_yield,excepted_yield=cal_exp_yield,excepted_yield_unit=exp_yield_unit_id,
+                        purchase_order_number=purchase_number,lot_number=lot_number,volume_shipped=volume_shipped,milled_volume=milled_volume,volume_left=volume_left,editable_obj=True,
+                        processor2_idd=select_proc_id,processor2_name=select_destination_, receiver_processor_type=receiver_processor_type)
                         save_shipment_management.save()
                         for file in files:
                             new_file = File.objects.create(file=file)
@@ -7190,7 +7238,7 @@ def rejected_shipments_csv_download(request) :
     else:
         return redirect ('dashboard')
 
-
+# from apps.processor.views import generate_shipment_id
 @login_required()
 def all_shipments_csv_download(request) :  
     if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
@@ -7215,3 +7263,99 @@ def all_shipments_csv_download(request) :
         return response
     else:
         return redirect ('dashboard')
+
+@login_required
+def add_outbound_shipment_processor1(request):
+    context = {}
+
+    if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+        # processor= Processor2.objects.filter(processor_type__type_name="T2").values("entity_name","id").order_by('entity_name')
+        # processor3= Processor2.objects.filter(processor_type__type_name="T3").values("entity_name","id").order_by('entity_name')
+        # processor4= Processor2.objects.filter(processor_type__type_name="T4").values("entity_name","id").order_by('entity_name')
+        # context["processor3"] = processor3
+        # context["processor4"] = processor4
+        context["processor"] = list(Processor.objects.all().values("id", "entity_name"))
+        
+        context.update({
+            "select_processor_name": None,
+            "select_processor_id": None,
+            "milled_value": "None",
+        })
+
+        if request.method == "POST":
+            data = request.POST
+            bin_pull = data.get("bin_pull")
+            milled_value = data.get("milled_value")
+            context.update({
+                "select_processor_name": Processor.objects.filter(id=int(bin_pull)).first().entity_name,
+                "select_processor_id": bin_pull,
+                "processor2_id": data.get("processor2_id"),
+                "exp_yield": data.get("exp_yield"),
+                "exp_yield_unit_id": data.get("exp_yield_unit_id"),
+                "moist_percentage": data.get("moist_percentage"),
+                "purchase_number": data.get("purchase_number"),
+                "weight_prod_unit_id": data.get("weight_prod_unit_id"),
+                "weight_prod": data.get("weight_prod"),
+                "storage_bin_id": data.get("storage_bin_id"),
+                "equipment_id": data.get("equipment_id"),
+                "equipment_type": data.get("equipment_type"),
+                "lot_number": data.get("lot_number"),
+                "volume_shipped": data.get("volume_shipped"),
+                "id_date": data.get("id_date"),
+            })
+
+            if bin_pull and not data.get("save"):
+                get_bin_location = list(ProductionManagement.objects.filter(processor_id=int(bin_pull)).values_list('milled_volume', flat=True))
+                print(get_bin_location)
+                list_get_bin_location = []
+                for i in get_bin_location:
+                    list_get_bin_location.append(int(i))
+                context["milled_value"] = sum(list_get_bin_location) if get_bin_location else 0
+                processor2 = LinkProcessor1ToProcessor.objects.filter(processor1_id=bin_pull, processor2__processor_type__type_name = "T2").values("processor2__id", "processor2__entity_name")
+                processor3 = LinkProcessor1ToProcessor.objects.filter(processor1_id=bin_pull, processor2__processor_type__type_name = "T3").values("processor2__id", "processor2__entity_name")
+                processor4 = LinkProcessor1ToProcessor.objects.filter(processor1_id=bin_pull, processor2__processor_type__type_name = "T4").values("processor2__id", "processor2__entity_name")
+                context["processor3"] = processor3
+                context["processor4"] = processor4
+                context["processor2"] = processor2
+                return render(request, 'processor/add_outbound_shipment.html', context)
+            else:
+                if context["weight_prod_unit_id"] == "LBS" :
+                    cal_weight = round(float(context["weight_prod"]),2)
+                if context["weight_prod_unit_id"] == "BU" :
+                    cal_weight = round(float(context["weight_prod"]) * 45,2)
+                if context["exp_yield_unit_id"] == "LBS" :
+                    cal_exp_yield = round(float(context["exp_yield"]),2)
+                if context["exp_yield_unit_id"] == "BU" :
+                    cal_exp_yield = round(float(context["exp_yield"]) * 45,2)
+
+
+                ### processor link part
+
+                select_proc_id, processor_type = context["processor2_id"].split()
+                if processor_type == 'T2':
+                    select_destination_ = Processor2.objects.get(id=select_proc_id).entity_name
+                    receiver_processor_type = "T2"
+                    # print("select_destination_-----",select_destination_)
+                elif processor_type == 'T3':
+                    select_destination_ = Processor2.objects.get(id=select_proc_id).entity_name
+                    receiver_processor_type = "T3"
+                    # print("select_destination_-----",select_destination_)
+                elif processor_type == 'T4':
+                    select_destination_ = Processor2.objects.get(id=select_proc_id).entity_name
+                    receiver_processor_type = "T4"
+                volume_left = 0
+                milled_volume = 0
+                shipment_id = generate_shipment_id()
+                
+                processor_e_name = Processor.objects.filter(id=int(bin_pull)).first().entity_name
+                save_shipment_management = ShipmentManagement(shipment_id=shipment_id,processor_idd=bin_pull,processor_e_name=processor_e_name, sender_processor_type="T1", bin_location=bin_pull,
+                        date_pulled=context["id_date"],equipment_type=context["equipment_type"],equipment_id=context["equipment_id"],storage_bin_send=context["storage_bin_id"],moisture_percent = context["moist_percentage"],weight_of_product_raw = context["weight_prod"],
+                        weight_of_product=cal_weight,weight_of_product_unit=context["weight_prod_unit_id"], excepted_yield_raw =context["exp_yield"],excepted_yield=cal_exp_yield,excepted_yield_unit=context["exp_yield_unit_id"],
+                        purchase_order_number=context["purchase_number"],lot_number=context["lot_number"],volume_shipped=context["volume_shipped"],milled_volume=milled_volume,volume_left=volume_left,editable_obj=True,
+                        processor2_idd=select_proc_id,processor2_name=select_destination_, receiver_processor_type=receiver_processor_type)
+                save_shipment_management.save()
+
+        return render(request, 'processor/add_outbound_shipment.html', context)
+
+
+
