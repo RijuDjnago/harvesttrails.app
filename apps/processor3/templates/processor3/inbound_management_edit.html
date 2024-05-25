@@ -12,6 +12,8 @@
 
   gtag('config', 'G-Y3EWVPF7PQ');
 </script>
+<link href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.16/themes/ui-lightness/jquery-ui.css" rel="stylesheet"
+    type="text/css" />
 {% endblock extrahead %}
 
 {% block content %}
@@ -41,7 +43,7 @@
 <div class="main-content">
     {% include 'header.html' %} {% load crispy_forms_tags %}
     <main>
-        <span class="farm headingtop">Add Shipment (Outbound 2 WIP)</span>
+        <span class="farm headingtop">Edit Shipment (Outbound 2 WIP)</span>
         <div class="card farm-fields-container">
             {% include '_alerts.html' %}
             <div class="container-fluid">
@@ -50,34 +52,25 @@
                     <div class="row" style="margin-bottom:10px">
                         <div class="col-md-5 mb-2">
                             <label for="id_bin_location_pull">Bin Location Pulled from<span class="asteriskField">*</span></label>
-                            <select name="bin_pull" id="pull" class="textinput textInput form-control" onchange="this.form.submit()">
-                                {% if select_processor_name %}
-                                <option value="{{select_processor_id}}" selected>{{select_processor_name}}</option>
-                                {% else %}
-                                <option value="all" disabled selected>Select Bin Location Pulled from</option>
-                                {% endif %}
+                            <select name="bin_pull" id="pull" class="textinput textInput form-control" >
                                 
-                                {% for pro in processor %}
-                                <option value="{{pro.id}}">{{pro.entity_name}}</option>
-                                {% endfor %}  
+                                <option value="{{shipment.processor_idd}}" selected>{{shipment.processor_e_name}}</option> 
                             </select>
                         </div>
                         
                         <div class="col-md-6 mb-2 text-center">
                             <label for="id_storage"><strong>Milled Volume</strong></label>
-                            {% if milled_value == "None" %}
-                            <div style="padding: 10px 5px;font-size: 18px;">Not Selected Pull From</div>
-                            {% else %}
-                            <div style="padding: 10px 5px;font-size: 18px;">{{milled_value}}</div>
-                            {% endif %}
+                           
+                            <div style="padding: 10px 5px;font-size: 18px;">{{shipment.milled_volume}}</div>
+                           
                         
-                            <input type="hidden" name="milled_value" id="sum_total_bin_location_milled_volume_java" value="{{milled_value}}">
+                            <input type="hidden" name="milled_value" id="sum_total_bin_location_milled_volume_java" value="{{shipment.milled_volume}}">
                         </div>
                         
                         <hr class="mt-2">
                         <div class="col-md-4 mb-2">
                             <label for="id_date">Date Pulled<span class="asteriskField">*</span></label>
-                            <input type="date" name="id_date" id="id_date" class="textinput textInput form-control" value="{{id_date}}">
+                            <input type="date" name="id_date" id="id_date" class="textinput textInput form-control" value="{{ shipment.date_pulled|date:"Y-m-d" }}">
                             <p id="alert_msg0" style="color:red"></p>
                         </div>
                         <div class="col-md-4 mb-2">
@@ -85,33 +78,33 @@
                                 <label for="equipment_type">Equipment Type<span class="asteriskField">*</span></label>
                                 <select name="equipment_type" id="equipment_type" class="textinput textInput form-control">
                                     <option value="All" selected disabled>Select Equipment Type</option>
-                                    <option value="Truck" {% if equipment_type == "Truck" %}selected{% endif %}>Truck</option>
-                                    <option value="Hopper Car" {% if equipment_type == "Hopper Car" %}selected{% endif %}>Hopper Car</option>
-                                    <option value="Rail Car" {% if equipment_type == "Rail Car" %}selected{% endif %}>Rail Car</option>
+                                    <option value="Truck" {% if shipment.equipment_type == "Truck" %}selected{% endif %}>Truck</option>
+                                    <option value="Hopper Car" {% if shipment.equipment_type == "Hopper Car" %}selected{% endif %}>Hopper Car</option>
+                                    <option value="Rail Car" {% if shipment.equipment_type == "Rail Car" %}selected{% endif %}>Rail Car</option>
                                 </select>
                             </div>
                         </div>
                         <div class="col-md-4 mb-2">
                             <div>
                                 <label for="equipment_id">Equipment ID<span class="asteriskField">*</span></label>
-                                <input type="text" id="equipment_id" name="equipment_id" class="textinput textInput form-control" value="{{equipment_id}}">
+                                <input type="text" id="equipment_id" name="equipment_id" class="textinput textInput form-control" value="{{shipment.equipment_id}}">
                                 <p id="alert_msg1" style="color:red"></p>
                             </div>
                         </div>
                         <div class="col-md-4 mb-2">
                             <div>
                                 <label for="storage_bin_id">Storage Bin ID (SKU ID)<span class="asteriskField">*</span></label>
-                                <input type="text" id="storage_bin_id" name="storage_bin_id" class="textinput textInput form-control" autocomplete="off">
+                                <input type="text" id="storage_bin_id" name="storage_bin_id" value="{{shipment.storage_bin_send}}" class="textinput textInput form-control" autocomplete="off">
                                 <p id="alert_msg3" style="color:red"></p>
                             </div>
                         </div>
                         <div class="col-md-4 mb-2">
                             <label for="weight_prod">Weight Of Product<span class="asteriskField">*</span></label>
                             <div class="d-flex">
-                                <input type="text" id="weight_prod" name="weight_prod" class="textinput textInput form-control" autocomplete="off" style="margin-top:0; border-top-right-radius:0 !important; border-bottom-right-radius:0 !important">
+                                <input type="text" id="weight_prod" name="weight_prod"  value="{{shipment.weight_of_product}}" class="textinput textInput form-control" autocomplete="off" style="margin-top:0; border-top-right-radius:0 !important; border-bottom-right-radius:0 !important">
                                 <select id="unitSelction" name="weight_prod_unit_id" class="form-select" style="border-top-left-radius:0 !important; border-bottom-left-radius:0 !important; border-left:0; width:90px;">
-                                    <option value="LBS" {% if weight_prod_unit_id == "LBS" %}selected{% endif %}>LBS</option>
-                                    <option value="BU" {% if weight_prod_unit_id == "BU" %}selected{% endif %}>BU</option>
+                                    <option value="LBS" {% if shipment.weight_of_product_unit == "LBS" %}selected{% endif %}>LBS</option>
+                                    <option value="BU" {% if shipment.weight_of_product_unit == "BU" %}selected{% endif %}>BU</option>
                                 </select>
                             </div>
                             <p id="alert_msg4" style="color:red"></p>
@@ -119,33 +112,68 @@
                         <div class="col-md-4 mb-2">
                             <label for="exp_yield">Expected Yield<span class="asteriskField">*</span></label>
                             <div class="d-flex">
-                                <input type="text" id="exp_yield" name="exp_yield" value="{{exp_yield}}" class="textinput textInput form-control" autocomplete="off" style="margin-top:0; border-top-right-radius:0 !important; border-bottom-right-radius:0 !important">
+                                <input type="text" id="exp_yield" name="exp_yield" value="{{shipment.excepted_yield}}" class="textinput textInput form-control" autocomplete="off" style="margin-top:0; border-top-right-radius:0 !important; border-bottom-right-radius:0 !important">
                                 <select id="unitSelction" name="exp_yield_unit_id" class="form-select" style="border-top-left-radius:0 !important; border-bottom-left-radius:0 !important; border-left:0; width:90px;">
-                                    <option value="LBS" {% if exp_yield_unit_id == "LBS" %}selected{% endif %}>LBS</option>
-                                    <option value="BU" {% if exp_yield_unit_id == "BU" %}selected{% endif %}>BU</option>
+                                    <option value="LBS" {% if shipment.excepted_yield_unit == "LBS" %}selected{% endif %}>LBS</option>
+                                    <option value="BU" {% if shipment.excepted_yield_unit == "BU" %}selected{% endif %}>BU</option>
                                 </select>
                             </div>
                             <p id="alert_msg5" style="color:red"></p>
                         </div>
                         <div class="col-md-4 mb-2">
                             <label for="moist_percentage">Moisture Measurement (%)<span class="asteriskField">*</span></label>
-                            <input type="text" class="textinput textInput form-control" id="moist_percentage" name="moist_percentage" value="{{moist_percentage}}">
+                            <input type="text" class="textinput textInput form-control" id="moist_percentage" name="moist_percentage" value="{{shipment.moisture_percent}}" value="{{moist_percentage}}">
                             <p id="alert_msg6" style="color:red"></p>
                         </div>
                         <div class="col-md-4 mb-2">
                             <div>
                                 <label for="purchase_number">Purchase Order number</label>
-                                <input type="text" name="purchase_number" class="textinput textInput form-control" id="purchase_number" value="{{purchase_number}}">
+                                <input type="text" name="purchase_number" class="textinput textInput form-control" id="purchase_number" value="{{shipment.purchase_order_number}}">
                             </div>
                         </div>
                         <div class="col-md-4 mb-2">
                             <label for="lot_number">Lot Number<span class="asteriskField">*</span></label>
-                            <input type="text" name="lot_number" class="textinput textInput form-control" id="lot_number" value="{{lot_number}}">
+                            <input type="text" name="lot_number" class="textinput textInput form-control" id="lot_number" value="{{shipment.lot_number}}">
                             <p id="alert_msg2" style="color:red"></p>
                         </div>
                         <div class="col-md-4 mb-2">
                             <label for="volume_shipped">Volume Shipped<span class="asteriskField">*</span></label>
-                            <input type="number" name="volume_shipped" value="{{volume_shipped}}" class="textinput textInput form-control" id="volume_shipped">
+                            <input type="number" name="volume_shipped" value="{{shipment.volume_shipped}}" class="textinput textInput form-control" id="volume_shipped">
+                            <p id="alert_msg" style="color:red"></p>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <label for="approval_date">Approval/Disapproval Date<span class="asteriskField">*</span></label>
+                            <input type="date" name="approval_date" id="approval_date" class="textinput textInput form-control" value="{% if shipment.recive_delivery_date %}{{shipment.recive_delivery_date}}{% endif %}">
+                            <p id="alert_msg0" style="color:red"></p>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <div>
+                                <label for="status">Status<span class="asteriskField">*</span></label>
+                                <select name="status" id="status" class="textinput textInput form-control">
+                                    <option value="All" selected disabled>Select Status</option>
+                                    <option value="APPROVED" {% if shipment.status == "APPROVED" %}selected{% endif %}>APPROVED</option>
+                                    <option value="DISAPPROVED" {% if shipment.status == "DISAPPROVED" %}selected{% endif %}>DISAPPROVED</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-2 approved-fields">
+                            <label for="received_weight">Received Weight<span class="asteriskField">*</span></label>
+                            <input type="number" name="received_weight" value="{% if shipment.received_weight %}{{shipment.received_weight}}{% else %}{% endif %}" class="textinput textInput form-control" id="received_weight">
+                            <p id="alert_msg" style="color:red"></p>
+                        </div>
+                        <div class="col-md-4 mb-2 approved-fields">
+                            <label for="ticket_number">Ticket Number<span class="asteriskField">*</span></label>
+                            <input type="number" name="ticket_number" value="{% if shipment.ticket_number %}{{shipment.ticket_number}}{% else %}{% endif %}" class="textinput textInput form-control" id="ticket_number">
+                            <p id="alert_msg" style="color:red"></p>
+                        </div>
+                        <div class="col-md-4 mb-2 approved-fields">
+                            <label for="storage_bin_recive">Receiver SKU Id<span class="asteriskField">*</span></label>
+                            <input type="text" name="storage_bin_recive" value="{% if shipment.storage_bin_recive %}{{shipment.storage_bin_recive}}{% else %}{% endif %}" class="textinput textInput form-control" id="storage_bin_recive">
+                            <p id="alert_msg" style="color:red"></p>
+                        </div>
+                        <div class="col-md-4 mb-2 disapproved-fields">
+                            <label for="reason_for_disapproval">Reason for disapproval<span class="asteriskField">*</span></label>
+                            <input type="text" name="reason_for_disapproval" value="{% if shipment.reason_for_disapproval %}{{shipment.reason_for_disapproval}}{% else %}{% endif %}" class="textinput textInput form-control" id="reason_for_disapproval">
                             <p id="alert_msg" style="color:red"></p>
                         </div>
                         <div class="col-md-4 mb-2">
@@ -153,28 +181,6 @@
                             <input type="file" name="files" multiple accept=".jpg,.png,.xlsx,.csv,.pdf" id="multi_file" class="textinput textInput form-control">
                             <p id="file_name_show" style="color:gray"></p>
                         </div>
-                        <div class="col-md-4 mb-2">
-                            <label for="">Select Destination<span class="asteriskField">*</span></label>
-                            <select id="processor2_id" name="processor2_id" class="textinput textInput form-control">
-                                <option value='All' selected disabled>Select Destination</option>
-                                <optgroup label="Select T2 Processor">
-                                    {% for processor in processor2 %}
-                                    <option value="{{ processor.processor2__id }} T2" {% if processor2_id == processor.processor2__id|stringformat:"s" %}selected{% endif %}>{{ processor.processor2__entity_name }} - {{ processor.processor2__id }}</option>
-                                    {% endfor %}
-                                </optgroup>
-                                <optgroup label="Select T3 Processor">
-                                    {% for processor in processor3 %}
-                                    <option value="{{ processor.processor2__id }} T3" {% if processor2_id == processor.processor2__id|stringformat:"s" %}selected{% endif %}>{{ processor.processor2__entity_name }} - {{ processor.processor2__id }}</option>
-                                    {% endfor %}
-                                </optgroup>
-                                <optgroup label="Select T4 Processor">
-                                    {% for processor in processor4 %}
-                                    <option value="{{ processor.processor2__id }} T4" {% if processor2_id == processor.processor2__id|stringformat:"s" %}selected{% endif %}>{{ processor.processor2__entity_name }} - {{ processor.processor2__id }}</option>
-                                    {% endfor %}
-                                </optgroup>
-                            </select>
-                        </div>
-                    </div>
                     <div class="row">
                         <div class="form-btn-row">
                             <a href="{% url 'outbound_shipment_mgmt' %}" class="btn-close-cancel btn-space">Cancel</a>
@@ -198,8 +204,46 @@
 <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.16/jquery-ui.js">
 </script>
 
-<link href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.16/themes/ui-lightness/jquery-ui.css" rel="stylesheet"
-    type="text/css" />
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var statusSelect = document.getElementById('status');
+            var approvedFields = document.querySelectorAll('.approved-fields');
+            var disapprovedFields = document.querySelectorAll('.disapproved-fields');
+        
+            function toggleFields() {
+                var status = statusSelect.value;
+                if (status === 'APPROVED') {
+                    approvedFields.forEach(function(field) {
+                        field.style.display = 'block';
+                    });
+                    disapprovedFields.forEach(function(field) {
+                        field.style.display = 'none';
+                    });
+                } else if (status === 'DISAPPROVED') {
+                    approvedFields.forEach(function(field) {
+                        field.style.display = 'none';
+                    });
+                    disapprovedFields.forEach(function(field) {
+                        field.style.display = 'block';
+                    });
+                } else {
+                    approvedFields.forEach(function(field) {
+                        field.style.display = 'none';
+                    });
+                    disapprovedFields.forEach(function(field) {
+                        field.style.display = 'none';
+                    });
+                }
+            }
+        
+            statusSelect.addEventListener('change', toggleFields);
+        
+            // Initial call to set the correct fields based on the current value
+            toggleFields();
+        });
+        </script>
+        
 <script>
 
     $(function() {
@@ -366,13 +410,13 @@
     });
     </script>
 
-<script>
-    $('#Processor-active').addClass('activeLink');
-  
-    $('#Processor-down').addClass('down');
-    $('#Processor-sub').show();
-  
-    $('#Shipment-Management').addClass('activeLink active-nav');
-  
-  </script>
+    <script>
+        $('#Tier2-Processor-active').addClass('activeLink');
+      
+        $('#Tier2-Processor-down').addClass('down');
+        $('#Tier2-Processor-sub').show();
+      
+        $('#Inbound-Management-Processor2').addClass('activeLink active-nav');
+      
+      </script>
 {% endblock jquery %}

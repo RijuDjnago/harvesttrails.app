@@ -122,5 +122,6 @@ urlpatterns = [
     
     path('link_processor1_to_processor/', views.link_processor1_to_processor, name="link_processor1_to_processor"),
     path('add_outbound_shipment/', views.add_outbound_shipment_processor1, name="add_outbound_shipment"),
-
+    path('Processor1ToProcessorManagement/', views.Processor1ToProcessorManagement, name="Processor1ToProcessorManagement"),
+    path('link_processor_one/', views.link_processor_one, name="link_processor_one"),
 ]

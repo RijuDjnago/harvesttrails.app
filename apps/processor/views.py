@@ -6748,7 +6748,7 @@ def add_outbound_shipment(request):
                     context['id_bin_location_pull'] = id_bin_location_pull
                     context['sum_total_bin_location_milled_volume'] = f'{sum_total_bin_location_milled_volume} Lbs'
                     context['sum_total_bin_location_milled_volume_java'] = sum_total_bin_location_milled_volume
-                    shipment_id = request.POST.get('shipment_id')
+                    shipment_id = generate_shipment_id()
 
                     equipment_type = request.POST.get('equipment_type')
                     equipment_id = request.POST.get('equipment_id')
@@ -7302,15 +7302,29 @@ def add_outbound_shipment_processor1(request):
                 "lot_number": data.get("lot_number"),
                 "volume_shipped": data.get("volume_shipped"),
                 "id_date": data.get("id_date"),
+                "files": data.get("files"),
+                "milled_value":data.get('milled_value')
             })
 
             if bin_pull and not data.get("save"):
-                get_bin_location = list(ProductionManagement.objects.filter(processor_id=int(bin_pull)).values_list('milled_volume', flat=True))
-                print(get_bin_location)
                 list_get_bin_location = []
-                for i in get_bin_location:
-                    list_get_bin_location.append(int(i))
-                context["milled_value"] = sum(list_get_bin_location) if get_bin_location else 0
+                get_bin_location = list(ProductionManagement.objects.filter(processor_id=int(bin_pull)).values_list('milled_volume', flat=True))
+
+                if get_bin_location:
+                    for i in get_bin_location:
+                        list_get_bin_location.append(float(i))
+
+                total_shiped_volume = []
+                shiped_volume = list(ShipmentManagement.objects.filter(bin_location=bin_pull).values_list('volume_shipped', flat=True))
+                if shiped_volume:
+                    for i in shiped_volume :
+                        total_shiped_volume.append(float(i))
+
+                sum_total_volume = sum(list_get_bin_location) if get_bin_location else 0
+                sum_shiped_volume = sum(total_shiped_volume) if shiped_volume else 0
+                
+                context["milled_value"] =  float(sum_total_volume) - float(sum_shiped_volume)
+               
                 processor2 = LinkProcessor1ToProcessor.objects.filter(processor1_id=bin_pull, processor2__processor_type__type_name = "T2").values("processor2__id", "processor2__entity_name")
                 processor3 = LinkProcessor1ToProcessor.objects.filter(processor1_id=bin_pull, processor2__processor_type__type_name = "T3").values("processor2__id", "processor2__entity_name")
                 processor4 = LinkProcessor1ToProcessor.objects.filter(processor1_id=bin_pull, processor2__processor_type__type_name = "T4").values("processor2__id", "processor2__entity_name")
@@ -7343,8 +7357,9 @@ def add_outbound_shipment_processor1(request):
                 elif processor_type == 'T4':
                     select_destination_ = Processor2.objects.get(id=select_proc_id).entity_name
                     receiver_processor_type = "T4"
-                volume_left = 0
-                milled_volume = 0
+               
+                milled_volume = context["milled_value"]
+                volume_left = float(context["milled_value"]) - float(context["volume_shipped"])
                 shipment_id = generate_shipment_id()
                 
                 processor_e_name = Processor.objects.filter(id=int(bin_pull)).first().entity_name
@@ -7354,8 +7369,77 @@ def add_outbound_shipment_processor1(request):
                         purchase_order_number=context["purchase_number"],lot_number=context["lot_number"],volume_shipped=context["volume_shipped"],milled_volume=milled_volume,volume_left=volume_left,editable_obj=True,
                         processor2_idd=select_proc_id,processor2_name=select_destination_, receiver_processor_type=receiver_processor_type)
                 save_shipment_management.save()
+                print(context["files"])
+                for file in context["files"]:
+                    new_file = File.objects.create(file=file)
+                    save_shipment_management.files.add(new_file)
+                save_shipment_management.save()
 
         return render(request, 'processor/add_outbound_shipment.html', context)
 
 
+@login_required()
+def Processor1ToProcessorManagement(request):
+    if request.user.is_authenticated:
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+            context ={}
+            Processor1 = Processor.objects.all()  #24/04/2024
+            context['Processor1'] = Processor1
+            link_processor_to_processor_all = LinkProcessor1ToProcessor.objects.all()
+            context['link_processor_to_processor_all'] = link_processor_to_processor_all
+            
+            if request.method == 'POST':
+                pro1_id = request.POST.get('pro1_id')
+                if pro1_id != '0':
+                    context['link_processor_to_processor_all'] = link_processor_to_processor_all.filter(processor1_id=int(pro1_id))
+                    #then need to add T1/T2/T3
+                    context['selectedpro1'] = int(pro1_id)             
+            print(context)             
+            return render(request, 'processor/processor_processor_management.html',context)
+    else:
+        return redirect('login')
+
+
+@login_required
+def link_processor_one(request):
+    context = {}
+    try:
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+            processor1 = Processor.objects.all()
+            context["processor1"] = processor1
+            context["processor2"] = []
+            context["processor3"] = []
+            context["processor4"] = []
+
+            if request.method == "POST" :
+
+                selected_processor = request.POST.get("processor_id")
+                button_click = request.POST.get("save")
+                if selected_processor and  not button_click:
+                    context["selectedprocessor"] = int(selected_processor)
+                    link_processor2 = list(LinkProcessor1ToProcessor.objects.filter(processor1_id=selected_processor).values_list("processor2", flat = True))
+                    processor_two = Processor2.objects.exclude(id__in=link_processor2)
+                    processor2 = processor_two.filter(processor_type__type_name="T2")
+                    processor3 = processor_two.filter(processor_type__type_name="T3")
+                    processor4 = processor_two.filter(processor_type__type_name="T4")
+                    context["processor2"] = processor2
+                    context["processor3"] = processor3
+                    context["processor4"] = processor4
+                    return render(request, 'processor/link_processor.html', context)
+                else:
+                    select_processor2 = request.POST.getlist("select_processor2")
+                    print(selected_processor, select_processor2)
+                    for i in select_processor2:
+                        pro_id , pro_type = i.split(" ")
+                        link_pro = LinkProcessor1ToProcessor(processor1_id = selected_processor, processor2_id = pro_id)
+                        link_pro.save()
+                    return redirect('Processor1ToProcessorManagement')
+                    # return render(request, 'processor2/link_processor.html', context)
+
+            return render(request, 'processor/link_processor.html', context)
+        else:
+            return render(request, 'processor/link_processor.html', context) 
+    except Exception as e:
+        print(e)
+        return render(request, 'processor/link_processor.html', context)
 

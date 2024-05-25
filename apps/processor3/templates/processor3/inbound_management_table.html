@@ -166,7 +166,7 @@
                     <a href="#" class="btn-close-cancel">Upcoming Inbound</a>
                 {% endif %}
                 &nbsp;
-                    <a href="{% url 'recive_shipment' %}" class="btn-close-cancel">Receive Delivery</a>
+                    <a href="{% url 'receive_shipment' %}" class="btn-close-cancel">Receive Delivery</a>
                 &nbsp;
                 {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
                     <a href="#" class="btn-close-cancel" target="_blank">Rejected Shipments CSV</a>

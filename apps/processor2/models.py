@@ -169,6 +169,9 @@ class ShipmentManagement(models.Model):
     processor2_name = models.CharField(max_length=250, null=True, blank=True)
     recive_delivery_date = models.DateTimeField(null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, null=True, blank=True)
+    received_weight = models.CharField(max_length=10, null=True, blank=True)
+    ticket_number = models.CharField(max_length=20, null=True, blank=True)
+    reason_for_disapproval = models.CharField(max_length=200, null=True, blank=True,verbose_name='Reason For Disapproval')
 
 class LinkProcessor1ToProcessor(models.Model):
     processor1 = models.ForeignKey(Processor, on_delete=models.CASCADE, null=True,blank=True)

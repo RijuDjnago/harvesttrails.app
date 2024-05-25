@@ -153,23 +153,15 @@
                             <input type="file" name="files" multiple accept=".jpg,.png,.xlsx,.csv,.pdf" id="multi_file" class="textinput textInput form-control">
                             <p id="file_name_show" style="color:gray"></p>
                         </div>
+                       
                         <div class="col-md-4 mb-2">
                             <label for="">Select Destination<span class="asteriskField">*</span></label>
                             <select id="processor2_id" name="processor2_id" class="textinput textInput form-control">
                                 <option value='All' selected disabled>Select Destination</option>
-                                <optgroup label="Select T2 Processor">
-                                    {% for processor in processor2 %}
-                                    <option value="{{ processor.processor2__id }} T2" {% if processor2_id == processor.processor2__id|stringformat:"s" %}selected{% endif %}>{{ processor.processor2__entity_name }} - {{ processor.processor2__id }}</option>
-                                    {% endfor %}
-                                </optgroup>
-                                <optgroup label="Select T3 Processor">
-                                    {% for processor in processor3 %}
-                                    <option value="{{ processor.processor2__id }} T3" {% if processor2_id == processor.processor2__id|stringformat:"s" %}selected{% endif %}>{{ processor.processor2__entity_name }} - {{ processor.processor2__id }}</option>
-                                    {% endfor %}
-                                </optgroup>
+                                
                                 <optgroup label="Select T4 Processor">
                                     {% for processor in processor4 %}
-                                    <option value="{{ processor.processor2__id }} T4" {% if processor2_id == processor.processor2__id|stringformat:"s" %}selected{% endif %}>{{ processor.processor2__entity_name }} - {{ processor.processor2__id }}</option>
+                                    <option value="{{ processor.linked_processor__id }} T4" {% if processor2_id == processor.linked_processor__id|stringformat:"s" %}selected{% endif %}>{{ processor.linked_processor__entity_name }} - {{ processor.linked_processor__id }}</option>
                                     {% endfor %}
                                 </optgroup>
                             </select>
@@ -367,12 +359,12 @@
     </script>
 
 <script>
-    $('#Processor-active').addClass('activeLink');
+    $('#Tier2-Processor-active').addClass('activeLink');
   
-    $('#Processor-down').addClass('down');
-    $('#Processor-sub').show();
+    $('#Tier2-Processor-down').addClass('down');
+    $('#Tier2-Processor-sub').show();
   
-    $('#Shipment-Management').addClass('activeLink active-nav');
+    $('#Shipment-Management-Processor2').addClass('activeLink active-nav');
   
   </script>
 {% endblock jquery %}

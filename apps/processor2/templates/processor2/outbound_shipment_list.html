@@ -159,22 +159,13 @@
     <main>
         {% include '_alerts.html' %}
         <div class="page-title-with-or-without-btn">
-            <span class="farm headingtop">Inbound Management</span>
-            <!-- Create button for Account-->
+            <span class="farm headingtop">Shipment Management</span>
+            <!-- Create button for add-processor-->
             <div class="flex-header-btn">
-                {% if request.user.is_processor %}
-                    <a href="#" class="btn-close-cancel">Upcoming Inbound</a>
-                {% endif %}
-                &nbsp;
-                    <a href="{% url 'recive_shipment' %}" class="btn-close-cancel">Receive Delivery</a>
-                &nbsp;
-                {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
-                    <a href="#" class="btn-close-cancel" target="_blank">Rejected Shipments CSV</a>
-                    &nbsp;
-                    <a href="#" class="btn-close-cancel" target="_blank">All Shipments CSV</a>
-                {% endif %}
+              <a href="{% url 'add_outbound_shipment_processor2' %}" class="btn-close-cancel">Add Shipment</a>
+              &nbsp;
+              <a href="#" class="btn-close-cancel">Download CSV</a>
             </div>
-
         </div>
 
         
@@ -520,7 +511,7 @@ $(function() {
     $('#Tier2-Processor-down').addClass('down');
     $('#Tier2-Processor-sub').show();
   
-    $('#Inbound-Management-Processor2').addClass('activeLink active-nav');
+    $('#Shipment-Management-Processor2').addClass('activeLink active-nav');
   
   </script>
 {% endblock jquery %}
