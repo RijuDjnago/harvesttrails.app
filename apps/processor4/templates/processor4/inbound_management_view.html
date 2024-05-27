@@ -195,8 +195,10 @@
                         <div class="col-md-6" style="margin-bottom: 10px;">
                             <label for="UploadedFiles" style="font-weight:bold;">Uploaded Files</label>
                             <div>
-                                {% if file_data %}
-                                    
+                                {% if files %}
+                                    {% for file in files %}
+                                    <li><a href="/media/{{ file.file }}" target="_blank">{{ file.name }}</a></li>
+                                    {% endfor %}
                             
                                 {% else %}
                                     <p>No files available</p>

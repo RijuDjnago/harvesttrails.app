@@ -7302,7 +7302,7 @@ def add_outbound_shipment_processor1(request):
                 "lot_number": data.get("lot_number"),
                 "volume_shipped": data.get("volume_shipped"),
                 "id_date": data.get("id_date"),
-                "files": data.get("files"),
+                # "files": data.get("files"),
                 "milled_value":data.get('milled_value')
             })
 
@@ -7369,13 +7369,15 @@ def add_outbound_shipment_processor1(request):
                         purchase_order_number=context["purchase_number"],lot_number=context["lot_number"],volume_shipped=context["volume_shipped"],milled_volume=milled_volume,volume_left=volume_left,editable_obj=True,
                         processor2_idd=select_proc_id,processor2_name=select_destination_, receiver_processor_type=receiver_processor_type)
                 save_shipment_management.save()
-                print(context["files"])
-                for file in context["files"]:
+                files = request.FILES.getlist('files')
+                for file in files:
                     new_file = File.objects.create(file=file)
                     save_shipment_management.files.add(new_file)
                 save_shipment_management.save()
-
+                return redirect('outbound_shipment_mgmt')
         return render(request, 'processor/add_outbound_shipment.html', context)
+    else:
+        return redirect('login')
 
 
 @login_required()

@@ -358,9 +358,14 @@
                      <li><a id="Inbound-Management-Processor2" href="{% url 'inbound_shipment_list' %}">Inbound Management</a></li>
                      {% endif %}
                      {% if 'Processor2 Management' in request.user.get_role_perm or request.user.is_superuser or request.user.is_processor %}
+                     <li><a id="Production-Management-Processor2" href="{% url 'inbound_production_management' %}">Production Management</a></li>
+                     {% endif %}
+                     {% if 'Processor2 Management' in request.user.get_role_perm or request.user.is_superuser or request.user.is_processor %}
                      <li><a id="Shipment-Management-Processor2" href="{% url 'outbound_shipment_list' %}">Shipment Management</a></li>
                      {% endif %}
+                     
                   {% endif %}
+
                   {% if 'Processor2 Management' in request.user.get_role_perm or request.user.is_superuser  %}
                      {% if request.user.is_processor2 %}
                      <li><a id="Classing-List-Tier2" href="{% url 'list_bale_processor2' %}">Classing List Tier 2</a></li>
@@ -386,6 +391,7 @@
             <li><a id="Processor3-List" href="{% url 'list_processor3' %}">T3 Processor Management</a></li>
             <li><a id="Processor3-Processor-Management" href="{% url 'processor3_processor_management' %}">Processor To Processor Management</a></li>
             <li><a id="Inbound-Management-Processor3" href="{% url 'inbound_shipment_list3' %}">Inbound Management</a></li>
+            <li><a id="Production-Management-Processor3" href="{% url 'inbound_production_management_processor3' %}">Production Management</a></li>
             <li><a id="Shipment-Management-Processor3" href="{% url 'outbound_shipment_list_processor3' %}">Shipment Management</a></li>
         </ul>
     </li>

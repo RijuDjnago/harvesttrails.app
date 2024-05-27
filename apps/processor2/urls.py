@@ -33,4 +33,8 @@ urlpatterns = [
     path('recive_shipment/', views.recive_shipment, name="recive_shipment"),
     path('link_processor_two/', views.link_processor_two, name="link_processor_two"),
     path('processor2_processor_management/', views.processor2_processor_management, name="processor2_processor_management"),
+    path('inbound_production_management/', views.inbound_production_management, name="inbound_production_management"),
+    path('add_volume_pulled_processor2/', views.add_volume_pulled_processor2, name="add_volume_pulled_processor2"),
+    path('edit_volume_pulled_processor2/<int:pk>/', views.edit_volume_pulled_processor2, name="edit_volume_pulled_processor2"),
+    path('delete_volume_pulled_processor2/<int:pk>/', views.delete_volume_pulled_processor2, name="delete_volume_pulled_processor2"),
 ]

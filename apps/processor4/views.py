@@ -49,6 +49,18 @@ def inbound_shipment_view(request, pk):
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role() or request.user.is_processor2:
             #inbound management list for admin
             context["shipment"] = list(ShipmentManagement.objects.filter(id=pk).values())
+            files = ShipmentManagement.objects.filter(id=pk).first().files.all().values('file')
+            files_data = []
+            for j in files:
+                file_name = {}
+                file_name["file"] = j["file"]
+                # print(j["file"])
+                if j["file"] or j["file"] != "" or j["file"] != ' ':
+                    file_name["name"] = j["file"].split("/")[-1]
+                else:
+                    file_name["name"] = None
+                files_data.append(file_name)
+            context["files"] = files_data
             return render (request, 'processor4/inbound_management_view.html', context)
         else:
             return redirect('login')  
@@ -74,6 +86,12 @@ def inbound_shipment_edit(request, pk):
                 ShipmentManagement.objects.filter(id=pk).update(status=status,moisture_percent=moisture_percent, recive_delivery_date=approval_date,
                                                                 received_weight=received_weight,ticket_number=ticket_number,
                                                                 storage_bin_recive=storage_bin_recive, reason_for_disapproval=reason_for_disapproval)
+                files = request.FILES.getlist('files')
+                shipment = ShipmentManagement.objects.get(id=pk)
+                for file in files:
+                    new_file = File.objects.create(file=file)
+                    shipment.files.add(new_file)
+                shipment.save()
                 return redirect('inbound_shipment_list_processor4')
             return render(request, 'processor4/inbound_management_edit.html', context)
         else:
@@ -113,7 +131,7 @@ def receive_shipment(request):
                 "equipment_type": data.get("equipment_type"),
                 "lot_number": data.get("lot_number"),
                 "volume_shipped": data.get("volume_shipped"),
-                "files": data.get("files"),
+                # "files": data.get("files"),
                 "status": data.get("status"),
                 "receiver_sku_id": data.get("receiver_sku_id"),
                 "received_weight": data.get("received_weight"),
@@ -178,8 +196,11 @@ def receive_shipment(request):
                         purchase_order_number=context["purchase_number"],lot_number=context["lot_number"],volume_shipped=context["volume_shipped"],milled_volume=milled_volume,volume_left=volume_left,editable_obj=True,status=context["status"],
                         storage_bin_recive=context["receiver_sku_id"],ticket_number=context["ticket_number"],received_weight=context["received_weight"],processor2_idd=select_proc_id,processor2_name=select_destination_, receiver_processor_type=receiver_processor_type)
                 save_shipment_management.save()
-                print(save_shipment_management)
-                print(context["files"])
+                files = request.FILES.getlist('files')
+                for file in files:
+                    new_file = File.objects.create(file=file)
+                    save_shipment_management.files.add(new_file)
+                save_shipment_management.save()
                 
                 return redirect('inbound_shipment_list_processor4')
         return render(request, 'processor4/receive_delivery.html', context)
