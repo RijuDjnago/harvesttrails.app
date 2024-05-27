@@ -73,6 +73,7 @@ INSTALLED_APPS = [
     'apps.growerpayments',
     'apps.processor2',
     'apps.processor3',
+    'apps.processor4',
     'apps.chat',
     'apps.assistantapp',
     'apps.tracemodule',

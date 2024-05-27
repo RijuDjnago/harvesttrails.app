@@ -6685,6 +6685,42 @@ def outbound_shipment_mgmt_view(request,pk):
     except:
         return render (request, 'processor/outbound_shipment_mgmt_view_test.html')   
 
+# @login_required()
+# def link_processor1_to_processor(request):
+#     context = {}
+#     if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+#         processor1 = Processor.objects.all()
+#         context["processor1"] = processor1
+#         if request.method == "POST":
+#             selected_processor1 = request.POST.get('selected_processor1')
+#             print("jsdhj", selected_processor1)
+#             print("jsdhj", request.POST.get("save"))
+#             if selected_processor1 and not request.POST.get("save"): 
+#                 context["selected_processor"] = selected_processor1
+#                 get_processor1 = Processor.objects.filter(id=selected_processor1).first()
+#                 linked_processor2 = list(LinkProcessor1ToProcessor.objects.filter(processor1_id=selected_processor1).values_list("id", flat=True))
+#                 processor2 = Processor2.objects.filter(processor_type__type_name="T2").exclude(id__in=linked_processor2)
+#                 context["processor2"] = processor2
+#                 processor3 = Processor2.objects.filter(processor_type__type_name="T3").exclude(id__in=linked_processor2)
+#                 context["processor3"] = processor3
+#                 processor4 = Processor2.objects.filter(processor_type__type_name="T4").exclude(id__in=linked_processor2)
+#                 context["processor4"] = processor4
+#                 processor_ids = request.POST.getlist('processor_ids')
+#                 if len(processor_ids) != 0:
+#                     print(processor_ids)
+                    
+#                 return render (request, 'processor/link_processor1.html', context)
+            
+#             counter = request.POST.get('counter')
+#             for i in range(1,int(counter)+1):
+#                 selected_processor = request.POST.get("processor_id{}".format(i))
+#                 processor2 = Processor2.objects.filter(id=selected_processor).first()
+#                 LinkProcessor1ToProcessor.objects.create(processor1=get_processor1, processor2=processor2)
+#             print(context)
+#         return render (request, 'processor/link_processor1.html', context)
+    
+#     else:
+#         return redirect('login')
 
 
 @login_required()
