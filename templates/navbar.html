@@ -336,7 +336,9 @@
          <li class="for-drop">
             <a id="Tier2-Processor-active" href="javascript:void(0)" class="parent-nav1010"> <span class="rightimg"><i class="fas fa-warehouse"></i></span>
                <span class="forn-none10">T2 Processor   <!--Tier 2 Processor -->
-               <span id="Tier2-Processor-down" class="fas fa-chevron-right pull-right rotate10"></span></span></a>
+                  <span id="Tier2-Processor-down" class="fas fa-chevron-right pull-right rotate10"></span>
+               </span>
+            </a>
                <ul id="Tier2-Processor-sub" class="dropdown-1010" style="display: none;">
                   {% if 'Processor2 Management' in request.user.get_role_perm or request.user.is_superuser  %}
                      
@@ -370,29 +372,43 @@
          {% endif %}
          {% endif %}
          <!-- 250123 -->
-
-         <!-- 030524 -->
+         
          {% if request.user.is_authenticated %}
-         {% if 'Processor3 Management' in request.user.get_role_perm or request.user.is_superuser %}
-         <li class="for-drop">
-            <a id="Processor3-Configuration-active" href="javascript:void(0)" class="parent-nav1012"> <span class="rightimg"><i class="fas fa-warehouse"></i></span>
-               <span class="forn-none12">T3 Processor 
-               <span  id="Processor3-Configuration-down" class="fas fa-chevron-right pull-right rotate12"></span></span></a>
-               <ul id="Processor3-Configuration-sub"  class="dropdown-1012" style="display: none;">
-                  {% if 'Processor3 Management' in request.user.get_role_perm and 'Processor3' in request.user.get_role  %}
-                  {% comment %} <li><a id ="Classing-List-Tier-3-Processor" href="{% url 'assign_bale_list_processor3' %}">Classing List Tier 3 Processor</a></li> {% endcomment %}
-                  {% else %}
-                     <li><a id ="Processor3-List" href="{% url 'list_processor3' %}">T3 Processor Management</a></li>
-                     <li><a id ="Processor3-riju" href="{% url 'test' %}">riju processor</a></li>
-                     {% comment %} <li><a id ="Assign-Bale-To-Tier-3-Processor" href="{% url 'processor3_assign_bale_csv' %}">Assign Bale To Tier 3 Processor</a></li> 
-                     <li><a id ="Classing-List-Tier-3-Processor" href="{% url 'assign_bale_list_processor3' %}">Classing List Tier 3 Processor</a></li> {% endcomment %}
-                  {% endif %}
-               </ul>
-         </li>
-         {% endif %}
-         {% endif %}
-         <!-- 030524 -->
+    {% if 'Processor2 Management' in request.user.get_role_perm or request.user.is_superuser %}
+    <li class="for-drop">
+        <a id="Tier3-Processor-active" href="javascript:void(0)" class="parent-nav1011">
+            <span class="rightimg"><i class="fas fa-warehouse"></i></span>
+            <span class="forn-none10">T3 Processor
+                <span id="Tier3-Processor-down" class="fas fa-chevron-right pull-right rotate11"></span>
+            </span>
+        </a>
+        <ul id="Tier3-Processor-sub" class="dropdown-1011" style="display: none;">
+            <li><a id="Processor3-List" href="{% url 'list_processor3' %}">T3 Processor Management</a></li>
+            <li><a id="Processor3-Processor-Management" href="{% url 'processor3_processor_management' %}">Processor To Processor Management</a></li>
+            <li><a id="Inbound-Management-Processor3" href="{% url 'inbound_shipment_list3' %}">Inbound Management</a></li>
+            <li><a id="Shipment-Management-Processor3" href="{% url 'outbound_shipment_list_processor3' %}">Shipment Management</a></li>
+        </ul>
+    </li>
+    {% endif %}
+{% endif %}
 
+{% if request.user.is_authenticated %}
+    {% if 'Processor2 Management' in request.user.get_role_perm or request.user.is_superuser %}
+    <li class="for-drop">
+        <a id="Tier4-Processor-active" href="javascript:void(0)" class="parent-nav1012">
+            <span class="rightimg"><i class="fas fa-warehouse"></i></span>
+            <span class="forn-none10">T4 Processor
+                <span id="Tier4-Processor-down" class="fas fa-chevron-right pull-right rotate12"></span>
+            </span>
+        </a>
+        <ul id="Tier4-Processor-sub" class="dropdown-1012" style="display: none;">
+            <li><a id="Inbound-Management-Processor4" href="{% url 'inbound_shipment_list4' %}">Inbound Management</a></li>
+        </ul>
+    </li>
+    {% endif %}
+{% endif %}
+         <!-- 030524 -->
+         
          {% if request.user.is_authenticated %}
             {% if not request.user.is_superuser %}
                {% if 'Take Survey' in request.user.get_role_perm %}
@@ -524,6 +540,25 @@
                 }
             }})
             };
+</script>
+<script>
+   document.addEventListener('DOMContentLoaded', function () {
+      var toggleDropdown = function(parentNavId, subMenuId) {
+            var parentNav = document.getElementById(parentNavId);
+            var subMenu = document.getElementById(subMenuId);
+            
+            parentNav.addEventListener('click', function () {
+               if (subMenu.style.display === 'block') {
+                  subMenu.style.display = 'none';
+               } else {
+                  subMenu.style.display = 'block';
+               }
+            });
+      };
+   
+      toggleDropdown('Tier3-Processor-active', 'Tier3-Processor-sub');
+      toggleDropdown('Tier4-Processor-active', 'Tier4-Processor-sub');
+   });
 </script>
 {% endif %}
 {% endif %}

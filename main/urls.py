@@ -73,6 +73,7 @@ urlpatterns = [
     path('growerpayments/', include('apps.growerpayments.urls')),
     path('processor2/', include('apps.processor2.urls')),
     path('processor3/', include('apps.processor3.urls')),
+    path('processor4/', include('apps.processor4.urls')),
     path('assistantapp/', include('apps.assistantapp.urls')),
     path('tracemodule/', include('apps.tracemodule.urls')),
     # path('buyer/', include('apps.buyer.urls')),

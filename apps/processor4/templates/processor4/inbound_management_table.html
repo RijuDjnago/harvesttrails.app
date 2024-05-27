@@ -17,12 +17,6 @@
 {% block content %}
 {% include 'navbar.html' %}
 
-<style>
-    .input-group>.form-control {
-        height: auto !important;
-    }
-</style>
-
 <div class="main-content">
     {% include 'header.html' %}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.5.2/css/bootstrap.css">
@@ -147,7 +141,7 @@
             padding-left: 12px;
             padding-right: 10px;
             font-size: 16px;
-            padding: 0;
+            padding: 5px 10px 5px 5px;
         }
         .dropdown-item {
             display: block;
@@ -172,7 +166,7 @@
                     <a href="#" class="btn-close-cancel">Upcoming Inbound</a>
                 {% endif %}
                 &nbsp;
-                    <a href="{% url 'receive_shipment3' %}" class="btn-close-cancel">Receive Delivery</a>
+                    <a href="{% url 'receive_shipment4' %}" class="btn-close-cancel">Receive Delivery</a>
                 &nbsp;
                 {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
                     <a href="#" class="btn-close-cancel" target="_blank">Rejected Shipments CSV</a>
@@ -207,31 +201,15 @@
                                             class="apply-filter-btn primary-btn" value="Apply Filter" />
                                     </div>
                             </div>-->
-                            <div class="col-md-4 col-sm-6 col-12">
-                                <div class=" mb-3">
-                                    <select name="growerSelction" id="growerSelction" class="form-control selectpicker" data-live-search="true">
-                                        <option value="0">Select Processor</option>
-                                        <option value="1" selected>op 1</option>
-                                        <option value="2">op 1</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-4 col-sm-6 col-12 ms-auto">
-                                <div class="input-group mb-3">
-                                    <input type="text" class="form-control" placeholder="Search" name="search_name">
-                                    <button type="submit" class="btn btn-outline-success" id="basic-addon2">Search</span>
-                                  </div>
-
-                                  
-
-                                {% comment %} <div class="row">
+                            <div class="col-4">
+                                <div class="row">
                                     <div class="col-8">
                                         <input class="form-control" name="search_name" type="search" placeholder="Search" autocomplete="off" aria-label="Search" id="search_name" value="{{get_search_name}}">
                                     </div>
                                     <div class="col-4">
                                         <button class="btn btn-outline-success btn-block" type="submit">Search</button>
                                     </div>
-                                </div> {% endcomment %}
+                                </div>
                                 
                             </div>
                     </div>
@@ -288,7 +266,7 @@
                                                         class="fas fa-qrcode" alt="view QR code" title="view QR code"></span></a>
                                             </li>
                                             <li>
-                                                <a href="{% url 'inbound_shipment_view3' shipment.id %}"
+                                                <a href="{% url 'inbound_shipment_view4' shipment.id %}"
                                                     class="update-btn-link" alt="view inbound management" title="view inbound management"> <span class="fas fa-eye"></span> </a>
                                             </li>
                                             
@@ -296,7 +274,7 @@
                                             
                                             
                                             <li>
-                                                <a href="{% url 'inbound_shipment_edit3' shipment.id %}" class="update-btn-link" alt="edit inbound management" title="edit inbound management"> <span class="fas fa-edit"></span></a>
+                                                <a href="{% url 'inbound_shipment_edit4' shipment.id %}" class="update-btn-link" alt="edit inbound management" title="edit inbound management"> <span class="fas fa-edit"></span></a>
                                             </li>
                                             {% endif %}
                                             {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
@@ -536,29 +514,13 @@ $(function() {
          $('#addqueModal').modal('hide');
      }
 </script>
-<script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdn.canvasjs.com/canvasjs.min.js"></script>
 <script>
-    $(document).ready(function() {
-    $('#growerSelction').change( function () {
-    $('#submitBtn').click();
-    });
-    });
-    $(document).ready(function() {
-    $('#fieldSelction').change( function () {
-    $('#submitBtn').click();
-    });
-    });
-</script>
-<script>
-    $('#Tier2-Processor-active').addClass('activeLink');
+    $('#Tier4-Processor-active').addClass('activeLink');
+
+    $('#Tier4-Processor-down').addClass('down');
+    $('#Tier4-Processor-sub').show();
   
-    $('#Tier2-Processor-down').addClass('down');
-    $('#Tier2-Processor-sub').show();
-  
-    $('#Inbound-Management-Processor2').addClass('activeLink active-nav');
+    $('#Inbound-Management-Processor4').addClass('activeLink active-nav');
   
   </script>
 {% endblock jquery %}
-

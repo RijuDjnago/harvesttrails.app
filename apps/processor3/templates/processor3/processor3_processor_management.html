@@ -11,34 +11,6 @@
 
   gtag('config', 'G-Y3EWVPF7PQ');
 </script>
-
-
-<style>
-    .dropdown.bootstrap-select.form-control .btn {
-        border-radius: 0.5rem !important;
-    }
-
-    .dropdown-item {
-        padding: 0 !important;
-    }
-
-    .dropdown-item.active {
-        
-        font-size: 15px;
-    }
-    
-    .selected {
-        margin-top: 0 !important;
-        margin-left: 0 !important;
-        padding: 0 !important;
-    }
-
-    .dropdown-item {
-        padding: 0.5rem 1rem !important;
-    }
-</style>
-
-
 {% endblock extrahead %}
 
 {% load crispy_forms_tags %}
@@ -54,25 +26,29 @@
     <main>
         {% include '_alerts.html' %}
         <div class="page-title-with-or-without-btn">
-            <span class="farm headingtop"> Tier 2 Processor To Processor Management</span>
+            <span class="farm headingtop"> Tier 3 Processor To Processor Management</span>
             <!-- Create button for Account-->
             {% if 'Processor Management' in request.user.get_role_perm or request.user.is_superuser  %}
             {% if not request.user.is_processor %}
             <div class="flex-header-btn">
-                <a href="{% url 'link_processor_two' %}" class="btn-close-cancel">Link Tier 2 Processor To Processor</a>
+                <a href="{% url 'link_processor_three' %}" class="btn-close-cancel">Link Tier 3 Processor To Processor</a>
             </div>
             {% endif %}
             {% endif %}
-        </div> 
+        </div>
+        
+        
+        
+        
         <div class="card card-padding">
             <div class="main-simple-table-with-search">
                 <div class="row">
-                <div class="col-md-4 col-sm-6 col-12">
+                <div class="col-8">
                     <form action="" method="post" class="">
                         {% csrf_token %}
+                        <div class="inline-apply-filter">
                             <div class="three-fields-with-label">
-                                <label for="">Select Processor</label>
-                                <select name="pro1_id" id="growerSelction" class="form-control selectpicker" data-live-search="true">
+                                <select id="growerSelction" name="pro1_id">
                                     <option value='0' selected> Select All Processor</option>
                                     {% for pro1 in Processor1 %}
                                     {% if pro1.id == selectedpro1 %}
@@ -87,6 +63,7 @@
                             </div>
                             <input style="display : none;" id="submitBtn" type="submit"
                                 class="apply-filter-btn primary-btn" value="Apply Filter" />
+                        </div>
                     </form>
                 </div>
                 <div class="form-inline justify-content-end">
@@ -113,8 +90,8 @@
                         <table id="processorList_tbl" class="table table-striped dt-responsive nowrap" style="width:100%">
                             <thead>
                                 <tr style="border-bottom: 2px solid #e0e0e0;">
-                                    <th width="50%">T2 Processor</th>
-                                    {% if 'Processor' in request.user.get_role and request.user.is_processor %}
+                                    <th width="50%">T3 Processor</th>
+                                    {% if 'Processor2' in request.user.get_role and request.user.is_processor %}
                                     {% else %}
                                     <th width="25%">processor</th>
                                     <th width="15%">processor Type</th>
@@ -126,7 +103,7 @@
                                 {% for pro in link_processor_to_processor_all %}
                                 <tr>
                                     <td>{{pro.processor.entity_name}}</td>   
-                                    {% if 'Processor' in request.user.get_role and request.user.is_processor %}
+                                    {% if 'Processor2' in request.user.get_role and request.user.is_processor %}
                                     {% else %}                              
                                     <td>{{pro.linked_processor.entity_name}}</td>  
                                     {% endif %} 
@@ -138,7 +115,7 @@
                                         <!-- <li>
                                         <a href="" class="update-btn-link" alt="edit linked grower to processor" title="edit linked grower to processor"> <span class="fas fa-at"></span> </a>
                                         </li> -->
-                                        {% if 'Processor' in request.user.get_role and request.user.is_processor %}
+                                        {% if 'Processor2' in request.user.get_role and request.user.is_processor %}
                                         {% else %}
                                         <li>
                                             <a onclick="delStorage('')" href="#"
@@ -196,21 +173,7 @@
 <script src="https://cdn.datatables.net/1.11.0/js/dataTables.bootstrap4.min.js"></script>
 <script src="https://cdn.datatables.net/responsive/2.2.9/js/dataTables.responsive.min.js"></script>
 <script src="https://cdn.datatables.net/responsive/2.2.9/js/responsive.bootstrap4.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdn.canvasjs.com/canvasjs.min.js"></script>
-<script>
-    $(document).ready(function() {
-    $('#growerSelction').change( function () {
-    $('#submitBtn').click();
-    });
-    });
-    $(document).ready(function() {
-    $('#fieldSelction').change( function () {
-    $('#submitBtn').click();
-    });
-    });
-</script>
+
 <script src="{% static 'js/farm/farm_list.js' %}"></script>
 
 <script>
@@ -244,15 +207,12 @@ function storagedeleteNow(){
 }
 </script>
 <script>
-    $('#Tier2-Processor-active').addClass('activeLink');
+    $('#Tier3-Processor-active').addClass('activeLink');
   
-    $('#Tier2-Processor-down').addClass('down');
-    $('#Tier2-Processor-sub').show();
+    $('#Tier3-Processor-down').addClass('down');
+    $('#Tier3-Processor-sub').show();
   
-    $('#Processor2-Processor-Management').addClass('activeLink active-nav');
+    $('#Processor3-Processor-Management').addClass('activeLink active-nav');
   
   </script>
 {% endblock scripts %}
-
-
-

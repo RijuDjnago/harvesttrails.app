@@ -1398,13 +1398,13 @@ def processor2_processor_management(request):
             context ={}
             processor2 = Processor2.objects.filter(processor_type__type_name="T2")  #24/04/2024
             context['Processor1'] = processor2
-            link_processor_to_processor_all = LinkProcessorToProcessor.objects.all()
+            link_processor_to_processor_all = LinkProcessorToProcessor.objects.filter(processor__processor_type__type_name="T2")
             context['link_processor_to_processor_all'] = link_processor_to_processor_all
             
             if request.method == 'POST':
                 pro1_id = request.POST.get('pro1_id')
                 if pro1_id != '0':
-                    context['link_processor_to_processor_all'] = link_processor_to_processor_all.filter(processor1_id=int(pro1_id))
+                    context['link_processor_to_processor_all'] = link_processor_to_processor_all.filter(processor_id=int(pro1_id))
                     #then need to add T1/T2/T3
                     context['selectedpro1'] = int(pro1_id)             
             print(context)             
