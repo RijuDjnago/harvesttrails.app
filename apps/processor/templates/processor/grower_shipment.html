@@ -33,26 +33,15 @@
                     {% csrf_token %}
                     <div class="row" style="margin-bottom:10px">
                         <div class="col-md-3">
-                            <label for="id_destination">Select Destination<span class="asteriskField">*</span></label>
-                            <select id="id_destination" name="processor_type" class="textinput textInput form-control" style="width: 100%;padding-left:10px;" required onchange="updateProcessorOptions()">
-                                <option value="select">Select Destination</option>
-                                <option value="T1">T1</option>
-                                <option value="T2">T2</option>
-                            </select>
-                            <p id="disp1" style="color: red;"></p>
-                        </div>
-                    </div>
-                
-                    <div class="row" style="margin-bottom:10px">
-                        <div class="col-md-3">
-                            <label for="id_processor">Processor<span class="asteriskField">*</span></label>
-                            <select id="id_processor" name="processor2_id" class="textinput textInput form-control" style="width: 100%;padding-left:10px;" required>
-                                <!-- Options will be populated by JavaScript -->
-                            </select>
+                            <label for="id_processor">Processor</label>
+                            <input id="id_processor" class="textinput textInput form-control" type="text" readonly
+                                value="{{processor}}">
                         </div>
                         <div class="col-md-3">
                             <label for="id_storage">Storage</label>
-                            <select id="id_storage" name="id_storage" class="textinput textInput form-control" style="width: 100%;padding-left:10px;">
+                            <select id="id_storage" name="id_storage" class="textinput textInput form-control"
+                                style="width: 100%;padding-left:10px ;">
+
                                 {% for storage in storage %}
                                 <option value="{{ storage.pk }}">{{storage.storage_name}} - {{ storage.pk }}</option>
                                 {% endfor %}
@@ -60,11 +49,13 @@
                         </div>
                         <div class="col-md-3">
                             <label for="module_number">Module Tag Number<span class="asteriskField">*</span></label>
-                            <input id="module_number1" name="module_number" class="textinput textInput form-control" type="text" required>
+                            <input id="module_number1" name="module_number" class="textinput textInput form-control"
+                                type="text" required>
                         </div>
                         <div class="col-md-3">
                             <label for="id_field">Field Origin<span class="asteriskField">*</span></label>
-                            <select id="id_field" name="id_field" class="textinput textInput form-control" style="width: 100%;padding-left:10px;" required>
+                            <select onchange="custom_option_deselect()" id="id_field1" name="id_field" class="textinput textInput form-control"
+                                style="width: 100%;padding-left:10px ;" required>
                                 <option value="select">Select Field</option>
                                 {% for field in field %}
                                 <option value="{{field.id}}" data-crop="{{field.crop}}">{{field.name}}</option>
@@ -72,19 +63,21 @@
                             </select>
                             <p id="disp1" style="color: red;"></p>
                         </div>
+
                     </div>
-                
                     <div class="row" style="margin-bottom:10px">
                         <div class="col-md-2 mb-2">
                             <div>
                                 <label for="id_amount1">Weight 1<span class="asteriskField">*</span></label>
-                                <input oninput="funcamount2()" type="number" name="amount1" class="textinput textInput form-control" id="id_amount1">
+                                <input oninput="funcamount2()" type="number" name="amount1"
+                                    class="textinput textInput form-control" id="id_amount1">
                             </div>
                             <p id="disp2" style="color: red;"></p>
                         </div>
                         <div class="col-md-2 mb-2">
                             <label for="id_unit">Weight Type 1<span class="asteriskField">*</span></label>
-                            <select onchange="funcamount2()" id="id_unit1" name="id_unit1" class="textinput textInput form-control" style="width: 100%;padding-left:10px;">
+                            <select onchange="funcamount2()" id="id_unit1" name="id_unit1"
+                                class="textinput textInput form-control" style="width: 100%;padding-left:10px ;">
                                 <option value=1>LBS</option>
                                 <option value=3800>MODULES (8 ROLLS)</option>
                                 <option value=1900>SETS (4 ROLLS)</option>
@@ -97,11 +90,14 @@
                         </div>
                         <div class="col-md-2 mb-2">
                             <label for="id_amount2">Weight 2</label>
-                            <input oninput="funcamount2()" type="number" name="amount2" class="textinput textInput form-control" id="id_amount2">
+                            <input oninput="funcamount2()" type="number" name="amount2"
+                                class="textinput textInput form-control" id="id_amount2">
                         </div>
+                        <!-- 1 roll = 475 lbs -->
                         <div class="col-md-2 mb-2">
                             <label for="id_unit2">Weight Type 2</label>
-                            <select onchange="funcamount2(this.value)" id="id_unit2" name="id_unit2" class="textinput textInput form-control" style="width: 100%;padding-left:10px;">
+                            <select onchange="funcamount2(this.value)" id="id_unit2" name="id_unit2"
+                                class="textinput textInput form-control" style="width: 100%;padding-left:10px ;">
                                 <option value=1>LBS</option>
                                 <option value=38000>MODULES (8 ROLLS)</option>
                                 <option value=19000>SETS (4 ROLLS)</option>
@@ -114,54 +110,31 @@
                         </div>
                         <div class="col-md-1 mb-2">
                             <label for="id_unit">Total</label>
-                            <div style="font-size: 20px; margin-top: 10px;display: flex;"><span id="output">0</span>&nbsp;<span> LBS</span></div>
+                            <div style="font-size: 20px; margin-top: 10px;display: flex;" ><span id="output">0</span>&nbsp;<span> LBS</span></div>
                             <input type="text" value="" id="get_output" style="display: none;" name="get_output">
                         </div>
+
                         <div class="col-md-4 mb-2">
                             <label for="multi_file">Upload File <span class="asteriskField">*</span></label>
-                            <input type="file" name="files" multiple accept=".jpg,.png,.xlsx,.csv,.pdf" id="multi_file" class="textinput textInput form-control">
+                            {% comment %} <input type="file" name="files" multiple accept=".jpg,.png,.xlsx,.csv,.pdf" id="multi_file" class="textinput textInput form-control" required> {% endcomment %}
+                            <input type="file" name="files" multiple accept=".jpg,.png,.xlsx,.csv,.pdf" id="multi_file" class="textinput textInput form-control" >
+                            {% comment %} <input type="file" id="fileInput" multiple> {% endcomment %}
                             <p id="file_name_show" style="color:gray"></p>
+                            {% comment %} <p id="alert_msg8" style="color:red"></p> {% endcomment %}
                         </div>
+
+
                     </div>
                     <div class="row">
                         <div class="form-btn-row">
                             <a href="{% url 'grower_shipment_list' %}" class="btn-close-cancel btn-space">Cancel</a>
-                            <input style="display: none;" id="hide_btn1" type="submit" class="btn-save-submit" value="Save">
+                            <input style="display: none;" id="hide_btn1" type="submit" class="btn-save-submit"
+                                value="Save">
                             <input type="button" class="btn-save-submit" value="Save" onclick="activityButton1()">
+                            <!-- <input type="submit" class="btn-save-submit" value="Save">  -->
                         </div>
                     </div>
                 </form>
-                
-                <script>
-                    function updateProcessorOptions() {
-                        var destination = document.getElementById('id_destination').value;
-                        var processorSelect = document.getElementById('id_processor');
-                        processorSelect.innerHTML = ''; // Clear existing options
-                
-                        if (destination === 'T1') {
-                            var option = document.createElement('option');
-                            option.value = 'selected';
-                            option.text = '{{ processor }}';
-                            processorSelect.appendChild(option);
-                        } else if (destination === 'T2') {
-                            {% for t2 in processor2 %}
-                            var option = document.createElement('option');
-                            option.value = '{{ t2.id }}';
-                            //option.name = 'processor2_id';
-                            option.text = '{{ t2.entity_name }}';
-                            processorSelect.appendChild(option);
-                            {% endfor %}
-                        } else {
-                            var option = document.createElement('option');
-                            option.value = 'select';
-                            option.text = 'Select Processor';
-                            option.disabled = true;
-                            option.selected = true;
-                            processorSelect.appendChild(option);
-                        }
-                    }
-                </script>
-                
                 {% endif %}
                 {% endif %}
                 {% if request.user.is_consultant %}

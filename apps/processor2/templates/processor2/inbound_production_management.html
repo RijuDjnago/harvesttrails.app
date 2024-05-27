@@ -1,5 +1,5 @@
 {% extends "base.html" %} {% load static %}
-{% block title %} Shipment Management {% endblock title %}
+{% block title %} Production Management {% endblock title %}
 
 {% block extrahead %}
 <!-- Google tag (gtag.js) -->
@@ -123,10 +123,10 @@
     <main>
         {% include '_alerts.html' %}
         <div class="page-title-with-or-without-btn">
-            <span class="farm headingtop">Shipment Management</span>
+            <span class="farm headingtop">Production Management</span>
             <!-- Create button for add-processor-->
             <div class="flex-header-btn">
-              <a href="{% url 'add_outbound_shipment' %}" class="btn-close-cancel">Add Shipment</a>
+              <a href="#" class="btn-close-cancel">Add Volume Pulled</a>
               &nbsp;
               <a href="#" class="btn-close-cancel">Download CSV</a>
             </div>
@@ -134,8 +134,8 @@
         <div class="card card-padding">
             <form method="get">
                 <div class="row">
-                    {% comment %} {% if request.user.is_processor %}
-                    {% else %} {% endcomment %}
+                    {% if request.user.is_processor %}
+                    {% else %}
                     <div class="col-4">
                         <div class="inline-apply-filter">
                             <div class="three-fields-with-label">
@@ -157,11 +157,11 @@
                     </div>
                     
                     <div class="col-4"></div>
-                    {% comment %} {% endif %} {% endcomment %}
+                    {% endif %}
                     <div class="col-4">
                         <div class="row">
                             <div class="col-8">
-                                <input class="form-control" name="search_name" type="search" placeholder="Search" aria-label="Search" id="search_name" value="{{search_name}}" autocomplete="off">
+                                <input class="form-control" name="search_name" type="search" placeholder="Search" aria-label="Search" id="search_name" value="{{search_name}}">
                             </div>
                             <div class="col-4">
                                 <button class="btn btn-outline-success btn-block" type="submit">Search</button>
@@ -178,55 +178,50 @@
                         <table id="processorList_tbl" class="table table-striped dt-responsive nowrap" style="width:100%">
                             <thead>
                                 <tr style="border-bottom: 2px solid #e0e0e0;">
-                                    <th width="15%">Bin Location</th>
-                                    <th width="15%">Processor</th>
-                                    <th width="15%">Milled Volume</th>
-                                    <th width="15%">Date Pulled</th>
-                                    <th width="15%">Volume Shipped</th>
-                                    <th width="15%">Balance</th>
-                                    {% comment %} {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %} {% endcomment %}
-                                    <th width="10%">Action</th>
-                                    {% comment %} {% endif %} {% endcomment %}
+                                    <th width="10%">Processor</th>
+                                    <th width="10%">Date Pulled</th>
+                                    <th width="10%">Bin Location</th>
+                                    <th width="10%">Total Volume</th>
+                                    <!-- <th width="10%">Total Inbound</th> -->
+                                    <th width="10%">Volume Pulled</th>
+                                    <th width="10%">Milled Volume</th>
+                                    <th width="10%">Volume Left</th>
+                                    <th width="10%">Milled Storage Bin</th>
+                                    {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
+                                    <th width="5%">Action</th>
+                                    {% endif %}
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for i in report %}
-
+                                
                                 <tr>
-                                    <td>{{i.bin_location}}</td>
                                     <td>{{i.processor_e_name}}</td>
-                                    <td>{{i.milled_volume}}</td>                                   
-                                    {% comment %} <td>{{i.date_pulled}} Lbs</td> {% endcomment %}
-                                    <td>{{i.date_pulled}} </td>
+                                    <td>{{i.date_pulled}}</td>
+                                    <td>{{i.bin_location}}</td>                                   
+                                    <td>{{i.total_volume}} Lbs</td>
                                     <!-- <td></td> -->
-                                    <td>{{i.volume_shipped}} Lbs</td>
+                                    <td>{{i.volume_pulled}} Lbs</td>
+                                    <td>{{i.milled_volume}} Lbs</td>
                                     <td>{{i.volume_left}} Lbs</td>
-                                    {% comment %} {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %} {% endcomment %}
+                                    <td>{{i.milled_storage_bin}}</td>
+                                    {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
                                     <td class="backk action-td rmv-bd">
-                                        {% comment %} <ul class="justify-content-end"> {% endcomment %}
+                                        {% if i.editable_obj %}
                                         <ul>
-                                            <li> 
-                                                <a href="{% url 'outbound_shipment_mgmt_view' i.id %}" alt="view user" title="view user"><span class="fas fa-eye"></span> </a>
+                                            <li>
+                                                <a href="{% url 'edit_volume_pulled' i.pk %}" class="update-btn-link" alt="edit production management" title="edit production management"> <span class="fas fa-edit"></span></a>
                                             </li>
-
-                                            {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
-                                            {% if i.editable_obj %}
-                                                <li>
-                                                    <a href="{% url 'edit_outbound_shipment' i.pk %}" class="update-btn-link" alt="edit production management" title="edit shipment management"> <span class="fas fa-edit"></span></a>
-                                                </li>
-                                                <li>
-                                                    <a onclick="delShipment('{% url 'delete_outbound_shipment' i.pk %}')"
-                                                        href="{% url 'delete_outbound_shipment' i.pk %}"
-                                                        data-mdb-toggle="modal" data-mdb-target="#deleteModal" alt="delete shipment management" title="delete shipment management">
-                                                        <span class="fas fa-trash"></span></a>
-                                                </li>
-                                            {% endif %}
-                                            {% endif %}
-                                            {% comment %} {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
-                                                <li> <a href="{% url 'outbound_shipment_mgmt_view' i.id %}" alt="view user" title="view user"><span class="fas fa-eye"></span> </a></li>
-                                            {% endif %} {% endcomment %}
+                                            <li>
+                                                <a onclick="delShipment('{% url 'delete_volume_pulled' i.pk %}')"
+                                                    href="{% url 'delete_volume_pulled' i.pk %}"
+                                                    data-mdb-toggle="modal" data-mdb-target="#deleteModal" alt="delete production management" title="delete production management">
+                                                    <span class="fas fa-trash"></span></a>
+                                            </li>
                                         </ul>
+                                        {% endif %}
                                     </td>
+                                    {% endif %}
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -266,7 +261,6 @@
     </main>
     {% include 'footer.html' %}
 </div>
-
 <!-- Delete Popup -->
 <div class="modal fade" id="deleteModal" aria-hidden="true" aria-labelledby="exampleModalToggleLabel22"
     tabindex="-1">
@@ -325,7 +319,6 @@
             });
         }
 </script>
-
 <script>
     $(document).ready(function() {
     $('#processorSelction').change( function () {
@@ -333,13 +326,14 @@
     });
     });
 </script>
+
 <script>
     $('#Processor-active').addClass('activeLink');
   
     $('#Processor-down').addClass('down');
     $('#Processor-sub').show();
   
-    $('#Shipment-Management').addClass('activeLink active-nav');
+    $('#Production-Management').addClass('activeLink active-nav');
   
   </script>
 {% endblock scripts %}

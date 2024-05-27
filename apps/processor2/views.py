@@ -77,8 +77,19 @@ def add_processor2(request):
                 main_fax = request.POST.get('main_fax')
                 website = request.POST.get('website')
                 counter = request.POST.get('counter')
+                processor_type = request.POST.getlist('processor_type')
+                print(processor_type)
+                print(fein, entity_name, billing_address, shipping_address)
+                if not counter:
+                    counter = 0
+                print(counter)
                 processor2 = Processor2(fein=fein,entity_name=entity_name,billing_address=billing_address,shipping_address=shipping_address,main_number=main_number,main_fax=main_fax,website=website)
                 processor2.save()
+                print(processor2)
+                for type in processor_type:
+                    check_type = ProcessorType.objects.filter(id=type).first()
+                    processor2.processor_type.add(check_type)
+                
                 
                 # 20-04-23 Log Table
                 log_type, log_status, log_device = "Processor2", "Added", "Web"
@@ -99,9 +110,9 @@ def add_processor2(request):
                                     action_by_email=action_by_email,action_by_role=action_by_role,log_email=log_email,
                                     log_details=log_details,log_device=log_device)
                 logtable.save()
-                for i in range(1,int(counter)+1):
+                # counter = counter + 1
+                for i in range(1, int(counter)+1):
                     contact_name = request.POST.get('contact_name{}'.format(i))
-
                     contact_email = request.POST.get('contact_email{}'.format(i))
                     contact_phone = request.POST.get('contact_phone{}'.format(i))
                     contact_fax = request.POST.get('contact_fax{}'.format(i))
