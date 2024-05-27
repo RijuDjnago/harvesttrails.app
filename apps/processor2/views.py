@@ -839,368 +839,606 @@ def t2_classing_ewr_report_all_downlaod(request,p2_id,level):
     return response
 
 
+import shapefile
 @login_required()
-def processor2_add_receive_delivery(request):
+def addlocation_processor2(request):
     if request.user.is_authenticated:
-        context = {}
-        status = ""
-        
-        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
-            grower = LinkGrowerToProcessor.objects.all()
-            grower_id = [i.grower_id for i in grower]
-            get_grower = Grower.objects.filter(id__in = grower_id).order_by('name')
-            context['get_grower'] = get_grower
-            get_processor2 = Processor2.objects.all()
-            context['get_processor2'] = get_processor2
-            
-            context['g_display'] = "none"
-            context['p_display'] = "none"
-            
+        context ={}
+        # Processor ....
+        if request.user.is_processor2 :
+            context = {}
+            form = Processor2LocationForm()
+            context['form']=form
+            user_id = request.user.id
+            user = User.objects.get(id=user_id)
+            processor_email =user.username
+
+            p = ProcessorUser2.objects.get(contact_email=processor_email)
+            processor_obj = Processor2.objects.get(id=p.processor_id)
+
+            # processor_obj = Processor.objects.get(contact_email=processor_email)
+            print(processor_obj.id)
             if request.method == 'POST':
-                id_grower = request.POST.get('id_grower')
-                processor_id = request.POST.get('processor_id')
-                files = request.FILES.getlist('files')   #add file
-                select_desti = request.POST.get('id_desti')   #add destination
-                # print("select_desti================",select_desti)
-                # if select_desti == 'Grower':
-                if id_grower !='all':
-                    selected_grower = Grower.objects.get(id=id_grower)
-                    context['selected_grower'] = selected_grower
+                form = Processor2LocationForm(request.POST)
+                name = request.POST.get('name')
+                upload_type = request.POST.get('upload_type')
+                processor = processor_obj.id
+                if request.FILES.get('zip_file'):
+                    zip_file = request.FILES.get('zip_file')
+                    Processor2Location(processor_id=processor, name=name,upload_type=upload_type,shapefile_id=zip_file).save()
+                    location_obj = Processor2Location.objects.filter(processor_id=processor).filter(name=name)        
+                    location_var = [i.id for i in location_obj][0]
+                    location_id = Processor2Location.objects.get(id=location_var)
+                    sf = shapefile.Reader(location_id.shapefile_id.path)
+                    features = sf.shapeRecords()
+                    for feat in features:
+                        eschlon_id = feat.record["id"]
+                        location_id.eschlon_id = eschlon_id
+                        location_id.save()
 
-                    storage_obj = Storage.objects.filter(grower_id=id_grower)
-                    context['storage'] = storage_obj
+                if request.POST.get('latitude') and request.POST.get('longitude'):
+                    latitude = request.POST.get('latitude')
+                    longitude = request.POST.get('longitude')
+                    Processor2Location(processor_id=processor, name=name,upload_type=upload_type,latitude=latitude,longitude=longitude).save()
+                
+                return redirect('location_list_processor2')
 
-                    field_obj = Field.objects.filter(grower_id=id_grower) 
-                    context['field'] = field_obj
-                    context['g_display'] = "block"
-                    context['p_display'] = "none"
+            return render(request, 'processor2/add_location_processor2.html',context)
+        # Super User ...
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+            form = Processor2LocationForm()
+            processor = Processor2.objects.all()
+            print(processor)
+            context['form']=form
+            context['processor']=processor
+            if request.method == 'POST':
+                form = Processor2LocationForm(request.POST)
+                name = request.POST.get('name')
+                upload_type = request.POST.get('upload_type')
+                processor = int(request.POST.get('processor_id'))  
+                if request.FILES.get('zip_file'):
+                    zip_file = request.FILES.get('zip_file')
+                    Processor2Location(processor_id=processor, name=name,upload_type=upload_type,shapefile_id=zip_file).save()
+                    location_obj = Processor2Location.objects.filter(name=name).filter(processor=processor)          
+                    location_var = [i.id for i in location_obj][0]
+                    location_id = Processor2Location.objects.get(id=location_var)
+                    sf = shapefile.Reader(location_id.shapefile_id.path)
+                    features = sf.shapeRecords()
+                    for feat in features:
+                        eschlon_id = feat.record["id"]
+                        location_id.eschlon_id = eschlon_id
+                        location_id.save()
 
+                if request.POST.get('latitude') and request.POST.get('longitude'):
+                    latitude = request.POST.get('latitude')
+                    longitude = request.POST.get('longitude')
+                    Processor2Location(processor_id=processor, name=name,upload_type=upload_type,latitude=latitude,longitude=longitude).save()
                     
-                    # # get_crop = Field.objects.filter(grower_id=id_grower).values('crop').distinct()
-                    get_crop = Field.objects.filter(grower_id=id_grower, crop='RICE').values('crop').distinct()
-                    # print("get_crop=================",get_crop)
-                    # print("get_crop=================",get_crop[0]['crop'])
-                    context['get_crop'] = get_crop[0]['crop'] 
+                return redirect('location_list_processor2')
+            return render(request, 'processor2/add_location_processor2.html',context)
+        else:
+            context["message"] = "You are not allowed to add location."
+            return render(request, 'processor2/add_location_processor2.html',context)
+    else:
+        return redirect('login')
+    
 
-                    id_storage = request.POST.get('id_storage')
-                    id_field = request.POST.get('id_field')
-                    module_number = request.POST.get('module_number')
-                    
-                    id_status = request.POST.get('id_status')
-                    print("id_status=============================",id_status)
+@login_required()   
+def location_list_processor2(request):
+    if request.user.is_authenticated:
+        # processor ...
+        if request.user.is_processor2 :
+            context ={}
+            user_email = request.user.email
+            p = ProcessorUser2.objects.get(contact_email=user_email)
+            processor = Processor2.objects.get(id=p.processor_id)
+            location = Processor2Location.objects.filter(processor= processor)
+            context['location'] = location
+            return render(request, 'processor2/list_location.html',context)
 
-                    amount1 = request.POST.get('amount1')
-                    amount2 = request.POST.get('amount2')
-                    
-                    id_unit1 = request.POST.get('id_unit1')
-                    id_unit2= request.POST.get('id_unit2')
+        # superuser ...
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+            context ={}
+            location = Processor2Location.objects.all()
+            processor = Processor2.objects.all()
+            context['location'] = location
+            context['processor'] = processor
+            if request.method == 'POST':
+                value = request.POST.get('processor_id')
+                print(value)
+                if value == 'all' :
+                    location = Processor2Location.objects.all()
+                    processor = Processor2.objects.all()
+                    context['location'] = location
+                    context['processor'] = processor
+                    return render(request, 'processor2/list_location.html',context)
 
-                    get_output= request.POST.get('get_output')
-                    shipment_id = generate_shipment_id()
-                    
-                    recieved_weight= request.POST.get('recieved_weight')
-                    sku_id = request.POST.get('sku_id')  #add sku
-                    files = request.FILES.getlist('files')
-
-                    ticket_number= request.POST.get('ticket_number')
-                    approval_date= request.POST.get('approval_date')
-
-                    reason_for_disapproval= request.POST.get('reason_for_disapproval')
-                    moisture_level= request.POST.get('moisture_level')
-                    fancy_count= request.POST.get('fancy_count')
-                    head_count= request.POST.get('head_count')
-                    bin_location_processor= request.POST.get('bin_location_processor')
-                    
-                    if len(amount1) > 0 and len(amount2) == 0:
-                        if id_unit1 == '1':
-                            id_unit1 = 'LBS'
-                            id_unit2 = ''
-                        if id_unit1 == '38000':
-                            id_unit1 = 'MODULES (8 ROLLS)'
-                            id_unit2 = ''
-                        if id_unit1 == '19000':
-                            id_unit1 = 'SETS (4 ROLLS)'
-                            id_unit2 = ''
-                        if id_unit1 == '4750':
-                            id_unit1 = 'ROLLS'
-                            id_unit2 = ''
-                    
-                    if len(amount1) > 0 and len(amount2) > 0:
-                        if id_unit1 == '1':
-                            id_unit1 = 'LBS'
-                        if id_unit1 == '38000':
-                            id_unit1 = 'MODULES (8 ROLLS)'
-                        if id_unit1 == '19000':
-                            id_unit1 = 'SETS (4 ROLLS)'
-                        if id_unit1 == '4750':
-                            id_unit1 = 'ROLLS'
-                        if id_unit2 == '1':
-                            id_unit2 = 'LBS'
-                        if id_unit2 == '38000':
-                            id_unit2 = 'MODULES (8 ROLLS)'
-                        if id_unit2 == '19000':
-                            id_unit2 = 'SETS (4 ROLLS)'
-                        if id_unit2 == '4750':
-                            id_unit2 = 'ROLLS'
-                    
-                    if id_storage == None :
-                        id_storage = None
-                        
-                    else:
-                        id_storage = id_storage
-
-                    processor_id = LinkGrowerToProcessor.objects.get(grower_id=selected_grower.id).processor_id
-                    if id_field and module_number:
-                        field = Field.objects.get(id=id_field)
-                        print("field=========",field)
-                        crop = field.crop
-                        if crop == "RICE":
-                            status = ""
-                        # if crop == "RICE":
-                        #     status = "APPROVED"
-                        if crop == "WHEAT":
-                            status = ""
-                        if crop == "COTTON":
-                            status = "APPROVED"
-
-                        sustain_data = SustainabilitySurvey.objects.filter(grower_id=selected_grower.id,field_id=id_field)
-
-                        if sustain_data.count() > 0:
-                            Avg_Percentage_Score_data = sustain_data.aggregate(Avg('sustainabilityscore'))
-                            surveyscore = int(Avg_Percentage_Score_data['sustainabilityscore__avg'])
-                        else:
-                            surveyscore = 0
-                      
-                        if id_status != None and id_status != "blank" and get_crop !='COTTON' :
-                            if id_status == 'APPROVED' and recieved_weight :
-                                print("recieved_weight---------------",recieved_weight)
-                                shipment = GrowerShipment(status=id_status,total_amount=get_output,unit_type2=id_unit2,amount2=amount2,echelon_id=field.eschlon_id,
-                                                        sustainability_score=surveyscore,amount=amount1,variety=field.variety,crop=field.crop,shipment_id=shipment_id,processor_id=processor_id,grower_id=selected_grower.id,
-                                                        storage_id=id_storage,field_id=id_field,module_number=module_number,unit_type=id_unit1,received_amount =recieved_weight,sku = sku_id,token_id=ticket_number,approval_date = approval_date,moisture_level=moisture_level,fancy_count=fancy_count,head_count=head_count,bin_location_processor=bin_location_processor,sender = select_desti)
-                                shipment.save()  
-                                for file in files:
-                                    new_file = GrowerShipmentFile.objects.create(file=file)
-                                    shipment.files.add(new_file)
-                                    
-                                # shipment.status=id_status
-                                # shipment.received_amount=recieved_weight
-                                # shipment.sku=sku_id  #add sku
-                                # shipment.token_id=ticket_number
-
-                                # if approval_date :
-                                #     shipment.approval_date = approval_date
-                                # else:
-                                #     shipment.approval_date= date.today()
-
-                                # shipment.moisture_level=moisture_level
-                                # shipment.fancy_count=fancy_count
-                                # shipment.head_count=head_count
-                                # shipment.bin_location_processor=bin_location_processor
-                                
-                                # shipment.save()
-                                
-
-                                msg_subject = 'Shipment is received as Approved'
-                                msg_body = f'Dear Admin,\n\nA new shipment has been approved.\n\nThe details of the same are as below: \n\nShipment ID: {shipment.shipment_id} \nGrower: {shipment.grower.name} \nField: {shipment.field.name} \nReceived weight: {recieved_weight} LBS \nReceived date: {shipment.approval_date} \n\nRegards\nCustomer Service\nAgreeta'
-                                from_email = 'techsupportUS@agreeta.com'
-                                to_email = ['customerservice@agreeta.com']
-                                # send_mail(
-                                # msg_subject,
-                                # msg_body,
-                                # from_email,
-                                # to_email,
-                                # fail_silently=False,
-                                # )
-
-                            elif id_status == 'DISAPPROVED' and reason_for_disapproval :
-                                pass
-                                # shipment.status=id_status
-                                # shipment.reason_for_disapproval=reason_for_disapproval
-                                # shipment.moisture_level=moisture_level
-                                # shipment.fancy_count=fancy_count
-                                # shipment.head_count=head_count
-                                # shipment.bin_location_processor=bin_location_processor
-                                # shipment.approval_date= date.today()
-
-                                # shipment.save()    
-            
-                # else: 
-                #     if processor_id !='all': 
-                #         pass 
-                    
-                        
-            return render(request, 'processor2/add_p2_receive_delivery.html',context)
+                else:
+                    processor_id = request.POST.get('processor_id')
+                    processor = Processor2.objects.all()
+                    location = Processor2Location.objects.filter(processor_id=processor_id)
+                    context['location'] = location
+                    context['processor'] = processor
+                    context['selectedprocessor'] = Processor2.objects.get(id=processor_id)
+                    return render(request, 'processor2/list_location.html',context)
+                   
+            return render(request, 'processor2/list_location.html',context)
+        
+        return render(request, 'processor2/list_location.html',context)
     else:
         return redirect('login')
 
-def processor2_receive_delivery(request):
+def location_edit_processor2(request,pk):
     if request.user.is_authenticated:
-        context = {}
-        status = ""        
-        if request.method == "POST":
-            selected_source = request.POST.get('selected_source')
-            if selected_source == "grower":
-                if request.user.is_processor2:            
-                    user_email = request.user.email
-                    p = ProcessorUser2.objects.get(contact_email=user_email)
-                    processor_id = Processor2.objects.get(id=p.processor_id).id
-                    growers = LinkToProcessor2.objects.filter(processor2_id=processor_id)
-                    growers_id = [i.grower_id for i in growers if i.grower]
-                    get_growers = Grower.objects.filter(id__in=growers_id)
-                    context["get_grower"] = get_growers
-                if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
-                    growers = LinkToProcessor2.objects.all()
-                    growers_id = [i.grower_id for i in growers if i.grower]
-                    get_growers = Grower.objects.filter(id__in=growers_id)
-                    context["get_grower"] = get_growers
-                id_grower = request.POST.get("id_grower")
-                if id_grower == 'all':
-                    context["message"] = "Select any one grower."
+        # processor ...
+        if request.user.is_processor2 :
+            context = {}
+            location = Processor2Location.objects.get(id=pk)
+            form = Processor2LocationForm(instance=location)
+            user_email = request.user.email
+            p = ProcessorUser2.objects.get(contact_email=user_email)
+            processor = Processor2.objects.filter(id=p.processor_id)
+            context['form'] = form
+            context['processor'] = processor
+            context['selectedprocessor'] = location.processor_id
+            context['uploadtypeselect'] = location.upload_type
+            location = Processor2Location.objects.filter(id=pk)
+            context['location'] = location
+            if request.method == 'POST':
+                name = request.POST.get('name')
+                uploadtypeSelction = request.POST.get('uploadtypeSelction')
+                shapefile_id = request.FILES.get('zip_file')
+                latitude = request.POST.get('latitude')
+                longitude = request.POST.get('longitude')
+                location_update = Processor2Location.objects.get(id=pk)
+                if uploadtypeSelction == 'shapefile':
+                    if request.FILES.get('zip_file'):
+                        location_update.name = name
+                        location_update.upload_type = 'shapefile'
+                        location_update.shapefile_id = shapefile_id
+                        location_update.latitude = None
+                        location_update.longitude = None
+                        location_update.save()
+                        
+                        sf = shapefile.Reader(location_update.shapefile_id.path)
+                        features = sf.shapeRecords()
+                        for feat in features:
+                            eschlon_id = feat.record["id"]
+                            location_update.eschlon_id = eschlon_id
+                            location_update.save()
+                    
                 else:
-                    selected_grower = Grower.objects.get(id=id_grower)
-                    context['selected_grower'] = selected_grower
+                    location_update.name = name
+                    location_update.upload_type = 'coordinates'
+                    location_update.shapefile_id = None
+                    location_update.eschlon_id = None
+                    location_update.latitude = latitude
+                    location_update.longitude = longitude
+                    location_update.save()
 
-                    storage_obj = Storage.objects.filter(grower_id=id_grower)
-                    context['storage'] = storage_obj
+                return redirect('location_list_processor2')
 
-                    field_obj = Field.objects.filter(grower_id=id_grower)
-                    context['field'] = field_obj
-
-                    id_storage = request.POST.get('id_storage')
-                    id_field = request.POST.get('id_field')
-                    module_number = request.POST.get('module_number')
-                    
-                    amount1 = request.POST.get('amount1')
-                    amount2 = request.POST.get('amount2')
-
-                    id_unit1 = request.POST.get('id_unit1')
-                    id_unit2= request.POST.get('id_unit2')
-                    
-                    # code
-                    shipment_id = generate_shipment_id()
-                    get_output= request.POST.get('get_output')
-                    files = request.FILES.getlist('files')
-                    
-                    recieved_weight= request.POST.get('recieved_weight')
-                    sku_id = request.POST.get('sku_id')
-                    ticket_number= request.POST.get('ticket_number')
-                    approval_date= request.POST.get('approval_date')
-
-                    moisture_level= request.POST.get('moisture_level')
-                    fancy_count= request.POST.get('fancy_count')
-                    head_count= request.POST.get('head_count')
-                    bin_location_processor= request.POST.get('bin_location_processor')
-                    if len(amount1) > 0 and len(amount2) == 0:
-                        if id_unit1 == '1':
-                            id_unit1 = 'LBS'
-                            id_unit2 = ''
-                        if id_unit1 == '38000':
-                            id_unit1 = 'MODULES (8 ROLLS)'
-                            id_unit2 = ''
-                        if id_unit1 == '19000':
-                            id_unit1 = 'SETS (4 ROLLS)'
-                            id_unit2 = ''
-                        if id_unit1 == '4750':
-                            id_unit1 = 'ROLLS'
-                            id_unit2 = ''
-                    
-                    if len(amount1) > 0 and len(amount2) > 0:
-                        if id_unit1 == '1':
-                            id_unit1 = 'LBS'
-                        if id_unit1 == '38000':
-                            id_unit1 = 'MODULES (8 ROLLS)'
-                        if id_unit1 == '19000':
-                            id_unit1 = 'SETS (4 ROLLS)'
-                        if id_unit1 == '4750':
-                            id_unit1 = 'ROLLS'
-                        if id_unit2 == '1':
-                            id_unit2 = 'LBS'
-                        if id_unit2 == '38000':
-                            id_unit2 = 'MODULES (8 ROLLS)'
-                        if id_unit2 == '19000':
-                            id_unit2 = 'SETS (4 ROLLS)'
-                        if id_unit2 == '4750':
-                            id_unit2 = 'ROLLS'
-
-                    if id_storage == None :
-                        id_storage = None
+            return render(request, 'processor2/location_edit.html',context)
+        # superuser ....
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+            context ={}
+            location = Processor2Location.objects.get(id=pk)
+            form = Processor2LocationForm(instance=location)
+            processor = Processor2.objects.all()
+            context['form'] = form
+            context['processor'] = processor
+            context['selectedprocessor'] = location.processor_id
+            context['uploadtypeselect'] = location.upload_type
+            location = Processor2Location.objects.filter(id=pk)
+            context['location'] = location
+            if request.method == 'POST':
+                name = request.POST.get('name')
+                processorSelction = int(request.POST.get('processor_name'))
+                uploadtypeSelction = request.POST.get('uploadtypeSelction')
+                shapefile_id = request.FILES.get('zip_file')
+                latitude = request.POST.get('latitude')
+                longitude = request.POST.get('longitude')
+                location_update = Processor2Location.objects.get(id=pk)
+                location_update.name = name
+                location_update.save()
+                if uploadtypeSelction == 'shapefile':
+                    if request.FILES.get('zip_file'):
+                        location_update.name = name
+                        location_update.processor_id = processorSelction
+                        location_update.upload_type = 'shapefile'
+                        location_update.shapefile_id = shapefile_id
+                        location_update.latitude = None
+                        location_update.longitude = None
+                        location_update.save()
                         
-                    else:
-                        id_storage = id_storage
-                                            
-                    if id_field and module_number:
-                        field = Field.objects.get(id=id_field)
-                        crop = field.crop
-                        # if crop == "RICE":
-                        #     status = ""
-                        if crop == "RICE":
-                            status = "APPROVED"
-                        if crop == "WHEAT":
-                            status = ""
-                        if crop == "COTTON":
-                            status = "APPROVED"
-                        # sustainabilitySurvey = SustainabilitySurvey.objects.filter(grower_id=selected_grower.id)
-                        # if len(sustainabilitySurvey) == 0:
-                        #     surveyscore = 0
-                        # else:
-                        #     surveyscore = [i.surveyscore for i in sustainabilitySurvey][0]
-                        sustain_data = SustainabilitySurvey.objects.filter(grower_id=selected_grower.id,field_id=id_field)
+                        sf = shapefile.Reader(location_update.shapefile_id.path)
+                        features = sf.shapeRecords()
+                        for feat in features:
+                            eschlon_id = feat.record["id"]
+                            location_update.eschlon_id = eschlon_id
+                            location_update.save()
 
-                        if sustain_data.count() > 0:
-                            Avg_Percentage_Score_data = sustain_data.aggregate(Avg('sustainabilityscore'))
-                            surveyscore = int(Avg_Percentage_Score_data['sustainabilityscore__avg'])
-                        else:
-                            surveyscore = 0
-                        # shipment = GrowerShipment(status=status,total_amount=get_output,unit_type2=id_unit2,amount2=amount2,echelon_id=field.eschlon_id,sustainability_score=surveyscore,amount=amount1,variety=field.variety,crop=field.crop,shipment_id=shipment_id,processor_id=processor_id,grower_id=selected_grower.id,storage_id=id_storage,field_id=id_field,module_number=module_number,unit_type=id_unit1)
-                        # shipment.save()
-                        
-                        shipment = GrowerShipment(status=status,total_amount=get_output,unit_type2=id_unit2,amount2=amount2,echelon_id=field.eschlon_id,
-                                                        sustainability_score=surveyscore,amount=amount1,variety=field.variety,crop=field.crop,shipment_id=shipment_id,processor_id=processor_id,grower_id=selected_grower.id,
-                                                        storage_id=id_storage,field_id=id_field,module_number=module_number,unit_type=id_unit1,received_amount =recieved_weight,sku = sku_id,token_id=ticket_number,approval_date = approval_date,moisture_level=moisture_level,fancy_count=fancy_count,head_count=head_count,bin_location_processor=bin_location_processor)
-                        shipment.save()
-                        for file in files:
-                            new_file = GrowerShipmentFile.objects.create(file=file)
-                            shipment.files.add(new_file)
-                        
-                        
-                        
-                        # 07-04-23 Log Table
-                        log_type, log_status, log_device = "GrowerShipment", "Added", "Web"
-                        log_idd, log_name = shipment.id, shipment.shipment_id
-                        log_details = f"status = {status} | total_amount = {get_output} | unit_type2 = {id_unit2} | amount2 = {amount2} | echelon_id = {field.eschlon_id} | sustainability_score = {surveyscore} | amount = {amount1} | variety = {field.variety} | crop = {field.crop} | shipment_id = {shipment_id} | processor_id = {processor_id} | grower_id = {selected_grower.id} | storage_id = {id_storage} | field_id = {id_field} | module_number = {module_number} | unit_type = {id_unit1} | "
-                        action_by_userid = request.user.id
-                        user = User.objects.get(pk=action_by_userid)
-                        user_role = user.role.all()
-                        action_by_username = f'{user.first_name} {user.last_name}'
-                        action_by_email = user.username
-                        if request.user.id == 1 :
-                            action_by_role = "superuser"
-                        else:
-                            action_by_role = str(','.join([str(i.role) for i in user_role]))
-                        logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
-                                            action_by_userid=action_by_userid,action_by_username=action_by_username,
-                                            action_by_email=action_by_email,action_by_role=action_by_role,log_details=log_details,
-                                            log_device=log_device)
-                        logtable.save()
+                else:
+                    print(name)
+                    location_update.name = name
+                    location_update.processor_id = processorSelction
+                    location_update.upload_type = 'coordinates'
+                    location_update.shapefile_id = None
+                    location_update.eschlon_id = None
+                    location_update.latitude = latitude
+                    location_update.longitude = longitude
+                    location_update.save()
+                return redirect('location_list_processor2')
+            return render(request, 'processor2/location_edit.html',context)
+        else:
+            return render(request, 'processor2/location_edit.html',context)
+    else:
+        return redirect('login')
 
-                        return redirect('processor2_inbound_management')
-            if selected_source == "processor":
-                if request.user.is_processor2:            
-                    user_email = request.user.email
-                    p = ProcessorUser2.objects.get(contact_email=user_email)
-                    processor_id = Processor2.objects.get(id=p.processor_id).id
-                    processors = LinkToProcessor2.objects.filter(processor2_id=processor_id)
-                    processors_id = [i.grower_id for i in processors if i.processor]
-                    get_processors = Processor.objects.filter(id__in=processors_id)
-                    context["get_processor"] = get_processors
-                if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
-                    processors = LinkToProcessor2.objects.all()
-                    processors_id = [i.grower_id for i in processors if i.processor]
-                    get_processors = Processor.objects.filter(id__in=processors_id)
-                    context["get_processor"] = get_processors
-                id_processor = request.POST.get("id_processor")
+@login_required()
+def location_delete_processor2(request,pk):
+    location = Location.objects.get(id=pk)
+    location.delete()
+    return redirect('location_list_processor2')  
 
-                    
 
+@login_required
+def add_outbound_shipment_processor2(request):
+    context = {}
+
+    if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+        # processor= Processor2.objects.filter(processor_type__type_name="T2").values("entity_name","id").order_by('entity_name')
+        # processor3= Processor2.objects.filter(processor_type__type_name="T3").values("entity_name","id").order_by('entity_name')
+        # processor4= Processor2.objects.filter(processor_type__type_name="T4").values("entity_name","id").order_by('entity_name')
+        # context["processor3"] = processor3
+        # context["processor4"] = processor4
+        context["processor"] = list(Processor2.objects.filter(processor_type__type_name="T2").values("id", "entity_name"))
+        
+        context.update({
+            "select_processor_name": None,
+            "select_processor_id": None,
+            "milled_value": "None",
+        })
+
+        if request.method == "POST":
+            data = request.POST
+            bin_pull = data.get("bin_pull")
+            milled_value = data.get("milled_value")
+            context.update({
+                "select_processor_name": Processor2.objects.filter(id=int(bin_pull)).first().entity_name,
+                "select_processor_id": bin_pull,
+                "processor2_id": data.get("processor2_id"),
+                "exp_yield": data.get("exp_yield"),
+                "exp_yield_unit_id": data.get("exp_yield_unit_id"),
+                "moist_percentage": data.get("moist_percentage"),
+                "purchase_number": data.get("purchase_number"),
+                "weight_prod_unit_id": data.get("weight_prod_unit_id"),
+                "weight_prod": data.get("weight_prod"),
+                "storage_bin_id": data.get("storage_bin_id"),
+                "equipment_id": data.get("equipment_id"),
+                "equipment_type": data.get("equipment_type"),
+                "lot_number": data.get("lot_number"),
+                "volume_shipped": data.get("volume_shipped"),
+                "files": data.get("files"),
+                "milled_value":data.get('milled_value')
+            })
+
+            if bin_pull and not data.get("save"):
+                list_get_bin_location = []
+                get_bin_location = list(ProductionManagementProcessor2.objects.filter(processor_id=int(bin_pull)).values_list('milled_volume', flat=True))
+
+                if get_bin_location:
+                    for i in get_bin_location:
+                        list_get_bin_location.append(float(i))
+
+                total_shiped_volume = []
+                shiped_volume = ShipmentManagement.objects.filter(bin_location=bin_pull).values('volume_shipped')
+                if shiped_volume:
+                    for i in shiped_volume :
+                        total_shiped_volume.append(float(i['volume_shipped']))
+
+                sum_total_volume = sum(list_get_bin_location) if get_bin_location else 0
+                sum_shiped_volume = sum(total_shiped_volume) if shiped_volume else 0
+                context["milled_value"] =  float(sum_total_volume) - float(sum_shiped_volume)
+                
+                processor3 = LinkProcessorToProcessor.objects.filter(processor_id=bin_pull, linked_processor__processor_type__type_name = "T3").values("linked_processor__id", "linked_processor__entity_name")
+                processor4 = LinkProcessorToProcessor.objects.filter(processor_id=bin_pull, linked_processor__processor_type__type_name = "T4").values("linked_processor__id", "linked_processor__entity_name")
+                context["processor3"] = processor3
+                context["processor4"] = processor4
+               
+                return render(request, 'processor2/add_outbound_shipment_processor2.html', context)
+            else:
+                if context["weight_prod_unit_id"] == "LBS" :
+                    cal_weight = round(float(context["weight_prod"]),2)
+                if context["weight_prod_unit_id"] == "BU" :
+                    cal_weight = round(float(context["weight_prod"]) * 45,2)
+                if context["exp_yield_unit_id"] == "LBS" :
+                    cal_exp_yield = round(float(context["exp_yield"]),2)
+                if context["exp_yield_unit_id"] == "BU" :
+                    cal_exp_yield = round(float(context["exp_yield"]) * 45,2)
+
+
+                ### processor link part
+
+                select_proc_id, processor_type = context["processor2_id"].split()
+                if processor_type == 'T3':
+                    select_destination_ = Processor2.objects.get(id=select_proc_id).entity_name
+                    receiver_processor_type = "T3"
+                    # print("select_destination_-----",select_destination_)
+                elif processor_type == 'T4':
+                    select_destination_ = Processor2.objects.get(id=select_proc_id).entity_name
+                    receiver_processor_type = "T4"
+                
+                milled_volume = context["milled_value"]
+                volume_left = float(context["milled_value"]) - float(context["volume_shipped"])
+                shipment_id = generate_shipment_id()
+                
+                processor_e_name = Processor2.objects.filter(id=int(bin_pull)).first().entity_name
+                save_shipment_management = ShipmentManagement(shipment_id=shipment_id,processor_idd=bin_pull,processor_e_name=processor_e_name, sender_processor_type="T2", bin_location=bin_pull,
+                        equipment_type=context["equipment_type"],equipment_id=context["equipment_id"],storage_bin_send=context["storage_bin_id"],moisture_percent = context["moist_percentage"],weight_of_product_raw = context["weight_prod"],
+                        weight_of_product=cal_weight,weight_of_product_unit=context["weight_prod_unit_id"], excepted_yield_raw =context["exp_yield"],excepted_yield=cal_exp_yield,excepted_yield_unit=context["exp_yield_unit_id"],
+                        purchase_order_number=context["purchase_number"],lot_number=context["lot_number"],volume_shipped=context["volume_shipped"],milled_volume=milled_volume,volume_left=volume_left,editable_obj=True,
+                        processor2_idd=select_proc_id,processor2_name=select_destination_, receiver_processor_type=receiver_processor_type)
+                save_shipment_management.save()
+                return redirect('outbound_shipment_list')
+
+        return render(request, 'processor2/add_outbound_shipment_processor2.html', context)
+
+@login_required()
+def outbound_shipment_list(request):  
+    try:
+        context = {}
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+            #inbound management list for admin
+            context["table_data"] = list(ShipmentManagement.objects.filter(sender_processor_type="T2").values())
+            print(context)
+            return render (request, 'processor2/outbound_shipment_list.html', context)
+        elif request.user.is_processor2 :
+            processor_email = request.user.email
+            p = ProcessorUser2.objects.get(contact_email=processor_email)
+            processor_id = Processor2.objects.get(id=p.processor2.id).id
+            #inbound management list for processor
+            context["table_data"] = list(ShipmentManagement.objects.filter(receiver_processor_type="T2", processor2_idd=processor_id).values())
+            return render (request, 'processor2/outbound_shipment_list.html', context)
+        else:
+            return redirect('login')  
+    except:
+        return render (request, 'processor2/outbound_shipment_list.html') 
+    
+
+@login_required()
+def inbound_shipment_list(request):  
+    try:
+        context = {}
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+            #inbound management list for admin
+            context["table_data"] = list(ShipmentManagement.objects.filter(receiver_processor_type="T2").values())
+            print(context)
+            return render (request, 'processor2/inbound_management_table.html', context)
+        elif request.user.is_processor2 :
+            processor_email = request.user.email
+            p = ProcessorUser2.objects.get(contact_email=processor_email)
+            processor_id = Processor2.objects.get(id=p.processor2.id).id
+            #inbound management list for processor
+            context["table_data"] = list(ShipmentManagement.objects.filter(receiver_processor_type="T2", processor2_idd=processor_id).values())
+            return render (request, 'processor2/inbound_management_table.html', context)
+        else:
+            return redirect('login')  
+    except:
+        return render (request, 'processor2/inbound_management_table.html') 
+    
+@login_required()
+def inbound_shipment_view(request, pk):
+    try:
+        context = {}
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role() or request.user.is_processor2:
+            #inbound management list for admin
+            context["shipment"] = list(ShipmentManagement.objects.filter(id=pk).values())
+            return render (request, 'processor2/inbound_management_view.html', context)
+        else:
+            return redirect('login')  
+    except:
+        return render (request, 'processor2/inbound_management_view.html', context) 
+    
+@login_required()
+def inbound_shipment_edit(request, pk):
+    try:
+        context = {}
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role() or request.user.is_processor2:
+            #inbound management list for admin
+            context["shipment"] = ShipmentManagement.objects.get(id=pk)
+            data = request.POST
+            if request.method == "POST":
+                status = data.get('status')
+                approval_date = data.get('approval_date')
+                received_weight = data.get('received_weight')
+                ticket_number = data.get('ticket_number')
+                storage_bin_recive = data.get('storage_bin_recive')
+                reason_for_disapproval = data.get('reason_for_disapproval')
+                moisture_percent = data.get('moist_percentage')
+                ShipmentManagement.objects.filter(id=pk).update(status=status,moisture_percent=moisture_percent, recive_delivery_date=approval_date,
+                                                                received_weight=received_weight,ticket_number=ticket_number,
+                                                                storage_bin_recive=storage_bin_recive, reason_for_disapproval=reason_for_disapproval)
+                return redirect('inbound_shipment_list')
+            return render(request, 'processor2/inbound_management_edit.html', context)
+        else:
+            return redirect('login')  
+    except:
+        return render(request, 'processor2/inbound_management_edit.html', context)
+
+@login_required()
+def recive_shipment(request):
+    context = {}
+
+    if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+        context["processor"] = list(Processor.objects.all().values("id", "entity_name"))
+        
+        context.update({
+            "select_processor_name": None,
+            "select_processor_id": None,
+            "milled_value": "None",
+        })
+
+        if request.method == "POST":
+            data = request.POST
+            bin_pull = data.get("bin_pull")
+            milled_value = data.get("milled_value")
+            context.update({
+                "select_processor_name": Processor.objects.filter(id=int(bin_pull)).first().entity_name,
+                "select_processor_id": bin_pull,
+                "processor2_id": data.get("processor2_id"),
+                "exp_yield": data.get("exp_yield"),
+                "exp_yield_unit_id": data.get("exp_yield_unit_id"),
+                "moist_percentage": data.get("moist_percentage"),
+                "purchase_number": data.get("purchase_number"),
+                "weight_prod_unit_id": data.get("weight_prod_unit_id"),
+                "weight_prod": data.get("weight_prod"),
+                "storage_bin_id": data.get("storage_bin_id"),
+                "equipment_id": data.get("equipment_id"),
+                "equipment_type": data.get("equipment_type"),
+                "lot_number": data.get("lot_number"),
+                "volume_shipped": data.get("volume_shipped"),
+                "files": data.get("files"),
+                "status": data.get("status"),
+                "receiver_sku_id": data.get("receiver_sku_id"),
+                "received_weight": data.get("received_weight"),
+                "ticket_number": data.get("ticket_number"),
+                "approval_date": data.get("approval_date"),
+                "milled_value":data.get('milled_value')
+            })
+
+            if bin_pull and not data.get("save"):
+                list_get_bin_location = []
+                get_bin_location = list(ProductionManagement.objects.filter(processor_id=int(bin_pull)).values_list('milled_volume', flat=True))
+
+                if get_bin_location:
+                    for i in get_bin_location:
+                        list_get_bin_location.append(float(i))
+
+                total_shiped_volume = []
+                shiped_volume = list(ShipmentManagement.objects.filter(bin_location=bin_pull).values_list('volume_shipped', flat=True))
+                if shiped_volume:
+                    for i in shiped_volume :
+                        total_shiped_volume.append(float(i))
+
+                sum_total_volume = sum(list_get_bin_location) if get_bin_location else 0
+                sum_shiped_volume = sum(total_shiped_volume) if shiped_volume else 0
+                
+                context["milled_value"] =  float(sum_total_volume) - float(sum_shiped_volume)
+               
+                processor2 = LinkProcessor1ToProcessor.objects.filter(processor1_id=bin_pull, processor2__processor_type__type_name = "T2").values("processor2__id", "processor2__entity_name")
+                processor3 = LinkProcessor1ToProcessor.objects.filter(processor1_id=bin_pull, processor2__processor_type__type_name = "T3").values("processor2__id", "processor2__entity_name")
+                processor4 = LinkProcessor1ToProcessor.objects.filter(processor1_id=bin_pull, processor2__processor_type__type_name = "T4").values("processor2__id", "processor2__entity_name")
+                context["processor3"] = processor3
+                context["processor4"] = processor4
+                context["processor2"] = processor2
+                return render(request, 'processor2/recive_delevery.html', context)
+            else:
+                print("okay piu")
+                if context["weight_prod_unit_id"] == "LBS" :
+                    cal_weight = round(float(context["weight_prod"]),2)
+                if context["weight_prod_unit_id"] == "BU" :
+                    cal_weight = round(float(context["weight_prod"]) * 45,2)
+                if context["exp_yield_unit_id"] == "LBS" :
+                    cal_exp_yield = round(float(context["exp_yield"]),2)
+                if context["exp_yield_unit_id"] == "BU" :
+                    cal_exp_yield = round(float(context["exp_yield"]) * 45,2)
+
+
+                ### processor link part
+
+                select_proc_id, processor_type = context["processor2_id"].split()
+                if processor_type == 'T2':
+                    select_destination_ = Processor2.objects.get(id=select_proc_id).entity_name
+                    receiver_processor_type = "T2"
+                    # print("select_destination_-----",select_destination_)
+                elif processor_type == 'T3':
+                    select_destination_ = Processor2.objects.get(id=select_proc_id).entity_name
+                    receiver_processor_type = "T3"
+                    # print("select_destination_-----",select_destination_)
+                elif processor_type == 'T4':
+                    select_destination_ = Processor2.objects.get(id=select_proc_id).entity_name
+                    receiver_processor_type = "T4"
+               
+                milled_volume = context["milled_value"]
+                volume_left = float(context["milled_value"]) - float(context["volume_shipped"])
+                shipment_id = generate_shipment_id()
+                
+                processor_e_name = Processor.objects.filter(id=int(bin_pull)).first().entity_name
+                save_shipment_management = ShipmentManagement(shipment_id=shipment_id,processor_idd=bin_pull,processor_e_name=processor_e_name, sender_processor_type="T1", bin_location=bin_pull,
+                        equipment_type=context["equipment_type"],equipment_id=context["equipment_id"],storage_bin_send=context["storage_bin_id"],moisture_percent = context["moist_percentage"],weight_of_product_raw = context["weight_prod"],
+                        weight_of_product=cal_weight,weight_of_product_unit=context["weight_prod_unit_id"], excepted_yield_raw =context["exp_yield"],excepted_yield=cal_exp_yield,excepted_yield_unit=context["exp_yield_unit_id"],recive_delivery_date=context["approval_date"],
+                        purchase_order_number=context["purchase_number"],lot_number=context["lot_number"],volume_shipped=context["volume_shipped"],milled_volume=milled_volume,volume_left=volume_left,editable_obj=True,status=context["status"],
+                        storage_bin_recive=context["receiver_sku_id"],ticket_number=context["ticket_number"],received_weight=context["received_weight"],processor2_idd=select_proc_id,processor2_name=select_destination_, receiver_processor_type=receiver_processor_type)
+                save_shipment_management.save()
+                print(save_shipment_management)
+                print(context["files"])
+                
+                return redirect('inbound_shipment_list')
+        return render(request, 'processor2/recive_delevery.html', context)
+    else:
+        return redirect('login')
+
+
+@login_required()
+def processor2_processor_management(request):
+    if request.user.is_authenticated:
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+            context ={}
+            processor2 = Processor2.objects.filter(processor_type__type_name="T2")  #24/04/2024
+            context['Processor1'] = processor2
+            link_processor_to_processor_all = LinkProcessorToProcessor.objects.filter(processor__processor_type__type_name="T2")
+            context['link_processor_to_processor_all'] = link_processor_to_processor_all
+            
+            if request.method == 'POST':
+                pro1_id = request.POST.get('pro1_id')
+                if pro1_id != '0':
+                    context['link_processor_to_processor_all'] = link_processor_to_processor_all.filter(processor_id=int(pro1_id))
+                    #then need to add T1/T2/T3
+                    context['selectedpro1'] = int(pro1_id)             
+            print(context)             
+            return render(request, 'processor2/processor2_processor_management.html',context)
+    else:
+        return redirect('login')
+
+
+@login_required
+def link_processor_two(request):
+    context = {}
+    try:
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+            processor2 = Processor2.objects.filter(processor_type__type_name="T2")           
+            context["processor2"] = processor2
+            context["processor3"] = []
+            context["processor4"] = []
+
+            if request.method == "POST" :
+                selected_processor = request.POST.get("processor_id")
+                button_click = request.POST.get("save")
+                if selected_processor and  not button_click:
+                    context["selectedprocessor"] = int(selected_processor)
+                    link_processor2 = list(LinkProcessorToProcessor.objects.filter(processor_id=selected_processor).values_list("linked_processor", flat = True))
+                    processor_two = Processor2.objects.exclude(id__in=link_processor2)
+                    processor3 = processor_two.filter(processor_type__type_name="T3")
+                    processor4 = processor_two.filter(processor_type__type_name="T4")
+                    context["processor3"] = processor3
+                    context["processor4"] = processor4
+                    return render(request, 'processor2/link_processor2.html', context)
+                else:
+                    select_processor2 = request.POST.getlist("select_processor2")
+                    print(selected_processor, select_processor2)
+                    for i in select_processor2:
+                        pro_id , pro_type = i.split(" ")
+                        link_pro = LinkProcessorToProcessor(processor_id = selected_processor, linked_processor_id = pro_id)
+                        link_pro.save()
+                    return redirect('processor2_processor_management')
+                    # return render(request, 'processor2/link_processor.html', context)
+
+            return render(request, 'processor2/link_processor2.html', context)
+        else:
+            return render(request, 'processor2/link_processor2.html', context) 
+    except Exception as e:
+        print(e)
+        return render(request, 'processor2/link_processor2.html', context)
 
 

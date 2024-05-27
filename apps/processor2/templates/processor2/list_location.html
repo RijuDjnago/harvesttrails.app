@@ -1,0 +1,235 @@
+{% extends "base.html" %} {% load static %}
+{% block title %} Location list {% endblock title %}
+
+{% block extrahead %}
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-Y3EWVPF7PQ"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-Y3EWVPF7PQ');
+</script>
+{% endblock extrahead %}
+
+{% load crispy_forms_tags %}
+{% block content %}
+{% include 'navbar.html' %}
+
+<div class="main-content">
+    {% include 'header.html' %}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.5.2/css/bootstrap.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.11.0/css/dataTables.bootstrap4.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.2.9/css/responsive.bootstrap4.min.css">
+
+    <main>
+
+      <style>
+        .selected {
+          margin-top: 0;
+          margin-left: 0;
+          padding-left: 12px;
+          padding-right: 10px;
+          font-size: 16px;
+          padding: 5px 10px 5px 5px;
+      }
+      .dropdown-item {
+          display: block;
+          width: 100%;
+          padding: 0.25rem 0.4rem;
+          clear: both;
+          font-weight: 400;
+          color: #212529;
+          text-align: inherit;
+          white-space: nowrap;
+          background-color: transparent;
+          border: 0;
+      }
+      </style>
+        {% include '_alerts.html' %}
+        <div class="page-title-with-or-without-btn">
+            <span class="farm headingtop">Location list </span>
+            <!-- Create button for add-location-->
+            <div class="flex-header-btn">
+                <a href="{% url 'addlocation_processor2' %}" class="btn-close-cancel">Add Location</a>
+            </div>
+        </div>
+        <div class="card card-padding">
+            <div class="main-simple-table-with-search">
+                
+                {% if 'Processor2' in request.user.get_role and not request.user.is_superuser %}
+                {% else %}
+                <div class="form-inline justify-content-start">
+                    <form action="" method="post" class="">
+                        {% csrf_token %}
+                        {% comment %} <div class="inline-apply-filter">
+                          <div class="three-fields-with-label">
+                            <select id="growerSelction" name="processor_id" class="mb-0" style="border-radius:0px !important">
+                              <option value='all' selected> Select All Processor </option>
+                              {% for processor in processor %}
+                              {% if processor == selectedprocessor %}
+                              <option selected value="{{ processor.pk }}">{{processor.entity_name}} - {{processor.id}}
+                              </option>
+                              {% else %}
+                              <option value="{{ processor.pk }}">{{processor.entity_name}} - {{processor.id}}</option>
+                              {% endif %}
+                              {% endfor %}
+                            </select>
+                          </div>
+                          <input style="display : none;" id="submitBtn" type="submit" class="apply-filter-btn primary-btn"
+                            value="Apply Filter" />
+                        </div> {% endcomment %}
+
+
+                        <div class="col-8">
+                          <div class="inline-apply-filter">
+                              <div class="three-fields-with-label">
+                                  <select id="growerSelction" name="processor_id"  class="form-control selectpicker" data-live-search="true">
+                                      <option value='all' selected> Select All Processor </option>
+                                      {% for processor in processor %}
+                                      {% if processor == selectedprocessor %}
+                                      <option selected value="{{ processor.pk }}">{{processor.entity_name}} - {{processor.id}}
+                                      </option>
+                                      {% else %}
+                                      <option value="{{ processor.pk }}">{{processor.entity_name}} - {{processor.id}}</option>
+                                      {% endif %}
+                                      {% endfor %}
+                                  </select>
+                              </div>
+                              <input style="display : none;" id="submitBtn" type="submit"
+                                  class="apply-filter-btn primary-btn" value="Apply Filter" />
+                          </div>
+                  </div>
+
+
+                      </form>                    
+                </div>
+                {% endif %}
+                <div class="both-data-in" style="display: inherit;">
+                    <div class="simple-responsive-table">
+                        <table id="processorList_tbl" class="table table-striped dt-responsive nowrap" style="width:100%">
+                            <thead>
+                                <tr style="border-bottom: 2px solid #e0e0e0;">
+                                    <th width="20%"> Processor Name</th>
+                                    <th width="20%"> Location Name</th>
+                                    <th width="20%">Echelon ID</th>
+                                    <th width="20%">Coordinate</th>
+                                    <th width="20%" class="text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for location in location %}
+                                <tr>
+                                    <td>{{location.processor.entity_name}}</td>
+                                    <td>{{location.name}}</td>
+                                    <td>{{location.eschlon_id}}</td>
+                                    <td>Lat: {{location.latitude}}, Lon: {{location.longitude}}</td>                                  
+                                    <td class="backk action-td" >
+                                        <!-- <li>
+                                        <a href="" class="map-icon-link"><span class="fas fa-draw-polygon"></span></a>
+                                        </li> -->
+                                        <li><a href="{% url 'location_edit_processor2' location.pk %}" class="update-btn-link" alt="edit location" title="edit location"> <span class="fas fa-edit"></span> </a>
+                                        </li>
+                                          <li>
+                                        <a onclick="delStorage('{% url 'location_delete_processor2' location.pk %}')" href="{% url 'delete-location' location.pk %}"
+                                        data-mdb-toggle="modal" data-mdb-target="#deleteModal" alt="delete location" title="delete location">
+                                        <span class="fas fa-trash"></span></a>
+                                        </li>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        
+                    </div>
+                </div>
+            </div>
+
+    </main>
+    {% include 'footer.html' %}
+</div>
+
+<!-- Delete Popup -->
+<div class="modal fade" id="deleteModal" aria-hidden="true" aria-labelledby="exampleModalToggleLabel22" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+  
+        <div class="modal-body">
+          <button type="button" class="btn-close cust-close-ds-btn" data-mdb-dismiss="modal" aria-label="Close"></button>
+          <div class="center-content-status">
+            <img src="{% static 'img/trash.png' %}" alt="right" id="rightImg" class="warning-icon">
+            <p id="message" class="modal-title titlepad">Are you sure you want to delete?</p>
+          </div>
+          <div class="modal-center-btn-footer">
+            <button onclick="reloadwindow()" id="closeBtnpopup" type="button" class="btn-close-cancel btn-space"
+              data-mdb-dismiss="modal">
+              Close
+            </button>
+            <!-- <button type="submit" class="btn-save-submit">Delete</button> -->
+            
+            <a onclick="storagedeleteNow()" href="" id="storageDelete" ><button type=""
+                class="btn-save-submit">Delete</button></a>
+           
+          </div>
+        </div>
+  
+      </div>
+    </div>
+  </div>
+<!-- end -->
+{% endblock content %}
+
+{% block scripts %}
+<script src="https://cdn.datatables.net/1.11.0/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.0/js/dataTables.bootstrap4.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.2.9/js/dataTables.responsive.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.2.9/js/responsive.bootstrap4.min.js"></script>
+
+<script src="{% static 'js/farm/farm_list.js' %}"></script>
+
+<script>
+    {% comment %} $(document).ready(function () {
+        $('#processorList_tbl').DataTable();
+    }); {% endcomment %}
+    $(document).ready(function () {
+      $('#processorList_tbl').DataTable({
+          "ordering": false  // Disable initial ordering
+      });
+  });
+    $(document).ready(function () {
+        $('#growerSelction').change(function () {
+            $('#submitBtn').click();
+        });
+    });
+
+// delete storage
+function delStorage(url){
+    $('#storageDelete').show();
+    $('#storageDelete').attr('url',url);
+}
+
+function storagedeleteNow(){
+  url = $('#storageDelete').attr('url');
+  console.log(url)
+  $.ajax({
+  url: url,
+  data: { },
+  success: function (data) {
+    if (data==1){
+      location.reload();
+    }
+  }
+});
+}
+</script>
+<script>
+  $('#Processor-active').addClass('activeLink');
+
+  $('#Processor-down').addClass('down');
+  $('#Processor-sub').show();
+
+  $('#Location-Management').addClass('activeLink active-nav');
+
+</script>
+{% endblock scripts %}

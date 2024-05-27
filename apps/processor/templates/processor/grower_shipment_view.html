@@ -90,16 +90,30 @@
                         
                         <div class="col-md-6" style="margin-bottom: 10px;">
                             <label for="shipment" style="font-weight:bold;"><b>Weight</b></label>
-                            <div style="font-size: 20px">
-                                    <span style="font-size: 30px">{{grower_shipment.amount}}</span>  {{grower_shipment.unit_type}}
+                            <div style="font-size: 25px">
+                                    <span style="font-size: 25px">{{grower_shipment.amount}}</span>  {{grower_shipment.unit_type}}
                                     {% if grower_shipment.amount2|length > 0 %}
-                                    + <span style="font-size: 30px">{{grower_shipment.amount2}}</span> {{grower_shipment.unit_type2}}
+                                    + <span style="font-size: 25px">{{grower_shipment.amount2}}</span> {{grower_shipment.unit_type2}}
                                     =
-                                    <span style="font-size: 30px">{{grower_shipment.total_amount}}</span> LBS
+                                    <span style="font-size: 25px">{{grower_shipment.total_amount}}</span> LBS
                                     {% endif %}
                             </div>
                         </div>
-                        <div class="col-md-12" style="margin-bottom: 10px;">
+                        <div class="col-md-6" style="margin-bottom: 10px;">
+                            <label for="UploadedFiles" style="font-weight:bold;">Uploaded files</label>
+                            <div>
+                                {% if file_data %}
+                                    {% for file in file_data %}
+                                        {% if file.file %}
+                                            <p><a href="{{ file.file }}" download style="cursor: pointer;">{{ file.name }}</a></p>
+                                        {% endif %}
+                                    {% endfor %}
+                                {% else %}
+                                    <p>No files available</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6" style="margin-bottom: 10px;">
                             <label for="shipment" style="font-weight:bold;">QR CODE</label>
                             <div>
                                 <img src="/media/{{img_name}}" alt="qr code" style="max-width: 350px;">

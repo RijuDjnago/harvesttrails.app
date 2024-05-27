@@ -26,7 +26,19 @@
     <main>
         {% include '_alerts.html' %}
         <div class="page-title-with-or-without-btn">
-            <span class="farm headingtop">Shipment List</span>
+            {% if 'Grower' in request.user.get_role and not request.user.is_superuser %}
+                <span class="farm headingtop">Shipment List For</span>
+                <form action="" method="post" class="">
+                {% csrf_token %}
+                <select id="growerSelction" name="selectp_id" onchange="this.form.submit()">
+                    <option value={{processor_val}} selected disabled> {{processor}} </option>
+                    <option value='t1'> Processor 1 </option>
+                    <option value='t2'> Processor 2 </option>
+                </select>
+                </form>
+            {% else %}
+                <span class="farm headingtop">Shipment List</span>
+            {% endif %}
             <!-- Create button for Add-->
             <div class="flex-header-btn">
                 <a href="{% url 'grower_shipment' %}" class="btn-close-cancel">Add Shipment</a>
@@ -36,6 +48,7 @@
         <div class="card card-padding">
             <div class="main-simple-table-with-search col-12">
                 {% if 'Grower' in request.user.get_role and not request.user.is_superuser %}
+                
                 {% else %}
                 <div class="row">
                     <div class="col-8">
