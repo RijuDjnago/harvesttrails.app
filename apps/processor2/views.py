@@ -55,7 +55,7 @@ characters3 = list(string.digits)
 def list_processor2(request):
     context = {}
     if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
-        processor2 = ProcessorUser2.objects.all()
+        processor2 = ProcessorUser2.objects.filter(processor2__processor_type__type_name="T2")
         context['processor'] = processor2
         return render(request, 'processor2/list_processor2.html',context)
     # Processor 

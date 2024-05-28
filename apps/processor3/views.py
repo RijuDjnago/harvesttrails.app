@@ -103,7 +103,7 @@ def add_processor3(request):
 def processor3_list(request):
     context={}
     if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
-        processor3 = ProcessorUser3.objects.all()
+        processor3 = ProcessorUser2.objects.filter(processor2__processor_type__type_name="T3")
         context['processor'] = processor3
         return render(request,'processor3/list_processor3.html',context)
     else:

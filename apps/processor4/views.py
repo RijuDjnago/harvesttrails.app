@@ -308,3 +308,199 @@ def receive_shipment(request):
         return render(request, 'processor4/receive_delivery.html', context)
     else:
         return redirect('login')
+    
+
+@login_required()
+def inbound_production_management_processor4(request): 
+    context = {}
+    if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+        output = ProductionManagementProcessor2.objects.filter(processor__processor_type__type_name="T4").order_by('processor_e_name','-id')
+
+        p_id = [i.processor.id for i in output]
+        processors = Processor2.objects.filter(id__in = p_id).order_by('entity_name')
+        context['processors'] = processors
+        print(context)
+        
+        search_name = request.GET.get('search_name')
+        selectprocessor_id = request.GET.get('selectprocessor_id')
+
+        if search_name == None and selectprocessor_id == None :
+            output = output
+        else:
+            output = ProductionManagementProcessor2.objects.filter(processor__processor_type__type_name="T3").order_by('processor_e_name','-id')
+            if search_name and search_name != 'All':
+                output = ProductionManagementProcessor2.objects.filter(Q(processor_e_name__icontains=search_name) | Q(date_pulled__icontains=search_name) |
+                Q(bin_location__icontains=search_name) | Q(milled_storage_bin__icontains=search_name) )
+                context['search_name'] = search_name
+            if selectprocessor_id and selectprocessor_id != 'All':
+                output = output.filter(processor_id=selectprocessor_id)
+                selectedProcessors = Processor2.objects.get(id=selectprocessor_id)
+                context['selectedProcessors'] = selectedProcessors
+        paginator = Paginator(output, 100)
+        page = request.GET.get('page')
+        try:
+            report = paginator.page(page)
+        except PageNotAnInteger:
+            report = paginator.page(1)
+        except EmptyPage:
+            report = paginator.page(paginator.num_pages)
+
+        context['report'] = report
+        return render (request, 'processor4/inbound_production_management.html', context)
+    
+    else:
+        return redirect ('login')
+
+
+@login_required()
+def add_volume_pulled_processor4(request):   
+    context = {}
+    if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+        get_processor = Processor2.objects.filter(processor_type__type_name="T4").order_by('entity_name')
+        context['get_processor'] = get_processor
+        if request.method == 'POST' :
+            id_processor = request.POST.get('id_processor')
+            if id_processor and id_processor != "all" :
+                total_receive_weight = []
+                total_volume_pulled_till_now = []
+                shipment = ShipmentManagement.objects.filter(processor2_idd = id_processor).filter(status ="APPROVED").values('volume_shipped')
+            
+                if shipment.exists() :
+                    for i in shipment :
+                        try:
+                            total_receive_weight.append(float(i['volume_shipped']))
+                        except:
+                            total_receive_weight.append(float(0))
+                    total_receive_weight = sum(total_receive_weight)
+
+                    volume_pulled_till_now = ProductionManagementProcessor2.objects.filter(processor_id = id_processor).values('volume_pulled')
+                    for i in volume_pulled_till_now :
+                        total_volume_pulled_till_now.append(float(i['volume_pulled']))
+                    
+                    sum_volume_pulled_till_now = sum(total_volume_pulled_till_now)
+                    final_total_volume = total_receive_weight - sum_volume_pulled_till_now
+                else:
+                    final_total_volume = 0
+                    total_volume_pulled_till_now = 0
+                    total_receive_weight = 0
+
+                
+                pp = Processor2.objects.get(id=id_processor)
+                context['selectedProcessor'] = pp
+                context['total_receive_weight'] = f'{final_total_volume} LBS'
+                context['total_receive_weight_java'] = final_total_volume
+
+                id_date = request.POST.get('id_date')
+                bin_location = request.POST.get('bin_location')
+                volume_pulled = request.POST.get('volume_pulled')
+                milled_volume = request.POST.get('milled_volume')
+                milled_storage_bin = request.POST.get('milled_storage_bin')
+                
+                if volume_pulled and id_date and milled_volume :
+                    volume_left = final_total_volume - float(volume_pulled)
+                    save_production_management=ProductionManagementProcessor2(processor_id=id_processor,processor_e_name=pp.entity_name,
+                    total_volume=final_total_volume,date_pulled=id_date,bin_location=bin_location,volume_pulled=volume_pulled,
+                    milled_volume=milled_volume,volume_left=volume_left,milled_storage_bin=milled_storage_bin,editable_obj=True)
+                    save_production_management.save()
+                    
+                    update_obj = ProductionManagementProcessor2.objects.filter(processor_id=id_processor).exclude(id=save_production_management.id).values('id','editable_obj')
+                    
+                    if update_obj.exists():
+                        for i in update_obj :
+                            get_obj = ProductionManagementProcessor2.objects.get(id=i['id'])
+                            get_obj.editable_obj = False
+                            get_obj.save()
+                    else:
+                        pass
+                    return redirect ('inbound_production_management_processor4')
+            else:
+                pass
+        return render (request, 'processor4/add_volume_pulled.html', context)
+    
+    else:
+        return redirect ('login')
+
+
+@login_required()
+def edit_volume_pulled_processor4(request,pk):   
+    context = {}
+    if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+        get_obj = ProductionManagementProcessor2.objects.get(id=pk)
+        if get_obj.editable_obj == True :
+            context['name_processor'] = get_obj.processor_e_name
+            context['total_receive_weight'] = get_obj.total_volume
+            context['total_receive_weight_java'] = get_obj.total_volume
+            context['id_date'] = str(get_obj.date_pulled)
+            context['bin_location'] = get_obj.bin_location
+            context['volume_pulled'] = get_obj.volume_pulled
+            context['milled_volume'] = get_obj.milled_volume
+            context['milled_storage_bin'] = get_obj.milled_storage_bin
+            if request.method == 'POST' :
+                id_date = request.POST.get('id_date')
+                bin_location = request.POST.get('bin_location')
+                volume_pulled = request.POST.get('volume_pulled')
+                milled_volume = request.POST.get('milled_volume')
+                milled_storage_bin = request.POST.get('milled_storage_bin')
+                
+                if volume_pulled and id_date and milled_volume :
+                    final_total_volume = float(get_obj.total_volume)
+                    volume_left = final_total_volume - float(volume_pulled)
+                    get_obj.date_pulled = id_date
+                    get_obj.bin_location = bin_location
+                    get_obj.volume_pulled = volume_pulled
+                    get_obj.milled_volume = milled_volume
+                    get_obj.volume_left = volume_left
+                    get_obj.milled_storage_bin = milled_storage_bin
+                    get_obj.save()
+                    return redirect ('inbound_production_management_processor4')
+        else:
+            messages.error(request,'This is not a valid request')
+    
+        return render (request, 'processor4/edit_volume_pulled.html', context)
+    else:
+        return redirect ('login')
+
+
+@login_required()
+def delete_volume_pulled_processor4(request,pk):  
+    if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+        get_obj = ProductionManagementProcessor2.objects.get(id=pk)
+        volume_pulled = get_obj.volume_pulled
+        bin_location = get_obj.bin_location
+        processor_id = get_obj.processor_id
+        
+        get_obj.delete()
+        update_obj = ProductionManagementProcessor2.objects.filter(processor_id=processor_id).order_by('id').values('id')
+
+        if update_obj.exists() :
+            last_obj_id = [i['id'] for i in update_obj][-1]
+            now_update_one = ProductionManagementProcessor2.objects.get(id=last_obj_id)
+            now_update_one.editable_obj = True
+            now_update_one.save()
+
+            now_update_all = ProductionManagementProcessor2.objects.filter(processor_id=processor_id).exclude(id=last_obj_id)
+            for i in now_update_all :
+                make_uneditale = ProductionManagementProcessor2.objects.get(id=i.id)
+                make_uneditale.editable_obj = False
+                make_uneditale.save()
+        else:
+            pass
+        
+        return redirect ('inbound_production_management_rpocessor4')
+    else:        
+        return redirect ('login')
+
+@login_required()  # show processor3 list
+def processor4_list(request):
+    context={}
+    if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+        processor3 = ProcessorUser2.objects.filter(processor2__processor_type__type_name="T4")
+        context['processor'] = processor3
+        return render(request,'processor4/list_processor4.html',context)
+    else:
+        return redirect('login')   
+    
+    
+        
+  
+    
