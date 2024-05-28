@@ -110,7 +110,7 @@
                         <div class="col-md-3 mb-2">
                             <div class="form-group">
                                 <label for="id_storage">Storage</label>
-                                <select  id="id_storage" name="id_storage" class="selectpicker " data-live-search="true" >
+                                <select  id="id_storage" name="id_storage" class="form-control selectpicker" data-live-search="true" >
                                     <option>Select Storage</option>
                                     {% for storage in storage %}
                                     <option value="{{ storage.pk }}">{{storage.storage_name}} - {{storage.pk }}</option>

@@ -374,6 +374,63 @@ def inbound_shipment_delete_processor3(request,pk):
 
 
 @login_required()
+def rejected_shipments_csv_download_for_t3(request) :  
+    if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+        today_date = date.today()
+        filename = f'Rejected Shipments CSV {today_date}.csv'
+        response = HttpResponse(
+            content_type='text/csv',
+            headers={'Content-Disposition': 'attachment; filename="{}"'.format(filename)},
+        )
+        writer = csv.writer(response)
+        writer.writerow(['Shipment ID','Lot Number #','Shipment Date', 'Send Processor','Recive Processor','Total Weight (LBS)','Disapproval Date','Reason For Disapproval','Moisture Level'])
+        output = ShipmentManagement.objects.filter(status='DISAPPROVED', receiver_processor_type="T3").order_by('-id').values('shipment_id','lot_number','date_pulled','processor_e_name','processor2_name',
+                                                                                            'weight_of_product','recive_delivery_date','reason_for_disapproval','moisture_percent')
+        for i in output:
+            writer.writerow([
+                i['shipment_id'], 
+                i['lot_number'], 
+                i['date_pulled'].strftime("%m-%d-%Y"),
+                i['processor_e_name'], 
+                i['processor2_name'], 
+                i['weight_of_product'],
+                i['recive_delivery_date'], 
+                i['reason_for_disapproval'], 
+                i['moisture_percent']])
+        return response
+    else:
+        return redirect ('dashboard')
+
+@login_required()
+def all_shipments_csv_download_for_t3(request):  
+    if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+        today_date = date.today()
+        filename = f'All Shipments CSV {today_date}.csv'
+        response = HttpResponse(
+            content_type='text/csv',
+            headers={'Content-Disposition': 'attachment; filename="{}"'.format(filename)},
+        )
+        writer = csv.writer(response)
+        writer.writerow(['Shipment ID','Lot Number #','Shipment Date', 'Send Processor','Recive Processor','Total Weight (LBS)','Disapproval Date','Reason For Disapproval','Moisture Level'])
+        output = ShipmentManagement.objects.filter(receiver_processor_type="T3").order_by('-id').values('shipment_id','lot_number','date_pulled','processor_e_name','processor2_name',
+                                                                                            'weight_of_product','recive_delivery_date','reason_for_disapproval','moisture_percent')
+        for i in output:
+            writer.writerow([
+                i['shipment_id'], 
+                i['lot_number'], 
+                i['date_pulled'].strftime("%m-%d-%Y"),
+                i['processor_e_name'], 
+                i['processor2_name'], 
+                i['weight_of_product'],
+                i['recive_delivery_date'], 
+                i['reason_for_disapproval'], 
+                i['moisture_percent']])
+        return response
+    else:
+        return redirect ('dashboard')
+
+
+@login_required()
 def receive_shipment(request):
     context = {}
 
@@ -595,6 +652,7 @@ def outbound_shipment_list_processor3(request):
         context = {}
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
             #inbound management list for admin
+            context['processor'] = Processor2.objects.filter(processor_type__type_name="T2")
             context["table_data"] = list(ShipmentManagement.objects.filter(sender_processor_type="T3").values())
             print(context)
             return render (request, 'processor3/outbound_shipment_list.html', context)
@@ -724,6 +782,19 @@ def link_processor_three(request):
     except Exception as e:
         print(e)
         return render(request, 'processor3/link_processor3.html', context)
+
+
+@login_required()
+def delete_link_processor_three(request, pk):
+    try:
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+            link = LinkProcessorToProcessor.objects.filter(id=pk).first()
+            link.delete()
+        else:
+            return redirect('login')
+    except Exception as e:
+        print(e)
+        return HttpResponse(e)
 
 
 @login_required()

@@ -139,7 +139,7 @@
                     <div class="col-4">
                         <div class="inline-apply-filter">
                             <div class="three-fields-with-label">
-                                <select id="processorSelction" name="selectprocessor_id">
+                                <select id="processorSelction" name="selectprocessor_id" class="form-control selectpicker" data-live-search="true">
                                     <option value='All' selected> Select All Processors </option>
                                     {% for i in processors %}
                                     {% if i == selectedProcessors %}

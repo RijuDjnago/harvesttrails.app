@@ -118,7 +118,7 @@
                                         {% if 'Processor' in request.user.get_role and request.user.is_processor %}
                                         {% else %}
                                         <li>
-                                            <a onclick="delStorage('')" href="#"
+                                            <a onclick="delStorage('{% url 'delete_link_processor_one' pro.id %}')" href="{% url 'delete_link_processor_one' pro.id %}"
                                         data-mdb-toggle="modal" data-mdb-target="#deleteModal" alt="delete linked grower to processor" title="delete linked grower to processor">
                                         <span class="fas fa-trash"></span></a>
                                         </li>

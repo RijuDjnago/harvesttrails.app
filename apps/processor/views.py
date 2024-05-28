@@ -7431,8 +7431,20 @@ def link_processor_one(request):
 
             return render(request, 'processor/link_processor.html', context)
         else:
-            return render(request, 'processor/link_processor.html', context) 
+            return redirect('login')
     except Exception as e:
         print(e)
         return render(request, 'processor/link_processor.html', context)
 
+
+@login_required()
+def delete_link_processor_one(request, pk):
+    try:
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+            link = LinkProcessor1ToProcessor.objects.filter(id=pk).first()
+            link.delete()
+        else:
+            return redirect('login')
+    except Exception as e:
+        print(e)
+        return HttpResponse(e)

@@ -146,11 +146,12 @@ def inbound_shipment_edit(request, pk):
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role() or request.user.is_processor2:
             #inbound management list for admin
             context["shipment"] = ShipmentManagement.objects.get(id=pk)
-            files = ShipmentManagement.objects.filter(id=pk).first().files.all().values('file')
+            files = ShipmentManagement.objects.filter(id=pk).first().files.all().values('file', 'id')
             files_data = []
             for j in files:
                 file_name = {}
                 file_name["file"] = j["file"]
+                file_name["id"] = j["id"]
                 # print(j["file"])
                 if j["file"] or j["file"] != "" or j["file"] != ' ':
                     file_name["name"] = j["file"].split("/")[-1]
