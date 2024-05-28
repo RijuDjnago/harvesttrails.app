@@ -234,11 +234,11 @@
                     {% endfor %} 
                     <div class="row" style="margin-top: 10px;">
                         <div class="form-btn-row">
-                            {% for shipment in grower_shipment %}
-                            <a href="{% url 'processor_inbound_management_edit' shipment.id %}" class="btn-close-cancel btn-space">Take Action</a>
+                            {% for ship in shipment %}
+                            <a href="{% url 'inbound_shipment_edit4' ship.id %}" class="btn-close-cancel btn-space">Take Action</a>
                             {% endfor %}
                         
-                            <a href="{% url 'processor_inbound_management' %}" class="btn-close-cancel btn-space">Back</a>
+                            <a href="{% url 'inbound_shipment_list4' %}" class="btn-close-cancel btn-space">Back</a>
                         </div>
                     </div> 
             </div>

@@ -78,14 +78,14 @@ def add_processor2(request):
                 website = request.POST.get('website')
                 counter = request.POST.get('counter')
                 processor_type = request.POST.getlist('processor_type')
-                print(processor_type)
-                print(fein, entity_name, billing_address, shipping_address)
+                #print(processor_type)
+                #print(fein, entity_name, billing_address, shipping_address)
                 if not counter:
                     counter = 0
-                print(counter)
+                #print(counter)
                 processor2 = Processor2(fein=fein,entity_name=entity_name,billing_address=billing_address,shipping_address=shipping_address,main_number=main_number,main_fax=main_fax,website=website)
                 processor2.save()
-                print(processor2)
+                #print(processor2)
                 for type in processor_type:
                     check_type = ProcessorType.objects.filter(id=type).first()
                     processor2.processor_type.add(check_type)
@@ -868,7 +868,7 @@ def addlocation_processor2(request):
             processor_obj = Processor2.objects.get(id=p.processor_id)
 
             # processor_obj = Processor.objects.get(contact_email=processor_email)
-            print(processor_obj.id)
+            #print(processor_obj.id)
             if request.method == 'POST':
                 form = Processor2LocationForm(request.POST)
                 name = request.POST.get('name')
@@ -899,7 +899,7 @@ def addlocation_processor2(request):
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
             form = Processor2LocationForm()
             processor = Processor2.objects.all()
-            print(processor)
+            #print(processor)
             context['form']=form
             context['processor']=processor
             if request.method == 'POST':
@@ -956,7 +956,7 @@ def location_list_processor2(request):
             context['processor'] = processor
             if request.method == 'POST':
                 value = request.POST.get('processor_id')
-                print(value)
+                #print(value)
                 if value == 'all' :
                     location = Processor2Location.objects.all()
                     processor = Processor2.objects.all()
@@ -1070,7 +1070,7 @@ def location_edit_processor2(request,pk):
                             location_update.save()
 
                 else:
-                    print(name)
+                    #print(name)
                     location_update.name = name
                     location_update.processor_id = processorSelction
                     location_update.upload_type = 'coordinates'
@@ -1175,7 +1175,7 @@ def add_outbound_shipment_processor2(request):
                 if processor_type == 'T3':
                     select_destination_ = Processor2.objects.get(id=select_proc_id).entity_name
                     receiver_processor_type = "T3"
-                    # print("select_destination_-----",select_destination_)
+                    # #print("select_destination_-----",select_destination_)
                 elif processor_type == 'T4':
                     select_destination_ = Processor2.objects.get(id=select_proc_id).entity_name
                     receiver_processor_type = "T4"
@@ -1206,7 +1206,7 @@ def outbound_shipment_list(request):
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
             #inbound management list for admin
             context["table_data"] = list(ShipmentManagement.objects.filter(sender_processor_type="T2").values())
-            print(context)
+            #print(context)
             return render (request, 'processor2/outbound_shipment_list.html', context)
         elif request.user.is_processor2 :
             processor_email = request.user.email
@@ -1228,7 +1228,6 @@ def inbound_shipment_list(request):
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
             #inbound management list for admin
             context["table_data"] = list(ShipmentManagement.objects.filter(receiver_processor_type="T2").values())
-            print(context)
             return render (request, 'processor2/inbound_management_table.html', context)
         elif request.user.is_processor2 :
             processor_email = request.user.email
@@ -1254,7 +1253,7 @@ def inbound_shipment_view(request, pk):
             for j in files:
                 file_name = {}
                 file_name["file"] = j["file"]
-                # print(j["file"])
+                # #print(j["file"])
                 if j["file"] or j["file"] != "" or j["file"] != ' ':
                     file_name["name"] = j["file"].split("/")[-1]
                 else:
@@ -1274,8 +1273,29 @@ def inbound_shipment_edit(request, pk):
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role() or request.user.is_processor2:
             #inbound management list for admin
             context["shipment"] = ShipmentManagement.objects.get(id=pk)
+            files = ShipmentManagement.objects.filter(id=pk).first().files.all().values('file')
+            files_data = []
+            for j in files:
+                file_name = {}
+                file_name["file"] = j["file"]
+                # #print(j["file"])
+                if j["file"] or j["file"] != "" or j["file"] != ' ':
+                    file_name["name"] = j["file"].split("/")[-1]
+                else:
+                    file_name["name"] = None
+                files_data.append(file_name)
+            context["files"] = files_data
             data = request.POST
             if request.method == "POST":
+                button_value = request.POST.getlist('remove_files')
+                #print(button_value)
+                if button_value:
+                    for file_id in button_value:
+                        try:
+                            file_obj = File.objects.get(id=file_id)
+                            file_obj.delete()
+                        except File.DoesNotExist:
+                            pass
                 status = data.get('status')
                 approval_date = data.get('approval_date')
                 received_weight = data.get('received_weight')
@@ -1286,7 +1306,7 @@ def inbound_shipment_edit(request, pk):
                 ShipmentManagement.objects.filter(id=pk).update(status=status,moisture_percent=moisture_percent, recive_delivery_date=approval_date,
                                                                 received_weight=received_weight,ticket_number=ticket_number,
                                                                 storage_bin_recive=storage_bin_recive, reason_for_disapproval=reason_for_disapproval)
-                files = request.FILES.getlist('files')
+                files = request.FILES.getlist('new_files')
                 shipment = ShipmentManagement.objects.get(id=pk)
                 for file in files:
                     new_file = File.objects.create(file=file)
@@ -1298,6 +1318,17 @@ def inbound_shipment_edit(request, pk):
             return redirect('login')  
     except:
         return render(request, 'processor2/inbound_management_edit.html', context)
+
+
+@login_required()
+def inbound_shipment_delete(request,pk):
+    print("hit------------------------------", pk)
+    shipment = ShipmentManagement.objects.filter(id=pk).first()
+
+    #print(shipment)
+    shipment.delete()
+    return redirect('inbound_shipment_list')
+
 
 @login_required()
 def recive_shipment(request):
@@ -1367,7 +1398,7 @@ def recive_shipment(request):
                 context["processor2"] = processor2
                 return render(request, 'processor2/recive_delevery.html', context)
             else:
-                print("okay piu")
+                #print("okay piu")
                 if context["weight_prod_unit_id"] == "LBS" :
                     cal_weight = round(float(context["weight_prod"]),2)
                 if context["weight_prod_unit_id"] == "BU" :
@@ -1384,11 +1415,11 @@ def recive_shipment(request):
                 if processor_type == 'T2':
                     select_destination_ = Processor2.objects.get(id=select_proc_id).entity_name
                     receiver_processor_type = "T2"
-                    # print("select_destination_-----",select_destination_)
+                    # #print("select_destination_-----",select_destination_)
                 elif processor_type == 'T3':
                     select_destination_ = Processor2.objects.get(id=select_proc_id).entity_name
                     receiver_processor_type = "T3"
-                    # print("select_destination_-----",select_destination_)
+                    # #print("select_destination_-----",select_destination_)
                 elif processor_type == 'T4':
                     select_destination_ = Processor2.objects.get(id=select_proc_id).entity_name
                     receiver_processor_type = "T4"
@@ -1432,7 +1463,7 @@ def processor2_processor_management(request):
                     context['link_processor_to_processor_all'] = link_processor_to_processor_all.filter(processor_id=int(pro1_id))
                     #then need to add T1/T2/T3
                     context['selectedpro1'] = int(pro1_id)             
-            print(context)             
+            #print(context)             
             return render(request, 'processor2/processor2_processor_management.html',context)
     else:
         return redirect('login')
@@ -1462,7 +1493,7 @@ def link_processor_two(request):
                     return render(request, 'processor2/link_processor2.html', context)
                 else:
                     select_processor2 = request.POST.getlist("select_processor2")
-                    print(selected_processor, select_processor2)
+                    #print(selected_processor, select_processor2)
                     for i in select_processor2:
                         pro_id , pro_type = i.split(" ")
                         link_pro = LinkProcessorToProcessor(processor_id = selected_processor, linked_processor_id = pro_id)
@@ -1474,7 +1505,7 @@ def link_processor_two(request):
         else:
             return render(request, 'processor2/link_processor2.html', context) 
     except Exception as e:
-        print(e)
+        #print(e)
         return render(request, 'processor2/link_processor2.html', context)
 
 

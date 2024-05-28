@@ -205,25 +205,6 @@
                                 {% endif %}
                             </div>
                         </div>
-                    
-                        <!-- <div class="col-md-12" style="margin-bottom: 10px;">
-                            <label for="shipment"><b>Weight</b></label>
-                            <div style="font-size: 20px">
-                                    <span style="font-size: 30px">
-                                    {{grower_shipment.amount}}</span>  {{grower_shipment.unit_type}}
-                                    {% if grower_shipment.amount2|length > 0 %}
-                                    + <span style="font-size: 30px">{{grower_shipment.amount2}}</span> {{grower_shipment.unit_type2}}
-                                    =
-                                    <span style="font-size: 30px">{{grower_shipment.total_amount}}</span> LBS
-                                    {% endif %}
-                            </div>
-                        </div> -->
-
-                        
-                        
-                    
-                       
-                        
                         <div class="col-md-6" style="margin-bottom: 10px;">
                             <label for="shipment" style="font-weight:bold;">QR CODE</label>
                             <div>
@@ -235,10 +216,10 @@
                     <div class="row" style="margin-top: 10px;">
                         <div class="form-btn-row">
                             {% for shipment in grower_shipment %}
-                            <a href="{% url 'processor_inbound_management_edit' shipment.id %}" class="btn-close-cancel btn-space">Take Action</a>
+                            <a href="{% url 'inbound_shipment_edit' shipment.id %}" class="btn-close-cancel btn-space">Take Action</a>
                             {% endfor %}
                         
-                            <a href="{% url 'processor_inbound_management' %}" class="btn-close-cancel btn-space">Back</a>
+                            <a href="{% url 'inbound_shipment_list' %}" class="btn-close-cancel btn-space">Back</a>
                         </div>
                     </div> 
             </div>

@@ -29,6 +29,7 @@ urlpatterns = [
     path('inbound_shipment_list/', views.inbound_shipment_list, name="inbound_shipment_list"),
     path('inbound_shipment_view/<int:pk>/', views.inbound_shipment_view, name="inbound_shipment_view"),
     path('inbound_shipment_edit/<int:pk>/', views.inbound_shipment_edit, name="inbound_shipment_edit"),
+    path('inbound_shipment_delete/<int:pk>/', views.inbound_shipment_delete, name="inbound_shipment_delete"),
     
     path('recive_shipment/', views.recive_shipment, name="recive_shipment"),
     path('link_processor_two/', views.link_processor_two, name="link_processor_two"),
