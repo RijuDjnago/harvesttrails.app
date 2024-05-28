@@ -29,8 +29,13 @@ urlpatterns = [
     path('inbound_shipment_list/', views.inbound_shipment_list, name="inbound_shipment_list"),
     path('inbound_shipment_view/<int:pk>/', views.inbound_shipment_view, name="inbound_shipment_view"),
     path('inbound_shipment_edit/<int:pk>/', views.inbound_shipment_edit, name="inbound_shipment_edit"),
+    path('inbound_shipment_delete/<int:pk>/', views.inbound_shipment_delete, name="inbound_shipment_delete"),
     
     path('recive_shipment/', views.recive_shipment, name="recive_shipment"),
     path('link_processor_two/', views.link_processor_two, name="link_processor_two"),
     path('processor2_processor_management/', views.processor2_processor_management, name="processor2_processor_management"),
+    path('inbound_production_management/', views.inbound_production_management, name="inbound_production_management"),
+    path('add_volume_pulled_processor2/', views.add_volume_pulled_processor2, name="add_volume_pulled_processor2"),
+    path('edit_volume_pulled_processor2/<int:pk>/', views.edit_volume_pulled_processor2, name="edit_volume_pulled_processor2"),
+    path('delete_volume_pulled_processor2/<int:pk>/', views.delete_volume_pulled_processor2, name="delete_volume_pulled_processor2"),
 ]
