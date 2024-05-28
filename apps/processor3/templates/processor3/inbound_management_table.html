@@ -184,7 +184,7 @@
                     <div class="row d-flex align-items-center">
                         <!-- Select tag on the left side -->
                         <div class="col-4">
-                            <select name="select_processor" id="mult_select"  class="form-control selectpicker" data-live-search="true" onchange="this.form.submit()">
+                            <select name="select_processor" id="mult_select"  class="form-control selectpicker" data-live-search="true">
                                 <option value='0'>Select Processor</option>
                                 {% for pro in processor3 %}
                                 {% if select_processor == pro.pk %}
@@ -201,7 +201,7 @@
                         <div class="col-4">
                             <div class="row justify-content-end">
                                 <div class="col-8">
-                                    <input class="form-control" name="search_name" type="search" placeholder="Search" autocomplete="off" aria-label="Search" id="search_name" {% if search_name == "None" %}value="Search"{% else %}value="{{search_name}}"{% endif %} >
+                                    <input class="form-control" name="search_name" type="search" placeholder="Search" autocomplete="off" aria-label="Search" id="search_name" {% if search_name %}value="{{search_name}}"{% else %}{% endif %} >
                                 </div>
                                 <div class="col-4">
                                     <button class="btn btn-outline-success btn-block" type="submit">Search</button>
