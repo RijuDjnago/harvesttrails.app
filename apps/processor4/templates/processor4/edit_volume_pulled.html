@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %} Add Volume Pulled {% endblock title %}
+{% block title %} Edit Volume Pulled {% endblock title %}
 
 {% block extrahead %}
 <!-- Google tag (gtag.js) -->
@@ -20,9 +20,11 @@
     
     {% include 'header.html' %} {% load crispy_forms_tags %}
     <main>
-        <span class="farm headingtop">Add Volume Pulled</span>
+        <span class="farm headingtop">Edit Volume Pulled</span>
         <div class="card farm-fields-container">
             {% include '_alerts.html' %}
+            {% if messages %}
+            {% else %}
             <div class="container-fluid">
                 <form method="post" class="farm-fields-form">
                     {% csrf_token %}
@@ -31,17 +33,7 @@
                         {% else %}
                         <div class="col-md-6 mb-2">
                             <label for="id_processor">Processor<span class="asteriskField">*</span></label>
-                            <select id="id_processor" name="id_processor" class="textinput textInput form-control"
-                                style="width: 100%;padding-left:10px ;" required>
-                                <option value='all'>Select Processor</option>
-                                {% for processor in get_processor %}
-                                {% if processor == selectedProcessor %}
-                                <option value="{{ processor.pk }}" selected>{{processor.entity_name}} - {{processor.pk }}</option>
-                                {% else %}
-                                <option value="{{ processor.pk }}">{{processor.entity_name}} - {{processor.pk }}</option>
-                                {% endif %}
-                                {% endfor %}
-                            </select>
+                            <input type="text" value="{{name_processor}}" class="textinput textInput form-control" name="" id="" readonly>
                         </div>
                         <input id="submitBtn2" type="submit" class="btn-save-submit" value="Save" style="display: none;">
                         {% endif %}
@@ -53,13 +45,13 @@
                         <hr class="mt-2">
                         <div class="col-md-6 mb-2">
                             <label for="id_date">Date Pulled<span class="asteriskField">*</span></label>
-                            <input type="date" name="id_date" id="id_date" class="textinput textInput form-control">
+                            <input type="date" name="id_date" id="id_date" value="{{id_date}}" class="textinput textInput form-control">
                             <p id="alert_msg0" style="color:red"></p>
                         </div>
                         <div class="col-md-6 mb-2">
                             <div>
                                 <label for="bin_location">Bin Location Pulled From</label>
-                                <input type="text" id="bin_location" name="bin_location" class="textinput textInput form-control">
+                                <input type="text" id="bin_location" name="bin_location" value="{{bin_location}}" class="textinput textInput form-control">
                                     
                             </div>
                         </div>
@@ -67,18 +59,18 @@
                         <div class="col-md-4 mb-2">
                             <div>
                                 <label for="volume_pulled">Volume Pulled<span class="asteriskField">*</span></label>
-                                <input type="number" name="volume_pulled" class="textinput textInput form-control" id="volume_pulled">
+                                <input type="number" name="volume_pulled" value="{{volume_pulled}}" class="textinput textInput form-control" id="volume_pulled">
                                 <p id="alert_msg" style="color:red"></p>
                             </div>
                         </div>
                         <div class="col-md-4 mb-2">
                             <label for="milled_volume">Milled Volume<span class="asteriskField">*</span></label>
-                            <input type="number" name="milled_volume" class="textinput textInput form-control" id="milled_volume">
+                            <input type="number" name="milled_volume" value="{{milled_volume}}" class="textinput textInput form-control" id="milled_volume">
                             <p id="alert_msg3" style="color:red"></p>
                         </div>
                         <div class="col-md-4 mb-2">
                             <label for="milled_storage_bin">Milled Storage Bin<span class="asteriskField">*</span></label>
-                            <input type="text" name="milled_storage_bin" class="textinput textInput form-control" id="milled_storage_bin">
+                            <input type="text" name="milled_storage_bin" value="{{milled_storage_bin}}" class="textinput textInput form-control" id="milled_storage_bin">
                             <p id="alert_msg2" style="color:red"></p>
                         </div>
                         
@@ -86,7 +78,7 @@
                     </div>
                     <div class="row">
                         <div class="form-btn-row">
-                            <a href="{% url 'inbound_production_management' %}" class="btn-close-cancel btn-space">Cancel</a>
+                            <a href="{% url 'inbound_production_management_processor4' %}" class="btn-close-cancel btn-space">Cancel</a>
                             <input onclick="cal_total_pulled()" type="submit" class="btn-save-submit" value="Save">
                             <input style="display: none;" id="hide_btn1" type="submit" class="btn-save-submit" value="Save">
                                 
@@ -95,6 +87,7 @@
                 </form>
 
             </div>
+            {% endif %}
         </div>
 
 
@@ -176,34 +169,15 @@
       
     }
 
-    // function cal_total_pulled(){
-    //     var final_total_volume = $("#total_receive_weight_java").val();
-    //     var volume_pulled = $("#volume_pulled").val();
-    //     var id_date = $("#id_date").val();
-        
-    //     if (parseFloat(final_total_volume) >= parseFloat(volume_pulled)){
-    //         document.getElementById('alert_msg').innerHTML = "";
-    //         $('#hide_btn1').click();
-    //     }
-    //     else{
-            
-    //         document.getElementById('alert_msg').innerHTML = "Pulled volume can't be blank or more than total rice volume";
-    //     }
-    //     if (id_date == ''){
-    //         document.getElementById('alert_msg0').innerHTML = "Date can't be blank";
-    //     }
-    //     else{
-    //         document.getElementById('alert_msg0').innerHTML = "";
-    //     }
-    // }
+   
 </script>
 <script>
-    $('#Tier2-Processor-active').addClass('activeLink');
+    $('#Tier4-Processor-active').addClass('activeLink');
       
-    $('#Tier2-Processor-down').addClass('down');
-    $('#Tier2-Processor-sub').show();
+    $('#Tier4-Processor-down').addClass('down');
+    $('#Tier4-Processor-sub').show();
   
-    $('#Production-Management-Processor2').addClass('activeLink active-nav');
+    $('#Production-Management-Processor4').addClass('activeLink active-nav');
   
   </script>
 {% endblock jquery %}
