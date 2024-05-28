@@ -181,23 +181,36 @@
         <form action="" method="get" class="">
             <div class="card card-padding">
                 <div class="main-simple-table-with-search col-12">
-                    <div class="row d-flex">
-                            <div class="col-md-4 col-sm-6 col-12">
-                                <div class=" mb-3">
-                                    <select name="growerSelction" id="growerSelction" class="form-control selectpicker" data-live-search="true">
-                                        <option value="0">Select Processor</option>
-                                        <option value="1" selected>op 1</option>
-                                        <option value="2">op 1</option>
-                                    </select>
+                    <div class="row d-flex align-items-center">
+                        <!-- Select tag on the left side -->
+                        <div class="col-4">
+                            <select name="select_processor" id="mult_select"  class="form-control selectpicker" data-live-search="true" onchange="this.form.submit()">
+                                <option value='0'>Select Processor</option>
+                                {% for pro in processor3 %}
+                                {% if select_processor == pro.pk %}
+                                    <option value="{{pro.pk}}" selected>{{pro.entity_name}}</option>
+                                {% else %}
+                                    <option value="{{pro.pk}}">{{pro.entity_name}}</option>
+                                {% endif %}
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-4">
+                        </div>
+                        <!-- Search section on the right side -->
+                        <div class="col-4">
+                            <div class="row justify-content-end">
+                                <div class="col-8">
+                                    <input class="form-control" name="search_name" type="search" placeholder="Search" autocomplete="off" aria-label="Search" id="search_name" {% if search_name == "None" %}value="Search"{% else %}value="{{search_name}}"{% endif %} >
+                                </div>
+                                <div class="col-4">
+                                    <button class="btn btn-outline-success btn-block" type="submit">Search</button>
                                 </div>
                             </div>
-                            <div class="col-md-4 col-sm-6 col-12 ms-auto">
-                                <div class="input-group mb-3">
-                                    <input type="text" class="form-control" placeholder="Search" name="search_name">
-                                    <button type="submit" class="btn btn-outline-success" id="basic-addon2">Search</span>
-                                  </div>
-                            </div>
+                        </div>
                     </div>
+        
+                    <br>
 
                     <div class="both-data-in" style="display: inherit;">
                         <div class="table-responsive">
@@ -222,7 +235,7 @@
                                     
                                     {% for shipment in table_data %}
                                     <tr>
-                                        <td>{{shipment.id}}</td>
+                                        <td>{{shipment.shipment_id}}</td>
                                         <td>{{shipment.date_pulled|date:"M d, Y"}}</td>
                                         <td>{{shipment.bin_location}}</td>
                                         <td>{{shipment.storage_bin_send}}</td>
@@ -494,13 +507,24 @@ $(function() {
      }
 </script>
 <script>
-    $('#Tier3-Processor-active').addClass('activeLink');
+    $(document).ready(function() {
+    $('#growerSelction').change( function () {
+    $('#submitBtn').click();
+    });
+    });
+    $(document).ready(function() {
+    $('#fieldSelction').change( function () {
+    $('#submitBtn').click();
+    });
+    });
+</script>
+<script>
+    $('#Tier2-Processor-active').addClass('activeLink');
   
     $('#Tier3-Processor-down').addClass('down');
     $('#Tier3-Processor-sub').show();
   
     $('#Inbound-Management-Processor3').addClass('activeLink active-nav');
-  
   
   </script>
 {% endblock jquery %}

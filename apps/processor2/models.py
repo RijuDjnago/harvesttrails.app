@@ -171,6 +171,7 @@ class ShipmentManagement(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, null=True, blank=True)
     received_weight = models.CharField(max_length=10, null=True, blank=True)
     ticket_number = models.CharField(max_length=20, null=True, blank=True)
+    qr_code_processor = models.FileField(upload_to='qr_code_processor/',null=True, blank=True)
     reason_for_disapproval = models.CharField(max_length=200, null=True, blank=True,verbose_name='Reason For Disapproval')
 
 class LinkProcessor1ToProcessor(models.Model):
