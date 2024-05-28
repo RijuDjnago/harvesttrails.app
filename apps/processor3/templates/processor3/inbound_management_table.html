@@ -201,7 +201,7 @@
                         <div class="col-4">
                             <div class="row justify-content-end">
                                 <div class="col-8">
-                                    <input class="form-control" name="search_name" type="search" placeholder="Search" autocomplete="off" aria-label="Search" id="search_name" {% if search_name == "None" %}value="Search"{% else %}value="{{search_name}}"{% endif %} >
+                                    <input class="form-control" name="search_name" type="search" placeholder="Search" autocomplete="off" aria-label="Search" id="search_name" {% if search_name %}value="{{search_name}}"{% else %}{% endif %} >
                                 </div>
                                 <div class="col-4">
                                     <button class="btn btn-outline-success btn-block" type="submit">Search</button>

@@ -1279,10 +1279,25 @@ def inbound_shipment_list(request):
     # try:
         context = {}
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
-            #inbound management list for admin
             context["table_data"] = list(ShipmentManagement.objects.filter(receiver_processor_type="T2").values())
             context["processor2"] = Processor2.objects.filter(processor_type__type_name="T2")
-
+            search_name = request.GET.get("search_name")
+            context["search_name"] = search_name
+            print("enter")
+            print(request.GET.get("select_processor"))
+            if request.GET.get("select_processor"):
+                context["select_processor"] = int(request.GET.get("select_processor"))
+            else:
+                context["select_processor"] = None
+            if context["select_processor"] == '0' or not context["select_processor"]:
+                if search_name:
+                    context["table_data"] = list(ShipmentManagement.objects.filter(receiver_processor_type="T2").filter(Q(shipment_id__icontains = search_name)|Q(processor_e_name__icontains = search_name)).values())
+                return render (request, 'processor2/inbound_management_table.html', context)
+            else:
+                if search_name:
+                    context["table_data"] = list(ShipmentManagement.objects.filter(receiver_processor_type="T2", processor2_idd=context["select_processor"]).filter(Q(shipment_id__icontains = search_name)|Q(processor_e_name__icontains = search_name)).values())
+                else:   
+                    context["table_data"] = list(ShipmentManagement.objects.filter(receiver_processor_type="T2", processor2_idd=context["select_processor"]).values())
             return render (request, 'processor2/inbound_management_table.html', context)
         elif request.user.is_processor2 :
             processor_email = request.user.email
