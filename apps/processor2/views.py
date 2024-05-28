@@ -1271,7 +1271,7 @@ def outbound_shipment_delete(request,pk):
                 make_uneditale.save()
         else:
             pass
-        return redirect('outbound_shipment_list')
+    return redirect('outbound_shipment_list')
 
 
 @login_required()

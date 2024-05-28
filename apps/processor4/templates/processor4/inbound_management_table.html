@@ -234,6 +234,29 @@
                                 <tbody>
                                     
                                     {% for shipment in table_data %}
+                                    <div class="modal fade" id="shipmentModal{{shipment.id}}" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true" >
+                                        <div class="modal-dialog">
+                                            <div class="modal-content">
+                                                <div class="modal-header" style="text-align: center;">
+                                                    <button type="button" class="btn-close cust-close-ds-btn close_modal_addqueModal"
+                                                        data-mdb-dismiss="modal" aria-label="Close" onclick="closeAddModal()"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <div class="modal-center-btn-footer">
+                                                        <div class="row">
+                                                            <div class="col-lg-12">
+                                                                <div>
+                                                                    <h5 class="text-decoration-underline">QR CODE</h5>
+                                                                </div>
+                                                                
+                                                                <img id="qr_id" src="/media/{{shipment.qr_code_processor}}" alt="qr code" style="max-width: 100%;">
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                     <tr>
                                         <td>{{shipment.shipment_id}}</td>
                                         <td>{{shipment.date_pulled|date:"M d, Y"}}</td>
@@ -260,7 +283,7 @@
                                         <td class="backk action-td rmv-bd">
                                         <ul>
                                             <li>
-                                                <a class="map-icon-link" onclick="showQR({{grower_shipment.pk}})"><span
+                                                <a class="map-icon-link" data-bs-toggle="modal" href="#shipmentModal{{shipment.id}}"><span
                                                         class="fas fa-qrcode" alt="view QR code" title="view QR code"></span></a>
                                             </li>
                                             <li>
