@@ -952,24 +952,24 @@ def location_list_processor2(request):
         # superuser ...
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
             context ={}
-            location = Processor2Location.objects.all()
-            processor = Processor2.objects.all()
+            location = Processor2Location.objects.filter(processor__processor_type__type_name="T2")
+            processor = Processor2.objects.filter(processor_type__type_name="T2")
             context['location'] = location
             context['processor'] = processor
             if request.method == 'POST':
                 value = request.POST.get('processor_id')
                 #print(value)
                 if value == 'all' :
-                    location = Processor2Location.objects.all()
-                    processor = Processor2.objects.all()
+                    location = Processor2Location.objects.filter(processor__processor_type__type_name="T2")
+                    processor = Processor2.objects.filter(processor_type__type_name="T2")
                     context['location'] = location
                     context['processor'] = processor
                     return render(request, 'processor2/list_location.html',context)
 
                 else:
                     processor_id = request.POST.get('processor_id')
-                    processor = Processor2.objects.all()
-                    location = Processor2Location.objects.filter(processor_id=processor_id)
+                    processor = Processor2.objects.filter(processor_type__type_name="T2")
+                    location = Processor2Location.objects.filter(processor__processor_type__type_name="T2").filter(processor_id=processor_id)
                     context['location'] = location
                     context['processor'] = processor
                     context['selectedprocessor'] = Processor2.objects.get(id=processor_id)
@@ -1534,6 +1534,64 @@ def recive_shipment(request):
     else:
         return redirect('login')
 
+@login_required()
+def rejected_shipments_csv_download_for_t2(request) :  
+    if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+        today_date = date.today()
+        filename = f'Rejected Shipments CSV {today_date}.csv'
+        response = HttpResponse(
+            content_type='text/csv',
+            headers={'Content-Disposition': 'attachment; filename="{}"'.format(filename)},
+        )
+        writer = csv.writer(response)
+        writer.writerow(['Shipment ID','Lot Number #','Shipment Date', 'Send Processor','Recive Processor','Total Weight (LBS)','Disapproval Date','Reason For Disapproval','Moisture Level'])
+        output = ShipmentManagement.objects.filter(status='DISAPPROVED', receiver_processor_type="T2").order_by('-id').values('shipment_id','lot_number','date_pulled','processor_e_name','processor2_name',
+                                                                                            'weight_of_product','recive_delivery_date','reason_for_disapproval','moisture_percent')
+        for i in output:
+            writer.writerow([
+                i['shipment_id'], 
+                i['lot_number'], 
+                i['date_pulled'].strftime("%m-%d-%Y"),
+                i['processor_e_name'], 
+                i['processor2_name'], 
+                i['weight_of_product'],
+                i['recive_delivery_date'], 
+                i['reason_for_disapproval'], 
+                i['moisture_percent']])
+        return response
+    else:
+        return redirect ('dashboard')
+
+@login_required()
+def all_shipments_csv_download_for_t2(request):  
+    if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+        today_date = date.today()
+        filename = f'All Shipments CSV {today_date}.csv'
+        response = HttpResponse(
+            content_type='text/csv',
+            headers={'Content-Disposition': 'attachment; filename="{}"'.format(filename)},
+        )
+        writer = csv.writer(response)
+        writer.writerow(['Shipment ID','Lot Number #','Shipment Date', 'Send Processor','Recive Processor','Total Weight (LBS)','Disapproval Date','Reason For Disapproval','Moisture Level'])
+        output = ShipmentManagement.objects.filter(receiver_processor_type="T2").order_by('-id').values('shipment_id','lot_number','date_pulled','processor_e_name','processor2_name',
+                                                                                            'weight_of_product','recive_delivery_date','reason_for_disapproval','moisture_percent')
+        for i in output:
+            writer.writerow([
+                i['shipment_id'], 
+                i['lot_number'], 
+                i['date_pulled'].strftime("%m-%d-%Y"),
+                i['processor_e_name'], 
+                i['processor2_name'], 
+                i['weight_of_product'],
+                i['recive_delivery_date'], 
+                i['reason_for_disapproval'], 
+                i['moisture_percent']])
+        return response
+    else:
+        return redirect ('dashboard')
+
+
+
 
 @login_required()
 def processor2_processor_management(request):
@@ -1596,6 +1654,17 @@ def link_processor_two(request):
         #print(e)
         return render(request, 'processor2/link_processor2.html', context)
 
+@login_required()
+def delete_link_processor_two(request, pk):
+    try:
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+            link = LinkProcessorToProcessor.objects.filter(id=pk).first()
+            link.delete()
+        else:
+            return redirect('login')
+    except Exception as e:
+        print(e)
+        return HttpResponse(e)
 
 @login_required()
 def inbound_production_management(request): 

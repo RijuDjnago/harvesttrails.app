@@ -31,6 +31,7 @@ urlpatterns = [
     
     path('processor_inbound_management_delete/<int:pk>/', views.processor_inbound_management_delete, name='processor_inbound_management_delete'),
     path('processor_inbound_management_edit/<int:pk>/', views.processor_inbound_management_edit, name='processor_inbound_management_edit'),
+    path('delete_link_processor_one/<int:pk>/', views.delete_link_processor_one, name="delete_link_processor_one"),
     
     # path('processor_location_assign/<int:pk>/', views.processor_location_assign, name='processor_location_assign'),
     path('processor_outbound_list', views.processor_outbound_list, name='processor_outbound_list'),

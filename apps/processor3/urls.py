@@ -17,7 +17,9 @@ urlpatterns = [
     path('inbound_shipment_edit/<int:pk>/', views.inbound_shipment_edit, name="inbound_shipment_edit3"),
     path('inbound_shipment_delete_processor3/<int:pk>/', views.inbound_shipment_delete_processor3, name="inbound_shipment_delete_processor3"),
     path('receive_shipment/', views.receive_shipment, name="receive_shipment3"),
-    
+    path('rejected_shipments_csv_download_for_t3/', views.rejected_shipments_csv_download_for_t3, name="rejected_shipments_csv_download_for_t3"),
+    path('all_shipments_csv_download_for_t3/', views.all_shipments_csv_download_for_t3, name="all_shipments_csv_download_for_t3"),
+
     path('add_outbound_shipment_processor3/', views.add_outbound_shipment_processor3, name="add_outbound_shipment_processor3"),
     path('outbound_shipment_list_processor3/', views.outbound_shipment_list_processor3, name="outbound_shipment_list_processor3"),
     path('outbound_shipment_view_processor3/<int:pk>/', views.outbound_shipment_view_processor3, name="outbound_shipment_view_processor3"),
@@ -25,6 +27,7 @@ urlpatterns = [
 
     path('processor3_processor_management/', views.processor3_processor_management, name="processor3_processor_management"),
     path('link_processor_three/', views.link_processor_three, name="link_processor_three"),
+    path('delete_link_processor_three/<int:pk>/', views.delete_link_processor_three, name="delete_link_processor_three"),
 
     path('inbound_production_management_processor3/', views.inbound_production_management_processor3, name="inbound_production_management_processor3"),
     path('add_volume_pulled_processor3/', views.add_volume_pulled_processor3, name="add_volume_pulled_processor3"),

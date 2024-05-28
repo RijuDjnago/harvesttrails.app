@@ -169,9 +169,9 @@
                     <a href="{% url 'recive_shipment' %}" class="btn-close-cancel">Receive Delivery</a>
                 &nbsp;
                 {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
-                    <a href="#" class="btn-close-cancel" target="_blank">Rejected Shipments CSV</a>
+                    <a href="{% url 'rejected_shipments_csv_download_for_t2' %}" class="btn-close-cancel" target="_blank">Rejected Shipments CSV</a>
                     &nbsp;
-                    <a href="#" class="btn-close-cancel" target="_blank">All Shipments CSV</a>
+                    <a href="{% url 'all_shipments_csv_download_for_t2' %}" class="btn-close-cancel" target="_blank">All Shipments CSV</a>
                 {% endif %}
             </div>
 
