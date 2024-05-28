@@ -242,8 +242,31 @@ def inbound_shipment_list(request):
     try:
         context = {}
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
-            #inbound management list for admin
             context["table_data"] = list(ShipmentManagement.objects.filter(receiver_processor_type="T3").values())
+            context["processor3"] = Processor2.objects.filter(processor_type__type_name="T3")
+            search_name = request.GET.get("search_name")
+            print(type(search_name), "ewrewwwwwwwwwwwwwwwwwwwwwwww")
+            if search_name == str(None) or not search_name:
+                print("sdgffdgfghf")
+                context["search_name"] = None
+            else:
+                context["search_name"] = search_name
+
+            if request.GET.get("select_processor"):
+                context["select_processor"] = int(request.GET.get("select_processor"))
+            else:
+                context["select_processor"] = None
+            if context["select_processor"] == '0' or not context["select_processor"]:
+                print("hit1", search_name, context["select_processor"])
+                if search_name and search_name != "None":
+                    context["table_data"] = list(ShipmentManagement.objects.filter(receiver_processor_type="T3").filter(Q(shipment_id__icontains = search_name)|Q(processor_e_name__icontains = search_name)).values())
+                print(context)
+                return render (request, 'processor3/inbound_management_table.html', context)
+            else:
+                if search_name and search_name != "None":
+                    context["table_data"] = list(ShipmentManagement.objects.filter(receiver_processor_type="T3", processor2_idd=context["select_processor"]).filter(Q(shipment_id__icontains = search_name)|Q(processor_e_name__icontains = search_name)).values())
+                else: 
+                    context["table_data"] = list(ShipmentManagement.objects.filter(receiver_processor_type="T3", processor2_idd=context["select_processor"]).values())
             print(context)
             return render (request, 'processor3/inbound_management_table.html', context)
         elif request.user.is_processor2 :
