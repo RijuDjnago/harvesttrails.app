@@ -1224,6 +1224,7 @@ def inbound_shipment_list(request):
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
             #inbound management list for admin
             context["table_data"] = list(ShipmentManagement.objects.filter(receiver_processor_type="T2").values())
+            context["processor2"] = Processor2.objects.filter(processor_type_type_name="T2")
             print(context)
             return render (request, 'processor2/inbound_management_table.html', context)
         elif request.user.is_processor2 :

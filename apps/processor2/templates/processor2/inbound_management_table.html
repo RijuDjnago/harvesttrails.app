@@ -182,36 +182,22 @@
             <div class="card card-padding">
                 <div class="main-simple-table-with-search col-12">
                     <div class="row d-flex">
-                            <!--<div class="col-8">
-                                    <div class="inline-apply-filter">
-                                        <div class="three-fields-with-label">
-                                            <select id="growerSelction" name="selectgrower_id" class="form-control selectpicker" data-live-search="true">
-                                                <option value='All' selected> Select All Growers </option>
-                                                {% for i in grower %}
-                                                {% if i == selectedGrower %}
-                                                <option value="{{ i.pk }}" selected>{{i.name}} - {{ i.pk }}
-                                                </option>
-                                                {% else %}
-                                                <option value="{{ i.pk }}">{{i.name}} - {{ i.pk }}</option>
-                                                {% endif %}
-                                                {% endfor %}
-                                            </select>
-                                        </div>
-                                        <input style="display : none;" id="submitBtn" type="submit"
-                                            class="apply-filter-btn primary-btn" value="Apply Filter" />
-                                    </div>
-                            </div>-->
-                            <div class="col-4">
-                                <div class="row">
-                                    <div class="col-8">
-                                        <input class="form-control" name="search_name" type="search" placeholder="Search" autocomplete="off" aria-label="Search" id="search_name" value="{{get_search_name}}">
-                                    </div>
-                                    <div class="col-4">
-                                        <button class="btn btn-outline-success btn-block" type="submit">Search</button>
-                                    </div>
-                                </div>
-                                
+                        <div class="col-md-4 col-sm-6 col-12">
+                            <div class=" mb-3">
+                                <select name="pro_id" id="mult_select"  class="form-control selectpicker" data-live-search="true">
+                                    <option value='0'>Select Processor</option>
+                                    {% for pro in processor2 %}
+                                    <option value="{{pro.pk}}" selected>{{pro.entity_name}}</option>
+                                    {% endfor %}
+                                </select>
                             </div>
+                        </div>
+                        <div class="col-md-4 col-sm-6 col-12 ms-auto">
+                            <div class="input-group mb-3">
+                                <input type="text" class="form-control" placeholder="Search" name="search_name">
+                                <button type="submit" class="btn btn-outline-success" id="basic-addon2">Search</span>
+                              </div>
+                        </div>
                     </div>
 
                     <div class="both-data-in" style="display: inherit;">
@@ -237,7 +223,7 @@
                                     
                                     {% for shipment in table_data %}
                                     <tr>
-                                        <td>{{shipment.id}}</td>
+                                        <td>{{shipment.pk}}</td>
                                         <td>{{shipment.date_pulled|date:"M d, Y"}}</td>
                                         <td>{{shipment.bin_location}}</td>
                                         <td>{{shipment.storage_bin_send}}</td>
