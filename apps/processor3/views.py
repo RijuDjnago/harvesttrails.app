@@ -480,7 +480,7 @@ def receive_shipment(request):
                     save_shipment_management.files.add(new_file)
                 save_shipment_management.save()
                 
-                return redirect('inbound_shipment_list')
+                return redirect('inbound_shipment_list3')
         return render(request, 'processor3/receive_delivery.html', context)
     else:
         return redirect('login')
@@ -609,6 +609,59 @@ def outbound_shipment_list_processor3(request):
             return redirect('login')  
     except:
         return render (request, 'processor3/outbound_shipment_list.html') 
+
+
+@login_required()
+def outbound_shipment_view_processor3(request,pk):   
+    try:
+        context ={}
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+            # processor_id = Processor.objects.get(id=pk)
+            # print("processor_id==============",processor_id)
+            output = ShipmentManagement.objects.filter(id=pk).order_by('bin_location')
+            files = ShipmentManagement.objects.filter(id=pk).first().files.all().values('file')
+            files_data = []
+            for j in files:
+                file_name = {}
+                file_name["file"] = j["file"]
+                # #print(j["file"])
+                if j["file"] or j["file"] != "" or j["file"] != ' ':
+                    file_name["name"] = j["file"].split("/")[-1]
+                else:
+                    file_name["name"] = None
+                files_data.append(file_name)
+            context["files"] = files_data
+            context["report"] = output
+           
+            return render (request, 'processor3/outbound_shipment_view.html', context) 
+        else:
+            return redirect('login')  
+    except:
+        return render (request, 'processor3/outbound_shipment_view.html')
+
+
+@login_required()
+def outbound_shipment_delete_processor3(request,pk):  
+    if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+        get_obj = ShipmentManagement.objects.get(id=pk)
+        mill_bin_location = get_obj.bin_location       
+        get_obj.delete()
+        update_obj = ShipmentManagement.objects.filter(bin_location=mill_bin_location).order_by('id').values('id')
+        if update_obj.exists() :
+            last_obj_id = [i['id'] for i in update_obj][-1]
+            now_update_one = ShipmentManagement.objects.get(id=last_obj_id)
+            now_update_one.editable_obj = True
+            now_update_one.save()
+
+            now_update_all = ShipmentManagement.objects.filter(bin_location=mill_bin_location).exclude(id=last_obj_id)
+            for i in now_update_all :
+                make_uneditale = ShipmentManagement.objects.get(id=i.id)
+                make_uneditale.editable_obj = False
+                make_uneditale.save()
+        else:
+            pass
+        return redirect('outbound_shipment_list_processor3')
+
 
 
 @login_required()

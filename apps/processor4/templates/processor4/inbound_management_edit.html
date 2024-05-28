@@ -141,7 +141,7 @@
                         </div>
                         <div class="col-md-4 mb-2">
                             <label for="approval_date">Approval/Disapproval Date<span class="asteriskField">*</span></label>
-                            <input type="date" name="approval_date" id="approval_date" class="textinput textInput form-control" value="{% if shipment.recive_delivery_date %}{{shipment.recive_delivery_date}}{% endif %}">
+                            <input type="date" name="approval_date" id="approval_date" class="textinput textInput form-control" value="{% if shipment.recive_delivery_date %}{{ shipment.recive_delivery_date|date:"Y-m-d" }}{% endif %}">
                             <p id="alert_msg0" style="color:red"></p>
                         </div>
                         <div class="col-md-4 mb-2">

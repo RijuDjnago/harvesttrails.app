@@ -211,9 +211,9 @@
 
                                             {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
                                             {% if i.editable_obj %}
-                                                <li>
+                                                {% comment %} <li>
                                                     <a href="{% url 'edit_outbound_shipment' i.pk %}" class="update-btn-link" alt="edit production management" title="edit shipment management"> <span class="fas fa-edit"></span></a>
-                                                </li>
+                                                </li> {% endcomment %}
                                                 <li>
                                                     <a onclick="delShipment('{% url 'delete_outbound_shipment' i.pk %}')"
                                                         href="{% url 'delete_outbound_shipment' i.pk %}"

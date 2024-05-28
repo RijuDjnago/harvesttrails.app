@@ -142,7 +142,7 @@
                     {% endfor %} 
                     <div class="row" style="margin-top: 10px;">
                         <div class="form-btn-row">
-                            <a href="{% url 'outbound_shipment_mgmt' %}" class="btn-close-cancel btn-space">Back</a>
+                            <a href="{% url 'outbound_shipment_list_processor3' %}" class="btn-close-cancel btn-space">Back</a>
                         </div>
                     </div> 
             </div>
@@ -171,12 +171,12 @@
 
 </script>
 <script>
-    $('#Processor-active').addClass('activeLink');
+    $('#Tier3-Processor-active').addClass('activeLink');
   
-    $('#Processor-down').addClass('down');
-    $('#Processor-sub').show();
+    $('#Tier3-Processor-down').addClass('down');
+    $('#Tier3-Processor-sub').show();
   
-    $('#Shipment-Management').addClass('activeLink active-nav');
+    $('#Shipment-Management-Processor3').addClass('activeLink active-nav');
   
   </script>
 {% endblock scripts %}
