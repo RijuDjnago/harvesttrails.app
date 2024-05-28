@@ -14,8 +14,8 @@ import pandas as pd
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import JsonResponse
 from django.contrib.auth.hashers import make_password
-from apps.processor.models import BaleReportFarmField 
-from apps.processor2.models import AssignedBaleProcessor2
+from apps.processor.models import * 
+from apps.processor2.models import *
 from apps.growerpayments.models import *
 import re
 from apps.processor.views import generate_shipment_id
@@ -501,7 +501,7 @@ def add_outbound_shipment_processor3(request):
                         purchase_order_number=context["purchase_number"],lot_number=context["lot_number"],volume_shipped=context["volume_shipped"],milled_volume=milled_volume,volume_left=volume_left,editable_obj=True,
                         processor2_idd=select_proc_id,processor2_name=select_destination_, receiver_processor_type=receiver_processor_type)
                 save_shipment_management.save()
-                return redirect('outbound_shipment_list')
+                return redirect('outbound_shipment_list_processor3')
 
         return render(request, 'processor3/add_outbound_shipment_processor3.html', context)
 
@@ -525,5 +525,68 @@ def outbound_shipment_list_processor3(request):
             return redirect('login')  
     except:
         return render (request, 'processor3/outbound_shipment_list.html') 
-   
+
+
+@login_required()
+def processor3_processor_management(request):
+    if request.user.is_authenticated:
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+            context ={}
+            processor3 = Processor2.objects.filter(processor_type__type_name="T3")  #24/04/2024
+            context['Processor1'] = processor3
+            link_processor_to_processor_all = LinkProcessorToProcessor.objects.filter(processor__processor_type__type_name="T3")
+            context['link_processor_to_processor_all'] = link_processor_to_processor_all
+            
+            if request.method == 'POST':
+                pro1_id = request.POST.get('pro1_id')
+                if pro1_id != '0':
+                    context['link_processor_to_processor_all'] = link_processor_to_processor_all.filter(processor1_id=int(pro1_id))
+                    #then need to add T1/T2/T3
+                    context['selectedpro1'] = int(pro1_id)             
+            print(context)             
+            return render(request, 'processor3/processor3_processor_management.html',context)
+    else:
+        return redirect('login')
+
+
+@login_required
+def link_processor_three(request):
+    context = {}
+    try:
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+            processor2 = Processor2.objects.filter(processor_type__type_name="T3")           
+            context["processor2"] = processor2
+           
+            context["processor4"] = []
+
+            if request.method == "POST" :
+                selected_processor = request.POST.get("processor_id")
+                button_click = request.POST.get("save")
+                if selected_processor and  not button_click:
+                    context["selectedprocessor"] = int(selected_processor)
+                    link_processor2 = list(LinkProcessorToProcessor.objects.filter(processor_id=selected_processor).values_list("linked_processor", flat = True))
+                    processor_two = Processor2.objects.exclude(id__in=link_processor2)
+                    
+                    processor4 = processor_two.filter(processor_type__type_name="T4")
+                   
+                    context["processor4"] = processor4
+                    return render(request, 'processor3/link_processor3.html', context)
+                else:
+                    select_processor2 = request.POST.getlist("select_processor2")
+                    print(selected_processor, select_processor2)
+                    for i in select_processor2:
+                        pro_id , pro_type = i.split(" ")
+                        link_pro = LinkProcessorToProcessor(processor_id = selected_processor, linked_processor_id = pro_id)
+                        link_pro.save()
+                    return redirect('processor3_processor_management')
+                    # return render(request, 'processor2/link_processor.html', context)
+
+            return render(request, 'processor3/link_processor3.html', context)
+        else:
+            return render(request, 'processor3/link_processor3.html', context) 
+    except Exception as e:
+        print(e)
+        return render(request, 'processor3/link_processor3.html', context)
+
+
     

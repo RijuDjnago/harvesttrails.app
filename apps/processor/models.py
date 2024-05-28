@@ -586,13 +586,7 @@ unit_choice = [
     ("BU","BU"),
 ]
 
-Processor_Type =[
-    ("T1","T1"),
-    ("T2","T2"),
-    ("T3","T3"),
-    ("T4","T4"),
-    ("Buyer","Buyer"),
-]
+
 
 class File(models.Model):
     # file = models.FileField(upload_to='uploads_shipment/')
