@@ -6598,29 +6598,20 @@ def outbound_shipment_mgmt_view(request,pk):
             # processor_id = Processor.objects.get(id=pk)
             # print("processor_id==============",processor_id)
             output = ShipmentManagement.objects.filter(id=pk).order_by('bin_location')
-            file_data = list(ShipmentManagement.objects.filter(id=pk).values_list("files__file", flat=True).order_by('bin_location'))
-            context['report'] = output
-            
-            # for fff in range(0, len(file_data)):
-            #     base_url = request.scheme + '://' + request.get_host()
-            #     ff = {"name":None, "file": None}
-            #     name = file_data[fff].split("/")
-            #     ff["name"] = name[-1]
-            #     # ff["file"] = "http://127.0.0.1:8000" + settings.MEDIA_URL + file_data[fff]
-            #     ff["file"] = base_url + settings.MEDIA_URL + file_data[fff]
-            #     file_data[fff] = ff
-            
-            for fff in range(len(file_data)):
-                base_url = request.scheme + '://' + request.get_host()
-                ff = {"name": None, "file": None}
-                if file_data[fff] is not None: 
-                    name = file_data[fff].split("/")
-                    ff["name"] = name[-1]
-                    ff["file"] = base_url + settings.MEDIA_URL + file_data[fff]
-                file_data[fff] = ff
-
-            # print(file_data)
-            context['file_data'] = file_data
+            files = ShipmentManagement.objects.filter(id=pk).first().files.all().values('file')
+            files_data = []
+            for j in files:
+                file_name = {}
+                file_name["file"] = j["file"]
+                # #print(j["file"])
+                if j["file"] or j["file"] != "" or j["file"] != ' ':
+                    file_name["name"] = j["file"].split("/")[-1]
+                else:
+                    file_name["name"] = None
+                files_data.append(file_name)
+            context["files"] = files_data
+            context["report"] = output
+            # context['file_data'] = file_data
             # return render (request, 'processor/outbound_shipment_mgmt_view_page.html', context)
             return render (request, 'processor/outbound_shipment_mgmt_view_test.html', context)
         
@@ -6632,19 +6623,19 @@ def outbound_shipment_mgmt_view(request,pk):
             # Check if pk exists in the processor's data
             if ShipmentManagement.objects.filter(processor_idd=processor_id, id=pk).exists():
                 output = ShipmentManagement.objects.filter(id=pk).order_by('bin_location')
-                file_data = list(ShipmentManagement.objects.filter(id=pk).values_list("files__file", flat=True).order_by('bin_location'))
-                context['report'] = output
                 
-                for fff in range(len(file_data)):
-                    base_url = request.scheme + '://' + request.get_host()
-                    ff = {"name": None, "file": None}
-                    if file_data[fff] is not None: 
-                        name = file_data[fff].split("/")
-                        ff["name"] = name[-1]
-                        ff["file"] = base_url + settings.MEDIA_URL + file_data[fff]
-                    file_data[fff] = ff
-
-                context['file_data'] = file_data
+                files = ShipmentManagement.objects.filter(id=pk).first().files.all().values('file')
+                files_data = []
+                for j in files:
+                    file_name = {}
+                    file_name["file"] = j["file"]
+                    # #print(j["file"])
+                    if j["file"] or j["file"] != "" or j["file"] != ' ':
+                        file_name["name"] = j["file"].split("/")[-1]
+                    else:
+                        file_name["name"] = None
+                    files_data.append(file_name)
+                context["files"] = files_data
                 # return render(request, 'processor/outbound_shipment_mgmt_view_page.html', context)
                 return render (request, 'processor/outbound_shipment_mgmt_view_test.html', context)
             else:
@@ -7168,7 +7159,7 @@ def delete_outbound_shipment(request,pk):
                 make_uneditale.save()
         else:
             pass
-        return HttpResponse (1)
+        return redirect('outbound_shipment_mgmt')
 
 
 @login_required() 

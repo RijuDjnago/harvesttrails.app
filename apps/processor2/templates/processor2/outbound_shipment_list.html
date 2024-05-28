@@ -253,25 +253,21 @@
                                         <td class="backk action-td rmv-bd">
                                         <ul>
                                             <li>
-                                                <a class="map-icon-link" onclick="showQR({{grower_shipment.pk}})"><span
-                                                        class="fas fa-qrcode" alt="view QR code" title="view QR code"></span></a>
-                                            </li>
-                                            <li>
-                                                <a href="{% url 'inbound_shipment_view' shipment.id %}"
+                                                <a href="{% url 'outbound_shipment_view' shipment.id %}"
                                                     class="update-btn-link" alt="view inbound management" title="view inbound management"> <span class="fas fa-eye"></span> </a>
                                             </li>
                                             
                                             {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role or 'Processor2' in request.user.get_role %}
                                             
                                             
-                                            <li>
+                                            {% comment %} <li>
                                                 <a href="{% url 'inbound_shipment_edit' shipment.id %}" class="update-btn-link" alt="edit inbound management" title="edit inbound management"> <span class="fas fa-edit"></span></a>
-                                            </li>
+                                            </li> {% endcomment %}
                                             {% endif %}
                                             {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
                                             <li>
-                                                <a onclick="delShipment('')"
-                                                    href="#"
+                                                <a onclick="delShipment('{% url 'outbound_shipment_delete' shipment.id %}')"
+                                                    href="{% url 'outbound_shipment_delete' shipment.id %}"
                                                     data-mdb-toggle="modal" data-mdb-target="#deleteModal" alt="delete inbound management" title="delete inbound management">
                                                     <span class="fas fa-trash"></span></a>
                                             </li>
@@ -279,28 +275,7 @@
                                         </ul>
                                         </td>
                                     </tr>
-                                    <div class="modal fade" id="addqueModal" aria-hidden="true" aria-labelledby="exampleModalToggleLabel22" tabindex="-1">
-                                        <div class="modal-dialog">
-                                            <div class="modal-content">
-                                                <div class="modal-header" style="text-align: center;">
-                                                    <button type="button" class="btn-close cust-close-ds-btn close_modal_addqueModal"
-                                                        data-mdb-dismiss="modal" aria-label="Close" onclick="closeAddModal()"></button>
-                                                </div>
-                                                <div class="modal-body">
-                                                    <div class="modal-center-btn-footer">
-                                                        <div class="row">
-                                                            <div class="col-lg-12">
-                                                                <div>
-                                                                    <h5 class="text-decoration-underline">QR CODE</h5>
-                                                                </div>
-                                                                <img id="qr_id" src="/media/{{grower_shipment.qr_code}}" alt="qr code" style="max-width: 100%;">
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
+                                    
                                     {% endfor %}
                                 </tbody>
                             </table>

@@ -141,7 +141,7 @@ def inbound_shipment_view(request, pk):
     
 @login_required()
 def inbound_shipment_edit(request, pk):
-    try:
+    # try:
         context = {}
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role() or request.user.is_processor2:
             #inbound management list for admin
@@ -185,12 +185,13 @@ def inbound_shipment_edit(request, pk):
                     new_file = File.objects.create(file=file)
                     shipment.files.add(new_file)
                 shipment.save()
-                return redirect('inbound_shipment_list_processor4')
+               
+                return redirect('inbound_shipment_list4')
             return render(request, 'processor4/inbound_management_edit.html', context)
         else:
             return redirect('login')  
-    except:
-        return render(request, 'processor4/inbound_management_edit.html', context)
+    # except:
+    #     return render(request, 'processor4/inbound_management_edit.html', context)
 
 @login_required()
 def inbound_shipment_delete_processor4(request,pk):
@@ -199,6 +200,7 @@ def inbound_shipment_delete_processor4(request,pk):
 
     #print(shipment)
     shipment.delete()
+    
     return redirect('inbound_shipment_list4')
 
 @login_required()
@@ -304,7 +306,7 @@ def receive_shipment(request):
                     save_shipment_management.files.add(new_file)
                 save_shipment_management.save()
                 
-                return redirect('inbound_shipment_list_processor4')
+                return redirect('inbound_shipment_list4')
         return render(request, 'processor4/receive_delivery.html', context)
     else:
         return redirect('login')

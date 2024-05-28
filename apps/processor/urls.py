@@ -118,7 +118,7 @@ urlpatterns = [
     # 08-05-23
     path('all_shipments_csv_download/', views.all_shipments_csv_download, name='all_shipments_csv_download'),
     #15-03-2024
-    path('outbound_shipment_mgmt_view/<int:pk>/detail/', views.outbound_shipment_mgmt_view, name='outbound_shipment_mgmt_view'),
+    path('outbound_shipment_mgmt_view/<int:pk>/', views.outbound_shipment_mgmt_view, name='outbound_shipment_mgmt_view'),
     
     # path('link_processor1_to_processor/', views.link_processor1_to_processor, name="link_processor1_to_processor"),
     path('add_outbound_shipment/', views.add_outbound_shipment_processor1, name="add_outbound_shipment"),
