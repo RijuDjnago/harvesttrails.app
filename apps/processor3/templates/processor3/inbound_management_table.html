@@ -17,12 +17,6 @@
 {% block content %}
 {% include 'navbar.html' %}
 
-<style>
-    .input-group>.form-control {
-        height: auto !important;
-    }
-</style>
-
 <div class="main-content">
     {% include 'header.html' %}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.5.2/css/bootstrap.css">
@@ -147,7 +141,7 @@
             padding-left: 12px;
             padding-right: 10px;
             font-size: 16px;
-            padding: 0;
+            padding: 5px 10px 5px 5px;
         }
         .dropdown-item {
             display: block;
@@ -270,8 +264,8 @@
                                             {% endif %}
                                             {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
                                             <li>
-                                                <a onclick="delShipment('')"
-                                                    href="#"
+                                                <a onclick="delShipment('{% url 'inbound_shipment_delete_processor3' shipment.id %}')"
+                                                    href="{% url 'inbound_shipment_delete_processor3' shipment.id %}"
                                                     data-mdb-toggle="modal" data-mdb-target="#deleteModal" alt="delete inbound management" title="delete inbound management">
                                                     <span class="fas fa-trash"></span></a>
                                             </li>
@@ -390,42 +384,36 @@
     <script>
         // delete storage
         function delShipment(url) {
-            $('#shipmentDelete').show();
-            $('#shipmentDelete').attr('url', url);
+            $('#shipmentDelete').attr('data-url', url); // Use data-url attribute for better semantics
         }
-
+        
+        // Function to perform the AJAX deletion and reload the page on success
         function shipmentdeleteNow() {
-            url = $('#shipmentDelete').attr('url');
-            console.log(url)
+            const url = $('#shipmentDelete').attr('data-url'); // Retrieve the URL
+            const csrfToken = '{{ csrf_token }}'; // Django template tag to get CSRF token
+        
             $.ajax({
+                type: 'POST', // Use POST method
                 url: url,
-                data: {},
-                success: function (data) {
-                    if (data == 1) {
-                        location.reload();
+                data: {
+                    csrfmiddlewaretoken: csrfToken // Include CSRF token
+                },
+                success: function(response) {
+                    if (response.success) { // Check if the response indicates success
+                        location.reload(); // Reload the page
+                    } else {
+                        console.error('Deletion failed:', response.error); // Log error message
                     }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Deletion failed:', error); // Log any AJAX error
                 }
             });
         }
     </script>
 
     <script>
-        // $(document).ready(function () {
-        //     $('#processorList_tbl').DataTable({
-        //         responsive: false,
-        //     "paging": true,
-        //     "pageLength": 100,
-		// 	"autoWidth": true,
-        //     scrollY: "600px",
-        //     scrollX: true,
-        //     scrollCollapse: true,
-        //     fixedColumns: {
-        //         left: 1,
-        //         right: 1
-        //     },
-        //     });
-        // });
-
+        
         function showQR(grower_shipment_pk) {
             console.log(grower_shipment_pk)
             $.ajax({
@@ -505,29 +493,14 @@ $(function() {
          $('#addqueModal').modal('hide');
      }
 </script>
-<script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdn.canvasjs.com/canvasjs.min.js"></script>
 <script>
-    $(document).ready(function() {
-    $('#growerSelction').change( function () {
-    $('#submitBtn').click();
-    });
-    });
-    $(document).ready(function() {
-    $('#fieldSelction').change( function () {
-    $('#submitBtn').click();
-    });
-    });
-</script>
-<script>
-    $('#Tier2-Processor-active').addClass('activeLink');
+    $('#Tier3-Processor-active').addClass('activeLink');
   
-    $('#Tier2-Processor-down').addClass('down');
-    $('#Tier2-Processor-sub').show();
+    $('#Tier3-Processor-down').addClass('down');
+    $('#Tier3-Processor-sub').show();
   
-    $('#Inbound-Management-Processor2').addClass('activeLink active-nav');
+    $('#Inbound-Management-Processor3').addClass('activeLink active-nav');
+  
   
   </script>
 {% endblock jquery %}
-

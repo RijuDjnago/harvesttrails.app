@@ -126,7 +126,7 @@
             <span class="farm headingtop">Production Management</span>
             <!-- Create button for add-processor-->
             <div class="flex-header-btn">
-              <a href="{% url 'add_volume_pulled_processor2' %}" class="btn-close-cancel">Add Volume Pulled</a>
+              <a href="{% url 'add_volume_pulled_processor3' %}" class="btn-close-cancel">Add Volume Pulled</a>
               &nbsp;
               <a href="#" class="btn-close-cancel">Download CSV</a>
             </div>
@@ -210,12 +210,11 @@
                                         {% if i.editable_obj %}
                                         <ul>
                                             <li>
-                                                <a href="{% url 'edit_volume_pulled_processor2' i.pk %}" class="update-btn-link" alt="edit production management" title="edit production management"> <span class="fas fa-edit"></span></a>
+                                                <a href="{% url 'edit_volume_pulled_processor3' i.pk %}" class="update-btn-link" alt="edit production management" title="edit production management"> <span class="fas fa-edit"></span></a>
                                             </li>
-                         
                                             <li>
-                                                <a onclick="delShipment('{% url 'delete_volume_pulled' i.pk %}')"
-                                                    href="{% url 'delete_volume_pulled' i.pk %}"
+                                                <a onclick="delShipment('{% url 'delete_volume_pulled_processor3' i.pk %}')"
+                                                    href="{% url 'delete_volume_pulled_processor3' i.pk %}"
                                                     data-mdb-toggle="modal" data-mdb-target="#deleteModal" alt="delete production management" title="delete production management">
                                                     <span class="fas fa-trash"></span></a>
                                             </li>
@@ -329,13 +328,12 @@
 </script>
 
 <script>
-    $('#Tier2-Processor-active').addClass('activeLink');
+    $('#Tier3-Processor-active').addClass('activeLink');
       
-    $('#Tier2-Processor-down').addClass('down');
-    $('#Tier2-Processor-sub').show();
+    $('#Tier3-Processor-down').addClass('down');
+    $('#Tier3-Processor-sub').show();
   
-    $('#Production-Management-Processor2').addClass('activeLink active-nav');
-
+    $('#Production-Management-Processor3').addClass('activeLink active-nav');
   
   </script>
 {% endblock scripts %}
