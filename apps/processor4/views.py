@@ -23,12 +23,27 @@ from apps.processor.views import generate_shipment_id
 # Create your views here.
 @login_required()
 def inbound_shipment_list(request):
-    try:
+    # try:
         context = {}
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
-            #inbound management list for admin
             context["table_data"] = list(ShipmentManagement.objects.filter(receiver_processor_type="T4").values())
-            print(context)
+            context["processor4"] = Processor2.objects.filter(processor_type__type_name="T4")
+            search_name = request.GET.get("search_name")
+            context["search_name"] = search_name
+            if request.GET.get("select_processor"):
+                context["select_processor"] = int(request.GET.get("select_processor"))
+            else:
+                context["select_processor"] = None
+            if context["select_processor"] == '0' or not context["select_processor"]:
+                if search_name:
+                    context["table_data"] = list(ShipmentManagement.objects.filter(receiver_processor_type="T4").filter(Q(shipment_id__icontains = search_name)|Q(processor_e_name__icontains = search_name)).values())
+                return render (request, 'processor4/inbound_management_table.html', context)
+            else:
+                if search_name:
+                    # print("hit", search, search_name)
+                    context["table_data"] = list(ShipmentManagement.objects.filter(receiver_processor_type="T4", processor2_idd=context["select_processor"]).filter(Q(shipment_id__icontains = search_name)|Q(processor_e_name__icontains = search_name)).values())
+                else:   
+                    context["table_data"] = list(ShipmentManagement.objects.filter(receiver_processor_type="T4", processor2_idd=context["select_processor"]).values())
             return render (request, 'processor4/inbound_management_table.html', context)
         elif request.user.is_processor2 :
             processor_email = request.user.email
@@ -39,8 +54,65 @@ def inbound_shipment_list(request):
             return render (request, 'processor4/inbound_management_table.html', context)
         else:
             return redirect('login')  
-    except:
-        return render (request, 'processor4/inbound_management_table.html') 
+    # except:
+    #     return render (request, 'processor4/inbound_management_table.html') 
+
+
+@login_required()
+def rejected_shipments_csv_download_for_t4(request) :  
+    if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+        today_date = date.today()
+        filename = f'Rejected Shipments CSV {today_date}.csv'
+        response = HttpResponse(
+            content_type='text/csv',
+            headers={'Content-Disposition': 'attachment; filename="{}"'.format(filename)},
+        )
+        writer = csv.writer(response)
+        writer.writerow(['Shipment ID','Lot Number #','Shipment Date', 'Send Processor','Recive Processor','Total Weight (LBS)','Disapproval Date','Reason For Disapproval','Moisture Level'])
+        output = ShipmentManagement.objects.filter(status='DISAPPROVED', receiver_processor_type="T4").order_by('-id').values('shipment_id','lot_number','date_pulled','processor_e_name','processor2_name',
+                                                                                            'weight_of_product','recive_delivery_date','reason_for_disapproval','moisture_percent')
+        for i in output:
+            writer.writerow([
+                i['shipment_id'], 
+                i['lot_number'], 
+                i['date_pulled'].strftime("%m-%d-%Y"),
+                i['processor_e_name'], 
+                i['processor2_name'], 
+                i['weight_of_product'],
+                i['recive_delivery_date'], 
+                i['reason_for_disapproval'], 
+                i['moisture_percent']])
+        return response
+    else:
+        return redirect ('dashboard')
+
+@login_required()
+def all_shipments_csv_download_for_t4(request):  
+    if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+        today_date = date.today()
+        filename = f'All Shipments CSV {today_date}.csv'
+        response = HttpResponse(
+            content_type='text/csv',
+            headers={'Content-Disposition': 'attachment; filename="{}"'.format(filename)},
+        )
+        writer = csv.writer(response)
+        writer.writerow(['Shipment ID','Lot Number #','Shipment Date', 'Send Processor','Recive Processor','Total Weight (LBS)','Disapproval Date','Reason For Disapproval','Moisture Level'])
+        output = ShipmentManagement.objects.filter(receiver_processor_type="T4").order_by('-id').values('shipment_id','lot_number','date_pulled','processor_e_name','processor2_name',
+                                                                                            'weight_of_product','recive_delivery_date','reason_for_disapproval','moisture_percent')
+        for i in output:
+            writer.writerow([
+                i['shipment_id'], 
+                i['lot_number'], 
+                i['date_pulled'].strftime("%m-%d-%Y"),
+                i['processor_e_name'], 
+                i['processor2_name'], 
+                i['weight_of_product'],
+                i['recive_delivery_date'], 
+                i['reason_for_disapproval'], 
+                i['moisture_percent']])
+        return response
+    else:
+        return redirect ('dashboard')
 
 @login_required()
 def inbound_shipment_view(request, pk):

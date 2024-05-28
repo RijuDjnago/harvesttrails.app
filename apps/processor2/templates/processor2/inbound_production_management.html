@@ -212,9 +212,10 @@
                                             <li>
                                                 <a href="{% url 'edit_volume_pulled_processor2' i.pk %}" class="update-btn-link" alt="edit production management" title="edit production management"> <span class="fas fa-edit"></span></a>
                                             </li>
+                         
                                             <li>
-                                                <a onclick="delShipment('{% url 'delete_volume_pulled_processor2' i.pk %}')"
-                                                    href="{% url 'delete_volume_pulled_processor2' i.pk %}"
+                                                <a onclick="delShipment('{% url 'delete_volume_pulled' i.pk %}')"
+                                                    href="{% url 'delete_volume_pulled' i.pk %}"
                                                     data-mdb-toggle="modal" data-mdb-target="#deleteModal" alt="delete production management" title="delete production management">
                                                     <span class="fas fa-trash"></span></a>
                                             </li>
@@ -334,6 +335,7 @@
     $('#Tier2-Processor-sub').show();
   
     $('#Production-Management-Processor2').addClass('activeLink active-nav');
+
   
   </script>
 {% endblock scripts %}

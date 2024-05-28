@@ -48,7 +48,7 @@
                         {% csrf_token %}
                         <div class="inline-apply-filter">
                             <div class="three-fields-with-label">
-                                <select id="growerSelction" name="pro1_id">
+                                <select name="pro1_id" id="mult_select"  class="form-control selectpicker" data-live-search="true">
                                     <option value='0' selected> Select All Processor</option>
                                     {% for pro1 in Processor1 %}
                                     {% if pro1.id == selectedpro1 %}
