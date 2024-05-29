@@ -330,7 +330,7 @@ def receive_shipment(request):
                 shipment_id = generate_shipment_id()
                 
                 processor_e_name = Processor2.objects.filter(id=int(bin_pull)).first().entity_name
-                save_shipment_management = ShipmentManagement(shipment_id=shipment_id,processor_idd=bin_pull,processor_e_name=processor_e_name, sender_processor_type="T1", bin_location=bin_pull,
+                save_shipment_management = ShipmentManagement(shipment_id=shipment_id,processor_idd=bin_pull,processor_e_name=processor_e_name, sender_processor_type="T3", bin_location=bin_pull,
                         equipment_type=context["equipment_type"],equipment_id=context["equipment_id"],storage_bin_send=context["storage_bin_id"],moisture_percent = context["moist_percentage"],weight_of_product_raw = context["weight_prod"],
                         weight_of_product=cal_weight,weight_of_product_unit=context["weight_prod_unit_id"], excepted_yield_raw =context["exp_yield"],excepted_yield=cal_exp_yield,excepted_yield_unit=context["exp_yield_unit_id"],recive_delivery_date=context["approval_date"],
                         purchase_order_number=context["purchase_number"],lot_number=context["lot_number"],volume_shipped=context["volume_shipped"],milled_volume=milled_volume,volume_left=volume_left,editable_obj=True,status=context["status"],
@@ -365,7 +365,7 @@ def inbound_production_management_processor4(request):
         if search_name == None and selectprocessor_id == None :
             output = output
         else:
-            output = ProductionManagementProcessor2.objects.filter(processor__processor_type__type_name="T3").order_by('processor_e_name','-id')
+            output = ProductionManagementProcessor2.objects.filter(processor__processor_type__type_name="T4").order_by('processor_e_name','-id')
             if search_name and search_name != 'All':
                 output = ProductionManagementProcessor2.objects.filter(Q(processor_e_name__icontains=search_name) | Q(date_pulled__icontains=search_name) |
                 Q(bin_location__icontains=search_name) | Q(milled_storage_bin__icontains=search_name) )

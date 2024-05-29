@@ -181,12 +181,13 @@
         <form action="" method="get" class="">
             <div class="card card-padding">
                 <div class="main-simple-table-with-search col-12">
-                    <div class="row d-flex align-items-center">
-                        <!-- Select tag on the left side -->
-                        <div class="col-4">
-                            <select name="select_processor" id="mult_select"  class="form-control selectpicker" data-live-search="true">
-                                <option value='0'>Select Processor</option>
-                                {% for pro in processor2 %}
+                    <div class="row d-flex">
+                        <div class="col-md-2 col-sm-6 col-12">
+                            <div class=" mb-3">
+                                <select name="pro_id" id="mult_select"  class="form-control selectpicker" data-live-search="true">
+                                    <option value='0'>Select Processor</option>
+                                    {% for pro in processor2 %}
+                    
                                 {% if select_processor == pro.pk %}
                                     <option value="{{pro.pk}}" selected>{{pro.entity_name}}</option>
                                 {% else %}
@@ -197,6 +198,7 @@
                         </div>
                         <div class="col-4">
                         </div>
+
                         <!-- Search section on the right side -->
                         <div class="col-4">
                             <div class="row justify-content-end">
@@ -207,6 +209,7 @@
                                     <button class="btn btn-outline-success btn-block" type="submit">Search</button>
                                 </div>
                             </div>
+
                         </div>
                     </div>
         

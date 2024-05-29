@@ -43,60 +43,62 @@
         <div class="card card-padding">
             <div class="main-simple-table-with-search">
                 <div class="row">
-                <div class="col-8">
-                    <form action="" method="post" class="">
-                        {% csrf_token %}
-                        <div class="inline-apply-filter">
-                            <div class="three-fields-with-label">
-                                <select id="growerSelction" name="grower_id">
-                                    <option value='0' selected> Select All Growers</option>
-                                    {% for i in grower %}
-                                    {% if i == selectedGrower %}
-                                    <option value="{{ i.pk }}" selected>{{i.name}} - {{ i.pk }}
-                                    </option>
-                                    {% else %}
-                                    <option value="{{ i.pk }}" >{{i.name}} - {{ i.pk }}</option>
-                                    {% endif %}
-                                    {% endfor %}
-                                </select>
+                    <div class="col-6">
+                        <form action="" method="post" class="">
+                            {% csrf_token %}
+                            <div class="inline-apply-filter">
+                                <div class="three-fields-with-label">
+                                    <select id="growerSelction" name="grower_id">
+                                        <option value='0' selected> Select All Growers</option>
+                                        {% for i in grower %}
+                                        {% if i == selectedGrower %}
+                                        <option value="{{ i.pk }}" selected>{{i.name}} - {{ i.pk }}
+                                        </option>
+                                        {% else %}
+                                        <option value="{{ i.pk }}" >{{i.name}} - {{ i.pk }}</option>
+                                        {% endif %}
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <input style="display : none;" id="submitBtn" type="submit"
+                                    class="apply-filter-btn primary-btn" value="Apply Filter" />
                             </div>
-                            <input style="display : none;" id="submitBtn" type="submit"
-                                class="apply-filter-btn primary-btn" value="Apply Filter" />
-                        </div>
-                    </form>
-                </div>
-                <div class="form-inline justify-content-end">
-                    <div class="table-filter-col ml-auto">
-                        <ul class="nav nav-tabs">
-                            <li class="nav-item">
-                                <a class="nav-link active" href="">
-                                    <img src="/static/img/tbIcon-b-1.svg" class="tbIcon tbIcon-b">
-                                    <img src="/static/img/tbIcon-w-1.svg" class="tbIcon tbIcon-w">
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link"
-                                    href="{% url 'all_grower_map_to_processor' %}">
-                                    <img src="/static/img/tbIcon-b-2.svg" class="tbIcon tbIcon-b">
-                                    <img src="/static/img/tbIcon-w-2.svg" class="tbIcon tbIcon-w">
-                                </a>
-                            </li>
-                        </ul>
+                        </form>
                     </div>
-                    <!-- <form class="form-inline " method="post" action="">
-                        {% csrf_token %}
-                        <input class="form-control mr-sm-2" name="processor_search" type="search" placeholder="Search"
-                            aria-label="Search">
-                        <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Search</button> &nbsp;
-                    </form>
-
-                    <form class="form-inline" method="get" action="">
-                        <input type="hidden" class="form-control mr-sm-2" name="farm_name_all" type="search"
-                            placeholder="Search" aria-label="Search">
-                        <button class="btn btn-outline-success my-2 my-sm-0" type="submit">All</button>
-                    </form> -->
-                    
-                </div>
+                    <div class="col-6">
+                        <div class="form-inline justify-content-end">
+                            <div class="table-filter-col ml-auto">
+                                <ul class="nav nav-tabs">
+                                    <li class="nav-item">
+                                        <a class="nav-link active" href="">
+                                            <img src="/static/img/tbIcon-b-1.svg" class="tbIcon tbIcon-b">
+                                            <img src="/static/img/tbIcon-w-1.svg" class="tbIcon tbIcon-w">
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link"
+                                            href="{% url 'all_grower_map_to_processor' %}">
+                                            <img src="/static/img/tbIcon-b-2.svg" class="tbIcon tbIcon-b">
+                                            <img src="/static/img/tbIcon-w-2.svg" class="tbIcon tbIcon-w">
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                            <!-- <form class="form-inline " method="post" action="">
+                                {% csrf_token %}
+                                <input class="form-control mr-sm-2" name="processor_search" type="search" placeholder="Search"
+                                    aria-label="Search">
+                                <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Search</button> &nbsp;
+                            </form>
+        
+                            <form class="form-inline" method="get" action="">
+                                <input type="hidden" class="form-control mr-sm-2" name="farm_name_all" type="search"
+                                    placeholder="Search" aria-label="Search">
+                                <button class="btn btn-outline-success my-2 my-sm-0" type="submit">All</button>
+                            </form> -->
+                            
+                        </div>
+                    </div>
                 </div>
                 <div class="both-data-in" style="display: inherit;">
                     <div class="simple-responsive-table">

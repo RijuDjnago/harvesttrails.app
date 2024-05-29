@@ -560,7 +560,7 @@ def receive_shipment(request):
                 shipment_id = generate_shipment_id()
                 
                 processor_e_name = Processor2.objects.filter(id=int(bin_pull)).first().entity_name
-                save_shipment_management = ShipmentManagement(shipment_id=shipment_id,processor_idd=bin_pull,processor_e_name=processor_e_name, sender_processor_type="T1", bin_location=bin_pull,
+                save_shipment_management = ShipmentManagement(shipment_id=shipment_id,processor_idd=bin_pull,processor_e_name=processor_e_name, sender_processor_type="T2", bin_location=bin_pull,
                         equipment_type=context["equipment_type"],equipment_id=context["equipment_id"],storage_bin_send=context["storage_bin_id"],moisture_percent = context["moist_percentage"],weight_of_product_raw = context["weight_prod"],
                         weight_of_product=cal_weight,weight_of_product_unit=context["weight_prod_unit_id"], excepted_yield_raw =context["exp_yield"],excepted_yield=cal_exp_yield,excepted_yield_unit=context["exp_yield_unit_id"],recive_delivery_date=context["approval_date"],
                         purchase_order_number=context["purchase_number"],lot_number=context["lot_number"],volume_shipped=context["volume_shipped"],milled_volume=milled_volume,volume_left=volume_left,editable_obj=True,status=context["status"],
@@ -687,16 +687,72 @@ def outbound_shipment_list_processor3(request):
         context = {}
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
             #inbound management list for admin
-            context['processor'] = Processor2.objects.filter(processor_type__type_name="T2")
-            context["table_data"] = list(ShipmentManagement.objects.filter(sender_processor_type="T3").values())
-            print(context)
+            output = ShipmentManagement.objects.filter(sender_processor_type="T3")
+            p_id = [i.processor_idd for i in output]
+            processors = Processor2.objects.filter(id__in = p_id).order_by('entity_name')
+            context['processors'] = processors
+
+            search_name = request.GET.get('search_name')
+            selectprocessor_id = request.GET.get('selectprocessor_id')
+
+            if search_name == None and selectprocessor_id == None :
+                output = output
+            else:
+                output = ShipmentManagement.objects.filter(sender_processor_type="T3").order_by('bin_location','id')
+                if search_name and search_name != 'All':
+                    output = output.filter(Q(processor_e_name__icontains=search_name) | Q(date_pulled__icontains=search_name) |
+                    Q(bin_location__icontains=search_name) | Q(equipment_type__icontains=search_name) | Q(equipment_id__icontains=search_name) | 
+                    Q(purchase_order_number__icontains=search_name) | Q(lot_number__icontains=search_name))
+                    context['search_name'] = search_name
+                if selectprocessor_id and selectprocessor_id != 'All':
+                    output = output.filter(processor_idd=selectprocessor_id)
+                    selectedProcessors = Processor2.objects.get(id=selectprocessor_id)
+                    context['selectedProcessors'] = selectedProcessors
+            paginator = Paginator(output, 100)
+            page = request.GET.get('page')
+            try:
+                report = paginator.page(page)
+            except PageNotAnInteger:
+                report = paginator.page(1)
+            except EmptyPage:
+                report = paginator.page(paginator.num_pages)
+            context["table_data"] = report
             return render (request, 'processor3/outbound_shipment_list.html', context)
         elif request.user.is_processor2 :
             processor_email = request.user.email
             p = ProcessorUser2.objects.get(contact_email=processor_email)
             processor_id = Processor2.objects.get(id=p.processor2.id).id
             #inbound management list for processor
-            context["table_data"] = list(ShipmentManagement.objects.filter(receiver_processor_type="T3", processor2_idd=processor_id).values())
+            output = ShipmentManagement.objects.filter(sender_processor_type="T3", processor_idd=processor_id)
+            p_id = [i.processor_idd for i in output]
+            processors = Processor2.objects.filter(id__in = p_id).order_by('entity_name')
+            context['processors'] = processors
+
+            search_name = request.GET.get('search_name')
+            selectprocessor_id = request.GET.get('selectprocessor_id')
+
+            if search_name == None and selectprocessor_id == None :
+                output = output
+            else:
+                output = ShipmentManagement.objects.filter(sender_processor_type="T3", processor_idd=processor_id).order_by('bin_location','id')
+                if search_name and search_name != 'All':
+                    output = output.filter(Q(processor_e_name__icontains=search_name) | Q(date_pulled__icontains=search_name) |
+                    Q(bin_location__icontains=search_name) | Q(equipment_type__icontains=search_name) | Q(equipment_id__icontains=search_name) | 
+                    Q(purchase_order_number__icontains=search_name) | Q(lot_number__icontains=search_name))
+                    context['search_name'] = search_name
+                if selectprocessor_id and selectprocessor_id != 'All':
+                    output = output.filter(processor_idd=selectprocessor_id)
+                    selectedProcessors = Processor2.objects.get(id=selectprocessor_id)
+                    context['selectedProcessors'] = selectedProcessors
+            paginator = Paginator(output, 100)
+            page = request.GET.get('page')
+            try:
+                report = paginator.page(page)
+            except PageNotAnInteger:
+                report = paginator.page(1)
+            except EmptyPage:
+                report = paginator.page(paginator.num_pages)
+            context["table_data"] = report            
             return render (request, 'processor3/outbound_shipment_list.html', context)
         else:
             return redirect('login')  

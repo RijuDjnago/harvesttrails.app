@@ -16,4 +16,6 @@ urlpatterns = [
     path('traceability_report_all_csv_download/<str:select_crop>/<str:get_search_by>/<str:search_text>/<str:from_date>/<str:to_date>/', views.traceability_report_all_csv_download, name='traceability_report_all_csv_download'),
     # autocomplete suggestions 03-04-23
     path('autocomplete_suggestions/<str:select_search>/<str:select_crop_id>/', views.autocomplete_suggestions, name='autocomplete_suggestions'),
+
+    path('display_traceability_report/', views.display_traceability_report, name="display_traceability_report"),
 ]

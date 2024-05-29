@@ -41,7 +41,7 @@
 <div class="main-content">
     {% include 'header.html' %} {% load crispy_forms_tags %}
     <main>
-        <span class="farm headingtop">Add Shipment (Outbound 2 WIP)</span>
+        <span class="farm headingtop">Add Shipment (Outbound 4 WIP)</span>
         <div class="card farm-fields-container">
             {% include '_alerts.html' %}
             <div class="container-fluid">
@@ -50,7 +50,7 @@
                     <div class="row" style="margin-bottom:10px">
                         <div class="col-md-5 mb-2">
                             <label for="id_bin_location_pull">Bin Location Pulled from<span class="asteriskField">*</span></label>
-                            <select name="bin_pull" id="pull" class="textinput textInput form-control" onchange="this.form.submit()">
+                            <select name="bin_pull" id="pull" class="textinput textInput form-control selectpicker" data-live-search="true" onchange="this.form.submit()">
                                 {% if select_processor_name %}
                                 <option value="{{select_processor_id}}" selected>{{select_processor_name}}</option>
                                 {% else %}

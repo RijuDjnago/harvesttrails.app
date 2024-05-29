@@ -31,8 +31,8 @@
                         {% else %}
                         <div class="col-md-6 mb-2">
                             <label for="id_processor">Processor<span class="asteriskField">*</span></label>
-                            <select id="id_processor" name="id_processor" class="textinput textInput form-control"
-                                style="width: 100%;padding-left:10px ;" required>
+                            <select id="id_processor" name="id_processor" class="textinput textInput form-control selectpicker"
+                                style="width: 100%;padding-left:10px ;" data-live-search="true" required>
                                 <option value='all'>Select Processor</option>
                                 {% for processor in get_processor %}
                                 {% if processor == selectedProcessor %}
