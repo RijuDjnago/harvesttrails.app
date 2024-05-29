@@ -166,7 +166,7 @@
                     <a href="#" class="btn-close-cancel">Upcoming Inbound</a>
                 {% endif %}
                 &nbsp;
-                    <a href="{% url 'recive_shipment' %}" class="btn-close-cancel">Receive Delivery</a>
+                    <a href="{% url 'receive_shipment3' %}" class="btn-close-cancel">Receive Delivery</a>
                 &nbsp;
                 {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
                     <a href="{% url 'rejected_shipments_csv_download_for_t2' %}" class="btn-close-cancel" target="_blank">Rejected Shipments CSV</a>
@@ -187,18 +187,33 @@
                                 <select name="pro_id" id="mult_select"  class="form-control selectpicker" data-live-search="true">
                                     <option value='0'>Select Processor</option>
                                     {% for pro in processor2 %}
+                    
+                                {% if select_processor == pro.pk %}
                                     <option value="{{pro.pk}}" selected>{{pro.entity_name}}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
+                                {% else %}
+                                    <option value="{{pro.pk}}">{{pro.entity_name}}</option>
+                                {% endif %}
+                                {% endfor %}
+                            </select>
                         </div>
-                        <div class="col-md-4 col-sm-6 col-12 ms-auto">
-                            <div class="input-group mb-3">
-                                <input type="text" class="form-control me-3 extra-css-input" placeholder="Search" name="search_name" style="height: 40px">
-                                <button type="submit" class="btn btn-outline-success" id="basic-addon2">Search</span>
-                              </div>
+                        <div class="col-4">
+                        </div>
+
+                        <!-- Search section on the right side -->
+                        <div class="col-4">
+                            <div class="row justify-content-end">
+                                <div class="col-8">
+                                    <input class="form-control" name="search_name" type="search" placeholder="Search" autocomplete="off" aria-label="Search" id="search_name" {% if search_name %}value="{{search_name}}"{% else %}{% endif %} >
+                                </div>
+                                <div class="col-4">
+                                    <button class="btn btn-outline-success btn-block" type="submit">Search</button>
+                                </div>
+                            </div>
+
                         </div>
                     </div>
+        
+                    <br>
 
                     <div class="both-data-in" style="display: inherit;">
                         <div class="table-responsive">
@@ -222,6 +237,29 @@
                                 <tbody>
                                     
                                     {% for shipment in table_data %}
+                                    <div class="modal fade" id="shipmentModal{{shipment.id}}" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true" >
+                                        <div class="modal-dialog">
+                                            <div class="modal-content">
+                                                <div class="modal-header" style="text-align: center;">
+                                                    <button type="button" class="btn-close cust-close-ds-btn close_modal_addqueModal"
+                                                        data-mdb-dismiss="modal" aria-label="Close" onclick="closeAddModal()"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <div class="modal-center-btn-footer">
+                                                        <div class="row">
+                                                            <div class="col-lg-12">
+                                                                <div>
+                                                                    <h5 class="text-decoration-underline">QR CODE</h5>
+                                                                </div>
+                                                                
+                                                                <img id="qr_id" src="/media/{{shipment.qr_code_processor}}" alt="qr code" style="max-width: 100%;">
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                     <tr>
                                         <td>{{shipment.shipment_id}}</td>
                                         <td>{{shipment.date_pulled|date:"M d, Y"}}</td>
@@ -248,11 +286,11 @@
                                         <td class="backk action-td rmv-bd">
                                         <ul>
                                             <li>
-                                                <a class="map-icon-link" onclick="showQR({{grower_shipment.pk}})"><span
+                                                <a class="map-icon-link" data-bs-toggle="modal" href="#shipmentModal{{shipment.id}}" ><span
                                                         class="fas fa-qrcode" alt="view QR code" title="view QR code"></span></a>
                                             </li>
                                             <li>
-                                                <a href="{% url 'inbound_shipment_view' shipment.id %}"
+                                                <a href="{% url 'inbound_shipment_view3' shipment.id %}"
                                                     class="update-btn-link" alt="view inbound management" title="view inbound management"> <span class="fas fa-eye"></span> </a>
                                             </li>
                                             
@@ -260,13 +298,13 @@
                                             
                                             
                                             <li>
-                                                <a href="{% url 'inbound_shipment_edit' shipment.id %}" class="update-btn-link" alt="edit inbound management" title="edit inbound management"> <span class="fas fa-edit"></span></a>
+                                                <a href="{% url 'inbound_shipment_edit3' shipment.id %}" class="update-btn-link" alt="edit inbound management" title="edit inbound management"> <span class="fas fa-edit"></span></a>
                                             </li>
                                             {% endif %}
                                             {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
                                             <li>
-                                                <a onclick="delShipment('{% url 'inbound_shipment_delete' shipment.id %}')"
-                                                    href="{% url 'inbound_shipment_delete' shipment.id %}"
+                                                <a onclick="delShipment('{% url 'inbound_shipment_delete_processor3' shipment.id %}')"
+                                                    href="{% url 'inbound_shipment_delete_processor3' shipment.id %}"
                                                     data-mdb-toggle="modal" data-mdb-target="#deleteModal" alt="delete inbound management" title="delete inbound management">
                                                     <span class="fas fa-trash"></span></a>
                                             </li>
@@ -274,28 +312,7 @@
                                         </ul>
                                         </td>
                                     </tr>
-                                    <div class="modal fade" id="addqueModal" aria-hidden="true" aria-labelledby="exampleModalToggleLabel22" tabindex="-1">
-                                        <div class="modal-dialog">
-                                            <div class="modal-content">
-                                                <div class="modal-header" style="text-align: center;">
-                                                    <button type="button" class="btn-close cust-close-ds-btn close_modal_addqueModal"
-                                                        data-mdb-dismiss="modal" aria-label="Close" onclick="closeAddModal()"></button>
-                                                </div>
-                                                <div class="modal-body">
-                                                    <div class="modal-center-btn-footer">
-                                                        <div class="row">
-                                                            <div class="col-lg-12">
-                                                                <div>
-                                                                    <h5 class="text-decoration-underline">QR CODE</h5>
-                                                                </div>
-                                                                <img id="qr_id" src="/media/{{shipment.qr_code_processor}}" alt="qr code" style="max-width: 100%;">
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
+                                    
                                     {% endfor %}
                                 </tbody>
                             </table>
@@ -493,6 +510,18 @@ $(function() {
        function closeAddModal() {
          $('#addqueModal').modal('hide');
      }
+</script>
+<script>
+    $(document).ready(function() {
+    $('#growerSelction').change( function () {
+    $('#submitBtn').click();
+    });
+    });
+    $(document).ready(function() {
+    $('#fieldSelction').change( function () {
+    $('#submitBtn').click();
+    });
+    });
 </script>
 <script>
     $('#Tier2-Processor-active').addClass('activeLink');

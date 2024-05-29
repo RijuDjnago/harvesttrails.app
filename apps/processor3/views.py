@@ -5,7 +5,7 @@ from .models import *
 from apps.processor.models import *
 from apps.accounts.models import *
 import string
-import random
+import random,time, json
 from django.core.mail import send_mail
 from datetime import date
 from django.db.models import Q
@@ -19,6 +19,8 @@ from apps.processor2.models import *
 from apps.growerpayments.models import *
 import re
 from apps.processor.views import generate_shipment_id
+import qrcode, time, json
+from django.core.files.base import ContentFile
 
 
 
@@ -245,7 +247,7 @@ def inbound_shipment_list(request):
             context["table_data"] = list(ShipmentManagement.objects.filter(receiver_processor_type="T3").values())
             context["processor3"] = Processor2.objects.filter(processor_type__type_name="T3")
             search_name = request.GET.get("search_name")
-            print(type(search_name), "ewrewwwwwwwwwwwwwwwwwwwwwwww")
+            # print(type(search_name), "ewrewwwwwwwwwwwwwwwwwwwwwwww")
             if search_name == str(None) or not search_name:
                 print("sdgffdgfghf")
                 context["search_name"] = None
@@ -283,28 +285,61 @@ def inbound_shipment_list(request):
 
 @login_required()
 def inbound_shipment_view(request, pk):
-    try:
+    # try:
         context = {}
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role() or request.user.is_processor2:
-            #inbound management list for admin
+            shipment = ShipmentManagement.objects.filter(id=pk).first()
+            if not shipment:
+                return redirect('some_error_page')  # Handle the case where shipment is not found
+            
+            # Convert the datetime to a string
+            shipment_date_str = shipment.date_pulled.strftime('%Y-%m-%dT%H:%M:%S') if shipment.date_pulled else None
+
+            datapy = {
+                "shipment_id": shipment.shipment_id,
+                "send_processor_name": shipment.processor_e_name,
+                "sustainability": "under development",
+                "shipment_date": shipment_date_str,
+            }
+            data = json.dumps(datapy)
+
+            # Generate QR code
+            img = qrcode.make(data)
+
+            # Create a unique image name
+            img_name = 'qr1_' + str(int(time.time())) + '.png'
+            from io import BytesIO
+            # Save the image to a BytesIO object
+            buffer = BytesIO()
+            img.save(buffer, format='PNG')
+            buffer.seek(0)
+
+            # Create a ContentFile from the BytesIO object
+            file = ContentFile(buffer.read(), name=img_name)
+
+            # Save the image to the model instance
+            shipment.qr_code_processor.save(img_name, file, save=True)
+            img_name = shipment.qr_code_processor
+            context["img_name"] = img_name
             context["shipment"] = list(ShipmentManagement.objects.filter(id=pk).values())
+
             files = ShipmentManagement.objects.filter(id=pk).first().files.all().values('file')
             files_data = []
             for j in files:
                 file_name = {}
                 file_name["file"] = j["file"]
-                # print(j["file"])
-                if j["file"] or j["file"] != "" or j["file"] != ' ':
+                if j["file"]:
                     file_name["name"] = j["file"].split("/")[-1]
                 else:
                     file_name["name"] = None
                 files_data.append(file_name)
             context["files"] = files_data
+            print(context)
             return render (request, 'processor3/inbound_management_view.html', context)
         else:
             return redirect('login')  
-    except:
-        return render (request, 'processor3/inbound_management_view.html', context) 
+    # except:
+    #     return render (request, 'processor3/inbound_management_view.html', context) 
     
 @login_required()
 def inbound_shipment_edit(request, pk):
