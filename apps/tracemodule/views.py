@@ -1073,7 +1073,7 @@ def outbound2_Wip_Grower(crop,check_grower_id,from_date,to_date,*grower_field_id
             volume_shipped = get_shipment.volume_shipped
             equipment_type = get_shipment.equipment_type
             bin_location = get_shipment.bin_location
-            storage_skuid = get_shipment.storage_bin
+            storage_skuid = get_shipment.storage_bin_send
             return_lst.extend([{"deliveryid":purchase_order_number,"storage_skuid":storage_skuid,"date":date_pulled,"quantity":volume_shipped,"transportation":equipment_type,"destination":bin_location}])
     return return_lst
 
@@ -1095,7 +1095,7 @@ def outbound2_Wip_Field(crop,field_name,field_id,from_date,to_date):
             volume_shipped = get_shipment.volume_shipped
             equipment_type = get_shipment.equipment_type
             bin_location = get_shipment.bin_location
-            storage_skuid = get_shipment.storage_bin  # add storage_bin
+            storage_skuid = get_shipment.storage_bin_send  # add storage_bin
             return_lst.extend([{"deliveryid":purchase_order_number,"storage_skuid":storage_skuid,"date":date_pulled,"quantity":volume_shipped,"transportation":equipment_type,"destination":bin_location}])
     return return_lst
 
@@ -1114,7 +1114,7 @@ def outbound2_Wip_Processor(crop,search_text,processor_id,from_date,to_date) :
             volume_shipped = get_shipment.volume_shipped
             equipment_type = get_shipment.equipment_type
             bin_location = get_shipment.bin_location
-            storage_skuid = get_shipment.storage_bin
+            storage_skuid = get_shipment.storage_bin_send
             equ_id = get_shipment.equipment_id
             return_lst.extend([{"deliveryid":purchase_order_number,"storage_skuid":storage_skuid,"date":date_pulled,"quantity":volume_shipped,"transportation":equipment_type,"destination":bin_location,"equ_id":equ_id}])
     return return_lst
@@ -1134,7 +1134,7 @@ def outbound2_Wip_deliveryid(crop,search_text,rice_shipment_id,from_date,to_date
             volume_shipped = get_shipment.volume_shipped
             equipment_type = get_shipment.equipment_type
             bin_location = get_shipment.bin_location
-            storage_skuid = get_shipment.storage_bin  # add storage_bin
+            storage_skuid = get_shipment.storage_bin_send  # add storage_bin
             return_lst.extend([{"deliveryid":purchase_order_number,"storage_skuid":storage_skuid,"date":date_pulled,"quantity":volume_shipped,"transportation":equipment_type,"destination":bin_location}])
     return return_lst
 
@@ -1238,15 +1238,15 @@ def t2_Processor_grower(crop,check_grower_id,from_date,to_date) :
         if get_grower.exists():
             shipment = ShipmentManagement.objects.all()
             for i in range(len(shipment)):
-                var = shipment[i].storage_bin
+                var = shipment[i].storage_bin_send
                 grower_shipment = GrowerShipment.objects.filter(sku = var).filter(grower_id=check_grower_id)
                 for r in grower_shipment :
                     del_id = r.shipment_id
                     shipment_date = r.approval_date
-                    get_shipment = ShipmentManagement.objects.get(storage_bin=var)
+                    get_shipment = ShipmentManagement.objects.get(storage_bin_send=var)
                     processor_id = get_shipment.processor2_idd
                     processor_name = get_shipment.processor2_name
-                    sku_id = get_shipment.storage_bin
+                    sku_id = get_shipment._send
                     pounds_shipped = r.total_amount
                     pounds_received = r.received_amount
                     pounds_delta = ''
@@ -1363,15 +1363,15 @@ def t2_Processor_field(crop,field_name,field_id,from_date,to_date) :
         if get_shipment_data.exists():    
             shipment = ShipmentManagement.objects.all()
             for i in range(len(shipment)):
-                var = shipment[i].storage_bin
+                var = shipment[i].storage_bin_send
                 grower_shipment = GrowerShipment.objects.filter(sku = var).filter(field_id=field_id)
                 for r in grower_shipment :
                     del_id = r.shipment_id
                     shipment_date = r.approval_date
-                    get_shipment = ShipmentManagement.objects.get(storage_bin=var)
+                    get_shipment = ShipmentManagement.objects.get(storage_bin_send=var)
                     processor_id = get_shipment.processor2_idd
                     processor_name = get_shipment.processor2_name
-                    sku_id = get_shipment.storage_bin
+                    sku_id = get_shipment.storage_bin_send
                     pounds_shipped = r.total_amount
                     pounds_received = r.received_amount
                     pounds_delta = ''
@@ -1489,15 +1489,15 @@ def t2_Processor_Processor(crop,processor_id,from_date,to_date,*bale_id) :
             shipment = ShipmentManagement.objects.filter(processor_idd = processor_id)
             # print("shipment============",shipment)
             for i in range(len(shipment)):
-                var = shipment[i].storage_bin
+                var = shipment[i].storage_bin_send
                 grower_shipment = GrowerShipment.objects.filter(sku = var)
                 for r in grower_shipment :
                     del_id = r.shipment_id
                     shipment_date = r.approval_date
-                    get_shipment = ShipmentManagement.objects.get(storage_bin=var)
+                    get_shipment = ShipmentManagement.objects.get(storage_bin_send=var)
                     processor_id = get_shipment.processor2_idd
                     processor_name = get_shipment.processor2_name
-                    sku_id = get_shipment.storage_bin
+                    sku_id = get_shipment.storage_bin_send
                     pounds_shipped = r.total_amount
                     pounds_received = r.received_amount
                     pounds_delta = ''
@@ -1608,15 +1608,15 @@ def t2_Processor_deliveryid(crop,search_text,warehouse_wh_id,from_date,to_date) 
         if get_shipment_data.exists():    
             shipment = ShipmentManagement.objects.all()
             for i in range(len(shipment)):
-                var = shipment[i].storage_bin
+                var = shipment[i].storage_bin_send
                 grower_shipment = GrowerShipment.objects.filter(sku = var,).filter(shipment_id=search_text)
                 for r in grower_shipment :
                     del_id = r.shipment_id
                     shipment_date = r.approval_date
-                    get_shipment = ShipmentManagement.objects.get(storage_bin=var)
+                    get_shipment = ShipmentManagement.objects.get(storage_bin_send=var)
                     processor_id = get_shipment.processor2_idd
                     processor_name = get_shipment.processor2_name
-                    sku_id = get_shipment.storage_bin
+                    sku_id = get_shipment.storage_bin_send
                     pounds_shipped = r.total_amount
                     pounds_received = r.received_amount
                     pounds_delta = ''
@@ -2858,5 +2858,27 @@ def traceability_report_all_csv_download(request,select_crop,get_search_by,searc
     else:
         return redirect ('dashboard')
 
+@login_required()
+def display_traceability_report(request):
+    try:
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+            
+            shipment_id = request.GET.get('shipment_id')
+            check_shipment = ShipmentManagement.objects.filter(shipment_id=shipment_id).first()
+            sender_processor = check_shipment.processor_idd
+            check_sender = Processor2.objects.filter(id=sender_processor,processor_type="T4")
+            if check_sender.exists():
+                get_sender = check_sender.first()
+                incomimg_for_sender = ShipmentManagement.objects.filter(processor2_idd=get_sender.id)
+                if incomimg_for_sender.exists():
+                    get_incoming = incomimg_for_sender.first()
+                    now_sender = get_incoming.processor_idd
+
+
+            return render(request, 'tracemodule/traceability_report.html')
+        else:
+            return redirect('login')    
+    except Exception as e:
+        return HttpResponse(e)
 
     

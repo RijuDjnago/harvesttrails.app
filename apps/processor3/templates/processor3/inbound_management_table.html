@@ -181,9 +181,9 @@
         <form action="" method="get" class="">
             <div class="card card-padding">
                 <div class="main-simple-table-with-search col-12">
-                    <div class="row d-flex align-items-center">
+                    <div class="row d-flex align-items-center justify-content-between">
                         <!-- Select tag on the left side -->
-                        <div class="col-4">
+                        <div class="col-3">
                             <select name="select_processor" id="mult_select"  class="form-control selectpicker" data-live-search="true">
                                 <option value='0'>Select Processor</option>
                                 {% for pro in processor3 %}
@@ -200,10 +200,10 @@
                         <!-- Search section on the right side -->
                         <div class="col-4">
                             <div class="row justify-content-end">
-                                <div class="col-8">
+                                <div class="col-9">
                                     <input class="form-control" name="search_name" type="search" placeholder="Search" autocomplete="off" aria-label="Search" id="search_name" {% if search_name == "None" %}value="Search"{% else %}value="{{search_name}}"{% endif %} >
                                 </div>
-                                <div class="col-4">
+                                <div class="col-3">
                                     <button class="btn btn-outline-success btn-block" type="submit">Search</button>
                                 </div>
                             </div>

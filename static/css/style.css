@@ -1915,7 +1915,10 @@ td.backk {
     display: flex;
     /* display: table-cell; */
     align-items: center;
+    /* justify-content: center; */
 }
+
+
 
 td.backk1 {
     display: flex;

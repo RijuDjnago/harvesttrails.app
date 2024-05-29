@@ -71,7 +71,7 @@
                         <div class="inline-apply-filter">
                             <div class="three-fields-with-label">
                                 <label for="processorSelction">Select Processor</label>
-                                <select id="processorSelction" name="processor_id" class="mb-0" style="border-radius:0px !important; width: 50%;" onchange="this.form.submit()">
+                                <select id="processorSelction" name="processor_id" class="mb-0 selectpicker" style="border-radius:0px !important; width: 50%;" data-live-search="true" onchange="this.form.submit()">
                                     <option value="" > Select Processor </option>
                                     {% for processor in processor2 %}
                                         {% if processor.pk == selectedprocessor %}
@@ -86,7 +86,7 @@
                         <br>
                         <div class="mb-3 d-flex flex-column" style="width: 468px;">
                             <label for="growerSelction">Select Processor</label>
-                            <select id="mySelect" multiple="multiple" name="select_processor2" class="multi-select">
+                            <select id="mySelect" multiple="multiple" name="select_processor2" class="multi-select " >
                                 
                                 {% if processor3|length != 0 %}
                                     <optgroup label="T3 Processor">

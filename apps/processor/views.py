@@ -6512,7 +6512,7 @@ def inbound_production_mgmt_csv_download(request):
 def outbound_shipment_mgmt(request):   
     context ={}
     if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
-        output = ShipmentManagement.objects.all().order_by('bin_location','id')
+        output = ShipmentManagement.objects.filter(sender_processor_type="T1").order_by('bin_location','id')
         
         p_id = [i.processor_idd for i in output]
         processors = Processor.objects.filter(id__in = p_id).order_by('entity_name')
@@ -6524,9 +6524,9 @@ def outbound_shipment_mgmt(request):
         if search_name == None and selectprocessor_id == None :
             output = output
         else:
-            output = ShipmentManagement.objects.filter(id__isnull=False).order_by('bin_location','id')
+            output = ShipmentManagement.objects.filter(sender_processor_type="T1").order_by('bin_location','id')
             if search_name and search_name != 'All':
-                output = ShipmentManagement.objects.filter(Q(processor_e_name__icontains=search_name) | Q(date_pulled__icontains=search_name) |
+                output = output.filter(Q(processor_e_name__icontains=search_name) | Q(date_pulled__icontains=search_name) |
                 Q(bin_location__icontains=search_name) | Q(equipment_type__icontains=search_name) | Q(equipment_id__icontains=search_name) | 
                 Q(purchase_order_number__icontains=search_name) | Q(lot_number__icontains=search_name))
                 context['search_name'] = search_name
