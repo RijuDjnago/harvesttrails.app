@@ -136,7 +136,10 @@ tr:nth-child(even) {
         &nbsp;
         &nbsp;
         <div>
-            <a href="{% url 'traceability_report_all_csv_download' select_crop get_search_by  search_text from_date to_date %}" class="btn-close-cancel">DOWNLOAD ALL CSV</a>
+            <a href="{% url 'traceability_report_all_csv_download' select_crop get_search_by  search_text from_date to_date %}" class="btn-close-cancel me-3">DOWNLOAD ALL CSV</a>
+        </div>
+        <div>
+            <a href="#" id="mapViewBtn" class="btn-close-cancel">MAP VIEW</a>
         </div>
     </div>
     {% endif %}
@@ -225,7 +228,7 @@ tr:nth-child(even) {
                 </div>
                 
                 <div class="col-md-3 text-left mt-2 pt-2">
-                    <input type="submit" class="btn-save-submit" value="search"> 
+                    <input type="submit" id="searchBtn" class="btn-save-submit" value="search"> 
                 </div>
             <div class="row">
                 <div class="form-btn-row">
@@ -235,7 +238,7 @@ tr:nth-child(even) {
     </div>
         </form>
 
-
+<section class="search_show" id="search_show">
 {% if origin_context %}
 <div class="main-simple-table-with-search" id="printableArea">
     <!-- Origin -->
@@ -598,7 +601,152 @@ tr:nth-child(even) {
     <h2>{{no_rec_found_msg}}</h2>
 </div>
 {% endif %}
-
+</section>
+<section id="map_show" class="map_show main_section" style="display:none; background-color: #fff; max-width: 800px; width: 100%; margin: auto; padding: 20px 0;">
+    <div class="container">
+        <div class="heading"  style="text-align: center;">
+            <h2 style="font-size: 35px;">Traceability Report for {shipment ID, bin #, lot #}</h2>
+        </div>
+        <div class="row" style="padding-top: 15px; margin-top: 30px; border-top: 1px solid #dadada; display: flex;">
+            <div class="col-6 mb-3">
+                <div class="text_wapper">
+                    <h3 style="font-size: 30px; margin-bottom: 20px;">Origin</h3>
+                    <ul style="list-style: none; padding: 0; margin: 0;">
+                        <li>
+                            <span style="display: block; font-size: 18px; font-weight: bold; margin-bottom: 10px;">Grower 1 Name</span>
+                            <span>Lorem ipsum dolor, sit amet consectetur adipisicing elit. Veritatis, culpa!</span>
+                        </li>
+                    </ul>
+                    <ul style="list-style: none; padding: 0; margin: 0; margin-top: 20px;">
+                        <li>
+                            <span style="display: block; font-size: 18px; font-weight: bold; margin-bottom: 10px;">Grower 2 Name</span>
+                            <span>Lorem ipsum dolor, sit amet consectetur adipisicing elit. Veritatis, culpa!</span>
+                        </li>
+                    </ul>
+                    <ul style="list-style: none; padding: 0; margin: 0; margin-top: 20px;">
+                        <li>
+                            <span style="display: block; font-size: 18px; font-weight: bold; margin-bottom: 10px;">Grower 3 Name</span>
+                            <span>Lorem ipsum dolor, sit amet consectetur adipisicing elit. Veritatis, culpa!</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="img_wapper" style="width: 100%; height: 250px;">
+                    <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d14736.291556014114!2d88.42368324144367!3d22.576377035307207!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3a0275b020703c0d%3A0xece6f8e0fc2e1613!2sSector%20V%2C%20Bidhannagar%2C%20Kolkata%2C%20West%20Bengal!5e0!3m2!1sen!2sin!4v1713427063064!5m2!1sen!2sin"  style="border:0; width: 100%; height: 100%; max-height: 100% !important;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                </div>
+            </div>
+        </div>
+        <div class="row" style="padding-top: 15px; margin-top: 30px; border-top: 1px solid #dadada; display: flex;">
+            <div class="col-6 mb-3">
+                <div class="text_wapper">
+                    <h3 style="font-size: 30px; margin-bottom: 20px;">Processor 1</h3>
+                    <ul style="list-style: none; padding: 0; margin: 0;">
+                        <li>
+                            <span style="display: block; font-size: 18px; font-weight: bold; margin-bottom: 10px;">Processor Name</span>
+                            <span>Akshya Nagar 1st Block 1st Cross, Rammurthy nagar, Bangalore-560016</span>
+                        </li>
+                    </ul>
+                    <ul style="list-style: none; padding: 0; margin: 0; margin-top: 30px;">
+                        <li style="font-weight: 500; margin-bottom: 5px;">Processing Date: <em style="font-weight: 400; font-style: normal;">18.04.2024</em></li>
+                        <li style="font-weight: 500;">Resulting Lot Number: <em style="font-weight: 400; font-style: normal;">58742586</em></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="img_wapper" style="width: 100%; height: 250px;">
+                    <img src="https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=1474&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="" style="width: 100%; height: 100%; object-fit: contain; object-position: center;">
+                </div>
+            </div>
+        </div>
+        <div class="row" style="padding-top: 15px; margin-top: 30px; border-top: 1px solid #dadada; flex-direction: row-reverse; display: flex;">
+            <div class="col-6">
+                <div class="text_wapper">
+                    <h3 style="font-size: 30px; margin-bottom: 20px;">Transport to Processor 2</h3>
+                    <ul style="list-style: none; padding: 0; margin: 0;">
+                        <li>
+                            <span style="display: block; font-size: 18px; font-weight: bold; margin-bottom: 10px;">Transport Type</span>
+                        </li>
+                    </ul>
+                    <ul style="list-style: none; padding: 0; margin: 0; margin-top: 30px;">
+                        <li style="font-weight: 500; margin-bottom: 5px;">Transport ID: <em style="font-weight: 400; font-style: normal;">5475820</em></li>
+                        <li style="font-weight: 500;">Transport Date:<em style="font-weight: 400; font-style: normal;">18.04.2024</em></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="img_wapper" style="width: 100%; height: 250px;">
+                    <img src="https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=1474&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="" style="width: 100%; height: 100%; object-fit: contain; object-position: center;">
+                </div>
+            </div>
+        </div>
+        <div class="row" style="padding-top: 15px; margin-top: 30px; border-top: 1px solid #dadada; display: flex;">
+            <div class="col-6 mb-3">
+                <div class="text_wapper">
+                    <h3 style="font-size: 30px; margin-bottom: 20px;">Processor 2</h3>
+                    <ul style="list-style: none; padding: 0; margin: 0;">
+                        <li>
+                            <span style="display: block; font-size: 18px; font-weight: bold; margin-bottom: 10px;">Processor Name</span>
+                            <span>Akshya Nagar 1st Block 1st Cross, Rammurthy nagar, Bangalore-560016</span>
+                        </li>
+                    </ul>
+                    <ul style="list-style: none; padding: 0; margin: 0; margin-top: 30px;">
+                        <li style="font-weight: 500; margin-bottom: 5px;">Processing Date: <em style="font-weight: 400; font-style: normal;">18.04.2024</em></li>
+                        <li style="font-weight: 500;">Resulting Lot Number: <em style="font-weight: 400; font-style: normal;">58742586</em></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="img_wapper" style="width: 100%; height: 250px;">
+                    <img src="https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=1474&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="" style="width: 100%; height: 100%; object-fit: contain; object-position: center;">
+                </div>
+            </div>
+        </div>
+        <div class="row" style="padding-top: 15px; margin-top: 30px; border-top: 1px solid #dadada; flex-direction: row-reverse; display: flex;">
+            <div class="col-6 mb-3">
+                <div class="text_wapper">
+                    <h3 style="font-size: 30px; margin-bottom: 20px;">Transport to Processor 3</h3>
+                    <ul style="list-style: none; padding: 0; margin: 0;">
+                        <li>
+                            <span style="display: block; font-size: 18px; font-weight: bold; margin-bottom: 10px;">Transport Type</span>
+                        </li>
+                    </ul>
+                    <ul style="list-style: none; padding: 0; margin: 0; margin-top: 30px;">
+                        <li style="font-weight: 500; margin-bottom: 5px;">Transport ID: <em style="font-weight: 400; font-style: normal;">5475820</em></li>
+                        <li style="font-weight: 500;">Transport Date:<em style="font-weight: 400; font-style: normal;">18.04.2024</em></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="img_wapper" style="width: 100%; height: 250px;">
+                    <img src="https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=1474&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="" style="width: 100%; height: 100%; object-fit: contain; object-position: center;">
+                </div>
+            </div>
+        </div>
+        <div class="row" style="padding-top: 15px; margin-top: 30px; border-top: 1px solid #dadada; display: flex;">
+            <div class="col-6 mb-3">
+                <div class="text_wapper">
+                    <h3 style="font-size: 30px; margin-bottom: 20px;">Processor 3</h3>
+                    <ul style="list-style: none; padding: 0; margin: 0;">
+                        <li>
+                            <span style="display: block; font-size: 18px; font-weight: bold; margin-bottom: 10px;">Processor Name</span>
+                            <span>Akshya Nagar 1st Block 1st Cross, Rammurthy nagar, Bangalore-560016</span>
+                        </li>
+                    </ul>
+                    <ul style="list-style: none; padding: 0; margin: 0; margin-top: 30px;">
+                        <li style="font-weight: 500; margin-bottom: 5px;">Processing Date: <em style="font-weight: 400; font-style: normal;">18.04.2024</em></li>
+                        <li style="font-weight: 500;">Resulting Lot Number: <em style="font-weight: 400; font-style: normal;">58742586</em></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="img_wapper" style="width: 100%; height: 250px;">
+                    <img src="https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=1474&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="" style="width: 100%; height: 100%; object-fit: contain; object-position: center;">
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
 <!--  SUSTAINABILITY METRICS Popup -->
 <div class="modal fade" id="addqueModal" aria-hidden="true" aria-labelledby="exampleModalToggleLabel22" tabindex="-1">
     <div class="modal-dialog" style="max-width: 800px !important;">
@@ -653,53 +801,7 @@ tr:nth-child(even) {
                                     </tbody>
                                 </table>
                             </div>
-                            <!-- <div style="text-align: center; margin-top: 10px;" align="center">
-                                <h5 class="text-decoration-underline">Quality Metrics</h5>
-                            </div>
-                            <div class="simple-responsive-table">
-                                <table id="" class="table dt-responsive nowrap classing" style="width:100%">
-                                    <tbody>
-                                        {% if select_crop == 'COTTON' %}
-                                        <tr>
-                                            <td><strong>Level :</strong>&nbsp;&nbsp;<span style="padding: 5px;background: {%if level == 'Llano Super' %}#03f4fc {% elif level == 'Gold' %}#FFD700 {% elif level == 'Silver' %} #C0C0C0 {% elif level == 'Bronze' %} #CD7F32 {% else %} #ffffff {% endif %}">{{level}}</span><br>
-                                            </td>
-                                            <td><strong>Grade :</strong>&nbsp;&nbsp;<span>{{grade}}</span><br>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td><strong>Leaf :</strong>&nbsp;&nbsp;<span>{{leaf}}</span><br>
-                                            </td>
-                                            <td><strong>Staple :</strong>&nbsp;&nbsp;<span>{{staple}}</span><br>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td><strong>Length :</strong>&nbsp;&nbsp;<span>{{length}}</span><br>
-                                            </td>
-                                            <td><strong>Strength :</strong>&nbsp;&nbsp;<span>{{strength}}</span><br>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td><strong>Mic :</strong>&nbsp;&nbsp;<span>{{mic}}</span><br>
-                                            </td>
-                                            <td></td>
-                                        </tr>
-                                        {% elif select_crop == 'RICE' %}
-                                        <tr>
-                                            <td><strong>Milling Yield :</strong>&nbsp;&nbsp;<span>{{level}}</span><br>
-                                            </td>
-                                            <td><strong>Milling Total :</strong>&nbsp;&nbsp;<span>{{level}}</span><br>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td><strong>Moisture :</strong>&nbsp;&nbsp;<span>{{level}}</span><br>
-                                            </td>
-                                            <td></td>
-                                            
-                                        </tr>
-                                        {% endif %}
-                                    </tbody>
-                                </table>
-                            </div> -->
+                            
                         </div>
                     </div>
                 </div>
@@ -969,4 +1071,16 @@ function getText(){
 <script>
     $('#Traceability-Report').addClass('activeLink');
 </script>
+<script>
+    document.getElementById('searchBtn').addEventListener('click', function() {
+        document.getElementById('search_show').style.display = 'block';
+        document.getElementById('map_show').style.display = 'none';
+    });
+    
+    document.getElementById('mapViewBtn').addEventListener('click', function() {
+        document.getElementById('map_show').style.display = 'block';
+        document.getElementById('search_show').style.display = 'none';
+    });
+    </script>
+    
 {% endblock jquery %}

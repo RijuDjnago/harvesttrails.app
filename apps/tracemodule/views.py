@@ -12,6 +12,23 @@ import datetime
 # Create your views here.
 
 
+def get_processor_type(processor_name):
+    check_processor = Processor.objects.filter(entity_name=processor_name)
+    if check_processor:
+        processor_details = {'id':check_processor.first().id,
+                             'type':'T1'}        
+    else:
+        get_processor = Processor2.objects.filter(entity_name=processor_name)
+        if get_processor:
+            processor = get_processor.first()
+            processor_details = {'id':processor.id,
+                             'type':processor.processor_type}
+        else:
+            processor_details = {'id':None,
+                                 'type':None}
+    return processor_details
+
+
 def get_Origin(crop,field_id,field_name,bale_id,warehouse_wh_id) :
     if type(field_id) != None and field_id !=  None :
         get_field = Field.objects.get(id=field_id)
@@ -1074,7 +1091,9 @@ def outbound2_Wip_Grower(crop,check_grower_id,from_date,to_date,*grower_field_id
             equipment_type = get_shipment.equipment_type
             bin_location = get_shipment.bin_location
             storage_skuid = get_shipment.storage_bin_send
-            return_lst.extend([{"deliveryid":purchase_order_number,"storage_skuid":storage_skuid,"date":date_pulled,"quantity":volume_shipped,"transportation":equipment_type,"destination":bin_location}])
+            receiver_skuid = get_shipment.storage_bin_recive
+            destination = get_shipment.processor2_name
+            return_lst.extend([{"deliveryid":purchase_order_number,"storage_skuid":storage_skuid,"date":date_pulled,"quantity":volume_shipped,"transportation":equipment_type,"destination":destination}])
     return return_lst
 
 def outbound2_Wip_Field(crop,field_name,field_id,from_date,to_date):
@@ -1115,8 +1134,10 @@ def outbound2_Wip_Processor(crop,search_text,processor_id,from_date,to_date) :
             equipment_type = get_shipment.equipment_type
             bin_location = get_shipment.bin_location
             storage_skuid = get_shipment.storage_bin_send
+            receiver_skuid = get_shipment.storage_bin_recive
             equ_id = get_shipment.equipment_id
-            return_lst.extend([{"deliveryid":purchase_order_number,"storage_skuid":storage_skuid,"date":date_pulled,"quantity":volume_shipped,"transportation":equipment_type,"destination":bin_location,"equ_id":equ_id}])
+            destination = get_shipment.processor2_name
+            return_lst.extend([{"deliveryid":purchase_order_number,"storage_skuid":storage_skuid,"date":date_pulled,"quantity":volume_shipped,"transportation":equipment_type,"destination":destination,"equ_id":equ_id}])
     return return_lst
 
 def outbound2_Wip_deliveryid(crop,search_text,rice_shipment_id,from_date,to_date) :
@@ -1510,6 +1531,38 @@ def t2_Processor_Processor(crop,processor_id,from_date,to_date,*bale_id) :
         
         return return_lst
 
+def t3_Processor_Processor(crop,processor_id,from_date,to_date,*bale_id) :
+    return_lst = []
+    if crop == 'RICE' :
+        
+        check_shipment = list(bale_id)
+        get_shipment_data = ShipmentManagement.objects.filter(id__in=check_shipment,status='APPROVED')
+        if get_shipment_data.exists():
+            # shipment = ShipmentManagement.objects.all()
+            shipment = ShipmentManagement.objects.filter(processor_idd = processor_id)
+            # print("shipment============",shipment)
+            for i in range(len(shipment)):
+                var = shipment[i].storage_bin_recive
+                grower_shipment = ShipmentManagement.objects.filter(storage_bin_send = var)
+                for r in grower_shipment :
+                    del_id = r.shipment_id
+                    shipment_date = r.approval_date
+                    get_shipment = ShipmentManagement.objects.get(storage_bin_send=var)
+                    processor_id = get_shipment.processor2_idd
+                    processor_name = get_shipment.processor2_name
+                    sku_id = get_shipment.storage_bin_send
+                    pounds_shipped = r.total_amount
+                    pounds_received = r.received_amount
+                    pounds_delta = ''
+                    try:
+                        pounds_delta = float(pounds_shipped) - float(pounds_received)
+                    except:
+                        pounds_delta = ''
+                    return_lst.extend([{"processor_name":processor_name,"processor_id":processor_id,"deliveryid":del_id,"date":shipment_date,
+                                "pounds_shipped":pounds_shipped,"pounds_received":pounds_received,"pounds_delta":pounds_delta,"skuid":sku_id}])
+        
+            return return_lst
+
 def t2_Processor_deliveryid(crop,search_text,warehouse_wh_id,from_date,to_date) :
     return_lst = []
     if crop == 'COTTON' :
@@ -1825,6 +1878,8 @@ def traceability_report_list(request):
                                 context["outbound2_wip"] = outbound2_wip
                                 t2_processor =  t2_Processor_Processor('RICE',processor_id,from_date,to_date,*bale_id) 
                                 context["t2_processor"] = t2_processor
+                                # t3_processor =  t3_Processor_Processor('RICE',processor_id,from_date,to_date,*bale_id) 
+                                # context["t3_processor"] = t3_processor
                             else:
                                 context['no_rec_found_msg'] = "No Records Found"
                         else:
@@ -1869,8 +1924,9 @@ def autocomplete_suggestions(request,select_search,select_crop_id):
         field_name = Field.objects.all().order_by('name').values('name')
         lst = [i['name'] for i in field_name]
     elif select_search == 'processor' :    
-        processor_name = Processor.objects.all().order_by('entity_name').values('entity_name')
-        lst = [i['entity_name'] for i in processor_name]
+        processor_name = list(Processor.objects.all().order_by('entity_name').values_list('entity_name', flat=True))
+        processor2_name = list(Processor2.objects.all().order_by('entity_name').values_list('entity_name', flat=True))
+        lst = processor_name + processor2_name    
     elif select_search == 'deliveryid' :
         if select_crop_id == 'RICE' :
             deliveryid = GrowerShipment.objects.all().order_by('shipment_id').values('shipment_id')
@@ -1880,6 +1936,7 @@ def autocomplete_suggestions(request,select_search,select_crop_id):
             lst = [i['bale_id'] for i in deliveryid]
 
     responce = {'select_search':lst}
+    print(responce)
     return JsonResponse(responce)
 
 @login_required()
@@ -2860,25 +2917,92 @@ def traceability_report_all_csv_download(request,select_crop,get_search_by,searc
 
 @login_required()
 def display_traceability_report(request):
-    try:
+    # try:
+        context = {}
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
-            
-            shipment_id = request.GET.get('shipment_id')
-            check_shipment = ShipmentManagement.objects.filter(shipment_id=shipment_id).first()
-            sender_processor = check_shipment.processor_idd
-            check_sender = Processor2.objects.filter(id=sender_processor,processor_type="T4")
-            if check_sender.exists():
-                get_sender = check_sender.first()
-                incomimg_for_sender = ShipmentManagement.objects.filter(processor2_idd=get_sender.id)
-                if incomimg_for_sender.exists():
-                    get_incoming = incomimg_for_sender.first()
-                    now_sender = get_incoming.processor_idd
+            if request.method == 'POST':
+                select_crop= request.POST.get('select_crop')
+                crop_year= request.POST.get('crop_year')
+                from_date= request.POST.get('from_date')
+                to_date= request.POST.get('to_date')
+                search_text= request.POST.get('search_text')
+                get_search_by= request.POST.get('get_search_by')
+                if select_crop and crop_year and from_date and to_date and search_text :
+                    context['select_crop'] = select_crop
+                    context['crop_year'] = crop_year
+                    context['from_date'] = from_date
+                    context['to_date'] = to_date
+                    context['search_text'] = search_text
+                    context['get_search_by'] = get_search_by
+                # shipment_id = request.GET.get('shipment_id')
+                # check_shipment = ShipmentManagement.objects.filter(shipment_id=shipment_id).first()
+                # sender_processor = check_shipment.processor_idd
+                # check_sender = Processor2.objects.filter(id=sender_processor)
+                # if check_sender.exists():
+                #     get_sender = check_sender.first()
+                #     get_sender_values = check_sender.values()
+                #     if get_sender.processor_type == "T4":
+                #         incoming_shipment_sender = list(ShipmentManagement.objects.filter(processor2_idd=get_sender.id).values("processor_idd"))
+                #         if incoming_shipment_sender:
+                #             for sender in incoming_shipment_sender:
+                #                 check_in_sender = Processor2.objects.filter(id=sender["processor_idd"])
+                #                 if check_in_sender:
+                #                     get_in_sender = check_in_sender.first()
+                #                     if get_in_sender.processor_type == "T3":
+                #                         new_senders = list(ShipmentManagement.objects.filter(processor2_idd=get_in_sender.id).values("processor_idd"))
+                #                         if new_senders:
+                #                             for sndr in new_senders:
+                #                                 check_new_sndr = Processor2.objects.filter(id=sndr["processor_idd"], processor_type="T2")
+                #                                 if check_new_sndr:
+                #                                     get_new_sndr = check_new_sndr.first()                                                
+                #                                     t1_senders = ShipmentManagement.objects.filter(processor2_idd=get_new_sndr.id).values("processor_idd")                                                
+                #                                     for t1 in t1_senders:
+                #                                         check_t1 = Processor.objects.filter(id=t1["processor_idd"]).first()
+                #                                         check_growers = list(GrowerShipment.objects.filter(processor_id=check_t1.id).values('grower', 'processor', 'storage','field','crop'))
+                #                                 else:
+                #                                     get_new_sndr = Processor.objects.filter(id=sndr["processor_idd"]).first()                                           
+                #                                     check_growers = list(GrowerShipment.objects.filter(processor_id=get_new_sndr.id).values('grower', 'processor', 'storage','field','crop'))
+                                                    
+                #                     elif get_in_sender.processor_type == "T2":
+                #                         t1_senders = ShipmentManagement.objects.filter(processor2_idd=get_in_sender.id).values("processor_idd")                                                
+                #                         for t1 in t1_senders:
+                #                             check_t1 = Processor.objects.filter(id=t1["processor_idd"]).first()
+                #                             check_growers = list(GrowerShipment.objects.filter(processor_id=check_t1.id).values('grower', 'processor', 'storage','field','crop'))
+                                            
+                #                     else:
+                #                         pass
+                #                 else:
+                #                     get_in_sender = Processor.objects.filter(id=sender["processor_idd"]).first()
+                #                     check_growers = list(GrowerShipment.objects.filter(processor_id=get_in_sender.id).values('grower', 'processor', 'storage','field','crop'))
+                                    
 
-
-            return render(request, 'tracemodule/traceability_report.html')
+                #     elif get_sender.processor_type == "T3":
+                #         new_senders = list(ShipmentManagement.objects.filter(processor2_idd=get_sender.id).values("processor_idd"))
+                #         if new_senders:
+                #             for sndr in new_senders:
+                #                 check_new_sndr = Processor2.objects.filter(id=sndr["processor_idd"], processor_type="T2")
+                #                 if check_new_sndr:
+                #                     get_new_sndr = check_new_sndr.first()                                                
+                #                     t1_senders = ShipmentManagement.objects.filter(processor2_idd=get_new_sndr.id).values("processor_idd")                                                
+                #                     for t1 in t1_senders:
+                #                         check_t1 = Processor.objects.filter(id=t1["processor_idd"]).first()
+                #                         check_growers = list(GrowerShipment.objects.filter(processor_id=check_t1.id).values('grower', 'processor', 'storage','field','crop'))
+                                        
+                #                 else:
+                #                     get_new_sndr = Processor.objects.filter(id=sndr["processor_idd"]).first()                                           
+                #                     check_growers = list(GrowerShipment.objects.filter(processor_id=get_new_sndr.id).values('grower', 'processor', 'storage','field','crop'))
+                #     else:
+                #         t1_senders = ShipmentManagement.objects.filter(processor2_idd=get_sender.id).values("processor_idd")                                                
+                #         for t1 in t1_senders:
+                #             check_t1 = Processor.objects.filter(id=t1["processor_idd"]).first()
+                #             check_growers = list(GrowerShipment.objects.filter(processor_id=check_t1.id).values('grower', 'processor', 'storage','field','crop'))
+                # else:
+                #     get_sender = Processor.objects.filter(id=sender_processor).first()
+                #     check_growers = list(GrowerShipment.objects.filter(processor_id=get_sender.id).values('grower', 'processor', 'storage','field','crop'))
+                # print(check_growers)
+                # context["growers"] = check_growers
+            return render(request, 'tracemodule/traceability_report.html', context)
         else:
             return redirect('login')    
-    except Exception as e:
-        return HttpResponse(e)
-
-    
+    # except Exception as e:
+    #     return HttpResponse(e)   
