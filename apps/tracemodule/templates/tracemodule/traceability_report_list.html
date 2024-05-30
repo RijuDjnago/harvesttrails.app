@@ -402,11 +402,11 @@ tr:nth-child(even) {
                 <tbody>
                     {% for i in outbound2_wip %}
                     <tr>
-                        <td>{{ i.deliveryid }}</td>
-                        <td>{{ i.destination }}</td>
-                        <td>{{ i.date }}</td>
-                        <td>{{ i.quantity|floatformat:0 }}</td>
-                        <td>{{ i.transportation }}  / {{i.equ_id}}</td>
+                        <td>{{ i.shipment_id }}</td>
+                        <td>{{ i.processor2_name }}</td>
+                        <td>{{ i.date_pulled }}</td>
+                        <td>{{ i.volume_shipped|floatformat:0 }}</td>
+                        <td>{{ i.equipment_type }}  / {{i.equipment_id}}</td>
                         
                     </tr>
                     {% endfor %}
@@ -437,13 +437,13 @@ tr:nth-child(even) {
                     </tr>
                 </thead>
                 <tbody>
-                    {% for i in t2_processor %}
+                    {% for i in inbound2_wip %}
                     <tr>
-                        <td>{{ i.processor_name }}</td>
-                        <td>{{ i.deliveryid }}</td>
-                        <td>{{ i.date }}</td>
-                        <td>{{ i.pounds_shipped|floatformat:0 }}</td>
-                        <td>{{ i.pounds_received|floatformat:0 }}</td>
+                        <td>{{ i.processor2_name }}</td>
+                        <td>{{ i.shipment_id }}</td>
+                        <td>{{ i.recive_delivery_date }}</td>
+                        <td>{{ i.volume_shipped|floatformat:0 }}</td>
+                        <td>{{ i.received_weight|floatformat:0 }}</td>
                         <td>{{ i.pounds_delta|floatformat:0 }}</td>
                     </tr>
                     {% endfor %}
@@ -451,6 +451,7 @@ tr:nth-child(even) {
             </table>
         </div>
     </div>
+    
     <!-- Outbound 3 WIP -->
     <div class="both-data-in" style="display: inherit; margin-top: 25px;">
         <div class="row">
@@ -473,15 +474,15 @@ tr:nth-child(even) {
                     </tr>
                 </thead>
                 <tbody>
-                    
+                    {% for i in outbound3_wip %}
                     <tr>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                        <td></td>
+                        <td>{{i.shipment_id}}</td>
+                        <td>{{i.processor2_name}}</td>
+                        <td>{{i.date_pulled}}</td>
+                        <td>{{i.volume_shipped}}</td>
+                        <td>{{i.equipment_type}}</td>
                     </tr>
-                    
+                    {% endfor %}
                 </tbody>
             </table>
         </div>
@@ -509,16 +510,16 @@ tr:nth-child(even) {
                     </tr>
                 </thead>
                 <tbody>
-                    
+                    {% for i in inbound3_wip  %}
                     <tr>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                        <td></td>
+                        <td>{{ i.processor2_name }}</td>
+                        <td>{{ i.shipment_id }}</td>
+                        <td>{{ i.recive_delivery_date }}</td>
+                        <td>{{ i.volume_shipped|floatformat:0 }}</td>
+                        <td>{{ i.received_weight|floatformat:0 }}</td>
+                        <td>{{ i.pounds_delta|floatformat:0 }}</td>
                     </tr>
-                    
+                    {% endfor %}
                 </tbody>
             </table>
         </div>
@@ -545,15 +546,51 @@ tr:nth-child(even) {
                     </tr>
                 </thead>
                 <tbody>
-                    
+                    {% for i in outbound4_wip %}
                     <tr>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                        <td></td>
+                        <td>{{i.shipment_id}}</td>
+                        <td>{{i.processor2_name}}</td>
+                        <td>{{i.date_pulled}}</td>
+                        <td>{{i.volume_shipped}}</td>
+                        <td>{{i.equipment_type}}</td>
                     </tr>
-                    
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="both-data-in" style="display: inherit; margin-top: 25px;">
+        <div class="row">
+            <div class="col-10" style="background-color: #81A179;padding: 12px 0px 0px 20px;text-align: left;color: #fff;font-size: 20px;">
+                <p>T4 Processor</p>
+            </div>
+            <div class="col-2" style="background-color: #957292;padding: 12px 0px 0px 0px;text-align: center;font-size: 16px;">
+                <a href="" style="color: #000000;font-weight: bold;font-size: 20px;">Csv Download</a>
+            </div>
+        </div>
+        <div class="simple-responsive-table">
+            <table id="" class="table table-striped dt-responsive nowrap text-center" style="width:100%">
+                <thead>
+                    <tr style="background-color: #B0C69F;">
+                        <th>Processor Name</th>
+                        <th>Delivery ID</th>
+                        <th>Date</th>
+                        <th>Quantity Pounds Shipped</th>
+                        <th>Quantity Pounds Received</th>
+                        <th>Quantity Delta</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for i in inbound4_wip  %}
+                    <tr>
+                        <td>{{ i.processor2_name }}</td>
+                        <td>{{ i.shipment_id }}</td>
+                        <td>{{ i.recive_delivery_date }}</td>
+                        <td>{{ i.volume_shipped|floatformat:0 }}</td>
+                        <td>{{ i.received_weight|floatformat:0 }}</td>
+                        <td>{{ i.pounds_delta|floatformat:0 }}</td>
+                    </tr>
+                    {% endfor %}
                 </tbody>
             </table>
         </div>
@@ -582,14 +619,16 @@ tr:nth-child(even) {
                 </thead>
                 <tbody>
                     
+                    {% comment %} {% for i in inbound4_wip  %}
                     <tr>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                        <td></td>
-                        <td></td>
+                        <td>{{i.processor_e_name}}</td>
+                        <td>{{i.shipment_id}}</td>
+                        <td>{{i.recive_delivery_date}}</td>
+                        <td>{{i.volume_shipped}}</td>
+                        <td>{{i.weight_received}}</td>
                         <td></td>
                     </tr>
+                    {% endfor %} {% endcomment %}
                     
                 </tbody>
             </table>

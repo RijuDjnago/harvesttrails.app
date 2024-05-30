@@ -115,10 +115,10 @@
                             <label for="shipment" style="font-weight:bold;">DATE AND TIME</label>
                             <p>{{grower_shipment.date_time}}</p>
                         </div>
-                        <div class="col-md-3" style="margin-bottom: 10px;">
+                        {% comment %} <div class="col-md-3" style="margin-bottom: 10px;">
                             <label for="shipment" style="font-weight:bold;"> ECHELON ID </label>
                             <p>{{grower_shipment.echelon_id}}</p>
-                        </div>
+                        </div> {% endcomment %}
 
                         {% if grower_shipment.crop != "COTTON" %}
                         <div class="col-md-3" style="margin-bottom: 10px;">
