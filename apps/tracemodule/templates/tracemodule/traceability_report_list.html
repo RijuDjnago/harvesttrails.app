@@ -125,6 +125,95 @@ tr:nth-child(even) {
 .table th {
     text-transform: capitalize;
 }
+/* .col-md-6{
+    width: 50%;
+} */
+
+/* .loader {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.loader:after {
+    content: "";
+    display: block;
+    width: 50px;
+    height: 50px;
+    border: 5px solid #ccc;
+    border-top: 5px solid #000;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+} */
+
+.img_wapper {
+    position: relative;
+}
+
+.loader {
+    width: 60px;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    animation: l11 2s infinite;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%,-50%);
+}
+
+@keyframes l11 {
+    0% {
+        background: conic-gradient(#006531 0, #0000 0)
+    }
+
+    12.5% {
+        background: conic-gradient(#006531 45deg, #0000 46deg)
+    }
+
+    25% {
+        background: conic-gradient(#006531 90deg, #0000 91deg)
+    }
+
+    37.5% {
+        background: conic-gradient(#006531 135deg, #0000 136deg)
+    }
+
+    50% {
+        background: conic-gradient(#006531 180deg, #0000 181deg)
+    }
+
+    62.5% {
+        background: conic-gradient(#006531 225deg, #0000 226deg)
+    }
+
+    75% {
+        background: conic-gradient(#006531 270deg, #0000 271deg)
+    }
+
+    87.5% {
+        background: conic-gradient(#006531 315deg, #0000 316deg)
+    }
+
+    100% {
+        background: conic-gradient(#006531 360deg, #0000 360deg)
+    }
+}
 </style>
 
 <div class="page-title-with-or-without-btn">
@@ -199,26 +288,37 @@ tr:nth-child(even) {
                         <option value='grower' selected>Grower</option>
                         <option value='field'>Field</option>
                         <option value='processor'>Processor</option>
+                        <option value='sku_id' >SKU id</option>
                         <option value='deliveryid'>Delivery id</option>
                         {% elif get_search_by == 'field' %}
                         <option value='grower'>Grower</option>
                         <option value='field' selected>Field</option>
                         <option value='processor'>Processor</option>
+                        <option value='sku_id' >SKU id</option>
                         <option value='deliveryid'>Delivery id</option>
                         {% elif get_search_by == 'processor' %}
                         <option value='grower'>Grower</option>
                         <option value='field'>Field</option>
                         <option value='processor' selected>Processor</option>
+                        <option value='sku_id' >SKU id</option>
                         <option value='deliveryid'>Delivery id</option>
+                        {% elif get_search_by == 'sku_id' %}
+                        <option value='grower'>Grower</option>
+                        <option value='field'>Field</option>
+                        <option value='processor'>Processor</option>
+                        <option value='sku_id' selected>SKU id</option>
+                        <option value='deliveryid' >Delivery id</option>                        
                         {% elif get_search_by == 'deliveryid' %}
                         <option value='grower'>Grower</option>
                         <option value='field'>Field</option>
                         <option value='processor'>Processor</option>
+                        <option value='sku_id' >SKU id</option>
                         <option value='deliveryid' selected>Delivery id</option>
                         {% else %}
                         <option value='grower'>Grower</option>
                         <option value='field'>Field</option>
                         <option value='processor'>Processor</option>
+                        <option value='sku_id' >SKU id</option>
                         <option value='deliveryid'>Delivery id</option>
                         {% endif %}
                     </select>
@@ -229,7 +329,7 @@ tr:nth-child(even) {
                 </div>
                 
                 <div class="col-md-3 text-left mt-2 pt-2">
-                    <input type="submit" id="searchBtn" class="btn-save-submit" value="search"> 
+                    <input type="submit" id="searchBtn" class="btn-save-submit" value="TABLE SHOW"> 
                 </div>
             <div class="row">
                 <div class="form-btn-row">
@@ -240,6 +340,7 @@ tr:nth-child(even) {
         </form>
 
 <section class="search_show" id="search_show">
+
 {% if origin_context %}
 <div class="main-simple-table-with-search" id="printableArea">
     <!-- Origin -->
@@ -637,21 +738,24 @@ tr:nth-child(even) {
     </div>
 </div>
 {% else %}
+
 <div style="margin-top: 5px;">
     <h2>{{no_rec_found_msg}}</h2>
 </div>
+
 {% endif %}
 </section>
-<section id="map_show" class="map_show main_section" style="display:none; background-color: #fff; max-width: 100%; width: 100%; margin: auto; padding: 20px 0;">
+<section id="map_show" class="map_show main_section hidden" style="display:none; background-color: #fff; max-width: 100%; width: 100%; margin: auto; padding: 20px 0;">
     <div class="container-fluid">
         <div class="heading"  style="">
             <h style="font-size: 35px;"><b>Traceability Report for Map</b>  </h>
         </div>
+        {% if origin_context %}
         <div class="row" style="padding-top: 15px; margin-top: 30px; border-top: 1px solid #dadada; display: flex;">
             <div class="col-6 mb-3">
                 <div class="text_wapper">
                     <h3 style="font-size: 30px; margin-bottom: 20px;">Origin</h3>
-                    {% if origin_context %}
+                    
                     {% for gr in origin_context|unique_growers %}
                     <ul style="list-style: none; padding: 0; margin: 0;">
                         <li>
@@ -660,7 +764,7 @@ tr:nth-child(even) {
                         </li>
                     </ul>
                     {% endfor %}
-                    {% endif %}
+                    
                 </div>
             </div>
             <div class="col-6">
@@ -669,6 +773,9 @@ tr:nth-child(even) {
                 </div>
             </div>
         </div>
+        {% endif %}
+
+        {% if t1_processor %}
         <div class="row" style="padding-top: 15px; margin-top: 30px; border-top: 1px solid #dadada; display: flex;">
             <div class="col-6 mb-3">
                 <div class="text_wapper">
@@ -681,10 +788,12 @@ tr:nth-child(even) {
                             <span style="display: block; font-size: 18px; font-weight: bold; margin-bottom: 10px;">{{pro.processor_name}}</span>
                             <span>Akshya Nagar 1st Block 1st Cross, Rammurthy nagar, Bangalore-560016</span>
                         </li>
+                        <li style="font-weight: 500;">SKU Id: <em style="font-weight: 400; font-style: normal;">{{pro.skuid}}</em></li>
                     </ul>
                     <ul style="list-style: none; padding: 0; margin: 0; margin-top: 30px;">
                         <li style="font-weight: 500; margin-bottom: 5px;">Processing Date: <em style="font-weight: 400; font-style: normal;">{{pro.date}}</em></li>
                         <li style="font-weight: 500;">Resulting Lot Number: <em style="font-weight: 400; font-style: normal;">{{pro.lot_number}}</em></li>
+                        
                     </ul>
                     {% endfor %}
                     {% endif %}
@@ -696,30 +805,46 @@ tr:nth-child(even) {
                 </div>
             </div>
         </div>
+        {% endif %}
+        {% if outbound2_wip %}
+        <!-- new implement-->
         <div class="row" style="padding-top: 15px; margin-top: 30px; border-top: 1px solid #dadada; flex-direction: row-reverse; display: flex;">
-            <div class="col-6">
+            <div class="col-12">
                 <div class="text_wapper">
-                    <h3 style="font-size: 30px; margin-bottom: 20px;">Transport to Processor 2</h3>
-                    
-                    {% for out2 in outbound2_wip %}
+                    <h3 style="font-size: 30px; margin-bottom: 40px;">Transport to Processor 2</h3>
                     <ul style="list-style: none; padding: 0; margin: 0;">
-                        <li>
-                            <span style="display: block; font-size: 18px; font-weight: bold; margin-bottom: 10px;">{{out2.equipment_type}}</span>
+                        <li style="margin-bottom: 30px;">
+                            {% for out2 in outbound2_wip %}
+                            <div class="row mb-4">
+                                <div class="col-6">
+                                    <span
+                                        style="display: block; font-size: 18px; font-weight: bold; margin-bottom: 10px;">{{out2.equipment_type}}
+                                    </span>
+                                    <ul style="list-style: none; padding: 0; margin: 0; margin-top: 30px;">
+                                        <li style="font-weight: 500; margin-bottom: 5px;">Transport ID: <em style="font-weight: 400; font-style: normal;">{{out2.shipment_id}}</em></li>
+                                        <li style="font-weight: 500;">Transport Date:<em style="font-weight: 400; font-style: normal;">{{out2.date_pulled}}</em></li>
+                                    </ul>
+                                </div>
+                                <div class="col-6">
+                                    <div class="img_wapper" style="width: 100%; height: 200px;">
+                                        <div id="loader" class="loader"></div>
+                                        <iframe id="mapFrame"
+                                            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d14736.291556014114!2d88.42368324144367!3d22.576377035307207!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3a0275b020703c0d%3A0xece6f8e0fc2e1613!2sSector%20V%2C%20Bidhannagar%2C%20Kolkata%2C%20West%20Bengal!5e0!3m2!1sen!2sin!4v1713427063064!5m2!1sen!2sin"
+                                            style="border:0; width: 100%; height: 100%; max-height: 100% !important;"
+                                            allowfullscreen="" loading="lazy"
+                                            referrerpolicy="no-referrer-when-downgrade"></iframe>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
                         </li>
                     </ul>
-                    <ul style="list-style: none; padding: 0; margin: 0; margin-top: 30px;">
-                        <li style="font-weight: 500; margin-bottom: 5px;">Transport ID: <em style="font-weight: 400; font-style: normal;">{{out2.equipment_id}}</em></li>
-                        <li style="font-weight: 500;">Transport Date:<em style="font-weight: 400; font-style: normal;">{{out2.date_pulled}}</em></li>
-                    </ul>
-                    {% endfor %}
-                </div>
-            </div>
-            <div class="col-6">
-                <div class="img_wapper" style="width: 100%; height: 250px;">
-                    <img src="https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=1474&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="" style="width: 100%; height: 100%; object-fit: cover; object-position: center;">
                 </div>
             </div>
         </div>
+        {% endif %}
+
+        {% if inbound2_wip %}
         <div class="row" style="padding-top: 15px; margin-top: 30px; border-top: 1px solid #dadada; display: flex;">
             <div class="col-6 mb-3">
                 <div class="text_wapper">
@@ -730,9 +855,10 @@ tr:nth-child(even) {
                           
                     <ul style="list-style: none; padding: 0; margin: 0;">
                         <li>
-                            <span style="display: block; font-size: 18px; font-weight: bold; margin-bottom: 10px;">{{pro.processor_e_name}}</span>
+                            <span style="display: block; font-size: 18px; font-weight: bold; margin-bottom: 10px;">{{pro.processor2_name}}</span>
                             <span>Akshya Nagar 1st Block 1st Cross, Rammurthy nagar, Bangalore-560016</span>
                         </li>
+                        <li style="font-weight: 500;">SKU Id: <em style="font-weight: 400; font-style: normal;">{{pro.skuid}}</em></li>
                     </ul>
                     <ul style="list-style: none; padding: 0; margin: 0; margin-top: 30px;">
                         <li style="font-weight: 500; margin-bottom: 5px;">Processing Date: <em style="font-weight: 400; font-style: normal;">{{pro.recive_delivery_date}}</em></li>
@@ -748,29 +874,44 @@ tr:nth-child(even) {
                 </div>
             </div>
         </div>
+        {% endif %}
+        {% if outbound3_wip %}
         <div class="row" style="padding-top: 15px; margin-top: 30px; border-top: 1px solid #dadada; flex-direction: row-reverse; display: flex;">
-            <div class="col-6 mb-3">
+            <div class="col-12">
                 <div class="text_wapper">
-                    <h3 style="font-size: 30px; margin-bottom: 20px;">Transport to Processor 3</h3>
-                    {% for out2 in outbound3_wip %}
+                    <h3 style="font-size: 30px; margin-bottom: 40px;">Transport to Processor 3</h3>
                     <ul style="list-style: none; padding: 0; margin: 0;">
-                        <li>
-                            <span style="display: block; font-size: 18px; font-weight: bold; margin-bottom: 10px;">{{out2.equipment_type}}</span>
+                        <li style="margin-bottom: 30px;">
+                            {% for out2 in outbound3_wip %}
+                            <div class="row mb-4">
+                                <div class="col-6">
+                                    <span
+                                        style="display: block; font-size: 18px; font-weight: bold; margin-bottom: 10px;">{{out2.equipment_type}}
+                                    </span>
+                                    <ul style="list-style: none; padding: 0; margin: 0; margin-top: 30px;">
+                                        <li style="font-weight: 500; margin-bottom: 5px;">Transport ID: <em style="font-weight: 400; font-style: normal;">{{out2.shipment_id}}</em></li>
+                                        <li style="font-weight: 500;">Transport Date:<em style="font-weight: 400; font-style: normal;">{{out2.date_pulled}}</em></li>
+                                    </ul>
+                                </div>
+                                <div class="col-6">
+                                    <div class="img_wapper" style="width: 100%; height: 200px;">
+                                        <div id="loader" class="loader"></div>
+                                        <iframe id="mapFrame"
+                                            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d14736.291556014114!2d88.42368324144367!3d22.576377035307207!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3a0275b020703c0d%3A0xece6f8e0fc2e1613!2sSector%20V%2C%20Bidhannagar%2C%20Kolkata%2C%20West%20Bengal!5e0!3m2!1sen!2sin!4v1713427063064!5m2!1sen!2sin"
+                                            style="border:0; width: 100%; height: 100%; max-height: 100% !important;"
+                                            allowfullscreen="" loading="lazy"
+                                            referrerpolicy="no-referrer-when-downgrade"></iframe>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
                         </li>
                     </ul>
-                    <ul style="list-style: none; padding: 0; margin: 0; margin-top: 30px;">
-                        <li style="font-weight: 500; margin-bottom: 5px;">Transport ID: <em style="font-weight: 400; font-style: normal;">{{out2.equipment_id}}</em></li>
-                        <li style="font-weight: 500;">Transport Date:<em style="font-weight: 400; font-style: normal;">{{out2.date_pulled}}</em></li>
-                    </ul>
-                    {% endfor %}
-                </div>
-            </div>
-            <div class="col-6">
-                <div class="img_wapper" style="width: 100%; height: 250px;">
-                    <img src="https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=1474&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="" style="width: 100%; height: 100%; object-fit: cover; object-position: center;">
                 </div>
             </div>
         </div>
+        {% endif %}
+        {% if inbound3_wip %}
         <div class="row" style="padding-top: 15px; margin-top: 30px; border-top: 1px solid #dadada; display: flex;">
             <div class="col-6 mb-3">
                 <div class="text_wapper">
@@ -780,9 +921,10 @@ tr:nth-child(even) {
                           
                     <ul style="list-style: none; padding: 0; margin: 0;">
                         <li>
-                            <span style="display: block; font-size: 18px; font-weight: bold; margin-bottom: 10px;">{{pro.processor_e_name}}</span>
+                            <span style="display: block; font-size: 18px; font-weight: bold; margin-bottom: 10px;">{{pro.processor2_name}}</span>
                             <span>Akshya Nagar 1st Block 1st Cross, Rammurthy nagar, Bangalore-560016</span>
                         </li>
+                        <li style="font-weight: 500;">SKU Id: <em style="font-weight: 400; font-style: normal;">{{pro.skuid}}</em></li>
                     </ul>
                     <ul style="list-style: none; padding: 0; margin: 0; margin-top: 30px;">
                         <li style="font-weight: 500; margin-bottom: 5px;">Processing Date: <em style="font-weight: 400; font-style: normal;">{{pro.recive_delivery_date}}</em></li>
@@ -794,12 +936,82 @@ tr:nth-child(even) {
             </div>
             <div class="col-6">
                 <div class="img_wapper" style="width: 100%; height: 250px;">
-                    <img src="https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=1474&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="" style="width: 100%; height: 100%; object-fit: contain; object-position: center;">
+
+                    <img src="https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=1474&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="" style="width: 100%; height: 100%; object-fit: cover; object-position: center;">
                 </div>
             </div>
         </div>
+        {% endif %}
+        {% if outbound4_wip %}
+        <div class="row" style="padding-top: 15px; margin-top: 30px; border-top: 1px solid #dadada; flex-direction: row-reverse; display: flex;">
+            <div class="col-12">
+                <div class="text_wapper">
+                    <h3 style="font-size: 30px; margin-bottom: 40px;">Transport to Processor 4</h3>
+                    <ul style="list-style: none; padding: 0; margin: 0;">
+                        <li style="margin-bottom: 30px;">
+                            {% for out2 in outbound4_wip %}
+                            <div class="row mb-4">
+                                <div class="col-6">
+                                    <span
+                                        style="display: block; font-size: 18px; font-weight: bold; margin-bottom: 10px;">{{out2.equipment_type}}
+                                    </span>
+                                    <ul style="list-style: none; padding: 0; margin: 0; margin-top: 30px;">
+                                        <li style="font-weight: 500; margin-bottom: 5px;">Transport ID: <em style="font-weight: 400; font-style: normal;">{{out2.shipment_id}}</em></li>
+                                        <li style="font-weight: 500;">Transport Date:<em style="font-weight: 400; font-style: normal;">{{out2.date_pulled}}</em></li>
+                                    </ul>
+                                </div>
+                                <div class="col-6">
+                                    <div class="img_wapper" style="width: 100%; height: 200px;">
+                                        <div id="loader" class="loader"></div>
+                                        <iframe id="mapFrame"
+                                            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d14736.291556014114!2d88.42368324144367!3d22.576377035307207!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3a0275b020703c0d%3A0xece6f8e0fc2e1613!2sSector%20V%2C%20Bidhannagar%2C%20Kolkata%2C%20West%20Bengal!5e0!3m2!1sen!2sin!4v1713427063064!5m2!1sen!2sin"
+                                            style="border:0; width: 100%; height: 100%; max-height: 100% !important;"
+                                            allowfullscreen="" loading="lazy"
+                                            referrerpolicy="no-referrer-when-downgrade"></iframe>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% if inbound4_wip %}
+        <div class="row" style="padding-top: 15px; margin-top: 30px; border-top: 1px solid #dadada; display: flex;">
+            <div class="col-6 mb-3">
+                <div class="text_wapper">
+                    <h3 style="font-size: 30px; margin-bottom: 20px;">Processor 4</h3>
+                    {% if inbound4_wip %}
+                    {% for pro in inbound4_wip|unique1_processor %}                   
+                          
+                    <ul style="list-style: none; padding: 0; margin: 0;">
+                        <li>
+                            <span style="display: block; font-size: 18px; font-weight: bold; margin-bottom: 10px;">{{pro.processor2_name}}</span>
+                            <span>Akshya Nagar 1st Block 1st Cross, Rammurthy nagar, Bangalore-560016</span>
+                        </li>
+                        <li style="font-weight: 500;">SKU Id: <em style="font-weight: 400; font-style: normal;">{{pro.skuid}}</em></li>
+                    </ul>
+                    <ul style="list-style: none; padding: 0; margin: 0; margin-top: 30px;">
+                        <li style="font-weight: 500; margin-bottom: 5px;">Processing Date: <em style="font-weight: 400; font-style: normal;">{{pro.recive_delivery_date}}</em></li>
+                        <li style="font-weight: 500;">Resulting Lot Number: <em style="font-weight: 400; font-style: normal;">{{pro.lot_number}}</em></li>
+                    </ul>
+                    {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="img_wapper" style="width: 100%; height: 250px;">
+                    <img src="https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=1474&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="" style="width: 100%; height: 100%; object-fit: cover; object-position: center;">
+
+                </div>
+            </div>
+        </div>
+        {% endif %}
     </div>
 </section>
+
 <!--  SUSTAINABILITY METRICS Popup -->
 <div class="modal fade" id="addqueModal" aria-hidden="true" aria-labelledby="exampleModalToggleLabel22" tabindex="-1">
     <div class="modal-dialog" style="max-width: 800px !important;">
@@ -1128,12 +1340,54 @@ function getText(){
     document.getElementById('searchBtn').addEventListener('click', function() {
         document.getElementById('search_show').style.display = 'block';
         document.getElementById('map_show').style.display = 'none';
+        
     });
     
     document.getElementById('mapViewBtn').addEventListener('click', function() {
         document.getElementById('map_show').style.display = 'block';
         document.getElementById('search_show').style.display = 'none';
+        document.getElementById('searchBtn').innerHTML = 'TableShow';
     });
-    </script>
-    
+</script>
+
+{% comment %} <script>
+    document.getElementById('mapViewBtn').addEventListener('click', function() {
+        var tableView = document.getElementById('search_show');
+        var mapView = document.getElementById('map_show');
+        var button = document.getElementById('mapViewBtn');
+        
+        if (tableView.classList.contains('hidden')) {
+            tableView.classList.remove('hidden');
+            mapView.classList.add('hidden');
+            button.textContent = 'Map View';
+            button.classList.remove('table-view');
+        } else {
+            tableView.classList.add('hidden');
+            mapView.classList.remove('hidden');
+            button.textContent = 'Table View';
+            button.classList.add('table-view');
+        }
+    });
+</script> {% endcomment %}
+
+<script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const mapContainers = document.querySelectorAll(".img_wapper");
+
+            mapContainers.forEach(container => {
+                const iframe = container.querySelector("iframe");
+                const loader = container.querySelector(".loader");
+
+                if (iframe && loader) {
+                    iframe.addEventListener("load", function () {
+                        loader.style.display = "none";
+                    });
+                    loader.style.display = "flex";
+                } else {
+                    console.error("Missing iframe or loader in .img_wapper", container);
+                }
+            });
+        });
+</script>  
+
 {% endblock jquery %}

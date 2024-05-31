@@ -31,7 +31,7 @@ def unique1_processor(processors):
     unique_list = []
     # print("growers", processors)
     for processor in processors:
-        if processor["processor_e_name"] not in seen:
+        if processor["processor2_name"] not in seen:
             unique_list.append(processor)
-            seen.add(processor["processor_e_name"])
+            seen.add(processor["processor2_name"])
     return unique_list
