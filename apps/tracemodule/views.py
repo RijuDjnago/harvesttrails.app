@@ -2418,26 +2418,58 @@ def traceability_report_list(request):
                         # """
                        
                     elif get_search_by and get_search_by == 'deliveryid' :
-                        get_delivery_id3 = GrowerShipment.objects.filter(shipment_id__icontains=search_text)
-                        if get_delivery_id3.exists() :
-                            rice_shipment_id = [i.shipment_id for i in get_delivery_id3][0]
-                            field_id = [i.field.id for i in get_delivery_id3][0]
-                            field_name = [i.field.name for i in get_delivery_id3][0]
+                        get_delivery_id3 = GrowerShipment.objects.filter(shipment_id__icontains=search_text)  
+                        if get_delivery_id3.exists():
+                            get_shipment = get_delivery_id3.first()
+                            shipment_id = get_shipment.shipment_id
+                            field_id = get_shipment.field.id
+                            field_name = get_shipment.field.name
                             warehouse_wh_id = ''
-                            get_origin_details = get_Origin_deliveryid('RICE',field_id,field_name,search_text,warehouse_wh_id)
-                            context["origin_context"] = get_origin_details
-                            context["search_by"] = "shipment_id"
-                            outbound1_wip = outbound1_Wip_deliveryid('RICE',rice_shipment_id,warehouse_wh_id,from_date,to_date)
-                            context["outbound1_wip"] = outbound1_wip
-                            t1_processor = t1_Processor_deliveryid('RICE',rice_shipment_id,warehouse_wh_id,from_date,to_date)
-                            context["t1_processor"] = t1_processor
-                            # 20-03-23
-                            outbound2_wip = outbound2_Wip_deliveryid('RICE',search_text,rice_shipment_id,from_date,to_date)         
-                            context["outbound2_wip"] = outbound2_wip
-                            t2_processor =  t2_Processor_deliveryid('RICE',search_text,warehouse_wh_id,from_date,to_date)
-                            context["t2_processor"] = t2_processor
+                            context = {
+                                "search_by":"shipment_id",
+                                "origin_context":[],
+                                "outbound1_wip":[],
+                                "t1_processor":[],
+                                "t2_processor":[],
+                                "outbound2_wip":[],
+                                "outbound3_wip": [],
+                                "outbound4_wip":[],
+                                "inbound2_wip": [],
+                                "inbound3_wip":[],
+                                "inbound4_wip":[]
+                            }
+                            origin_context = []
+                            context["origin_context"] =  origin_context
+                            context["outbound1_wip"] =  origin_context
+
+
+                        elif not get_delivery_id3.exists():
+                            get_delivery_id4 = ShipmentManagement.objects.filter(shipment_id__icontains=search_text)
+                            if get_delivery_id3.exists():
+                                get_shipment = get_delivery_id4.first()
+                                shipment_id = get_shipment.shipment_id
+                                recive_sku_id = get_shipment.storage_bin_recive
+                                send_sku_id = get_shipment.storage_bin_send
+                                warehouse_wh_id = ''
+                                context = {
+                                "search_by":"shipment_id",
+                                "origin_context":[],
+                                "outbound1_wip":[],
+                                "t1_processor":[],
+                                "t2_processor":[],
+                                "outbound2_wip":[],
+                                "outbound3_wip": [],
+                                "outbound4_wip":[],
+                                "inbound2_wip": [],
+                                "inbound3_wip":[],
+                                "inbound4_wip":[]
+                                }
+
+                            else:
+                                context['no_rec_found_msg'] = "No Records Found"
                         else:
                             context['no_rec_found_msg'] = "No Records Found"     
+                    
                     else:
                         context['no_rec_found_msg'] = "No Records Found"
                           

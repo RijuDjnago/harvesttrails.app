@@ -539,6 +539,242 @@ def processor4_list(request):
         return redirect('login')   
     
     
+##############
+from apps.processor2.forms import *
+# processor 4 location management
+import shapefile
+@login_required()
+def addlocation_processor4(request):
+    if request.user.is_authenticated:
+        context ={}
+        # Processor ....
+        if request.user.is_processor2 :
+            context = {}
+            form = Processor2LocationForm()
+            context['form']=form
+            user_id = request.user.id
+            user = User.objects.get(id=user_id)
+            processor_email =user.username
+
+            p = ProcessorUser2.objects.get(contact_email=processor_email)
+            processor_obj = Processor2.objects.get(id=p.processor_id)
+
+            # processor_obj = Processor.objects.get(contact_email=processor_email)
+            #print(processor_obj.id)
+            if request.method == 'POST':
+                form = Processor2LocationForm(request.POST)
+                name = request.POST.get('name')
+                upload_type = request.POST.get('upload_type')
+                processor = processor_obj.id
+                if request.FILES.get('zip_file'):
+                    zip_file = request.FILES.get('zip_file')
+                    Processor2Location(processor_id=processor, name=name,upload_type=upload_type,shapefile_id=zip_file).save()
+                    location_obj = Processor2Location.objects.filter(processor_id=processor).filter(name=name)        
+                    location_var = [i.id for i in location_obj][0]
+                    location_id = Processor2Location.objects.get(id=location_var)
+                    sf = shapefile.Reader(location_id.shapefile_id.path)
+                    features = sf.shapeRecords()
+                    for feat in features:
+                        eschlon_id = feat.record["id"]
+                        location_id.eschlon_id = eschlon_id
+                        location_id.save()
+
+                if request.POST.get('latitude') and request.POST.get('longitude'):
+                    latitude = request.POST.get('latitude')
+                    longitude = request.POST.get('longitude')
+                    Processor2Location(processor_id=processor, name=name,upload_type=upload_type,latitude=latitude,longitude=longitude).save()
+                
+                return redirect('location_list_processor3')
+
+            return render(request, 'processor3/add_location_processor3.html',context)
+        # Super User ...
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+            form = Processor2LocationForm()
+            processor = Processor2.objects.filter(processor_type__type_name = "T4")
+            #print(processor)
+            context['form']=form
+            context['processor']=processor
+            if request.method == 'POST':
+                form = Processor2LocationForm(request.POST)
+                name = request.POST.get('name')
+                upload_type = request.POST.get('upload_type')
+                processor = int(request.POST.get('processor_id'))  
+                if request.FILES.get('zip_file'):
+                    zip_file = request.FILES.get('zip_file')
+                    Processor2Location(processor_id=processor, name=name,upload_type=upload_type,shapefile_id=zip_file).save()
+                    location_obj = Processor2Location.objects.filter(name=name).filter(processor=processor)          
+                    location_var = [i.id for i in location_obj][0]
+                    location_id = Processor2Location.objects.get(id=location_var)
+                    sf = shapefile.Reader(location_id.shapefile_id.path)
+                    features = sf.shapeRecords()
+                    for feat in features:
+                        eschlon_id = feat.record["id"]
+                        location_id.eschlon_id = eschlon_id
+                        location_id.save()
+
+                if request.POST.get('latitude') and request.POST.get('longitude'):
+                    latitude = request.POST.get('latitude')
+                    longitude = request.POST.get('longitude')
+                    Processor2Location(processor_id=processor, name=name,upload_type=upload_type,latitude=latitude,longitude=longitude).save()
+                    
+                return redirect('location_list_processor4')
+            return render(request, 'processor4/add_location_processor4.html',context)
+        else:
+            context["message"] = "You are not allowed to add location."
+            return render(request, 'processor4/add_location_processor4.html',context)
+    else:
+        return redirect('login')
+    
+
+@login_required()   
+def location_list_processor4(request):
+    if request.user.is_authenticated:
         
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+            context ={}
+            location = Processor2Location.objects.filter(processor__processor_type__type_name="T4")
+            processor = Processor2.objects.filter(processor_type__type_name="T4")
+            context['location'] = location
+            context['processor'] = processor
+            if request.method == 'POST':
+                value = request.POST.get('processor_id')
+                #print(value)
+                if value == 'all' :
+                    location = Processor2Location.objects.filter(processor__processor_type__type_name="T4")
+                    processor = Processor2.objects.filter(processor_type__type_name="T4")
+                    context['location'] = location
+                    context['processor'] = processor
+                    return render(request, 'processor4/location_managment.html',context)
+
+                else:
+                    processor_id = request.POST.get('processor_id')
+                    processor = Processor2.objects.filter(processor_type__type_name="T4")
+                    location = Processor2Location.objects.filter(processor__processor_type__type_name="T4").filter(processor_id=processor_id)
+                    context['location'] = location
+                    context['processor'] = processor
+                    context['selectedprocessor'] = Processor2.objects.get(id=processor_id)
+                    return render(request, 'processor4/location_managment.html',context)
+                   
+            return render(request, 'processor4/location_managment.html',context)
+        return render(request, 'processor4/location_managment.html',context)
+    else:
+        return redirect('login')
+
+
+@login_required()
+def location_edit_processor4(request,pk):
+    if request.user.is_authenticated:
+        # processor ...
+        if request.user.is_processor2 :
+            context = {}
+            location = Processor2Location.objects.get(id=pk)
+            form = Processor2LocationForm(instance=location)
+            user_email = request.user.email
+            p = ProcessorUser2.objects.get(contact_email=user_email)
+            processor = Processor2.objects.filter(id=p.processor_id)
+            context['form'] = form
+            context['processor'] = processor
+            context['selectedprocessor'] = location.processor_id
+            context['uploadtypeselect'] = location.upload_type
+            location = Processor2Location.objects.filter(id=pk)
+            context['location'] = location
+            if request.method == 'POST':
+                name = request.POST.get('name')
+                uploadtypeSelction = request.POST.get('uploadtypeSelction')
+                shapefile_id = request.FILES.get('zip_file')
+                latitude = request.POST.get('latitude')
+                longitude = request.POST.get('longitude')
+                location_update = Processor2Location.objects.get(id=pk)
+                if uploadtypeSelction == 'shapefile':
+                    if request.FILES.get('zip_file'):
+                        location_update.name = name
+                        location_update.upload_type = 'shapefile'
+                        location_update.shapefile_id = shapefile_id
+                        location_update.latitude = None
+                        location_update.longitude = None
+                        location_update.save()
+                        
+                        sf = shapefile.Reader(location_update.shapefile_id.path)
+                        features = sf.shapeRecords()
+                        for feat in features:
+                            eschlon_id = feat.record["id"]
+                            location_update.eschlon_id = eschlon_id
+                            location_update.save()
+                    
+                else:
+                    location_update.name = name
+                    location_update.upload_type = 'coordinates'
+                    location_update.shapefile_id = None
+                    location_update.eschlon_id = None
+                    location_update.latitude = latitude
+                    location_update.longitude = longitude
+                    location_update.save()
+
+                return redirect('location_list_processor4')
+
+            return render(request, 'processor4/location_edit.html',context)
+        # superuser ....
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+            context ={}
+            location = Processor2Location.objects.get(id=pk)
+            form = Processor2LocationForm(instance=location)
+            processor = Processor2.objects.filter(processor_type__type_name = "T4")
+            context['form'] = form
+            context['processor'] = processor
+            context['selectedprocessor'] = location.processor_id
+            context['uploadtypeselect'] = location.upload_type
+            location = Processor2Location.objects.filter(id=pk)
+            context['location'] = location
+            if request.method == 'POST':
+                name = request.POST.get('name')
+                processorSelction = int(request.POST.get('processor_name'))
+                uploadtypeSelction = request.POST.get('uploadtypeSelction')
+                shapefile_id = request.FILES.get('zip_file')
+                latitude = request.POST.get('latitude')
+                longitude = request.POST.get('longitude')
+                location_update = Processor2Location.objects.get(id=pk)
+                location_update.name = name
+                location_update.save()
+                if uploadtypeSelction == 'shapefile':
+                    if request.FILES.get('zip_file'):
+                        location_update.name = name
+                        location_update.processor_id = processorSelction
+                        location_update.upload_type = 'shapefile'
+                        location_update.shapefile_id = shapefile_id
+                        location_update.latitude = None
+                        location_update.longitude = None
+                        location_update.save()
+                        
+                        sf = shapefile.Reader(location_update.shapefile_id.path)
+                        features = sf.shapeRecords()
+                        for feat in features:
+                            eschlon_id = feat.record["id"]
+                            location_update.eschlon_id = eschlon_id
+                            location_update.save()
+
+                else:
+                    #print(name)
+                    location_update.name = name
+                    location_update.processor_id = processorSelction
+                    location_update.upload_type = 'coordinates'
+                    location_update.shapefile_id = None
+                    location_update.eschlon_id = None
+                    location_update.latitude = latitude
+                    location_update.longitude = longitude
+                    location_update.save()
+                return redirect('location_list_processor4')
+            return render(request, 'processor4/location_edit.html',context)
+        else:
+            return render(request, 'processor4/location_edit.html',context)
+    else:
+        return redirect('login')
+
+@login_required()
+def location_delete_processor4(request,pk):
+    location = Location.objects.get(id=pk)
+    location.delete()
+    return redirect('location_list_processor4')  
+
+          
   
     

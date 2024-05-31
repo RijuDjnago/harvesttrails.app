@@ -900,7 +900,7 @@ def addlocation_processor2(request):
         # Super User ...
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
             form = Processor2LocationForm()
-            processor = Processor2.objects.all()
+            processor = Processor2.objects.filter(processor_type__type_name = "T3")
             #print(processor)
             context['form']=form
             context['processor']=processor
@@ -927,11 +927,11 @@ def addlocation_processor2(request):
                     longitude = request.POST.get('longitude')
                     Processor2Location(processor_id=processor, name=name,upload_type=upload_type,latitude=latitude,longitude=longitude).save()
                     
-                return redirect('location_list_processor2')
-            return render(request, 'processor2/add_location_processor2.html',context)
+                return redirect('location_list_processor3')
+            return render(request, 'processor3/add_location_processor3.html',context)
         else:
             context["message"] = "You are not allowed to add location."
-            return render(request, 'processor2/add_location_processor2.html',context)
+            return render(request, 'processor3/add_location_processor3.html',context)
     else:
         return redirect('login')
     
@@ -980,6 +980,8 @@ def location_list_processor2(request):
         return render(request, 'processor2/list_location.html',context)
     else:
         return redirect('login')
+
+
 
 def location_edit_processor2(request,pk):
     if request.user.is_authenticated:

@@ -18,4 +18,10 @@ urlpatterns = [
     path('processor4_list/', views.processor4_list, name="processor4_list"),
     path('rejected_shipments_csv_download_f4/', views.rejected_shipments_csv_download_for_t4, name="rejected_shipments_csv_download_f4"),
     path('all_shipments_csv_download_t4/', views.all_shipments_csv_download_for_t4, name="all_shipments_csv_download_t4"),
+
+    path('addlocation_processor4/', views.addlocation_processor4, name="addlocation_processor4"),
+    path('location_list_processor4/', views.location_list_processor4, name="location_list_processor4"),
+    path('location_edit_processor4/<int:pk>/', views.location_edit_processor4, name="location_edit_processor4"),
+    path('location_delete_processor4/<int:pk>/', views.location_delete_processor4, name="location_delete_processor4"), 
+
 ]
