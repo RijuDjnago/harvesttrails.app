@@ -2541,6 +2541,7 @@ def traceability_report_list(request):
             
                         
                     elif get_search_by and get_search_by == 'deliveryid' :
+
                         get_delivery_id3 = GrowerShipment.objects.filter(shipment_id__icontains=search_text)
                         if get_delivery_id3.exists() :
                             sku_id = get_delivery_id3.first().sku
@@ -2561,7 +2562,8 @@ def traceability_report_list(request):
                                 
                                 context.update(context_)
                         else:
-                            context['no_rec_found_msg'] = "No Records Found"     
+                            context['no_rec_found_msg'] = "No Records Found"    
+                    
                     else:
                         context['no_rec_found_msg'] = "No Records Found"
                           

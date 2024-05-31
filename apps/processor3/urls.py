@@ -33,5 +33,9 @@ urlpatterns = [
     path('add_volume_pulled_processor3/', views.add_volume_pulled_processor3, name="add_volume_pulled_processor3"),
     path('edit_volume_pulled_processor3/<int:pk>/', views.edit_volume_pulled_processor3, name="edit_volume_pulled_processor3"),
     path('delete_volume_pulled_processor3/<int:pk>/', views.delete_volume_pulled_processor3, name="delete_volume_pulled_processor3"),
-    
+
+    path('addlocation_processor3/', views.addlocation_processor3, name="addlocation_processor3"),
+    path('location_list_processor3/', views.location_list_processor3, name="location_list_processor3"),
+    path('location_edit_processor3/<int:pk>/', views.location_edit_processor3, name="location_edit_processor3"),
+    path('location_delete_processor3/<int:pk>/', views.location_delete_processor3, name="location_delete_processor3"), 
 ]
