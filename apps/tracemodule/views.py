@@ -407,7 +407,7 @@ def Origin_searchby_Grower(crop,search_text,*grower_field_ids):
                                 "less_GHG":less_GHG,"co2_eQ_footprint":co2_eQ_footprint,"premiums_to_growers":premiums_to_growers}])
     return return_lst
    
-def Origin_searchby_Processor(crop,search_text,*bale_id):
+def Origin_searchby_Processor(crop,*bale_id):
     return_lst = []
     if crop == 'COTTON' :
         for i in bale_id :
@@ -1110,7 +1110,7 @@ def outbound_Wip_Processor(crop,processor_id,processor_type,from_date,to_date) :
     if crop == 'RICE' :
         if processor_type == "T1":
             get_shipment = ShipmentManagement.objects.filter(sender_processor_type="T1", processor_idd = processor_id, date_pulled__gte = from_date, date_pulled__lte = to_date,  status = None).values()
-            # print(get_shipment, "shipmenttttttttt", processor_type)
+            print(get_shipment, "shipmenttttttttt", processor_type)
         elif processor_type == "T2":
             get_shipment = ShipmentManagement.objects.filter(sender_processor_type="T2", processor_idd = processor_id, date_pulled__gte = from_date, date_pulled__lte = to_date).values()
             # print(get_shipment, "shipmenttttttttt", processor_type)
@@ -1676,11 +1676,279 @@ def get_processor_type(processor_name):
         get_processor = Processor2.objects.filter(entity_name=processor_name)
         if get_processor:
             processor = get_processor.first()
+            processor_type = processor.processor_type.all().first().type_name
+            print("type", processor_type)
             processor_details = {'id':processor.id,
-                             'type':processor.processor_type}
+                             'type':processor_type}
         else:
             processor_details = None
     return processor_details
+
+def processor_traceability_report_response(processor_id,processor_type, from_date, to_date, search_text):
+    context = {}
+    if processor_type in ["T1"]:
+        check_processor = Processor.objects.filter(entity_name__icontains=search_text)
+        if check_processor.exists() :
+            get_shipment = GrowerShipment.objects.filter(processor_id=processor_id,crop='RICE').values("id")
+            if get_shipment.exists() :
+                bale_id = [i["id"] for i in get_shipment]  
+                get_Origin_Processor = Origin_searchby_Processor('RICE',*bale_id)        
+                context["origin_context"] = get_Origin_Processor
+                context["search_by"] = "processor"
+                outbound1_wip = outbound1_Wip_Processor('RICE',from_date,to_date,processor_id)
+                context["outbound1_wip"] = outbound1_wip
+                t1_processor = t1_Processor_Processor('RICE',processor_id,from_date,to_date,*bale_id)
+                context["t1_processor"] = t1_processor
+                # 20-03-23
+                ### outbound 
+                # T1 to T2
+                outbound2_wip = outbound_Wip_Processor('RICE',processor_id,processor_type,from_date,to_date)         
+                context["outbound2_wip"] = outbound2_wip                                        
+                
+                # T2 to T3
+                
+                processor_type = "T2"
+                link_t2_processor_id_list = list(LinkProcessor1ToProcessor.objects.filter(processor1=processor_id, processor2__processor_type__type_name = "T2").values_list("processor2_id", flat=True))
+                outbound3_wip = []
+                for t2_id in link_t2_processor_id_list:
+                    outbound_wip = outbound_Wip_Processor('RICE',t2_id,processor_type,from_date,to_date)         
+                    outbound3_wip = outbound3_wip + outbound_wip
+                context["outbound3_wip"] = outbound3_wip
+                
+                # T3 to T4
+                processor_type = "T3"
+                link_t3_processor_id_list = list(LinkProcessorToProcessor.objects.filter(processor_id__in = link_t2_processor_id_list, linked_processor__processor_type__type_name = "T3").values_list("linked_processor_id", flat=True))
+                outbound4_wip = []
+                for t3_id in link_t3_processor_id_list:
+                    outbound2_wip = outbound_Wip_Processor('RICE',t3_id,processor_type,from_date,to_date)         
+                    outbound4_wip = outbound4_wip + outbound2_wip
+                context["outbound4_wip"] = outbound4_wip
+
+                
+                # T2 to T3
+                processor_type = "T2"
+                link_t2_processor_id_list = list(LinkProcessor1ToProcessor.objects.filter(processor1=processor_id, processor2__processor_type__type_name = "T2").values_list("processor2_id", flat=True))
+                inbound2_wip = []
+                for t2_id in link_t2_processor_id_list:
+                    inbound_wip = inbound_Wip_Processor('RICE',t2_id,processor_type,from_date,to_date)         
+                    inbound2_wip = inbound2_wip + inbound_wip
+                context["inbound2_wip"] = inbound2_wip
+                
+
+                # T3 to T4
+                processor_type = "T3"
+                link_t3_processor_id_list = list(LinkProcessorToProcessor.objects.filter(processor_id__in = link_t2_processor_id_list, linked_processor__processor_type__type_name = "T3").values_list("linked_processor_id", flat=True))
+                inbound3_wip = []
+                for t3_id in link_t3_processor_id_list:
+                    inbound_wip = inbound_Wip_Processor('RICE',t3_id,processor_type,from_date,to_date)         
+                    inbound3_wip = inbound3_wip + inbound_wip
+                context["inbound3_wip"] = inbound3_wip
+                
+                
+                processor_type = "T4"
+                link_t4_processor_id_list = list(LinkProcessorToProcessor.objects.filter(processor_id__in = link_t3_processor_id_list, linked_processor__processor_type__type_name = "T4").values_list("linked_processor_id", flat=True))
+                
+                inbound4_wip = []
+                for t4_id in link_t4_processor_id_list:
+                    inbound2_wip = inbound_Wip_Processor('RICE',t4_id,processor_type,from_date,to_date)         
+                    inbound4_wip = inbound4_wip + inbound2_wip
+                context["inbound4_wip"] = inbound4_wip                                      
+
+    elif processor_type in ["T2", "T3", "T4"]:
+        if processor_type == "T2":
+
+            
+            linked_t1 = list(LinkProcessor1ToProcessor.objects.filter(processor2_id=processor_id).values_list("processor1_id", flat=True))
+            grower_list = []
+            outbound2_wip = []
+            outbound1 = []
+            inbound1 = []
+            for t1_id in linked_t1:
+                get_shipment = GrowerShipment.objects.filter(processor_id=t1_id,crop='RICE').values("id")
+                if get_shipment.exists():
+                    bale_id = [i["id"] for i in get_shipment]  
+                    get_Origin_Processor = Origin_searchby_Processor('RICE',*bale_id) 
+                    grower_list = grower_list + get_Origin_Processor
+                    outbound1_wip = outbound1_Wip_Processor('RICE',from_date,to_date,processor_id)
+                    outbound1 = outbound1 + outbound1_wip
+                    t1_processor = t1_Processor_Processor('RICE',t1_id,from_date,to_date,*bale_id)
+                    inbound1 = inbound1 + t1_processor
+
+                    processor_type = "T1"
+                    outbound2_wip_ = outbound_Wip_Processor('RICE',t1_id,processor_type,from_date,to_date)         
+                    outbound2_wip = outbound2_wip + outbound2_wip_
+            context["outbound2_wip"] = outbound2_wip
+                    
+            context["origin_context"] = grower_list
+            context["search_by"] = "processor"
+            context["outbound1_wip"] = outbound1
+            context["t1_processor"] = inbound1
+
+            
+
+            processor_type = "T2"  
+            outbound3_wip = outbound_Wip_Processor('RICE',processor_id,processor_type,from_date,to_date)  
+            context["outbound3_wip"] = outbound3_wip
+
+            processor_type = "T3"
+            link_t3_processor_id_list = list(LinkProcessorToProcessor.objects.filter(processor_id = processor_id, linked_processor__processor_type__type_name = "T3").values_list("linked_processor_id", flat=True))
+            outbound4_wip = []
+            for t3_id in link_t3_processor_id_list:
+                outbound2_wip = outbound_Wip_Processor('RICE',t3_id,processor_type,from_date,to_date)         
+                outbound4_wip = outbound4_wip + outbound2_wip
+            context["outbound4_wip"] = outbound4_wip
+
+            processor_type = "T2"                                    
+            inbound2_wip = inbound_Wip_Processor('RICE',processor_id,processor_type,from_date,to_date)  
+            context["inbound2_wip"] = inbound2_wip
+
+            processor_type = "T3"
+            link_t3_processor_id_list = list(LinkProcessorToProcessor.objects.filter(processor_id = processor_id, linked_processor__processor_type__type_name = "T3").values_list("linked_processor_id", flat=True))
+            inbound3_wip = []
+            for t3_id in link_t3_processor_id_list:
+                inbound_wip = inbound_Wip_Processor('RICE',t3_id,processor_type,from_date,to_date)         
+                inbound3_wip = inbound3_wip + inbound_wip
+            context["inbound3_wip"] = inbound3_wip
+            
+            
+            processor_type = "T4"
+            link_t4_processor_id_list = list(LinkProcessorToProcessor.objects.filter(processor_id__in = link_t3_processor_id_list, linked_processor__processor_type__type_name = "T4").values_list("linked_processor_id", flat=True))
+            
+            inbound4_wip = []
+            for t4_id in link_t4_processor_id_list:
+                inbound2_wip = inbound_Wip_Processor('RICE',t4_id,processor_type,from_date,to_date)         
+                inbound4_wip = inbound4_wip + inbound2_wip
+            context["inbound4_wip"] = inbound4_wip 
+
+        if processor_type == "T3":
+            
+            linked_t2 = list(LinkProcessorToProcessor.objects.filter(linked_processor_id=processor_id, processor__processor_type__type_name="T2").values_list("processor_id", flat=True))
+            grower_list = []
+            outbound1 = []
+            inbound1 = []
+            outbound2 = []
+            outbound3 = []
+            inbound2 = []
+            for t2_id in linked_t2:
+                linked_t1 = list(LinkProcessor1ToProcessor.objects.filter(processor2_id=t2_id).values_list("processor1_id", flat=True))
+                for t1_id in linked_t1:
+                    get_shipment = GrowerShipment.objects.filter(processor_id=t1_id,crop='RICE').values("id")
+                    if get_shipment.exists():
+                        bale_id = [i["id"] for i in get_shipment]  
+                        get_Origin_Processor = Origin_searchby_Processor('RICE',*bale_id) 
+                        grower_list = grower_list + get_Origin_Processor
+
+                        outbound1_wip = outbound1_Wip_Processor('RICE',from_date,to_date,t1_id)
+                        outbound1 = outbound1 + outbound1_wip
+
+                        t1_processor = t1_Processor_Processor('RICE',t1_id,from_date,to_date,*bale_id)
+                        inbound1 = inbound1 + t1_processor
+                
+                        processor_type = "T1"
+                        outbound2_wip = outbound_Wip_Processor('RICE',t1_id,processor_type,from_date,to_date)         
+                        outbound2 = outbound2 + outbound2_wip
+
+                processor_type = "T2"  
+                outbound3_wip = outbound_Wip_Processor('RICE',t2_id,processor_type,from_date,to_date)  
+                outbound3 =  outbound3 + outbound3_wip
+
+                processor_type = "T2"                                    
+                inbound2_wip = inbound_Wip_Processor('RICE',t2_id,processor_type,from_date,to_date)  
+                inbound2 = inbound2 + inbound2_wip
+
+            context["origin_context"] = grower_list
+            context["search_by"] = "processor"
+            context["outbound1_wip"] = outbound1
+            
+            context["t1_processor"] = inbound1
+            context["outbound2_wip"] = outbound2
+            context["outbound3_wip"] = outbound3
+            context["inbound2_wip"] = inbound2
+
+            processor_type = "T3"                                    
+            outbound4_wip = outbound_Wip_Processor('RICE',processor_id,processor_type,from_date,to_date)        
+                
+            context["outbound4_wip"] = outbound4_wip
+
+            processor_type = "T3"                                    
+            inbound3_wip = inbound_Wip_Processor('RICE',processor_id,processor_type,from_date,to_date)         
+                
+            context["inbound3_wip"] = inbound3_wip
+            
+            
+            processor_type = "T4"
+            # link_t3_processor_id_list = 
+            link_t4_processor_id_list = list(LinkProcessorToProcessor.objects.filter(processor_id = processor_id, linked_processor__processor_type__type_name = "T4").values_list("linked_processor_id", flat=True))
+            
+            inbound4_wip = []
+            for t4_id in link_t4_processor_id_list:
+                inbound2_wip = inbound_Wip_Processor('RICE',t4_id,processor_type,from_date,to_date)         
+                inbound4_wip = inbound4_wip +inbound2_wip
+            context["inbound4_wip"] = inbound4_wip  
+
+        if processor_type == "T4":
+            grower_list = []
+            outbound1 = []
+            inbound1 = []
+            outbound2 = []
+            outbound3 = []
+            inbound2 = [] 
+            outbound4_wip = []
+            inbound3_wip = []
+            linked_t3 = list(LinkProcessorToProcessor.objects.filter(linked_processor_id=processor_id, processor__processor_type__type_name="T3").values_list("processor_id", flat=True))
+            for t3_id in linked_t3:
+                linked_t2 = list(LinkProcessorToProcessor.objects.filter(linked_processor_id=t3_id, processor__processor_type__type_name="T2").values_list("processor_id", flat=True))
+                for t2_id in linked_t2:
+                    linked_t1 = list(LinkProcessor1ToProcessor.objects.filter(processor2_id=t2_id).values_list("processor1_id", flat=True))
+                    for t1_id in linked_t1:
+                        get_shipment = GrowerShipment.objects.filter(processor_id=t1_id,crop='RICE').values("id")
+                        if get_shipment.exists():
+                            bale_id = [i["id"] for i in get_shipment]  
+                            get_Origin_Processor = Origin_searchby_Processor('RICE',*bale_id) 
+                            grower_list = grower_list + get_Origin_Processor
+
+                            outbound1_wip = outbound1_Wip_Processor('RICE',from_date,to_date,t1_id)
+                            outbound1 = outbound1 + outbound1_wip
+
+                            t1_processor = t1_Processor_Processor('RICE',t1_id,from_date,to_date,*bale_id)
+                            inbound1 = inbound1 + t1_processor
+                    
+                            processor_type = "T1"
+                            outbound2_wip = outbound_Wip_Processor('RICE',t1_id,processor_type,from_date,to_date)         
+                            outbound2 = outbound2 + outbound2_wip
+                    processor_type = "T2"  
+                    outbound3_wip = outbound_Wip_Processor('RICE',t2_id,processor_type,from_date,to_date)  
+                    outbound3 =  outbound3 + outbound3_wip
+
+                    processor_type = "T2"                                    
+                    inbound2_wip = inbound_Wip_Processor('RICE',t2_id,processor_type,from_date,to_date)  
+                    inbound2 = inbound2 + inbound2_wip
+
+                processor_type = "T3"                                    
+                outbound4_wip_ = outbound_Wip_Processor('RICE',t3_id,processor_type,from_date,to_date)        
+                outbound4_wip = outbound4_wip + outbound4_wip_  
+                
+
+                processor_type = "T3"                                    
+                inbound3_wip_ = inbound_Wip_Processor('RICE',t3_id,processor_type,from_date,to_date)         
+                inbound3_wip = inbound3_wip + inbound3_wip_
+
+            
+            context["origin_context"] = grower_list
+            context["search_by"] = "processor"
+            context["outbound1_wip"] = outbound1
+            
+            context["t1_processor"] = inbound1
+            context["outbound2_wip"] = outbound2
+            context["outbound3_wip"] = outbound3
+            context["inbound2_wip"] = inbound2
+            context["inbound3_wip"] = inbound3_wip
+            context["outbound4_wip"] = outbound4_wip
+            processor_type = "T4"                                    
+            inbound4_wip = inbound_Wip_Processor('RICE',processor_id,processor_type,from_date,to_date)         
+                
+            context["inbound4_wip"] = inbound4_wip
+    return context
 
 @login_required()
 def traceability_report_list(request):
@@ -1815,22 +2083,22 @@ def traceability_report_list(request):
                     if get_search_by and get_search_by == 'grower' :
                         check_grower = Grower.objects.filter(name__icontains=search_text)
                         if check_grower.exists() :
-                            check_grower_id = [i.id for i in check_grower][0]
+                            check_grower_id = check_grower.first().id
                             check_grower_field_crop = Field.objects.filter(crop='RICE',grower_id=check_grower_id)
                             if check_grower_field_crop.exists() :
                                 grower_field_ids = [i.id for i in check_grower_field_crop]
                                 get_Origin_Grower = Origin_searchby_Grower('RICE',search_text,*grower_field_ids)                                              
                                 context["origin_context"] = get_Origin_Grower
                                 context["search_by"] = "grower"
-                                outbound1_wip = outbound1_Wip_Grower('RICE',search_text,from_date,to_date,*grower_field_ids)         
-                                context["outbound1_wip"] = outbound1_wip
-                                t1_processor = t1_Processor_grower('RICE',check_grower_id,from_date,to_date)
-                                context["t1_processor"] = t1_processor
-                                # 20-03-23
-                                outbound2_wip = outbound2_Wip_Grower('RICE',check_grower_id,from_date,to_date,*grower_field_ids)         
-                                context["outbound2_wip"] = outbound2_wip
-                                t2_processor = t2_Processor_grower('RICE',check_grower_id,from_date,to_date)
-                                context["t2_processor"] = t2_processor
+
+                                processor_id = LinkGrowerToProcessor.objects.filter(grower_id=check_grower_id).first().processor.id
+                                entity_name = LinkGrowerToProcessor.objects.filter(grower_id=check_grower_id).first().processor.entity_name
+                                processor_type = "T1"
+                                return_context = processor_traceability_report_response(processor_id, processor_type, from_date, to_date, entity_name)
+                                # print(return_context)
+                                del return_context["origin_context"]
+                                context.update(return_context)
+                                
                             else:
                                 context['no_rec_found_msg'] = "No Records Found"
                         else:
@@ -1840,20 +2108,30 @@ def traceability_report_list(request):
                         check_field = Field.objects.filter(name__icontains=search_text,crop='RICE')
                         if check_field.exists() :
                             field_name = search_text
-                            field_id = [i.id for i in check_field][0]
+                            field_id = check_field.first().id
                             warehouse_wh_id = ''
                             get_origin_details = get_Origin_deliveryid('RICE',field_id,field_name,'',warehouse_wh_id)
                             context["origin_context"] = get_origin_details
                             context["search_by"] = "field"
+                            grower_id =  check_field.first().grower.id
+                            
+
                             outbound1_wip = outbound1_Wip_field('RICE',search_text,from_date,to_date,field_id)
                             context["outbound1_wip"] = outbound1_wip
                             t1_processor = t1_Processor_field('RICE',search_text,field_id,from_date,to_date)
                             context["t1_processor"] = t1_processor
                             # 20-03-23
-                            outbound2_wip = outbound2_Wip_Field('RICE',field_name,field_id,from_date,to_date)         
-                            context["outbound2_wip"] = outbound2_wip
-                            t2_processor = t2_Processor_field('RICE',field_name,field_id,from_date,to_date)
-                            context["t2_processor"] = t2_processor
+                            processor_id = LinkGrowerToProcessor.objects.filter(grower_id=grower_id).first().processor.id
+                            entity_name = LinkGrowerToProcessor.objects.filter(grower_id=grower_id).first().processor.entity_name
+                            processor_type = "T1"
+                            return_context = processor_traceability_report_response(processor_id, processor_type, from_date, to_date, entity_name)
+                            # print(return_context)
+                            del return_context["origin_context"]
+                            del return_context["outbound1_wip"]
+                            del return_context["t1_processor"]
+                            
+                            context.update(return_context)
+                            
                         else:
                             context['no_rec_found_msg'] = "No Records Found"
                     # search by Processor ....
@@ -1861,121 +2139,284 @@ def traceability_report_list(request):
                         check_processor = get_processor_type(search_text)
                         if check_processor:
                             processor_type = check_processor["type"]
-                            if processor_type in ["T1"]:
-                                check_processor = Processor.objects.filter(entity_name__icontains=search_text)
-                                if check_processor.exists() :
-                                    processor_id = [i.id for i in check_processor][0]
-                                    get_shipment = GrowerShipment.objects.filter(processor_id=processor_id,crop='RICE').values("id")
-                                    if get_shipment.exists() :
-                                        bale_id = [i["id"] for i in get_shipment]  
-                                        get_Origin_Processor = Origin_searchby_Processor('RICE',search_text,*bale_id)        
-                                        context["origin_context"] = get_Origin_Processor
-                                        context["search_by"] = "processor"
-                                        outbound1_wip = outbound1_Wip_Processor('RICE',from_date,to_date,processor_id)
-                                        context["outbound1_wip"] = outbound1_wip
-                                        t1_processor = t1_Processor_Processor('RICE',processor_id,from_date,to_date,*bale_id)
-                                        context["t1_processor"] = t1_processor
-                                        # 20-03-23
-                                        ### outbound 
-                                        # T1 to T2
-                                        outbound2_wip = outbound_Wip_Processor('RICE',processor_id,processor_type,from_date,to_date)         
-                                        context["outbound2_wip"] = outbound2_wip                                        
+                            processor_id = check_processor["id"]
+                            context2 = processor_traceability_report_response(processor_id,processor_type, from_date, to_date, search_text)
+                            context.update(context2)
+                            print(processor_id)
+                        else:
+                            context['no_rec_found_msg'] = "No Records Found"
+
+                        #     if processor_type in ["T1"]:
+                        #         check_processor = Processor.objects.filter(entity_name__icontains=search_text)
+                        #         if check_processor.exists() :
+                        #             processor_id = [i.id for i in check_processor][0]
+                        #             get_shipment = GrowerShipment.objects.filter(processor_id=processor_id,crop='RICE').values("id")
+                        #             if get_shipment.exists() :
+                        #                 bale_id = [i["id"] for i in get_shipment]  
+                        #                 get_Origin_Processor = Origin_searchby_Processor('RICE',*bale_id)        
+                        #                 context["origin_context"] = get_Origin_Processor
+                        #                 context["search_by"] = "processor"
+                        #                 outbound1_wip = outbound1_Wip_Processor('RICE',from_date,to_date,processor_id)
+                        #                 context["outbound1_wip"] = outbound1_wip
+                        #                 t1_processor = t1_Processor_Processor('RICE',processor_id,from_date,to_date,*bale_id)
+                        #                 context["t1_processor"] = t1_processor
+                        #                 # 20-03-23
+                        #                 ### outbound 
+                        #                 # T1 to T2
+                        #                 outbound2_wip = outbound_Wip_Processor('RICE',processor_id,processor_type,from_date,to_date)         
+                        #                 context["outbound2_wip"] = outbound2_wip                                        
                                         
-                                        # T2 to T3
+                        #                 # T2 to T3
                                         
-                                        processor_type = "T2"
-                                        link_t2_processor_id_list = list(LinkProcessor1ToProcessor.objects.filter(processor1=processor_id, processor2__processor_type__type_name = "T2").values_list("processor2_id", flat=True))
-                                        outbound3_wip = []
-                                        for t2_id in link_t2_processor_id_list:
-                                            outbound_wip = outbound_Wip_Processor('RICE',t2_id,processor_type,from_date,to_date)         
-                                            outbound3_wip = outbound3_wip + outbound_wip
-                                        context["outbound3_wip"] = outbound3_wip
+                        #                 processor_type = "T2"
+                        #                 link_t2_processor_id_list = list(LinkProcessor1ToProcessor.objects.filter(processor1=processor_id, processor2__processor_type__type_name = "T2").values_list("processor2_id", flat=True))
+                        #                 outbound3_wip = []
+                        #                 for t2_id in link_t2_processor_id_list:
+                        #                     outbound_wip = outbound_Wip_Processor('RICE',t2_id,processor_type,from_date,to_date)         
+                        #                     outbound3_wip = outbound3_wip + outbound_wip
+                        #                 context["outbound3_wip"] = outbound3_wip
                                         
-                                        # T3 to T4
-                                        processor_type = "T3"
-                                        link_t3_processor_id_list = list(LinkProcessorToProcessor.objects.filter(processor_id__in = link_t2_processor_id_list, linked_processor__processor_type__type_name = "T3").values_list("linked_processor_id", flat=True))
-                                        outbound4_wip = []
-                                        for t3_id in link_t3_processor_id_list:
-                                            outbound2_wip = outbound_Wip_Processor('RICE',t3_id,processor_type,from_date,to_date)         
-                                            outbound4_wip = outbound4_wip + outbound2_wip
-                                        context["outbound4_wip"] = outbound4_wip
+                        #                 # T3 to T4
+                        #                 processor_type = "T3"
+                        #                 link_t3_processor_id_list = list(LinkProcessorToProcessor.objects.filter(processor_id__in = link_t2_processor_id_list, linked_processor__processor_type__type_name = "T3").values_list("linked_processor_id", flat=True))
+                        #                 outbound4_wip = []
+                        #                 for t3_id in link_t3_processor_id_list:
+                        #                     outbound2_wip = outbound_Wip_Processor('RICE',t3_id,processor_type,from_date,to_date)         
+                        #                     outbound4_wip = outbound4_wip + outbound2_wip
+                        #                 context["outbound4_wip"] = outbound4_wip
 
                                         
-                                        ## inbound 
-                                        # T1 to T2
-                                        # processor_type = "T1"
-                                        # t2_processor =  inbound_Wip_Processor('RICE',processor_id, processor_type ,from_date,to_date) 
-                                        # context["t2_processor"] = t2_processor
-                                        # print(t2_processor, "222222222")
-
-                                        # T2 to T3
-                                        processor_type = "T2"
-                                        link_t2_processor_id_list = list(LinkProcessor1ToProcessor.objects.filter(processor1=processor_id, processor2__processor_type__type_name = "T2").values_list("processor2_id", flat=True))
-                                        inbound2_wip = []
-                                        for t2_id in link_t2_processor_id_list:
-                                            inbound_wip = inbound_Wip_Processor('RICE',t2_id,processor_type,from_date,to_date)         
-                                            inbound2_wip = inbound2_wip + inbound_wip
-                                        context["inbound2_wip"] = inbound2_wip
+                        #                 # T2 to T3
+                        #                 processor_type = "T2"
+                        #                 link_t2_processor_id_list = list(LinkProcessor1ToProcessor.objects.filter(processor1=processor_id, processor2__processor_type__type_name = "T2").values_list("processor2_id", flat=True))
+                        #                 inbound2_wip = []
+                        #                 for t2_id in link_t2_processor_id_list:
+                        #                     inbound_wip = inbound_Wip_Processor('RICE',t2_id,processor_type,from_date,to_date)         
+                        #                     inbound2_wip = inbound2_wip + inbound_wip
+                        #                 context["inbound2_wip"] = inbound2_wip
                                         
 
-                                        # T3 to T4
-                                        processor_type = "T3"
-                                        link_t3_processor_id_list = list(LinkProcessorToProcessor.objects.filter(processor_id__in = link_t2_processor_id_list, linked_processor__processor_type__type_name = "T3").values_list("linked_processor_id", flat=True))
-                                        inbound3_wip = []
-                                        for t3_id in link_t3_processor_id_list:
-                                            inbound_wip = inbound_Wip_Processor('RICE',t3_id,processor_type,from_date,to_date)         
-                                            inbound3_wip = inbound3_wip + inbound_wip
-                                        context["inbound3_wip"] = inbound3_wip
-                                        print(inbound3_wip, 5555555555555)
+                        #                 # T3 to T4
+                        #                 processor_type = "T3"
+                        #                 link_t3_processor_id_list = list(LinkProcessorToProcessor.objects.filter(processor_id__in = link_t2_processor_id_list, linked_processor__processor_type__type_name = "T3").values_list("linked_processor_id", flat=True))
+                        #                 inbound3_wip = []
+                        #                 for t3_id in link_t3_processor_id_list:
+                        #                     inbound_wip = inbound_Wip_Processor('RICE',t3_id,processor_type,from_date,to_date)         
+                        #                     inbound3_wip = inbound3_wip + inbound_wip
+                        #                 context["inbound3_wip"] = inbound3_wip
                                         
-                                        processor_type = "T4"
-                                        link_t4_processor_id_list = list(LinkProcessorToProcessor.objects.filter(processor_id__in = link_t3_processor_id_list, linked_processor__processor_type__type_name = "T4").values_list("linked_processor_id", flat=True))
-                                        print(link_t4_processor_id_list, "listttttttttt")
-                                        inbound4_wip = []
-                                        for t4_id in link_t4_processor_id_list:
-                                            inbound2_wip = inbound_Wip_Processor('RICE',t4_id,processor_type,from_date,to_date)         
-                                            inbound4_wip = inbound4_wip + inbound2_wip
-                                        context["inbound4_wip"] = inbound4_wip
-                                        print('inbound 44444444', inbound4_wip)
+                                        
+                        #                 processor_type = "T4"
+                        #                 link_t4_processor_id_list = list(LinkProcessorToProcessor.objects.filter(processor_id__in = link_t3_processor_id_list, linked_processor__processor_type__type_name = "T4").values_list("linked_processor_id", flat=True))
+                                        
+                        #                 inbound4_wip = []
+                        #                 for t4_id in link_t4_processor_id_list:
+                        #                     inbound2_wip = inbound_Wip_Processor('RICE',t4_id,processor_type,from_date,to_date)         
+                        #                     inbound4_wip = inbound4_wip + inbound2_wip
+                        #                 context["inbound4_wip"] = inbound4_wip                                      
 
 
-                            elif processor_type in ["T2", "T3", "T4"]:
-                                pass
-                        
-                        """"
-                        previous code
-                        """
-                        # check_processor = Processor.objects.filter(entity_name__icontains=search_text)
-                        # if check_processor.exists() :
-                        #     processor_id = [i.id for i in check_processor][0]
-                        #     get_shipment = GrowerShipment.objects.filter(processor_id=processor_id,crop='RICE').values("id")
-                        #     if get_shipment.exists() :
-                        #         bale_id = [i["id"] for i in get_shipment]  
-                        #         get_Origin_Processor = Origin_searchby_Processor('RICE',search_text,*bale_id)    
-                        #         context["origin_context"] = get_Origin_Processor
-                        #         context["search_by"] = "processor"
-                        #         outbound1_wip = outbound1_Wip_Processor('RICE',from_date,to_date,processor_id)
-                        #         context["outbound1_wip"] = outbound1_wip
-                        #         t1_processor = t1_Processor_Processor('RICE',processor_id,from_date,to_date,*bale_id)
-                        #         context["t1_processor"] = t1_processor
-                        #         # 20-03-23
-                        #         outbound2_wip = outbound2_Wip_Processor('RICE',search_text,processor_id,from_date,to_date)         
-                        #         context["outbound2_wip"] = outbound2_wip
-                        #         t2_processor =  t2_Processor_Processor('RICE',processor_id,from_date,to_date,*bale_id) 
-                        #         context["t2_processor"] = t2_processor
-                                
-                        # else:
-                        #     processor = Processor2.objects.filter(entity_name__icontains=search_text)
-                        #     processor_id = [i.id for i in processor][0]
-                        #     get_shipment = ShipmentManagement.objects.filter(processor2_idd=processor_id).values('id')
-                        #     if get_shipment.exists():
-                        #         t3_processor =  t3_Processor_Processor('RICE',processor_id,from_date,to_date,*bale_id) 
-                        #         context["t3_processor"] = t3_processor
-                        #     else:
-                        #         context['no_rec_found_msg'] = "No Records Found"
-                        # else:
-                            # context['no_rec_found_msg'] = "No Records Found"
-                    # search by Delivery ID ....
+                        #     elif processor_type in ["T2", "T3", "T4"]:
+                        #         print('hello', processor_type)
+                        #         if processor_type == "T2":
+
+                        #             processor_id = Processor2.objects.filter(entity_name__icontains=search_text).first().id
+                        #             linked_t1 = list(LinkProcessor1ToProcessor.objects.filter(processor2_id=processor_id).values_list("processor1_id", flat=True))
+                        #             grower_list = []
+                        #             outbound2_wip = []
+                        #             outbound1 = []
+                        #             inbound1 = []
+                        #             for t1_id in linked_t1:
+                        #                 get_shipment = GrowerShipment.objects.filter(processor_id=t1_id,crop='RICE').values("id")
+                        #                 if get_shipment.exists():
+                        #                     bale_id = [i["id"] for i in get_shipment]  
+                        #                     get_Origin_Processor = Origin_searchby_Processor('RICE',*bale_id) 
+                        #                     grower_list = grower_list + get_Origin_Processor
+                        #                     outbound1_wip = outbound1_Wip_Processor('RICE',from_date,to_date,processor_id)
+                        #                     outbound1 = outbound1 + outbound1_wip
+                        #                     t1_processor = t1_Processor_Processor('RICE',t1_id,from_date,to_date,*bale_id)
+                        #                     inbound1 = inbound1 + t1_processor
+
+                        #                     processor_type = "T1"
+                        #                     outbound2_wip_ = outbound_Wip_Processor('RICE',t1_id,processor_type,from_date,to_date)         
+                        #                     outbound2_wip = outbound2_wip + outbound2_wip_
+                        #             context["outbound2_wip"] = outbound2_wip
+                                            
+                        #             context["origin_context"] = grower_list
+                        #             context["search_by"] = "processor"
+                        #             context["outbound1_wip"] = outbound1
+                        #             context["t1_processor"] = inbound1
+
+                                    
+
+                        #             processor_type = "T2"  
+                        #             outbound3_wip = outbound_Wip_Processor('RICE',processor_id,processor_type,from_date,to_date)  
+                        #             context["outbound3_wip"] = outbound3_wip
+
+                        #             processor_type = "T3"
+                        #             link_t3_processor_id_list = list(LinkProcessorToProcessor.objects.filter(processor_id = processor_id, linked_processor__processor_type__type_name = "T3").values_list("linked_processor_id", flat=True))
+                        #             outbound4_wip = []
+                        #             for t3_id in link_t3_processor_id_list:
+                        #                 outbound2_wip = outbound_Wip_Processor('RICE',t3_id,processor_type,from_date,to_date)         
+                        #                 outbound4_wip = outbound4_wip + outbound2_wip
+                        #             context["outbound4_wip"] = outbound4_wip
+
+                        #             processor_type = "T2"                                    
+                        #             inbound2_wip = inbound_Wip_Processor('RICE',processor_id,processor_type,from_date,to_date)  
+                        #             context["inbound2_wip"] = inbound2_wip
+
+                        #             processor_type = "T3"
+                        #             link_t3_processor_id_list = list(LinkProcessorToProcessor.objects.filter(processor_id = processor_id, linked_processor__processor_type__type_name = "T3").values_list("linked_processor_id", flat=True))
+                        #             inbound3_wip = []
+                        #             for t3_id in link_t3_processor_id_list:
+                        #                 inbound_wip = inbound_Wip_Processor('RICE',t3_id,processor_type,from_date,to_date)         
+                        #                 inbound3_wip = inbound3_wip + inbound_wip
+                        #             context["inbound3_wip"] = inbound3_wip
+                                    
+                                    
+                        #             processor_type = "T4"
+                        #             link_t4_processor_id_list = list(LinkProcessorToProcessor.objects.filter(processor_id__in = link_t3_processor_id_list, linked_processor__processor_type__type_name = "T4").values_list("linked_processor_id", flat=True))
+                                    
+                        #             inbound4_wip = []
+                        #             for t4_id in link_t4_processor_id_list:
+                        #                 inbound2_wip = inbound_Wip_Processor('RICE',t4_id,processor_type,from_date,to_date)         
+                        #                 inbound4_wip = inbound4_wip + inbound2_wip
+                        #             context["inbound4_wip"] = inbound4_wip 
+
+                        #         if processor_type == "T3":
+                        #             processor_id = Processor2.objects.filter(entity_name__icontains=search_text).first().id
+                        #             linked_t2 = list(LinkProcessorToProcessor.objects.filter(linked_processor_id=processor_id, processor__processor_type__type_name="T2").values_list("processor_id", flat=True))
+                        #             grower_list = []
+                        #             outbound1 = []
+                        #             inbound1 = []
+                        #             outbound2 = []
+                        #             outbound3 = []
+                        #             inbound2 = []
+                        #             for t2_id in linked_t2:
+                        #                 linked_t1 = list(LinkProcessor1ToProcessor.objects.filter(processor2_id=t2_id).values_list("processor1_id", flat=True))
+                        #                 for t1_id in linked_t1:
+                        #                     get_shipment = GrowerShipment.objects.filter(processor_id=t1_id,crop='RICE').values("id")
+                        #                     if get_shipment.exists():
+                        #                         bale_id = [i["id"] for i in get_shipment]  
+                        #                         get_Origin_Processor = Origin_searchby_Processor('RICE',*bale_id) 
+                        #                         grower_list = grower_list + get_Origin_Processor
+
+                        #                         outbound1_wip = outbound1_Wip_Processor('RICE',from_date,to_date,t1_id)
+                        #                         outbound1 = outbound1 + outbound1_wip
+
+                        #                         t1_processor = t1_Processor_Processor('RICE',t1_id,from_date,to_date,*bale_id)
+                        #                         inbound1 = inbound1 + t1_processor
+                                        
+                        #                         processor_type = "T1"
+                        #                         outbound2_wip = outbound_Wip_Processor('RICE',t1_id,processor_type,from_date,to_date)         
+                        #                         outbound2 = outbound2 + outbound2_wip
+
+                        #                 processor_type = "T2"  
+                        #                 outbound3_wip = outbound_Wip_Processor('RICE',t2_id,processor_type,from_date,to_date)  
+                        #                 outbound3 =  outbound3 + outbound3_wip
+
+                        #                 processor_type = "T2"                                    
+                        #                 inbound2_wip = inbound_Wip_Processor('RICE',t2_id,processor_type,from_date,to_date)  
+                        #                 inbound2 = inbound2 + inbound2_wip
+
+                        #             context["origin_context"] = grower_list
+                        #             context["search_by"] = "processor"
+                        #             context["outbound1_wip"] = outbound1
+                                    
+                        #             context["t1_processor"] = inbound1
+                        #             context["outbound2_wip"] = outbound2
+                        #             context["outbound3_wip"] = outbound3
+                        #             context["inbound2_wip"] = inbound2
+
+                        #             processor_type = "T3"                                    
+                        #             outbound4_wip = outbound_Wip_Processor('RICE',processor_id,processor_type,from_date,to_date)        
+                                        
+                        #             context["outbound4_wip"] = outbound4_wip
+
+                        #             processor_type = "T3"                                    
+                        #             inbound3_wip = inbound_Wip_Processor('RICE',processor_id,processor_type,from_date,to_date)         
+                                       
+                        #             context["inbound3_wip"] = inbound3_wip
+                                    
+                                    
+                        #             processor_type = "T4"
+                        #             # link_t3_processor_id_list = 
+                        #             link_t4_processor_id_list = list(LinkProcessorToProcessor.objects.filter(processor_id = processor_id, linked_processor__processor_type__type_name = "T4").values_list("linked_processor_id", flat=True))
+                                    
+                        #             inbound4_wip = []
+                        #             for t4_id in link_t4_processor_id_list:
+                        #                 inbound2_wip = inbound_Wip_Processor('RICE',t4_id,processor_type,from_date,to_date)         
+                        #                 inbound4_wip = inbound4_wip +inbound2_wip
+                        #             context["inbound4_wip"] = inbound4_wip  
+
+                        #         if processor_type == "T4":
+
+                        #             grower_list = []
+                        #             outbound1 = []
+                        #             inbound1 = []
+                        #             outbound2 = []
+                        #             outbound3 = []
+                        #             inbound2 = [] 
+                        #             outbound4_wip = []
+                        #             inbound3_wip = []
+                        #             processor_id = Processor2.objects.filter(entity_name__icontains=search_text).first().id
+                        #             linked_t3 = list(LinkProcessorToProcessor.objects.filter(linked_processor_id=processor_id, processor__processor_type__type_name="T3").values_list("processor_id", flat=True))
+                        #             for t3_id in linked_t3:
+                        #                 linked_t2 = list(LinkProcessorToProcessor.objects.filter(linked_processor_id=t3_id, processor__processor_type__type_name="T2").values_list("processor_id", flat=True))
+                        #                 for t2_id in linked_t2:
+                        #                     linked_t1 = list(LinkProcessor1ToProcessor.objects.filter(processor2_id=t2_id).values_list("processor1_id", flat=True))
+                        #                     for t1_id in linked_t1:
+                        #                         get_shipment = GrowerShipment.objects.filter(processor_id=t1_id,crop='RICE').values("id")
+                        #                         if get_shipment.exists():
+                        #                             bale_id = [i["id"] for i in get_shipment]  
+                        #                             get_Origin_Processor = Origin_searchby_Processor('RICE',*bale_id) 
+                        #                             grower_list = grower_list + get_Origin_Processor
+
+                        #                             outbound1_wip = outbound1_Wip_Processor('RICE',from_date,to_date,t1_id)
+                        #                             outbound1 = outbound1 + outbound1_wip
+
+                        #                             t1_processor = t1_Processor_Processor('RICE',t1_id,from_date,to_date,*bale_id)
+                        #                             inbound1 = inbound1 + t1_processor
+                                            
+                        #                             processor_type = "T1"
+                        #                             outbound2_wip = outbound_Wip_Processor('RICE',t1_id,processor_type,from_date,to_date)         
+                        #                             outbound2 = outbound2 + outbound2_wip
+                        #                     processor_type = "T2"  
+                        #                     outbound3_wip = outbound_Wip_Processor('RICE',t2_id,processor_type,from_date,to_date)  
+                        #                     outbound3 =  outbound3 + outbound3_wip
+
+                        #                     processor_type = "T2"                                    
+                        #                     inbound2_wip = inbound_Wip_Processor('RICE',t2_id,processor_type,from_date,to_date)  
+                        #                     inbound2 = inbound2 + inbound2_wip
+
+                        #                 processor_type = "T3"                                    
+                        #                 outbound4_wip_ = outbound_Wip_Processor('RICE',t3_id,processor_type,from_date,to_date)        
+                        #                 outbound4_wip = outbound4_wip + outbound4_wip_  
+                                        
+
+                        #                 processor_type = "T3"                                    
+                        #                 inbound3_wip_ = inbound_Wip_Processor('RICE',t3_id,processor_type,from_date,to_date)         
+                        #                 inbound3_wip = inbound3_wip + inbound3_wip_
+
+                                    
+                        #             context["origin_context"] = grower_list
+                        #             context["search_by"] = "processor"
+                        #             context["outbound1_wip"] = outbound1
+                                    
+                        #             context["t1_processor"] = inbound1
+                        #             context["outbound2_wip"] = outbound2
+                        #             context["outbound3_wip"] = outbound3
+                        #             context["inbound2_wip"] = inbound2
+                        #             context["inbound3_wip"] = inbound3_wip
+                        #             context["outbound4_wip"] = outbound4_wip
+                        #             processor_type = "T4"                                    
+                        #             inbound4_wip = inbound_Wip_Processor('RICE',processor_id,processor_type,from_date,to_date)         
+                                        
+                        #             context["inbound4_wip"] = inbound4_wip
+                        # """"
+                        # previous code
+                        # """
+                       
                     elif get_search_by and get_search_by == 'deliveryid' :
                         get_delivery_id3 = GrowerShipment.objects.filter(shipment_id__icontains=search_text)  
                         if get_delivery_id3.exists():
@@ -2059,7 +2500,7 @@ def autocomplete_suggestions(request,select_search,select_crop_id):
             lst = [i['bale_id'] for i in deliveryid]
 
     responce = {'select_search':lst}
-    print(responce)
+    # print(responce)
     return JsonResponse(responce)
 
 @login_required()
