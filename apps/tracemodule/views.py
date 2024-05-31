@@ -3664,3 +3664,22 @@ def display_traceability_report(request):
             return redirect('login')    
     # except Exception as e:
     #     return HttpResponse(e)   
+
+
+
+def test_map(request):
+    routes = [
+        {'origin': {'lat': 40.712776, 'lng': -74.005974}, 'destination': {'lat': 38.907192, 'lng': -77.036873}},  # NY to DC
+        {'origin': {'lat': 34.052235, 'lng': -118.243683}, 'destination': {'lat': 36.169941, 'lng': -115.139832}},  # LA to Vegas
+        {'origin': {'lat': 41.878113, 'lng': -87.629799}, 'destination': {'lat': 39.739236, 'lng': -104.990251}},  # Chicago to Denver
+        {'origin': {'lat': 29.760427, 'lng': -95.369804}, 'destination': {'lat': 32.776665, 'lng': -96.796989}},  # Houston to Dallas
+        {'origin': {'lat': 25.761681, 'lng': -80.191788}, 'destination': {'lat': 27.950575, 'lng': -82.457178}},  # Miami to Tampa
+        {'origin': {'lat': 47.606209, 'lng': -122.332071}, 'destination': {'lat': 45.515232, 'lng': -122.678385}}  # Seattle to Portland
+    ]
+
+    context = {
+        'outbound2_Wip': routes,
+        'api_key': 'AIzaSyAQ_OGAb4yuL8g55IMufP3Dwd4yjrWxrdI'  # Replace with your actual Google Maps API key
+    }
+
+    return render(request, "tracemodule/test_map.html", context)
