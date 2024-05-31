@@ -2327,10 +2327,84 @@ def skuid_traceability_response(search_text):
                 context["t1_processor"] = t1_processor_
 
                 get_Origin_Grower = Origin_searchby_Grower('RICE',search_text,*field_ids)                                              
-                context["origin_context"] = get_Origin_Grower
-                
+                context["origin_context"] = get_Origin_Grower                
     
     return context
+
+def location_response(context):   
+    
+    for i in context["outbound2_wip"]:
+        processor1 = i["processor_idd"]
+        processor2 = i["processor2_idd"]
+        check_processor1_location = Location.objects.filter(processor_id=processor1)
+
+        if check_processor1_location:
+            out2_processor1_lat = check_processor1_location.first().latitude
+            out2_processor1_long = check_processor1_location.first().longitude
+            i["origin"] = {'lat': out2_processor1_lat, 'lng': out2_processor1_long}
+        else:
+            i["origin"] = {'lat': 0, 'lng': 0}
+        check_processor2_location = Processor2Location.objects.filter(processor_id=processor2, processor__processor_type__type_name="T2")
+
+        if check_processor2_location:
+            out2_processor2_lat = check_processor2_location.first().latitude
+            out2_processor2_long = check_processor2_location.first().longitude
+            i["destination"] = {'lat': out2_processor2_lat, 'lng': out2_processor2_long}
+        else:
+            i["destination"] = {'lat': 30.30602, 'lng': 86.49102}
+            
+    for i in context["outbound3_wip"]:
+        processor1 = i["processor_idd"]
+        processor2 = i["processor2_idd"]
+        check_processor1_location = Processor2Location.objects.filter(processor_id=processor1, processor__processor_type__type_name="T2")
+
+        if check_processor1_location:
+            out3_processor1_lat = check_processor1_location.first().latitude
+            out3_processor1_long = check_processor1_location.first().longitude
+            i["sender_lat"] = out3_processor1_lat
+            i["sender_long"] = out3_processor1_long
+        else:
+            i["sender_lat"] = 0
+            i["sender_long"] = 0
+        check_processor2_location = Processor2Location.objects.filter(processor_id=processor2, processor__processor_type__type_name="T3")
+
+        if check_processor2_location:
+            out3_processor2_lat = check_processor2_location.first().latitude
+            out3_processor2_long = check_processor2_location.first().longitude
+            i["receiver_lat"] = out3_processor2_lat
+            i["receiver_long"] = out3_processor2_long
+        else:
+            i["receiver_lat"] = 0
+            i["receiver_long"] = 0
+    
+    for i in context["outbound4_wip"]:
+        processor1 = i["processor_idd"]
+        processor2 = i["processor2_idd"]
+        check_processor1_location = Processor2Location.objects.filter(processor_id=processor1, processor__processor_type__type_name="T3")
+
+        if check_processor1_location:
+            out4_processor1_lat = check_processor1_location.first().latitude
+            out4_processor1_long = check_processor1_location.first().longitude
+            i["sender_lat"] = out4_processor1_lat
+            i["sender_long"] = out4_processor1_long
+        else:
+            i["sender_lat"] = 0
+            i["sender_long"] = 0
+        check_processor2_location = Processor2Location.objects.filter(processor_id=processor2, processor__processor_type__type_name="T4")
+
+        if check_processor2_location:
+            out4_processor2_lat = check_processor2_location.first().latitude
+            out4_processor2_long = check_processor2_location.first().longitude
+            i["receiver_lat"] = out4_processor2_lat
+            i["receiver_long"] = out4_processor2_long
+        else:
+            i["sender_lat"] = 0
+            i["sender_long"] = 0
+    print(context["outbound2_wip"][0]["origin"], "piuuuuuuuuuuuuuuuuuuuuuuuu")
+    print(context["outbound2_wip"][0]["destination"], "destination")
+    return context
+        
+    
 
 @login_required()
 def traceability_report_list(request):
@@ -2477,9 +2551,10 @@ def traceability_report_list(request):
                                 entity_name = LinkGrowerToProcessor.objects.filter(grower_id=check_grower_id).first().processor.entity_name
                                 processor_type = "T1"
                                 return_context = processor_traceability_report_response(processor_id, processor_type, from_date, to_date, entity_name)
-                                # print(return_context)
+                                new_context = location_response(return_context)
                                 del return_context["origin_context"]
-                                context.update(return_context)
+                                context.update(return_context)                                
+                                context.update(new_context)
                                 
                             else:
                                 context['no_rec_found_msg'] = "No Records Found"
@@ -2507,12 +2582,13 @@ def traceability_report_list(request):
                             entity_name = LinkGrowerToProcessor.objects.filter(grower_id=grower_id).first().processor.entity_name
                             processor_type = "T1"
                             return_context = processor_traceability_report_response(processor_id, processor_type, from_date, to_date, entity_name)
-                            # print(return_context)
+                            new_context = location_response(return_context)
                             del return_context["origin_context"]
                             del return_context["outbound1_wip"]
                             del return_context["t1_processor"]
                             
                             context.update(return_context)
+                            context.update(new_context)
                             
                         else:
                             context['no_rec_found_msg'] = "No Records Found"
@@ -2523,21 +2599,26 @@ def traceability_report_list(request):
                             processor_type = check_processor["type"]
                             processor_id = check_processor["id"]
                             context2 = processor_traceability_report_response(processor_id,processor_type, from_date, to_date, search_text)
+                            new_context = location_response(context2)
                             context.update(context2)
-                            print(processor_id)
+                            context.update(new_context)
+                            # print(context)
                         else:
                             context['no_rec_found_msg'] = "No Records Found"
 
                         
                     elif get_search_by and get_search_by == 'sku_id':
                         context2 = skuid_traceability_response(search_text)
+                        context.update(context2)
                         context["get_search_by"] = "sku_id"
                         # context.update(context2)
-                        if len(context2["origin_context"]) == 0:
+                        
+                        if len(context["origin_context"]) == 0:
                             context["no_rec_found_msg"] = "Not Found Origin"
                         else:
+                            new_context = location_response(context2)
+                            context.update(new_context)
                             
-                            context.update(context2)
             
                         
                     elif get_search_by and get_search_by == 'deliveryid' :
@@ -2552,6 +2633,8 @@ def traceability_report_list(request):
                             else:
                                 
                                 context.update(context_)
+                                new_context = location_response(context_)
+                                context.update(new_context)
                         elif not get_delivery_id3:
                             sku_id = ShipmentManagement.objects.filter(shipment_id__icontains=search_text).first().storage_bin_send
                             context_ = skuid_traceability_response(sku_id)
@@ -2561,12 +2644,14 @@ def traceability_report_list(request):
                             else:
                                 
                                 context.update(context_)
+                                new_context = location_response(context_)
+                                context.update(new_context)
                         else:
                             context['no_rec_found_msg'] = "No Records Found"    
                     
                     else:
                         context['no_rec_found_msg'] = "No Records Found"
-                          
+        context["api_key"]  = 'AIzaSyAQ_OGAb4yuL8g55IMufP3Dwd4yjrWxrdI'         
         return render (request, 'tracemodule/traceability_report_list.html', context)
     else:
         return redirect ('dashboard')
