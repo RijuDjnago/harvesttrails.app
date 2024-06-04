@@ -2,11 +2,8 @@
 {% load custom_tags %}{% block title %} Trace Module {% endblock title %} 
 
 {% block extrahead %}
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAQ_OGAb4yuL8g55IMufP3Dwd4yjrWxrdI&callback=initMap" async defer></script>
 <!-- Google tag (gtag.js) -->
-<script src="https://maps.googleapis.com/maps/api/js?key={{ api_key }}&callback=initMap" async defer></script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-Y3EWVPF7PQ"></script>
-
 <script>
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
@@ -218,7 +215,7 @@ tr:nth-child(even) {
     }
 }
 </style>
-
+<form method="post" class="farm-fields-form">
 <div class="page-title-with-or-without-btn">
     <span class="farm headingtop">Trace Module</span>
     {% if origin_context %}
@@ -232,7 +229,7 @@ tr:nth-child(even) {
             <a href="{% url 'traceability_report_all_csv_download' select_crop get_search_by  search_text from_date to_date %}" class="btn-close-cancel me-3">DOWNLOAD ALL CSV</a>
         </div>
         <div>
-            <a href="#" id="mapViewBtn" class="btn-close-cancel">MAP VIEW</a>
+            <input type="submit" class="btn-close-cancel" name="map_view" value="MAP VIEW">
         </div>
     </div>
     {% endif %}
@@ -240,7 +237,7 @@ tr:nth-child(even) {
 
 <div class="card farm-fields-container">
     <div class="container-fluid">
-        <form method="post" class="farm-fields-form">
+        
             {% csrf_token %}
             <div class="row">
                 <div class="col-md-3">
@@ -332,7 +329,7 @@ tr:nth-child(even) {
                 </div>
                 
                 <div class="col-md-3 text-left mt-2 pt-2">
-                    <input type="submit" id="searchBtn" class="btn-save-submit" value="TABLE SHOW"> 
+                    <input type="submit" id="searchBtn" class="btn-save-submit" value="TABLE SHOW" name="table_view"> 
                 </div>
             <div class="row">
                 <div class="form-btn-row">
@@ -344,674 +341,411 @@ tr:nth-child(even) {
 
 <section class="search_show" id="search_show">
 
-{% if origin_context %}
-<div class="main-simple-table-with-search" id="printableArea">
-    <!-- Origin -->
-    <div class="both-data-in" style="display: inherit;">
-        <div class="row">
-            <div class="col-10" style="background-color: #81A179;padding: 12px 0px 0px 20px;text-align: left;color: #fff;font-size: 20px;">
-                <p>Origin</p>
+    {% if origin_context %}
+    <div class="main-simple-table-with-search" id="printableArea">
+        <!-- Origin -->
+        <div class="both-data-in" style="display: inherit;">
+            <div class="row">
+                <div class="col-10" style="background-color: #81A179;padding: 12px 0px 0px 20px;text-align: left;color: #fff;font-size: 20px;">
+                    <p>Origin</p>
+                </div>
+                <div class="col-2" style="background-color: #957292;padding: 12px 0px 0px 0px;text-align: center;font-size: 16px;">
+                    <a target="_blank" href="{% url 'traceability_report_Origin_csv_download' select_crop get_search_by  search_text from_date to_date %}" style="color: #000000;font-weight: bold;font-size: 20px;">Csv Download</a>
+                </div>
             </div>
-            <div class="col-2" style="background-color: #957292;padding: 12px 0px 0px 0px;text-align: center;font-size: 16px;">
-                <a target="_blank" href="{% url 'traceability_report_Origin_csv_download' select_crop get_search_by  search_text from_date to_date %}" style="color: #000000;font-weight: bold;font-size: 20px;">Csv Download</a>
+            <div class="simple-responsive-table">
+                <table id="" class="table table-striped dt-responsive nowrap text-center" style="width:100%">
+                    <thead>
+                        <tr style="background-color: #B0C69F;">
+                            <th>Crop</th>
+                            <th>Grower</th>
+                            <th>Farm</th>
+                            <th>Field</th>                       
+                            <th>Harvest Date</th>
+                            <th>Projected Yield</th>
+                            <th>Actual Yield</th>
+                            <th>Yield Delta</th>
+                            <th>Storage Quantity</th>
+                            <th>Variety</th>
+                            <th>Sustainability Metrics</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for i in origin_context %}
+                        <tr>
+                            <td>{{ i.get_select_crop }}</td>
+                            <td>{{ i.grower_name}} - {{ i.grower_id }}</td>
+                            <td>{{ i.farm_name}} - {{ i.farm_id}}</td>
+                            <td>{{ i.field_name}} - {{ i.field_id }}</td>
+                            <td>{{ i.harvest_date }}</td>
+                            <td>{{ i.projected_yeild|floatformat:0}}</td>
+                            <td>{{ i.reported_yeild|floatformat:0 }}</td>
+                            <td>{{ i.yield_delta|floatformat:0 }}</td>
+                            <td>{{ i.storage_quanitty|floatformat:0 }}</td>
+                            <td>{{ i.variety}}</td>
+                            <td>
+                                <a onclick="showTraceability({{i.field_id}})" class="update-btn-link" alt="view" title="view" style="cursor: pointer;" data-mdb-toggle="modal" data-mdb-target="#addqueModal"><span class="fas fa-eye"></span> </a>
+                                <p style="display: none;" id="search_by">{{search_by}}</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
         </div>
-        <div class="simple-responsive-table">
-            <table id="" class="table table-striped dt-responsive nowrap text-center" style="width:100%">
-                <thead>
-                    <tr style="background-color: #B0C69F;">
-                        <th>Crop</th>
-                        <th>Grower</th>
-                        <th>Farm</th>
-                        <th>Field</th>                       
-                        <th>Harvest Date</th>
-                        <th>Projected Yield</th>
-                        <th>Actual Yield</th>
-                        <th>Yield Delta</th>
-                        <th>Storage Quantity</th>
-                        <th>Variety</th>
-                        <th>Sustainability Metrics</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for i in origin_context %}
-                    <tr>
-                        <td>{{ i.get_select_crop }}</td>
-                        <td>{{ i.grower_name}} - {{ i.grower_id }}</td>
-                        <td>{{ i.farm_name}} - {{ i.farm_id}}</td>
-                        <td>{{ i.field_name}} - {{ i.field_id }}</td>
-                        <td>{{ i.harvest_date }}</td>
-                        <td>{{ i.projected_yeild|floatformat:0}}</td>
-                        <td>{{ i.reported_yeild|floatformat:0 }}</td>
-                        <td>{{ i.yield_delta|floatformat:0 }}</td>
-                        <td>{{ i.storage_quanitty|floatformat:0 }}</td>
-                        <td>{{ i.variety}}</td>
-                        <td>
-                            <a onclick="showTraceability({{i.field_id}})" class="update-btn-link" alt="view" title="view" style="cursor: pointer;" data-mdb-toggle="modal" data-mdb-target="#addqueModal"><span class="fas fa-eye"></span> </a>
-                            <p style="display: none;" id="search_by">{{search_by}}</p>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <!-- Outbound 1 WIP -->
+        <div class="both-data-in" style="display: inherit; margin-top: 25px;">
+            <div class="row">
+                <div class="col-10" style="background-color: #81A179;padding: 12px 0px 0px 20px;text-align: left;color: #fff;font-size: 20px;">
+                    <p>Outbound 1 WIP</p>
+                </div>
+                <div class="col-2" style="background-color: #957292;padding: 12px 0px 0px 0px;text-align: center;font-size: 16px;">
+                    <a target="_blank" href="{% url 'traceability_report_WIP1_csv_download' select_crop get_search_by  search_text from_date to_date %}" style="color: #000000;font-weight: bold;font-size: 20px;">Csv Download</a>
+                </div>
+            </div>
+            <!-- <h2 style="background-color: #4473c5;padding: 5px;text-align: center;color: #fff;">Outbound 1 WIP</h2> -->
+            <div class="simple-responsive-table">
+                <table id="" class="table table-striped dt-responsive nowrap text-center" style="width:100%">
+                    <thead>
+                        <tr style="background-color: #B0C69F;">
+                            <th>Delivery ID</th>
+                            <th>Destination</th>
+                            <th>Date</th>
+                            <th>Quantity</th>
+                            <th>Transportation Mode</th>
+                            
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for i in outbound1_wip %}
+                        <tr>
+                            <td>{{ i.deliveryid }}</td>
+                            <td>{{ i.destination }}</td>
+                            <td>{{ i.date }}</td>
+                            <td>{{ i.quantity|floatformat:0 }}</td>
+                            <td>{{ i.transportation }}</td>
+                            
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <!-- T1 Processor -->
+        <div class="both-data-in" style="display: inherit; margin-top: 25px;">
+            <div class="row">
+                <div class="col-10" style="background-color: #81A179;padding: 12px 0px 0px 20px;text-align: left;color: #fff;font-size: 20px;">
+                    <p>T1 Processor</p>
+                </div>
+                <div class="col-2" style="background-color: #957292;padding: 12px 0px 0px 0px;text-align: center;font-size: 16px;">
+                    <a target="_blank" href="{% url 'traceability_report_T1_Processor_csv_download' select_crop get_search_by  search_text from_date to_date %}" style="color: #000000;font-weight: bold;font-size: 20px;">Csv Download</a>
+                </div>
+            </div>
+            <div class="simple-responsive-table">
+                <table id="" class="table table-striped dt-responsive nowrap text-center" style="width:100%">
+                    <thead>
+                        <tr style="background-color: #B0C69F;">
+                            <th>Processor Name</th>
+                            <th>Delivery ID</th>
+                            <th>Date</th>
+                            <th>Grower</th>
+                            <th>Farm</th>
+                            <th>Field</th>
+                            <th>Quantity Shipped</th>
+                            <th>Quantity Received</th>
+                            <th>Quantity Delta</th>
+                            <th>Quality Metrics</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for i in t1_processor %}
+                        <tr>
+                            <td>{{ i.processor_name }}</td>
+                            <td>{{ i.deliveryid }}</td>
+                            <td>{{ i.date }}</td>
+                            <td>{{ i.grower }}</td>
+                            <td>{{ i.farm }}</td>
+                            <td>{{ i.field }}</td>
+                            <td>{{ i.pounds_shipped|floatformat:0 }}</td>
+                            <td>{{ i.pounds_received|floatformat:0 }}</td>
+                            <td>{{ i.pounds_delta|floatformat:0}}</td>
+                            <td>
+                                <a onclick="showQuality({{i.deliveryid}})" class="update-btn-link" alt="view" title="view" style="cursor: pointer;" data-mdb-toggle="modal" data-mdb-target="#addQualityModal"><span class="fas fa-eye"></span> </a>
+                                <p style="display: none;" id="deliveryid">{{i.deliveryid}}</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <!-- Outbound 2 WIP -->
+        <div class="both-data-in" style="display: inherit; margin-top: 25px;">
+            <div class="row">
+                <div class="col-10" style="background-color: #81A179;padding: 12px 0px 0px 20px;text-align: left;color: #fff;font-size: 20px;">
+                    <p>Outbound 2 WIP</p>
+                </div>
+                <div class="col-2" style="background-color: #957292;padding: 12px 0px 0px 0px;text-align: center;font-size: 16px;">
+                    <a href="{% url 'traceability_report_WIP2_csv_download' select_crop get_search_by  search_text from_date to_date %}" style="color: #000000;font-weight: bold;font-size: 20px;">Csv Download</a>
+                </div>
+            </div>
+            <div class="simple-responsive-table">
+                <table id="" class="table table-striped dt-responsive nowrap text-center" style="width:100%">
+                    <thead>
+                        <tr style="background-color: #B0C69F;">
+                            <th>Delivery ID</th>
+                            <th>Destination</th>
+                            <th>Date</th>
+                            <th>Quantity</th>
+                            <th>Transportation Mode/Equipment ID</th>
+                            
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for i in outbound2_wip %}
+                        <tr>
+                            <td>{{ i.shipment_id }}</td>
+                            <td>{{ i.processor2_name }}</td>
+                            <td>{{ i.date_pulled }}</td>
+                            <td>{{ i.volume_shipped|floatformat:0 }}</td>
+                            <td>{{ i.equipment_type }}  / {{i.equipment_id}}</td>
+                            
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <!-- T2 Processor -->
+        <div class="both-data-in" style="display: inherit; margin-top: 25px;">
+            <div class="row">
+                <div class="col-10" style="background-color: #81A179;padding: 12px 0px 0px 20px;text-align: left;color: #fff;font-size: 20px;">
+                    <p>T2 Processor</p>
+                </div>
+                <div class="col-2" style="background-color: #957292;padding: 12px 0px 0px 0px;text-align: center;font-size: 16px;">
+                    <a href="{% url 'traceability_report_T2_Processor_csv_download' select_crop get_search_by  search_text from_date to_date %}" style="color: #000000;font-weight: bold;font-size: 20px;">Csv Download</a>
+                </div>
+            </div>
+            <div class="simple-responsive-table">
+                <table id="" class="table table-striped dt-responsive nowrap text-center" style="width:100%">
+                    <thead>
+                        <tr style="background-color: #B0C69F;">
+                            <th>Processor Name</th>
+                            <th>Delivery ID</th>
+                            <th>Date</th>
+                            <th>Quantity Pounds Shipped</th>
+                            <th>Quantity Pounds Received</th>
+                            <th>Quantity Delta</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for i in inbound2_wip %}
+                        <tr>
+                            <td>{{ i.processor_e_name }}</td>
+                            <td>{{ i.shipment_id }}</td>
+                            <td>{{ i.recive_delivery_date }}</td>
+                            <td>{{ i.volume_shipped|floatformat:0 }}</td>
+                            <td>{{ i.received_weight|floatformat:0 }}</td>
+                            <td>{{ i.volume_shipped|floatformat:0|subtract:i.received_weight|floatformat:0 }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Outbound 3 WIP -->
+        <div class="both-data-in" style="display: inherit; margin-top: 25px;">
+            <div class="row">
+                <div class="col-10" style="background-color: #81A179;padding: 12px 0px 0px 20px;text-align: left;color: #fff;font-size: 20px;">
+                    <p>Outbound 3 WIP</p>
+                </div>
+                <div class="col-2" style="background-color: #957292;padding: 12px 0px 0px 0px;text-align: center;font-size: 16px;">
+                    <a href="" style="color: #000000;font-weight: bold;font-size: 20px;">Csv Download</a>
+                </div>
+            </div>
+            <div class="simple-responsive-table">
+                <table id="" class="table table-striped dt-responsive nowrap text-center" style="width:100%">
+                    <thead>
+                        <tr style="background-color: #B0C69F;">
+                            <th>Delivery ID</th>
+                            <th>Destination</th>
+                            <th>Date</th>
+                            <th>Quantity</th>
+                            <th>Transportation Mode</th>                        
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for i in outbound3_wip %}
+                        <tr>
+                            <td>{{i.shipment_id}}</td>
+                            <td>{{i.processor2_name}}</td>
+                            <td>{{i.date_pulled}}</td>
+                            <td>{{i.volume_shipped}}</td>
+                            <td>{{i.equipment_type}}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <!-- T3 Processor -->
+        <div class="both-data-in" style="display: inherit; margin-top: 25px;">
+            <div class="row">
+                <div class="col-10" style="background-color: #81A179;padding: 12px 0px 0px 20px;text-align: left;color: #fff;font-size: 20px;">
+                    <p>T3 Processor</p>
+                </div>
+                <div class="col-2" style="background-color: #957292;padding: 12px 0px 0px 0px;text-align: center;font-size: 16px;">
+                    <a href="" style="color: #000000;font-weight: bold;font-size: 20px;">Csv Download</a>
+                </div>
+            </div>
+            <div class="simple-responsive-table">
+                <table id="" class="table table-striped dt-responsive nowrap text-center" style="width:100%">
+                    <thead>
+                        <tr style="background-color: #B0C69F;">
+                            <th>Processor Name</th>
+                            <th>Delivery ID</th>
+                            <th>Date</th>
+                            <th>Quantity Pounds Shipped</th>
+                            <th>Quantity Pounds Received</th>
+                            <th>Quantity Delta</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for i in inbound3_wip  %}
+                        <tr>
+                            <td>{{ i.processor_e_name }}</td>
+                            <td>{{ i.shipment_id }}</td>
+                            <td>{{ i.recive_delivery_date }}</td>
+                            <td>{{ i.volume_shipped|floatformat:0 }}</td>
+                            <td>{{ i.received_weight|floatformat:0 }}</td>
+                            <td>{{ i.volume_shipped|floatformat:0|subtract:i.received_weight|floatformat:0 }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <!-- Outbound 4 WIP -->
+        <div class="both-data-in" style="display: inherit; margin-top: 25px;">
+            <div class="row">
+                <div class="col-10" style="background-color: #81A179;padding: 12px 0px 0px 20px;text-align: left;color: #fff;font-size: 20px;">
+                    <p>Outbound 4 WIP</p>
+                </div>
+                <div class="col-2" style="background-color: #957292;padding: 12px 0px 0px 0px;text-align: center;font-size: 16px;">
+                    <a href="" style="color: #000000;font-weight: bold;font-size: 20px;">Csv Download</a>
+                </div>
+            </div>
+            <div class="simple-responsive-table">
+                <table id="" class="table table-striped dt-responsive nowrap text-center" style="width:100%">
+                    <thead>
+                        <tr style="background-color: #B0C69F;">
+                            <th>Delivery ID</th>
+                            <th>Destination</th>
+                            <th>Date</th>
+                            <th>Quantity</th>
+                            <th>Transportation Mode</th>                        
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for i in outbound4_wip %}
+                        <tr>
+                            <td>{{i.shipment_id}}</td>
+                            <td>{{i.processor2_name}}</td>
+                            <td>{{i.date_pulled}}</td>
+                            <td>{{i.volume_shipped}}</td>
+                            <td>{{i.equipment_type}}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="both-data-in" style="display: inherit; margin-top: 25px;">
+            <div class="row">
+                <div class="col-10" style="background-color: #81A179;padding: 12px 0px 0px 20px;text-align: left;color: #fff;font-size: 20px;">
+                    <p>T4 Processor</p>
+                </div>
+                <div class="col-2" style="background-color: #957292;padding: 12px 0px 0px 0px;text-align: center;font-size: 16px;">
+                    <a href="" style="color: #000000;font-weight: bold;font-size: 20px;">Csv Download</a>
+                </div>
+            </div>
+            <div class="simple-responsive-table">
+                <table id="" class="table table-striped dt-responsive nowrap text-center" style="width:100%">
+                    <thead>
+                        <tr style="background-color: #B0C69F;">
+                            <th>Processor Name</th>
+                            <th>Delivery ID</th>
+                            <th>Date</th>
+                            <th>Quantity Pounds Shipped</th>
+                            <th>Quantity Pounds Received</th>
+                            <th>Quantity Delta</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for i in inbound4_wip  %}
+                        <tr>
+                            <td>{{ i.processor_e_name }}</td>
+                            <td>{{ i.shipment_id }}</td>
+                            <td>{{ i.recive_delivery_date }}</td>
+                            <td>{{ i.volume_shipped|floatformat:0 }}</td>
+                            <td>{{ i.received_weight|floatformat:0 }}</td>
+                            <td>{{ i.volume_shipped|floatformat:0|subtract:i.received_weight|floatformat:0 }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <!-- Buyer -->
+        <div class="both-data-in" style="display: inherit; margin-top: 25px;">
+            <div class="row">
+                <div class="col-10" style="background-color: #81A179;padding: 12px 0px 0px 20px;text-align: left;color: #fff;font-size: 20px;">
+                    <p>Buyer</p>
+                </div>
+                <div class="col-2" style="background-color: #957292;padding: 12px 0px 0px 0px;text-align: center;font-size: 16px;">
+                    <a href="" style="color: #000000;font-weight: bold;font-size: 20px;">Csv Download</a>
+                </div>
+            </div>
+            <div class="simple-responsive-table">
+                <table id="" class="table table-striped dt-responsive nowrap text-center" style="width:100%">
+                    <thead>
+                        <tr style="background-color: #B0C69F;">
+                            <th>Buyer Name / ID #</th>
+                            <th>Delivery ID</th>
+                            <th>Date</th>
+                            <th>Quantity Pounds Shipped</th>
+                            <th>Quantity Pounds Received</th>
+                            <th>Quantity Delta</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        
+                        {% comment %} {% for i in inbound4_wip  %}
+                        <tr>
+                            <td>{{i.processor_e_name}}</td>
+                            <td>{{i.shipment_id}}</td>
+                            <td>{{i.recive_delivery_date}}</td>
+                            <td>{{i.volume_shipped}}</td>
+                            <td>{{i.weight_received}}</td>
+                            <td></td>
+                        </tr>
+                        {% endfor %} {% endcomment %}
+                        
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
-    <!-- Outbound 1 WIP -->
-    <div class="both-data-in" style="display: inherit; margin-top: 25px;">
-        <div class="row">
-            <div class="col-10" style="background-color: #81A179;padding: 12px 0px 0px 20px;text-align: left;color: #fff;font-size: 20px;">
-                <p>Outbound 1 WIP</p>
-            </div>
-            <div class="col-2" style="background-color: #957292;padding: 12px 0px 0px 0px;text-align: center;font-size: 16px;">
-                <a target="_blank" href="{% url 'traceability_report_WIP1_csv_download' select_crop get_search_by  search_text from_date to_date %}" style="color: #000000;font-weight: bold;font-size: 20px;">Csv Download</a>
-            </div>
-        </div>
-        <!-- <h2 style="background-color: #4473c5;padding: 5px;text-align: center;color: #fff;">Outbound 1 WIP</h2> -->
-        <div class="simple-responsive-table">
-            <table id="" class="table table-striped dt-responsive nowrap text-center" style="width:100%">
-                <thead>
-                    <tr style="background-color: #B0C69F;">
-                        <th>Delivery ID</th>
-                        <th>Destination</th>
-                        <th>Date</th>
-                        <th>Quantity</th>
-                        <th>Transportation Mode</th>
-                        
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for i in outbound1_wip %}
-                    <tr>
-                        <td>{{ i.deliveryid }}</td>
-                        <td>{{ i.destination }}</td>
-                        <td>{{ i.date }}</td>
-                        <td>{{ i.quantity|floatformat:0 }}</td>
-                        <td>{{ i.transportation }}</td>
-                        
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-    <!-- T1 Processor -->
-    <div class="both-data-in" style="display: inherit; margin-top: 25px;">
-        <div class="row">
-            <div class="col-10" style="background-color: #81A179;padding: 12px 0px 0px 20px;text-align: left;color: #fff;font-size: 20px;">
-                <p>T1 Processor</p>
-            </div>
-            <div class="col-2" style="background-color: #957292;padding: 12px 0px 0px 0px;text-align: center;font-size: 16px;">
-                <a target="_blank" href="{% url 'traceability_report_T1_Processor_csv_download' select_crop get_search_by  search_text from_date to_date %}" style="color: #000000;font-weight: bold;font-size: 20px;">Csv Download</a>
-            </div>
-        </div>
-        <div class="simple-responsive-table">
-            <table id="" class="table table-striped dt-responsive nowrap text-center" style="width:100%">
-                <thead>
-                    <tr style="background-color: #B0C69F;">
-                        <th>Processor Name</th>
-                        <th>Delivery ID</th>
-                        <th>Date</th>
-                        <th>Grower</th>
-                        <th>Farm</th>
-                        <th>Field</th>
-                        <th>Quantity Shipped</th>
-                        <th>Quantity Received</th>
-                        <th>Quantity Delta</th>
-                        <th>Quality Metrics</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for i in t1_processor %}
-                    <tr>
-                        <td>{{ i.processor_name }}</td>
-                        <td>{{ i.deliveryid }}</td>
-                        <td>{{ i.date }}</td>
-                        <td>{{ i.grower }}</td>
-                        <td>{{ i.farm }}</td>
-                        <td>{{ i.field }}</td>
-                        <td>{{ i.pounds_shipped|floatformat:0 }}</td>
-                        <td>{{ i.pounds_received|floatformat:0 }}</td>
-                        <td>{{ i.pounds_delta|floatformat:0}}</td>
-                        <td>
-                            <a onclick="showQuality({{i.deliveryid}})" class="update-btn-link" alt="view" title="view" style="cursor: pointer;" data-mdb-toggle="modal" data-mdb-target="#addQualityModal"><span class="fas fa-eye"></span> </a>
-                            <p style="display: none;" id="deliveryid">{{i.deliveryid}}</p>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-    <!-- Outbound 2 WIP -->
-    <div class="both-data-in" style="display: inherit; margin-top: 25px;">
-        <div class="row">
-            <div class="col-10" style="background-color: #81A179;padding: 12px 0px 0px 20px;text-align: left;color: #fff;font-size: 20px;">
-                <p>Outbound 2 WIP</p>
-            </div>
-            <div class="col-2" style="background-color: #957292;padding: 12px 0px 0px 0px;text-align: center;font-size: 16px;">
-                <a href="{% url 'traceability_report_WIP2_csv_download' select_crop get_search_by  search_text from_date to_date %}" style="color: #000000;font-weight: bold;font-size: 20px;">Csv Download</a>
-            </div>
-        </div>
-        <div class="simple-responsive-table">
-            <table id="" class="table table-striped dt-responsive nowrap text-center" style="width:100%">
-                <thead>
-                    <tr style="background-color: #B0C69F;">
-                        <th>Delivery ID</th>
-                        <th>Destination</th>
-                        <th>Date</th>
-                        <th>Quantity</th>
-                        <th>Transportation Mode/Equipment ID</th>
-                        
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for i in outbound2_wip %}
-                    <tr>
-                        <td>{{ i.shipment_id }}</td>
-                        <td>{{ i.processor2_name }}</td>
-                        <td>{{ i.date_pulled }}</td>
-                        <td>{{ i.volume_shipped|floatformat:0 }}</td>
-                        <td>{{ i.equipment_type }}  / {{i.equipment_id}}</td>
-                        
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-    <!-- T2 Processor -->
-    <div class="both-data-in" style="display: inherit; margin-top: 25px;">
-        <div class="row">
-            <div class="col-10" style="background-color: #81A179;padding: 12px 0px 0px 20px;text-align: left;color: #fff;font-size: 20px;">
-                <p>T2 Processor</p>
-            </div>
-            <div class="col-2" style="background-color: #957292;padding: 12px 0px 0px 0px;text-align: center;font-size: 16px;">
-                <a href="{% url 'traceability_report_T2_Processor_csv_download' select_crop get_search_by  search_text from_date to_date %}" style="color: #000000;font-weight: bold;font-size: 20px;">Csv Download</a>
-            </div>
-        </div>
-        <div class="simple-responsive-table">
-            <table id="" class="table table-striped dt-responsive nowrap text-center" style="width:100%">
-                <thead>
-                    <tr style="background-color: #B0C69F;">
-                        <th>Processor Name</th>
-                        <th>Delivery ID</th>
-                        <th>Date</th>
-                        <th>Quantity Pounds Shipped</th>
-                        <th>Quantity Pounds Received</th>
-                        <th>Quantity Delta</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for i in inbound2_wip %}
-                    <tr>
-                        <td>{{ i.processor_e_name }}</td>
-                        <td>{{ i.shipment_id }}</td>
-                        <td>{{ i.recive_delivery_date }}</td>
-                        <td>{{ i.volume_shipped|floatformat:0 }}</td>
-                        <td>{{ i.received_weight|floatformat:0 }}</td>
-                        <td>{{ i.pounds_delta|floatformat:0 }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+    {% else %}
+    
+    <div style="margin-top: 5px;">
+        <h2>{{no_rec_found_msg}}</h2>
     </div>
     
-    <!-- Outbound 3 WIP -->
-    <div class="both-data-in" style="display: inherit; margin-top: 25px;">
-        <div class="row">
-            <div class="col-10" style="background-color: #81A179;padding: 12px 0px 0px 20px;text-align: left;color: #fff;font-size: 20px;">
-                <p>Outbound 3 WIP</p>
-            </div>
-            <div class="col-2" style="background-color: #957292;padding: 12px 0px 0px 0px;text-align: center;font-size: 16px;">
-                <a href="" style="color: #000000;font-weight: bold;font-size: 20px;">Csv Download</a>
-            </div>
-        </div>
-        <div class="simple-responsive-table">
-            <table id="" class="table table-striped dt-responsive nowrap text-center" style="width:100%">
-                <thead>
-                    <tr style="background-color: #B0C69F;">
-                        <th>Delivery ID</th>
-                        <th>Destination</th>
-                        <th>Date</th>
-                        <th>Quantity</th>
-                        <th>Transportation Mode</th>                        
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for i in outbound3_wip %}
-                    <tr>
-                        <td>{{i.shipment_id}}</td>
-                        <td>{{i.processor2_name}}</td>
-                        <td>{{i.date_pulled}}</td>
-                        <td>{{i.volume_shipped}}</td>
-                        <td>{{i.equipment_type}}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-    <!-- T3 Processor -->
-    <div class="both-data-in" style="display: inherit; margin-top: 25px;">
-        <div class="row">
-            <div class="col-10" style="background-color: #81A179;padding: 12px 0px 0px 20px;text-align: left;color: #fff;font-size: 20px;">
-                <p>T3 Processor</p>
-            </div>
-            <div class="col-2" style="background-color: #957292;padding: 12px 0px 0px 0px;text-align: center;font-size: 16px;">
-                <a href="" style="color: #000000;font-weight: bold;font-size: 20px;">Csv Download</a>
-            </div>
-        </div>
-        <div class="simple-responsive-table">
-            <table id="" class="table table-striped dt-responsive nowrap text-center" style="width:100%">
-                <thead>
-                    <tr style="background-color: #B0C69F;">
-                        <th>Processor Name</th>
-                        <th>Delivery ID</th>
-                        <th>Date</th>
-                        <th>Quantity Pounds Shipped</th>
-                        <th>Quantity Pounds Received</th>
-                        <th>Quantity Delta</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for i in inbound3_wip  %}
-                    <tr>
-                        <td>{{ i.processor_e_name }}</td>
-                        <td>{{ i.shipment_id }}</td>
-                        <td>{{ i.recive_delivery_date }}</td>
-                        <td>{{ i.volume_shipped|floatformat:0 }}</td>
-                        <td>{{ i.received_weight|floatformat:0 }}</td>
-                        <td>{{ i.pounds_delta|floatformat:0 }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-    <!-- Outbound 4 WIP -->
-    <div class="both-data-in" style="display: inherit; margin-top: 25px;">
-        <div class="row">
-            <div class="col-10" style="background-color: #81A179;padding: 12px 0px 0px 20px;text-align: left;color: #fff;font-size: 20px;">
-                <p>Outbound 4 WIP</p>
-            </div>
-            <div class="col-2" style="background-color: #957292;padding: 12px 0px 0px 0px;text-align: center;font-size: 16px;">
-                <a href="" style="color: #000000;font-weight: bold;font-size: 20px;">Csv Download</a>
-            </div>
-        </div>
-        <div class="simple-responsive-table">
-            <table id="" class="table table-striped dt-responsive nowrap text-center" style="width:100%">
-                <thead>
-                    <tr style="background-color: #B0C69F;">
-                        <th>Delivery ID</th>
-                        <th>Destination</th>
-                        <th>Date</th>
-                        <th>Quantity</th>
-                        <th>Transportation Mode</th>                        
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for i in outbound4_wip %}
-                    <tr>
-                        <td>{{i.shipment_id}}</td>
-                        <td>{{i.processor2_name}}</td>
-                        <td>{{i.date_pulled}}</td>
-                        <td>{{i.volume_shipped}}</td>
-                        <td>{{i.equipment_type}}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-    <div class="both-data-in" style="display: inherit; margin-top: 25px;">
-        <div class="row">
-            <div class="col-10" style="background-color: #81A179;padding: 12px 0px 0px 20px;text-align: left;color: #fff;font-size: 20px;">
-                <p>T4 Processor</p>
-            </div>
-            <div class="col-2" style="background-color: #957292;padding: 12px 0px 0px 0px;text-align: center;font-size: 16px;">
-                <a href="" style="color: #000000;font-weight: bold;font-size: 20px;">Csv Download</a>
-            </div>
-        </div>
-        <div class="simple-responsive-table">
-            <table id="" class="table table-striped dt-responsive nowrap text-center" style="width:100%">
-                <thead>
-                    <tr style="background-color: #B0C69F;">
-                        <th>Processor Name</th>
-                        <th>Delivery ID</th>
-                        <th>Date</th>
-                        <th>Quantity Pounds Shipped</th>
-                        <th>Quantity Pounds Received</th>
-                        <th>Quantity Delta</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for i in inbound4_wip  %}
-                    <tr>
-                        <td>{{ i.processor_e_name }}</td>
-                        <td>{{ i.shipment_id }}</td>
-                        <td>{{ i.recive_delivery_date }}</td>
-                        <td>{{ i.volume_shipped|floatformat:0 }}</td>
-                        <td>{{ i.received_weight|floatformat:0 }}</td>
-                        <td>{{ i.pounds_delta|floatformat:0 }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-    <!-- Buyer -->
-    <div class="both-data-in" style="display: inherit; margin-top: 25px;">
-        <div class="row">
-            <div class="col-10" style="background-color: #81A179;padding: 12px 0px 0px 20px;text-align: left;color: #fff;font-size: 20px;">
-                <p>Buyer</p>
-            </div>
-            <div class="col-2" style="background-color: #957292;padding: 12px 0px 0px 0px;text-align: center;font-size: 16px;">
-                <a href="" style="color: #000000;font-weight: bold;font-size: 20px;">Csv Download</a>
-            </div>
-        </div>
-        <div class="simple-responsive-table">
-            <table id="" class="table table-striped dt-responsive nowrap text-center" style="width:100%">
-                <thead>
-                    <tr style="background-color: #B0C69F;">
-                        <th>Buyer Name / ID #</th>
-                        <th>Delivery ID</th>
-                        <th>Date</th>
-                        <th>Quantity Pounds Shipped</th>
-                        <th>Quantity Pounds Received</th>
-                        <th>Quantity Delta</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    
-                    {% comment %} {% for i in inbound4_wip  %}
-                    <tr>
-                        <td>{{i.processor_e_name}}</td>
-                        <td>{{i.shipment_id}}</td>
-                        <td>{{i.recive_delivery_date}}</td>
-                        <td>{{i.volume_shipped}}</td>
-                        <td>{{i.weight_received}}</td>
-                        <td></td>
-                    </tr>
-                    {% endfor %} {% endcomment %}
-                    
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-{% else %}
-
-<div style="margin-top: 5px;">
-    <h2>{{no_rec_found_msg}}</h2>
-</div>
-
-{% endif %}
+    {% endif %}
 </section>
-<section id="map_show" class="map_show main_section hidden" style="display:none; background-color: #fff; max-width: 100%; width: 100%; margin: auto; padding: 20px 0;">
-    <div class="container-fluid">
-        <div class="heading"  style="">
-            <h style="font-size: 35px;"><b>Traceability Report for Map</b>  </h>
-        </div>
-        {% if origin_context %}
-        <div class="row" style="padding-top: 15px; margin-top: 30px; border-top: 1px solid #dadada; display: flex;">
-            <div class="col-6 mb-3">
-                <div class="text_wapper">
-                    <h3 style="font-size: 30px; margin-bottom: 20px;">Origin</h3>
-                    
-                    {% for gr in origin_context|unique_growers %}
-                    <ul style="list-style: none; padding: 0; margin: 0;">
-                        <li>
-                            <span style="display: block; font-size: 18px; font-weight: bold; margin-bottom: 10px;">{{gr.grower_name}}</span>
-                            <span>Farm:{{gr.farm_name}}, Field: {{gr.field_name}}, Variety: {{gr.variety}}</span>
-                        </li>
-                    </ul>
-                    {% endfor %}
-                    
-                </div>
-            </div>
-            <div class="col-6">
-                <div class="img_wapper" style="width: 100%; height: 250px;">
-                    <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d14736.291556014114!2d88.42368324144367!3d22.576377035307207!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3a0275b020703c0d%3A0xece6f8e0fc2e1613!2sSector%20V%2C%20Bidhannagar%2C%20Kolkata%2C%20West%20Bengal!5e0!3m2!1sen!2sin!4v1713427063064!5m2!1sen!2sin"  style="border:0; width: 100%; height: 100%; max-height: 100% !important;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
-                </div>
-            </div>
-        </div>
-        {% endif %}
 
-        {% if t1_processor %}
-        <div class="row" style="padding-top: 15px; margin-top: 30px; border-top: 1px solid #dadada; display: flex;">
-            <div class="col-6 mb-3">
-                <div class="text_wapper">
-                    <h3 style="font-size: 30px; margin-bottom: 20px;">Processor 1</h3>
-                    {% if t1_processor %}
-                    {% for pro in t1_processor|unique_processor %}                   
-                          
-                    <ul style="list-style: none; padding: 0; margin: 0;">
-                        <li>
-                            <span style="display: block; font-size: 18px; font-weight: bold; margin-bottom: 10px;">{{pro.processor_name}}</span>
-                            <span>Akshya Nagar 1st Block 1st Cross, Rammurthy nagar, Bangalore-560016</span>
-                        </li>
-                        <li style="font-weight: 500;">SKU Id: <em style="font-weight: 400; font-style: normal;">{{pro.skuid}}</em></li>
-                    </ul>
-                    <ul style="list-style: none; padding: 0; margin: 0; margin-top: 30px;">
-                        <li style="font-weight: 500; margin-bottom: 5px;">Processing Date: <em style="font-weight: 400; font-style: normal;">{{pro.date}}</em></li>
-                        <li style="font-weight: 500;">Resulting Lot Number: <em style="font-weight: 400; font-style: normal;">{{pro.lot_number}}</em></li>
-                        
-                    </ul>
-                    {% endfor %}
-                    {% endif %}
-                </div>
-            </div>
-            <div class="col-6">
-                <div class="img_wapper" style="width: 100%; height: 250px;">
-                    <img src="https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=1474&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="" style="width: 100%; height: 100%; object-fit: cover; object-position: center;">
-                </div>
-            </div>
-        </div>
-        {% endif %}
-        {% if outbound2_wip %}
-        <!-- new implement-->
-        <div class="row" style="padding-top: 15px; margin-top: 30px; border-top: 1px solid #dadada; flex-direction: row-reverse; display: flex;">
-            <div class="col-12">
-                <div class="text_wapper">
-                    <h3 style="font-size: 30px; margin-bottom: 40px;">Transport to Processor 2</h3>
-                    <ul style="list-style: none; padding: 0; margin: 0;">
-                        <li style="margin-bottom: 30px;">
-                            {% for out2 in outbound2_wip %}
-                            <div class="row mb-4">
-                                <div class="col-6">
-                                    <span
-                                        style="display: block; font-size: 18px; font-weight: bold; margin-bottom: 10px;">{{out2.equipment_type}}
-                                    </span>
-                                    <ul style="list-style: none; padding: 0; margin: 0; margin-top: 30px;">
-                                        <li style="font-weight: 500; margin-bottom: 5px;">Transport ID: <em style="font-weight: 400; font-style: normal;">{{out2.shipment_id}}</em></li>
-                                        <li style="font-weight: 500;">Transport Date:<em style="font-weight: 400; font-style: normal;">{{out2.date_pulled}}</em></li>
-                                    </ul>
-                                </div>
-                                <div class="col-6">
-                                    <div class="img_wapper" style="width: 100%; height: 200px;">
-                                        <div id="map{{forloop.counter}}" class="loader"></div>
-                                        {{out2.origin}}
-                                        {{out2.destination}}
-                                        {{api_key}}
-                                    </div>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-        {% endif %}
-
-        {% if inbound2_wip %}
-        <div class="row" style="padding-top: 15px; margin-top: 30px; border-top: 1px solid #dadada; display: flex;">
-            <div class="col-6 mb-3">
-                <div class="text_wapper">
-                    <h3 style="font-size: 30px; margin-bottom: 20px;">Processor 2</h3>
-                    
-                    {% if inbound2_wip %}
-                    {% for pro in inbound2_wip|unique1_processor %}                   
-                          
-                    <ul style="list-style: none; padding: 0; margin: 0;">
-                        <li>
-                            <span style="display: block; font-size: 18px; font-weight: bold; margin-bottom: 10px;">{{pro.processor2_name}}</span>
-                            <span>Akshya Nagar 1st Block 1st Cross, Rammurthy nagar, Bangalore-560016</span>
-                        </li>
-                        <li style="font-weight: 500;">SKU Id: <em style="font-weight: 400; font-style: normal;">{{pro.skuid}}</em></li>
-                    </ul>
-                    <ul style="list-style: none; padding: 0; margin: 0; margin-top: 30px;">
-                        <li style="font-weight: 500; margin-bottom: 5px;">Processing Date: <em style="font-weight: 400; font-style: normal;">{{pro.recive_delivery_date}}</em></li>
-                        <li style="font-weight: 500;">Resulting Lot Number: <em style="font-weight: 400; font-style: normal;">{{pro.lot_number}}</em></li>
-                    </ul>
-                    {% endfor %}
-                    {% endif %}
-                </div>
-            </div>
-            <div class="col-6">
-                <div class="img_wapper" style="width: 100%; height: 250px;">
-                    <img src="https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=1474&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="" style="width: 100%; height: 100%; object-fit: cover; object-position: center;">
-                </div>
-            </div>
-        </div>
-        {% endif %}
-        {% if outbound3_wip %}
-        <div class="row" style="padding-top: 15px; margin-top: 30px; border-top: 1px solid #dadada; flex-direction: row-reverse; display: flex;">
-            <div class="col-12">
-                <div class="text_wapper">
-                    <h3 style="font-size: 30px; margin-bottom: 40px;">Transport to Processor 3</h3>
-                    <ul style="list-style: none; padding: 0; margin: 0;">
-                        <li style="margin-bottom: 30px;">
-                            {% for out2 in outbound3_wip %}
-                            <div class="row mb-4">
-                                <div class="col-6">
-                                    <span
-                                        style="display: block; font-size: 18px; font-weight: bold; margin-bottom: 10px;">{{out2.equipment_type}}
-                                    </span>
-                                    <ul style="list-style: none; padding: 0; margin: 0; margin-top: 30px;">
-                                        <li style="font-weight: 500; margin-bottom: 5px;">Transport ID: <em style="font-weight: 400; font-style: normal;">{{out2.shipment_id}}</em></li>
-                                        <li style="font-weight: 500;">Transport Date:<em style="font-weight: 400; font-style: normal;">{{out2.date_pulled}}</em></li>
-                                    </ul>
-                                </div>
-                                <div class="col-6">
-                                    <div class="img_wapper" style="width: 100%; height: 200px;">
-                                        <div id="loader" class="loader"></div>
-                                        <iframe id="mapFrame"
-                                            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d14736.291556014114!2d88.42368324144367!3d22.576377035307207!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3a0275b020703c0d%3A0xece6f8e0fc2e1613!2sSector%20V%2C%20Bidhannagar%2C%20Kolkata%2C%20West%20Bengal!5e0!3m2!1sen!2sin!4v1713427063064!5m2!1sen!2sin"
-                                            style="border:0; width: 100%; height: 100%; max-height: 100% !important;"
-                                            allowfullscreen="" loading="lazy"
-                                            referrerpolicy="no-referrer-when-downgrade"></iframe>
-                                    </div>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-        {% endif %}
-        {% if inbound3_wip %}
-        <div class="row" style="padding-top: 15px; margin-top: 30px; border-top: 1px solid #dadada; display: flex;">
-            <div class="col-6 mb-3">
-                <div class="text_wapper">
-                    <h3 style="font-size: 30px; margin-bottom: 20px;">Processor 3</h3>
-                    {% if inbound3_wip %}
-                    {% for pro in inbound3_wip|unique1_processor %}                   
-                          
-                    <ul style="list-style: none; padding: 0; margin: 0;">
-                        <li>
-                            <span style="display: block; font-size: 18px; font-weight: bold; margin-bottom: 10px;">{{pro.processor2_name}}</span>
-                            <span>Akshya Nagar 1st Block 1st Cross, Rammurthy nagar, Bangalore-560016</span>
-                        </li>
-                        <li style="font-weight: 500;">SKU Id: <em style="font-weight: 400; font-style: normal;">{{pro.skuid}}</em></li>
-                    </ul>
-                    <ul style="list-style: none; padding: 0; margin: 0; margin-top: 30px;">
-                        <li style="font-weight: 500; margin-bottom: 5px;">Processing Date: <em style="font-weight: 400; font-style: normal;">{{pro.recive_delivery_date}}</em></li>
-                        <li style="font-weight: 500;">Resulting Lot Number: <em style="font-weight: 400; font-style: normal;">{{pro.lot_number}}</em></li>
-                    </ul>
-                    {% endfor %}
-                    {% endif %}
-                </div>
-            </div>
-            <div class="col-6">
-                <div class="img_wapper" style="width: 100%; height: 250px;">
-
-                    <img src="https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=1474&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="" style="width: 100%; height: 100%; object-fit: cover; object-position: center;">
-                </div>
-            </div>
-        </div>
-        {% endif %}
-        {% if outbound4_wip %}
-        <div class="row" style="padding-top: 15px; margin-top: 30px; border-top: 1px solid #dadada; flex-direction: row-reverse; display: flex;">
-            <div class="col-12">
-                <div class="text_wapper">
-                    <h3 style="font-size: 30px; margin-bottom: 40px;">Transport to Processor 4</h3>
-                    <ul style="list-style: none; padding: 0; margin: 0;">
-                        <li style="margin-bottom: 30px;">
-                            {% for out2 in outbound4_wip %}
-                            <div class="row mb-4">
-                                <div class="col-6">
-                                    <span
-                                        style="display: block; font-size: 18px; font-weight: bold; margin-bottom: 10px;">{{out2.equipment_type}}
-                                    </span>
-                                    <ul style="list-style: none; padding: 0; margin: 0; margin-top: 30px;">
-                                        <li style="font-weight: 500; margin-bottom: 5px;">Transport ID: <em style="font-weight: 400; font-style: normal;">{{out2.shipment_id}}</em></li>
-                                        <li style="font-weight: 500;">Transport Date:<em style="font-weight: 400; font-style: normal;">{{out2.date_pulled}}</em></li>
-                                    </ul>
-                                </div>
-                                <div class="col-6">
-                                    <div class="img_wapper" style="width: 100%; height: 200px;">
-                                        <div id="loader" class="loader"></div>
-                                        <iframe id="mapFrame"
-                                            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d14736.291556014114!2d88.42368324144367!3d22.576377035307207!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3a0275b020703c0d%3A0xece6f8e0fc2e1613!2sSector%20V%2C%20Bidhannagar%2C%20Kolkata%2C%20West%20Bengal!5e0!3m2!1sen!2sin!4v1713427063064!5m2!1sen!2sin"
-                                            style="border:0; width: 100%; height: 100%; max-height: 100% !important;"
-                                            allowfullscreen="" loading="lazy"
-                                            referrerpolicy="no-referrer-when-downgrade"></iframe>
-                                    </div>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-        {% endif %}
-        {% if inbound4_wip %}
-        <div class="row" style="padding-top: 15px; margin-top: 30px; border-top: 1px solid #dadada; display: flex;">
-            <div class="col-6 mb-3">
-                <div class="text_wapper">
-                    <h3 style="font-size: 30px; margin-bottom: 20px;">Processor 4</h3>
-                    {% if inbound4_wip %}
-                    {% for pro in inbound4_wip|unique1_processor %}                   
-                          
-                    <ul style="list-style: none; padding: 0; margin: 0;">
-                        <li>
-                            <span style="display: block; font-size: 18px; font-weight: bold; margin-bottom: 10px;">{{pro.processor2_name}}</span>
-                            <span>Akshya Nagar 1st Block 1st Cross, Rammurthy nagar, Bangalore-560016</span>
-                        </li>
-                        <li style="font-weight: 500;">SKU Id: <em style="font-weight: 400; font-style: normal;">{{pro.skuid}}</em></li>
-                    </ul>
-                    <ul style="list-style: none; padding: 0; margin: 0; margin-top: 30px;">
-                        <li style="font-weight: 500; margin-bottom: 5px;">Processing Date: <em style="font-weight: 400; font-style: normal;">{{pro.recive_delivery_date}}</em></li>
-                        <li style="font-weight: 500;">Resulting Lot Number: <em style="font-weight: 400; font-style: normal;">{{pro.lot_number}}</em></li>
-                    </ul>
-                    {% endfor %}
-                    {% endif %}
-                </div>
-            </div>
-            <div class="col-6">
-                <div class="img_wapper" style="width: 100%; height: 250px;">
-                    <img src="https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=1474&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="" style="width: 100%; height: 100%; object-fit: cover; object-position: center;">
-
-                </div>
-            </div>
-        </div>
-        {% endif %}
-    </div>
-</section>
 
 <!--  SUSTAINABILITY METRICS Popup -->
 <div class="modal fade" id="addqueModal" aria-hidden="true" aria-labelledby="exampleModalToggleLabel22" tabindex="-1">
@@ -1150,6 +884,63 @@ tr:nth-child(even) {
 {% endblock %}
 
 {% block jquery %}
+
+
+<!-- map script start-->
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.js"></script>
+<script>
+    // Function to initialize maps for each transport
+    function initializeMaps() {
+        {% for transport in transports %}
+            var map = L.map('map-{{ forloop.counter }}').setView([{{ out2.origin_lat }}, {{ out2.origin_lng }}], 6);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+
+            var origin = [{{ out2.origin_lat }}, {{ out2.origin_lng }}];
+            var destination = [{{ out2.destination_lat }}, {{ out2.destination_lng }}];
+
+            L.Routing.control({
+                waypoints: [
+                    L.latLng(origin),
+                    L.latLng(destination)
+                ],
+                router: L.Routing.osrmv1({
+                    serviceUrl: 'https://router.project-osrm.org/route/v1'
+                }),
+                lineOptions: {
+                    styles: [{ color: 'blue', opacity: 0.6, weight: 4 }]
+                },
+                createMarker: function() { return null; },
+                routeWhileDragging: false,
+                addWaypoints: false
+            }).addTo(map);
+        {% endfor %}
+    }
+
+    // Initialize maps on window load
+    window.onload = initializeMaps;
+</script>
+
+
+
+<!-- map script end-->
+
+
+
+
+
+
+
+
+
+
+
+
+
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.js">
 </script>
 
@@ -1337,50 +1128,8 @@ function getText(){
 <script>
     $('#Traceability-Report').addClass('activeLink');
 </script>
-<script>
-    document.getElementById('searchBtn').addEventListener('click', function() {
-        document.getElementById('search_show').style.display = 'block';
-        document.getElementById('map_show').style.display = 'none';
-        
-    });
-    
-    document.getElementById('mapViewBtn').addEventListener('click', function() {
-        document.getElementById('map_show').style.display = 'block';
-        document.getElementById('search_show').style.display = 'none';
-        document.getElementById('searchBtn').innerHTML = 'TableShow';
-    });
-</script>
-<script>
-    function initMap() {
-        const routes = {{ outbound2_Wip|safe }};
 
-        routes.forEach((route, index) => {
-            const mapElementId = 'map' + (index + 1);
-            const map = new google.maps.Map(document.getElementById(mapElementId), {
-                zoom: 7,
-                center: route.origin
-            });
 
-            const directionsService = new google.maps.DirectionsService();
-            const directionsRenderer = new google.maps.DirectionsRenderer();
-            directionsRenderer.setMap(map);
-
-            const request = {
-                origin: route.origin,
-                destination: route.destination,
-                travelMode: 'DRIVING'
-            };
-
-            directionsService.route(request, function(result, status) {
-                if (status === 'OK') {
-                    directionsRenderer.setDirections(result);
-                } else {
-                    window.alert('Directions request failed due to ' + status);
-                }
-            });
-        });
-    }
-</script>
 <script>
         document.addEventListener("DOMContentLoaded", function () {
             const mapContainers = document.querySelectorAll(".img_wapper");

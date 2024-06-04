@@ -35,3 +35,11 @@ def unique1_processor(processors):
             unique_list.append(processor)
             seen.add(processor["processor2_name"])
     return unique_list
+
+
+@register.filter
+def subtract(value, arg):
+    try:
+        return float(value) - float(arg)
+    except (ValueError, TypeError):
+        return '' 
