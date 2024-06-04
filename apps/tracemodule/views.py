@@ -543,7 +543,7 @@ def Origin_searchby_Processor(crop,*bale_id):
                                 "yield_delta":yield_delta, "storage_quanitty":storage_quanitty, "water_savings":water_savings,
                                 "water_per_pound_savings":water_per_pound_savings, "land_use":land_use, "less_GHG":less_GHG,
                                 "co2_eQ_footprint":co2_eQ_footprint, "premiums_to_growers":premiums_to_growers,"pf_sus":pf_sus}])
-            # print(return_lst,return_lst)
+            # #print(return_lst,return_lst)
 
     return return_lst
 
@@ -982,7 +982,7 @@ def t1_Processor_deliveryid(crop,search_text,warehouse_wh_id,from_date,to_date) 
 
                     if finale_date >= from_date and finale_date <= to_date:
                         res = True
-                        print("res",res)
+                        #print("res",res)
                     else:
                         return return_lst
 
@@ -1002,7 +1002,7 @@ def t1_Processor_deliveryid(crop,search_text,warehouse_wh_id,from_date,to_date) 
 
                     if finale_date >= from_date and finale_date <= to_date:
                         res = True
-                        print("res",res)
+                        #print("res",res)
                     else:
                         return return_lst
                 else:
@@ -1110,16 +1110,16 @@ def outbound_Wip_Processor(crop,processor_id,processor_type,from_date,to_date) :
     if crop == 'RICE' :
         if processor_type == "T1":
             get_shipment = ShipmentManagement.objects.filter(sender_processor_type="T1", processor_idd = processor_id, date_pulled__gte = from_date, date_pulled__lte = to_date,  status = None).values()
-            print(get_shipment, "shipmenttttttttt", processor_type)
+            #print(get_shipment, "shipmenttttttttt", processor_type)
         elif processor_type == "T2":
             get_shipment = ShipmentManagement.objects.filter(sender_processor_type="T2", processor_idd = processor_id, date_pulled__gte = from_date, date_pulled__lte = to_date).values()
-            # print(get_shipment, "shipmenttttttttt", processor_type)
+            # #print(get_shipment, "shipmenttttttttt", processor_type)
         elif processor_type == "T3":
             get_shipment = ShipmentManagement.objects.filter(sender_processor_type="T3", processor_idd = processor_id, date_pulled__gte = from_date, date_pulled__lte = to_date).values()
-            # print(get_shipment, "shipmenttttttttt", processor_type)
+            # #print(get_shipment, "shipmenttttttttt", processor_type)
         elif processor_type == "T4":
             get_shipment = ShipmentManagement.objects.filter(sender_processor_type="T4", processor_idd = processor_id, date_pulled__gte = from_date, date_pulled__lte = to_date, status = None).values()
-            # print(get_shipment, "shipmenttttttttt", processor_type)
+            # #print(get_shipment, "shipmenttttttttt", processor_type)
     return list(get_shipment)
 
 
@@ -1131,13 +1131,13 @@ def inbound_Wip_Processor(crop,processor_id,processor_type,from_date,to_date) :
         get_shipment = []
         if processor_type == "T2":
             get_shipment = ShipmentManagement.objects.filter(receiver_processor_type="T2", processor2_idd = processor_id, date_pulled__gte = from_date, date_pulled__lte = to_date).values()
-            # print(get_shipment,"shipmentttttttttttttttt")
+            # #print(get_shipment,"shipmentttttttttttttttt")
         elif processor_type == "T3":
             get_shipment = ShipmentManagement.objects.filter(receiver_processor_type="T3", processor2_idd = processor_id, date_pulled__gte = from_date, date_pulled__lte = to_date).values()
-            # print(get_shipment,"shipmentttttttttttttttt")
+            # #print(get_shipment,"shipmentttttttttttttttt")
         elif processor_type == "T4":
             get_shipment = ShipmentManagement.objects.filter(receiver_processor_type="T4", processor2_idd = processor_id, date_pulled__gte = from_date, date_pulled__lte = to_date).values()
-            print(get_shipment,"shipmentttttttttttttttt")
+            #print(get_shipment,"shipmentttttttttttttttt")
     return list(get_shipment)
 
 
@@ -1192,7 +1192,7 @@ def t2_Processor_grower(crop,check_grower_id,from_date,to_date) :
 
                     if finale_date >= from_date and finale_date <= to_date:
                         res = True
-                        # print("res",res)
+                        # #print("res",res)
                     else:
                         continue
                 elif '/' in str_date :
@@ -1211,7 +1211,7 @@ def t2_Processor_grower(crop,check_grower_id,from_date,to_date) :
 
                     if finale_date >= from_date and finale_date <= to_date:
                         res = True
-                        print("res",res)
+                        #print("res",res)
                     else:
                         continue
                 else:
@@ -1316,7 +1316,7 @@ def t2_Processor_field(crop,field_name,field_id,from_date,to_date) :
 
                         if finale_date >= from_date and finale_date <= to_date:
                             res = True
-                            print("res",res)
+                            #print("res",res)
                         else:
                             continue
                     elif '/' in str_date :
@@ -1335,7 +1335,7 @@ def t2_Processor_field(crop,field_name,field_id,from_date,to_date) :
 
                         if finale_date >= from_date and finale_date <= to_date:
                             res = True
-                            print("res",res)
+                            #print("res",res)
                         else:
                             continue
                     else:
@@ -1439,7 +1439,7 @@ def t2_Processor_Processor(crop,processor_id,from_date,to_date,*bale_id) :
 
                     if finale_date >= from_date and finale_date <= to_date:
                         res = True
-                        print("res",res)
+                        #print("res",res)
                     else:
                         continue
                 elif '/' in str_date :
@@ -1458,7 +1458,7 @@ def t2_Processor_Processor(crop,processor_id,from_date,to_date,*bale_id) :
 
                     if finale_date >= from_date and finale_date <= to_date:
                         res = True
-                        print("res",res)
+                        #print("res",res)
                     else:
                         continue
                 else:
@@ -1493,7 +1493,7 @@ def t2_Processor_Processor(crop,processor_id,from_date,to_date,*bale_id) :
         if get_shipment_data.exists():
             # shipment = ShipmentManagement.objects.all()
             shipment = ShipmentManagement.objects.filter(processor_idd = processor_id)
-            # print("shipment============",shipment)
+            # #print("shipment============",shipment)
             for i in range(len(shipment)):
                 var = shipment[i].storage_bin_send
                 grower_shipment = GrowerShipment.objects.filter(sku = var)
@@ -1525,7 +1525,7 @@ def t3_Processor_Processor(crop,processor_id,from_date,to_date,*bale_id) :
         if get_shipment_data.exists():
             # shipment = ShipmentManagement.objects.all()
             shipment = ShipmentManagement.objects.filter(processor_idd = processor_id)
-            # print("shipment============",shipment)
+            # #print("shipment============",shipment)
             for i in range(len(shipment)):
                 var = shipment[i].storage_bin_recive
                 grower_shipment = ShipmentManagement.objects.filter(storage_bin_send = var)
@@ -1576,7 +1576,7 @@ def t2_Processor_deliveryid(crop,search_text,warehouse_wh_id,from_date,to_date) 
 
                     if finale_date >= from_date and finale_date <= to_date:
                         res = True
-                        print("res",res)
+                        #print("res",res)
                     else:
                         return return_lst
                 elif '/' in str_date :
@@ -1595,7 +1595,7 @@ def t2_Processor_deliveryid(crop,search_text,warehouse_wh_id,from_date,to_date) 
 
                     if finale_date >= from_date and finale_date <= to_date:
                         res = True
-                        print("res",res)
+                        #print("res",res)
                     else:
                         return return_lst
                 else:
@@ -1677,7 +1677,7 @@ def get_processor_type(processor_name):
         if get_processor:
             processor = get_processor.first()
             processor_type = processor.processor_type.all().first().type_name
-            print("type", processor_type)
+            #print("type", processor_type)
             processor_details = {'id':processor.id,
                              'type':processor_type}
         else:
@@ -2331,8 +2331,158 @@ def skuid_traceability_response(search_text):
     
     return context
 
+import datetime
+from django.http import HttpResponse
+import requests
+
+# def generate_static_map_url(origin, destination):
+#     api_key = "AIzaSyAQ_OGAb4yuL8g55IMufP3Dwd4yjrWxrdI"
+#     base_url = "https://maps.googleapis.com/maps/api/staticmap"
+#     params = {
+#         "size": "600x300",
+#         "markers": f"color:red|{origin}",
+#         "path": f"color:0x0000ff|weight:5|{origin}|{destination}",
+#         "key": api_key
+#     }
+#     response = requests.get(base_url, params=params)
+#     return response.url
+
+
+def generate_static_map_url(origin, destination):
+    # Construct the URL for embedding a map based on origin and destination
+    base_url = "https://www.google.com/maps/embed/v1/directions"
+    api_key = "AIzaSyAQ_OGAb4yuL8g55IMufP3Dwd4yjrWxrdI"
+    params = {
+        "origin": origin,
+        "destination": destination,
+        "key": api_key
+    }
+    # Encode parameters and construct the complete URL
+    encoded_params = "&".join([f"{k}={v}" for k, v in params.items()])
+    embed_map_url = f"{base_url}?{encoded_params}"
+    return embed_map_url
+
+
+def grower_location(context):
+    origin_context = context.get("origin_context", [])
+    t1_processor = context.get("t1_processor",[])
+    inbound2_wip = context.get("inbound2_wip", [])
+    inbound3_wip = context.get("inbound3_wip", [])
+    inbound4_wip = context.get("inbound4_wip", [])
+    field_location_list = []
+    if origin_context:
+        for i in context["origin_context"]:
+            j = {"grower":"","field":"", "lat": 0.0, "lng": 0.0}
+            field_id = i["field_id"]
+            field = Field.objects.filter(id=field_id)
+            if field:
+                field_lat = field.first().latitude
+                field_long = field.first().longitude
+                j["grower"] = field.first().grower.name
+                j["field"] = field.first().name
+                try:
+                    j["lat"] = float(field_lat)
+                    j["lng"] = float(field_long)
+                except:
+                    j["lat"] = 0.0
+                    j["lng"] = 0.0
+            else:
+                j["grower"] = None
+                j["field"] = None
+                j["lat"] = 0.0
+                j["lng"] = 0.0
+            field_location_list.append(j)    
+    t1_location_list = []
+    if t1_processor:
+        for i in context["t1_processor"]:
+            j = {"processor":"", "lat":0.0, "lng":0.0}
+            processor = i["processor_name"]
+            processor_location = Location.objects.filter(processor__entity_name=processor)
+            if processor_location:
+                j["processor"] = processor
+                try:
+                    j["lat"] = float(processor_location.first().latitude)
+                    j["lng"] = float(processor_location.first().longitude)
+                except:
+                    j["lat"] = 0.0
+                    j["lng"] = 0.0
+            else:
+                j["processor"] = None                
+                j["lat"] = 0.0
+                j["lng"] = 0.0
+            t1_location_list.append(j)
+    t2_location_list = []
+    if inbound2_wip:
+        for i in context["inbound2_wip"]:
+            j = {"processor":"", "lat":0.0, "lng":0.0}
+            processor_id = i["processor2_idd"]
+            processor = i["processor2_name"]
+            processor_location = Processor2Location.objects.filter(processor_id=processor_id)
+            if processor_location:
+                j["processor"] = processor
+                try:
+                    j["lat"] = float(processor_location.first().latitude)
+                    j["lng"] = float(processor_location.first().longitude)
+                except:
+                    j["lat"] = 0.0
+                    j["lng"] = 0.0
+            else:
+                j["processor"] = None                
+                j["lat"] = 0.0
+                j["lng"] = 0.0
+            t2_location_list.append(j)
+    t3_location_list = []
+    if inbound3_wip:
+        for i in context["inbound3_wip"]:
+            j = {"processor":"", "lat":0.0, "lng":0.0}
+            processor_id = i["processor2_idd"]
+            processor = i["processor2_name"]
+            processor_location = Processor2Location.objects.filter(processor_id=processor_id)
+            if processor_location:
+                j["processor"] = processor
+                try:
+                    j["lat"] = float(processor_location.first().latitude)
+                    j["lng"] = float(processor_location.first().longitude)
+                except:
+                    j["lat"] = 0.0
+                    j["lng"] = 0.0
+            else:
+                j["processor"] = None                
+                j["lat"] = 0.0
+                j["lng"] = 0.0
+            t3_location_list.append(j)
+    t4_location_list = []
+    if inbound2_wip:
+        for i in context["inbound4_wip"]:
+            j = {"processor":"", "lat":0.0, "lng":0.0}
+            processor_id = i["processor2_idd"]
+            processor = i["processor2_name"]
+            processor_location = Processor2Location.objects.filter(processor_id=processor_id)
+            if processor_location:
+                j["processor"] = processor
+                try:
+                    j["lat"] = float(processor_location.first().latitude)
+                    j["lng"] = float(processor_location.first().longitude)
+                except:
+                    j["lat"] = 0.0
+                    j["lng"] = 0.0
+            else:
+                j["processor"] = None                
+                j["lat"] = 0.0
+                j["lng"] = 0.0
+            t4_location_list.append(j)
+
+    context.update({
+        "field_location_list":field_location_list,
+        "t1_location_list":t1_location_list,
+        "t2_location_list":t2_location_list,
+        "t3_location_list":t3_location_list, 
+        "t4_location_list":t4_location_list
+        })       
+    return context
+
+
 def location_response(context):   
-    
     for i in context["outbound2_wip"]:
         processor1 = i["processor_idd"]
         processor2 = i["processor2_idd"]
@@ -2341,69 +2491,166 @@ def location_response(context):
         if check_processor1_location:
             out2_processor1_lat = check_processor1_location.first().latitude
             out2_processor1_long = check_processor1_location.first().longitude
-            i["origin"] = {'lat': out2_processor1_lat, 'lng': out2_processor1_long}
+            try:
+                org_lat = float(out2_processor1_lat)
+                org_lng = float(out2_processor1_long)
+            except:
+                org_lat = 0
+                org_lng = 0
         else:
-            i["origin"] = {'lat': 0, 'lng': 0}
+            org_lat = 0
+            org_lng = 0
+        
         check_processor2_location = Processor2Location.objects.filter(processor_id=processor2, processor__processor_type__type_name="T2")
 
         if check_processor2_location:
             out2_processor2_lat = check_processor2_location.first().latitude
             out2_processor2_long = check_processor2_location.first().longitude
-            i["destination"] = {'lat': out2_processor2_lat, 'lng': out2_processor2_long}
+            try:
+                des_lat = float(out2_processor2_lat)
+                des_lng = float(out2_processor2_long)
+            except:
+                des_lat = 0
+                des_lng = 0
         else:
-            i["destination"] = {'lat': 30.30602, 'lng': 86.49102}
+            des_lat = 0
+            des_lng = 0
+        
+        i["origin_lat"] = org_lat
+        i["origin_lng"] = org_lng
+        i["destination_lat"] = des_lat
+        i["destination_lng"] = des_lng
+
+        origin = f"{org_lat},{org_lng}"
+        destination = f"{des_lat},{des_lng}"
+        
+        i["map_url"] = generate_static_map_url(origin, destination)
+        
+        
             
-    for i in context["outbound3_wip"]:
-        processor1 = i["processor_idd"]
-        processor2 = i["processor2_idd"]
+    for j in context["outbound3_wip"]:
+        processor1 = j["processor_idd"]
+        processor2 = j["processor2_idd"]
         check_processor1_location = Processor2Location.objects.filter(processor_id=processor1, processor__processor_type__type_name="T2")
 
         if check_processor1_location:
             out3_processor1_lat = check_processor1_location.first().latitude
             out3_processor1_long = check_processor1_location.first().longitude
-            i["sender_lat"] = out3_processor1_lat
-            i["sender_long"] = out3_processor1_long
+            try:
+                org_lat = float(out3_processor1_lat)
+                org_lng = float(out3_processor1_long)
+            except:
+                org_lat = 0
+                org_lng = 0
         else:
-            i["sender_lat"] = 0
-            i["sender_long"] = 0
+            org_lat = 0
+            org_lng = 0
         check_processor2_location = Processor2Location.objects.filter(processor_id=processor2, processor__processor_type__type_name="T3")
 
         if check_processor2_location:
             out3_processor2_lat = check_processor2_location.first().latitude
             out3_processor2_long = check_processor2_location.first().longitude
-            i["receiver_lat"] = out3_processor2_lat
-            i["receiver_long"] = out3_processor2_long
+            try:
+                des_lat = float(out3_processor2_lat)
+                des_lng = float(out3_processor2_long)
+            except:
+                des_lat = 0
+                des_lng = 0
         else:
-            i["receiver_lat"] = 0
-            i["receiver_long"] = 0
+            des_lat = 0
+            des_lng = 0
+
+
+        j["origin_lat"] = org_lat
+        j["origin_lng"] = org_lng
+        j["destination_lat"] = des_lat
+        j["destination_lng"] = des_lng
+        origin = f"{org_lat},{org_lng}"
+        destination = f"{des_lat},{des_lng}"
+        
+        j["map_url"] = generate_static_map_url(origin, destination)
     
-    for i in context["outbound4_wip"]:
-        processor1 = i["processor_idd"]
-        processor2 = i["processor2_idd"]
+    for k in context["outbound4_wip"]:
+        processor1 = k["processor_idd"]
+        processor2 = k["processor2_idd"]
         check_processor1_location = Processor2Location.objects.filter(processor_id=processor1, processor__processor_type__type_name="T3")
 
         if check_processor1_location:
             out4_processor1_lat = check_processor1_location.first().latitude
             out4_processor1_long = check_processor1_location.first().longitude
-            i["sender_lat"] = out4_processor1_lat
-            i["sender_long"] = out4_processor1_long
+            try:
+                org_lat = float(out4_processor1_lat)
+                org_lng = float(out4_processor1_long)
+            except:
+                org_lat = 0
+                org_lng = 0
         else:
-            i["sender_lat"] = 0
-            i["sender_long"] = 0
+            org_lat = 0
+            org_lng = 0
         check_processor2_location = Processor2Location.objects.filter(processor_id=processor2, processor__processor_type__type_name="T4")
 
         if check_processor2_location:
             out4_processor2_lat = check_processor2_location.first().latitude
             out4_processor2_long = check_processor2_location.first().longitude
-            i["receiver_lat"] = out4_processor2_lat
-            i["receiver_long"] = out4_processor2_long
+            try:
+                des_lat = float(out4_processor2_lat)
+                des_lng = float(out4_processor2_long)
+            except:
+                des_lat = 0
+                des_lng = 0
         else:
-            i["sender_lat"] = 0
-            i["sender_long"] = 0
-    print(context["outbound2_wip"][0]["origin"], "piuuuuuuuuuuuuuuuuuuuuuuuu")
-    print(context["outbound2_wip"][0]["destination"], "destination")
+            des_lat = 0
+            des_lng = 0
+
+        k["origin_lat"] = org_lat
+        k["origin_lng"] = org_lng
+        k["destination_lat"] = des_lat
+        k["destination_lng"] = des_lng
+
+        origin = f"{org_lat},{org_lng}"
+        destination = f"{des_lat},{des_lng}"
+        k["map_url"] = generate_static_map_url(origin, destination)
+
+    print(context["outbound2_wip"], "piuuuuuuuuuuuuuuuuuuuuuuuu")
+    # #print(context["outbound2_wip"])
     return context
+
+
+###
+# def location_response(context):   
+#     def get_location(processor_id, processor_type_name):
+#         location = Processor2Location.objects.filter(processor_id=processor_id, processor__processor_type__type_name=processor_type_name)
+#         if location:
+#             lat = float(location.first().latitude)
+#             lng = float(location.first().longitude)
+#         else:
+#             lat = 0
+#             lng = 0
+#         return lat, lng
+    
+#     for entry in context["outbound2_wip"]:
+#         processor1 = entry["processor_idd"]
+#         processor2 = entry["processor2_idd"]
+#         org_lat, org_lng = get_location(processor1, "T2")
+#         des_lat, des_lng = get_location(processor2, "T2")
+#         entry["map_url"] = generate_static_map_url(f"{org_lat},{org_lng}", f"{des_lat},{des_lng}")
         
+#     for entry in context["outbound3_wip"]:
+#         processor1 = entry["processor_idd"]
+#         processor2 = entry["processor2_idd"]
+#         org_lat, org_lng = get_location(processor1, "T2")
+#         des_lat, des_lng = get_location(processor2, "T3")
+#         entry["map_url"] = generate_static_map_url(f"{org_lat},{org_lng}", f"{des_lat},{des_lng}")
+    
+#     for entry in context["outbound4_wip"]:
+#         processor1 = entry["processor_idd"]
+#         processor2 = entry["processor2_idd"]
+#         org_lat, org_lng = get_location(processor1, "T3")
+#         des_lat, des_lng = get_location(processor2, "T4")
+#         entry["map_url"] = generate_static_map_url(f"{org_lat},{org_lng}", f"{des_lat},{des_lng}")
+        
+#     return context
+    
     
 
 @login_required()
@@ -2602,7 +2849,7 @@ def traceability_report_list(request):
                             new_context = location_response(context2)
                             context.update(context2)
                             context.update(new_context)
-                            # print(context)
+                            # #print(context)
                         else:
                             context['no_rec_found_msg'] = "No Records Found"
 
@@ -2651,7 +2898,16 @@ def traceability_report_list(request):
                     
                     else:
                         context['no_rec_found_msg'] = "No Records Found"
-        context["api_key"]  = 'AIzaSyAQ_OGAb4yuL8g55IMufP3Dwd4yjrWxrdI'         
+                map_show = request.POST.get("map_view")
+                table_show = request.POST.get("table_view")
+                print("map_show", map_show)
+                print("table_show", table_show)
+                context = grower_location(context)
+                if map_show:
+                    return render (request, 'tracemodule/traceability_map_show.html', context)
+                if table_show:
+                    return render (request, 'tracemodule/traceability_report_list.html', context)  
+
         return render (request, 'tracemodule/traceability_report_list.html', context)
     else:
         return redirect ('dashboard')
@@ -2679,7 +2935,7 @@ def autocomplete_suggestions(request,select_search,select_crop_id):
             lst = [i['bale_id'] for i in deliveryid]
 
     responce = {'select_search':lst}
-    # print(responce)
+    # #print(responce)
     return JsonResponse(responce)
 
 @login_required()
@@ -2785,7 +3041,7 @@ def traceability_report_Origin_csv_download(request,select_crop,get_search_by,se
         if select_crop == 'COTTON' :
             writer.writerow(['CROP', 'VARIETY', 'FIELD', 'GROWER', 'FARM', 'HARVEST DATE', 
                             'PROJECTED YIELD', 'ACTUAL YIELD', 'YIELD  DELTA', 'Pass / Fail Sustainability','Water Savings %',
-                            'Land Use Efficiency %', 'Less GHG % ', 'Premiums to Growers %', 'CO2 EQ Footprint #','Pounds of Water Per Pound Savings %'])
+                            'Land Use Efficiency %', 'Less GHG % ', 'Premiums to Growers %', 'CO2 EQ footprint #','Pounds of Water Per Pound Savings %'])
             
             
             if get_search_by and get_search_by == 'grower' :
@@ -2840,7 +3096,7 @@ def traceability_report_Origin_csv_download(request,select_crop,get_search_by,se
         if select_crop == 'RICE' :
             writer.writerow(['CROP', 'VARIETY', 'FIELD', 'GROWER', 'FARM', 'HARVEST DATE', 
                             'PROJECTED YIELD', 'ACTUAL YIELD', 'YIELD  DELTA', 'Pass / Fail Sustainability','Water Savings %',
-                            'Land Use Efficiency %', 'Less GHG % ', 'Premiums to Growers %', 'CO2 EQ Footprint #','Pounds of Water Per Pound Savings %'])
+                            'Land Use Efficiency %', 'Less GHG % ', 'Premiums to Growers %', 'CO2 EQ footprint #','Pounds of Water Per Pound Savings %'])
             
             if get_search_by and get_search_by == 'grower' :
                 check_grower = Grower.objects.filter(name__icontains=search_text)
@@ -3233,7 +3489,7 @@ def traceability_report_all_csv_download(request,select_crop,get_search_by,searc
         writer = csv.writer(response)
         # writer.writerow(['CROP', 'VARIETY', 'FIELD', 'GROWER', 'FARM', 'HARVEST DATE', 
         #                 'PROJECTED YIELD', 'ACTUAL YIELD', 'YIELD  DELTA', 'Pass / Fail Sustainability','Water Savings %',
-        #                 'Land Use Efficiency %', 'Less GHG % ', 'Premiums to Growers %', 'CO2 EQ Footprint #','Pounds of Water Per Pound Savings %'])
+        #                 'Land Use Efficiency %', 'Less GHG % ', 'Premiums to Growers %', 'CO2 EQ footprint #','Pounds of Water Per Pound Savings %'])
         output_origin = []
         if select_crop == 'COTTON' :
             # search by Grower ....
@@ -3247,7 +3503,7 @@ def traceability_report_all_csv_download(request,select_crop,get_search_by,searc
                         writer.writerow(["Origin"])
                         writer.writerow(['CROP', 'VARIETY', 'FIELD', 'GROWER', 'FARM', 'HARVEST DATE', 
                             'PROJECTED YIELD', 'ACTUAL YIELD', 'YIELD  DELTA', 'Pass / Fail Sustainability','Water Savings %',
-                            'Land Use Efficiency %', 'Less GHG % ', 'Premiums to Growers %', 'CO2 EQ Footprint #','Pounds of Water Per Pound Savings %'])
+                            'Land Use Efficiency %', 'Less GHG % ', 'Premiums to Growers %', 'CO2 EQ footprint #','Pounds of Water Per Pound Savings %'])
                         get_Origin_Grower = Origin_searchby_Grower('COTTON',search_text,*grower_field_ids)         
                         for i in get_Origin_Grower :
                             writer.writerow([i["get_select_crop"], i["variety"], i["field_name"], i["grower_name"], i["farm_name"], i["harvest_date"], 
@@ -3293,7 +3549,7 @@ def traceability_report_all_csv_download(request,select_crop,get_search_by,searc
                     writer.writerow(["Origin"])
                     writer.writerow(['CROP', 'VARIETY', 'FIELD', 'GROWER', 'FARM', 'HARVEST DATE', 
                         'PROJECTED YIELD', 'ACTUAL YIELD', 'YIELD  DELTA', 'Pass / Fail Sustainability','Water Savings %',
-                        'Land Use Efficiency %', 'Less GHG % ', 'Premiums to Growers %', 'CO2 EQ Footprint #','Pounds of Water Per Pound Savings %'])
+                        'Land Use Efficiency %', 'Less GHG % ', 'Premiums to Growers %', 'CO2 EQ footprint #','Pounds of Water Per Pound Savings %'])
                     get_origin_details = get_Origin_deliveryid('COTTON',field_id,field_name,'',warehouse_wh_id)
                     for i in get_origin_details :
                         writer.writerow([i["get_select_crop"], i["variety"], i["field_name"], i["grower_name"], i["farm_name"], i["harvest_date"], 
@@ -3339,7 +3595,7 @@ def traceability_report_all_csv_download(request,select_crop,get_search_by,searc
                         writer.writerow(["Origin"])
                         writer.writerow(['CROP', 'VARIETY', 'FIELD', 'GROWER', 'FARM', 'HARVEST DATE', 
                             'PROJECTED YIELD', 'ACTUAL YIELD', 'YIELD  DELTA', 'Pass / Fail Sustainability','Water Savings %',
-                            'Land Use Efficiency %', 'Less GHG % ', 'Premiums to Growers %', 'CO2 EQ Footprint #','Pounds of Water Per Pound Savings %'])
+                            'Land Use Efficiency %', 'Less GHG % ', 'Premiums to Growers %', 'CO2 EQ footprint #','Pounds of Water Per Pound Savings %'])
                         get_Origin_Processor = Origin_searchby_Processor('COTTON',search_text,*bale_id)         
                         for i in get_Origin_Processor :
                             writer.writerow([i["get_select_crop"], i["variety"], i["field_name"], i["grower_name"], i["farm_name"], i["harvest_date"], 
@@ -3384,7 +3640,7 @@ def traceability_report_all_csv_download(request,select_crop,get_search_by,searc
                     writer.writerow(["Origin"])
                     writer.writerow(['CROP', 'VARIETY', 'FIELD', 'GROWER', 'FARM', 'HARVEST DATE', 
                         'PROJECTED YIELD', 'ACTUAL YIELD', 'YIELD  DELTA', 'Pass / Fail Sustainability','Water Savings %',
-                        'Land Use Efficiency %', 'Less GHG % ', 'Premiums to Growers %', 'CO2 EQ Footprint #','Pounds of Water Per Pound Savings %'])
+                        'Land Use Efficiency %', 'Less GHG % ', 'Premiums to Growers %', 'CO2 EQ footprint #','Pounds of Water Per Pound Savings %'])
                     get_origin_details = get_Origin_deliveryid('COTTON',field_id,field_name,search_text,warehouse_wh_id)
                     for i in get_Origin_Processor :
                             writer.writerow([i["get_select_crop"], i["variety"], i["field_name"], i["grower_name"], i["farm_name"], i["harvest_date"], 
@@ -3421,7 +3677,7 @@ def traceability_report_all_csv_download(request,select_crop,get_search_by,searc
                     writer.writerow(["Origin"])
                     writer.writerow(['CROP', 'VARIETY', 'FIELD', 'GROWER', 'FARM', 'HARVEST DATE', 
                         'PROJECTED YIELD', 'ACTUAL YIELD', 'YIELD  DELTA', 'Pass / Fail Sustainability','Water Savings %',
-                        'Land Use Efficiency %', 'Less GHG % ', 'Premiums to Growers %', 'CO2 EQ Footprint #','Pounds of Water Per Pound Savings %'])
+                        'Land Use Efficiency %', 'Less GHG % ', 'Premiums to Growers %', 'CO2 EQ footprint #','Pounds of Water Per Pound Savings %'])
                     get_origin_details = get_Origin_deliveryid('COTTON',field_id,field_name,f"0{search_text}",warehouse_wh_id)
                     for i in get_Origin_Processor :
                             writer.writerow([i["get_select_crop"], i["variety"], i["field_name"], i["grower_name"], i["farm_name"], i["harvest_date"], 
@@ -3466,7 +3722,7 @@ def traceability_report_all_csv_download(request,select_crop,get_search_by,searc
                         writer.writerow(["Origin"])
                         writer.writerow(['CROP', 'VARIETY', 'FIELD', 'GROWER', 'FARM', 'HARVEST DATE', 
                         'PROJECTED YIELD', 'ACTUAL YIELD', 'YIELD  DELTA', 'Pass / Fail Sustainability','Water Savings %',
-                        'Land Use Efficiency %', 'Less GHG % ', 'Premiums to Growers %', 'CO2 EQ Footprint #','Pounds of Water Per Pound Savings %'])
+                        'Land Use Efficiency %', 'Less GHG % ', 'Premiums to Growers %', 'CO2 EQ footprint #','Pounds of Water Per Pound Savings %'])
                         get_Origin_Grower = Origin_searchby_Grower('RICE',search_text,*grower_field_ids)                                              
                         for i in get_Origin_Grower:
                             writer.writerow([i["get_select_crop"], i["variety"], i["field_name"], i["grower_name"], i["farm_name"], i["harvest_date"], 
@@ -3515,7 +3771,7 @@ def traceability_report_all_csv_download(request,select_crop,get_search_by,searc
                     writer.writerow(["Origin"])
                     writer.writerow(['CROP', 'VARIETY', 'FIELD', 'GROWER', 'FARM', 'HARVEST DATE', 
                     'PROJECTED YIELD', 'ACTUAL YIELD', 'YIELD  DELTA', 'Pass / Fail Sustainability','Water Savings %',
-                    'Land Use Efficiency %', 'Less GHG % ', 'Premiums to Growers %', 'CO2 EQ Footprint #','Pounds of Water Per Pound Savings %'])
+                    'Land Use Efficiency %', 'Less GHG % ', 'Premiums to Growers %', 'CO2 EQ footprint #','Pounds of Water Per Pound Savings %'])
                     get_origin_details = get_Origin_deliveryid('RICE',field_id,field_name,'',warehouse_wh_id)
                     for i in get_origin_details:
                         writer.writerow([i["get_select_crop"], i["variety"], i["field_name"], i["grower_name"], i["farm_name"], i["harvest_date"], 
@@ -3564,7 +3820,7 @@ def traceability_report_all_csv_download(request,select_crop,get_search_by,searc
                         writer.writerow(["Origin"])
                         writer.writerow(['CROP', 'VARIETY', 'FIELD', 'GROWER', 'FARM', 'HARVEST DATE', 
                         'PROJECTED YIELD', 'ACTUAL YIELD', 'YIELD  DELTA', 'Pass / Fail Sustainability','Water Savings %',
-                        'Land Use Efficiency %', 'Less GHG % ', 'Premiums to Growers %', 'CO2 EQ Footprint #','Pounds of Water Per Pound Savings %'])
+                        'Land Use Efficiency %', 'Less GHG % ', 'Premiums to Growers %', 'CO2 EQ footprint #','Pounds of Water Per Pound Savings %'])
                         get_Origin_Processor = Origin_searchby_Processor('RICE',search_text,*bale_id)         
                         for i in get_Origin_Processor:
                             writer.writerow([i["get_select_crop"], i["variety"], i["field_name"], i["grower_name"], i["farm_name"], i["harvest_date"], 
@@ -3614,7 +3870,7 @@ def traceability_report_all_csv_download(request,select_crop,get_search_by,searc
                     writer.writerow(["Origin"])
                     writer.writerow(['CROP', 'VARIETY', 'FIELD', 'GROWER', 'FARM', 'HARVEST DATE', 
                     'PROJECTED YIELD', 'ACTUAL YIELD', 'YIELD  DELTA', 'Pass / Fail Sustainability','Water Savings %',
-                    'Land Use Efficiency %', 'Less GHG % ', 'Premiums to Growers %', 'CO2 EQ Footprint #','Pounds of Water Per Pound Savings %'])
+                    'Land Use Efficiency %', 'Less GHG % ', 'Premiums to Growers %', 'CO2 EQ footprint #','Pounds of Water Per Pound Savings %'])
                     get_origin_details = get_Origin_deliveryid('RICE',field_id,field_name,search_text,warehouse_wh_id)
                     for i in get_Origin_Processor:
                         writer.writerow([i["get_select_crop"], i["variety"], i["field_name"], i["grower_name"], i["farm_name"], i["harvest_date"], 
@@ -3742,10 +3998,54 @@ def display_traceability_report(request):
                 # else:
                 #     get_sender = Processor.objects.filter(id=sender_processor).first()
                 #     check_growers = list(GrowerShipment.objects.filter(processor_id=get_sender.id).values('grower', 'processor', 'storage','field','crop'))
-                # print(check_growers)
+                # #print(check_growers)
                 # context["growers"] = check_growers
             return render(request, 'tracemodule/traceability_report.html', context)
         else:
             return redirect('login')    
     # except Exception as e:
     #     return HttpResponse(e)   
+
+
+
+# def generate_static_map_url(transport):
+#     origin = f"{transport['origin_lat']},{transport['origin_lng']}"
+#     destination = f"{transport['destination_lat']},{transport['destination_lng']}"
+#     image_size = "600x300"  # Adjust size as needed
+#     zoom = "10"  # Adjust zoom level as needed
+#     base_url = "https://staticmap.openstreetmap.de/staticmap.php"
+
+#     # Constructing the URL
+#     url = f"{base_url}?center={origin}&zoom={zoom}&size={image_size}&markers={origin},{destination}"
+
+#     return url
+
+
+def transport_list(request):
+    outbound2_wip = [
+        {'shipment_id': 'ABC123', 'origin_lat': 40.7128, 'origin_lng': -74.0060, 'destination_lat': 34.0522, 'destination_lng': -80.2437},
+        {'shipment_id': 'DEF456', 'origin_lat': 34.0522, 'origin_lng': -76.2437, 'destination_lat': 41.8781, 'destination_lng': -87.6298},
+        # Add more demo data as needed
+    ]
+
+    # Demo data for outbound3_wip
+    outbound3_wip = [
+        {'shipment_id': 'GHI789', 'origin_lat': 37.7749, 'origin_lng': -122.4194, 'destination_lat': 40.7128, 'destination_lng': -74.0060},
+        # Add more demo data as needed
+    ]
+
+    # Demo data for outbound4_wip
+    outbound4_wip = [
+        {'shipment_id': 'JKL101', 'origin_lat': 41.8781, 'origin_lng': -87.6298, 'destination_lat': 37.7749, 'destination_lng': -82.4194},
+        # Add more demo data as needed
+    ]
+
+    # Pass the demo data to your template
+    context = {
+        'outbound2_wip': outbound2_wip,
+        'outbound3_wip': outbound3_wip,
+        'outbound4_wip': outbound4_wip,
+    }
+    return render(request, 'tracemodule/traceability_map_show.html', context)
+    # return render(request, 'tracemodule/test_map.html', context)
+    

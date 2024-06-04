@@ -18,4 +18,6 @@ urlpatterns = [
     path('autocomplete_suggestions/<str:select_search>/<str:select_crop_id>/', views.autocomplete_suggestions, name='autocomplete_suggestions'),
 
     path('display_traceability_report/', views.display_traceability_report, name="display_traceability_report"),
+
+    path('test/', views.transport_list, name="transport_list"),
 ]
