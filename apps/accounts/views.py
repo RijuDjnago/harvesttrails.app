@@ -1261,7 +1261,7 @@ def dashboard(request):
         'Avg_Percentage_Score': Avg_Percentage_Score,
         'SustainabilitySurvey_data_latest': SustainabilitySurvey_data_latest,
         'release_notes' : release_notes,
-	'all_log' : all_log,
+	    'all_log' : all_log,
         'upcoming_dates': upcoming_dates,
         'onboarding_Grower_contract':onboarding_Grower_contract,
         'onboarding_Grower_Onboarding_Survey_1':onboarding_Grower_Onboarding_Survey_1,
