@@ -7374,8 +7374,9 @@ def add_outbound_shipment_processor1(request):
 @login_required()
 def Processor1ToProcessorManagement(request):
     if request.user.is_authenticated:
+        context ={}
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
-            context ={}
+            
             Processor1 = Processor.objects.all()  #24/04/2024
             context['Processor1'] = Processor1
             link_processor_to_processor_all = LinkProcessor1ToProcessor.objects.all()
@@ -7388,7 +7389,8 @@ def Processor1ToProcessorManagement(request):
                     #then need to add T1/T2/T3
                     context['selectedpro1'] = int(pro1_id)             
             print(context)             
-            return render(request, 'processor/processor_processor_management.html',context)
+            # return render(request, 'processor/processor_processor_management.html',context)
+        return render(request, 'processor/processor_processor_management.html',context)
     else:
         return redirect('login')
 

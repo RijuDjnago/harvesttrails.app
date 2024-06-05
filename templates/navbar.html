@@ -7,7 +7,7 @@
          <li>
             <span class="mainn minenaviga">Main Navigation</span>
          </li>
-         {% if  request.user.is_processor or request.user.is_consultant or request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
+         {% if  request.user.is_processor2 or request.user.is_processor or request.user.is_consultant or request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
          <li>
             <a class="" href="{% url 'dashboard' %}"> <span class="rightimg"><i
                class="fa fa-home"></i></span> <span>Home</span> </a>
@@ -270,13 +270,13 @@
          {% if 'Processor Management' in request.user.get_role_perm or request.user.is_superuser %}
          <li class="for-drop">
             <a id="Processor-active" href="javascript:void(0)" class="parent-nav99"> <span class="rightimg"><i class="fas fa-warehouse"></i></span>
-            <span class="forn-none9">T1 Processor  <!--Processor -->
+            <span class="forn-none9">Processor Management<!--Processor -->
             <span id="Processor-down" class="fas fa-chevron-right pull-right rotate9"></span></span></a>
             
             <ul id="Processor-sub" class="dropdown-99" style="display: none;">
                {% if 'Processor Management' in request.user.get_role_perm or request.user.is_superuser  %}
                   {% if not request.user.is_processor %}
-                  <li><a id="Processor-Management" href="{% url 'list-processor' %}">T1 Processor Management</a></li>   <!--Processor Management -->
+                  <li><a id="Processor-Management" href="{% url 'list-processor' %}">User Management</a></li>   <!--Processor Management -->
                   {% endif %}
                {% endif %}
                {% if 'Processor Location' in request.user.get_role_perm or request.user.is_superuser or request.user.is_processor %}
@@ -456,7 +456,7 @@
 
          <!-- 16-02-23 -->
          {% if request.user.is_authenticated %}
-         {% if request.user.is_processor or request.user.grower or request.user.is_consultant or request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
+         {% if request.user.is_processor2 or request.user.is_processor or request.user.grower or request.user.is_consultant or request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
          <li><a id="Chat-Section" href="{% url 'chat_ag' %}"> <span class="rightimg"><i class="fas fa-comment-dots"></i></span>
             <span>Chat</span>&nbsp;( <span id="show-chat-noti" style="color: red;">0</span> )</a>
          </li>
@@ -477,7 +477,7 @@
       <!-- 29/02/2024 -->  <!-- new add feature -->
 
          {% if request.user.is_authenticated %}
-            {% if  request.user.is_processor or request.user.grower or request.user.is_consultant or request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
+            {% if  request.user.is_processor2 or request.user.is_processor or request.user.grower or request.user.is_consultant or request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
                <li>
                   <a href="#" onclick="document.getElementById('logout-form').submit();" class="d-flex">
                      <span class="rightimg"><i class="fas fa-sign-out-alt"></i></span>
