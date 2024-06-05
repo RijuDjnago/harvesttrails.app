@@ -227,7 +227,7 @@ tr:nth-child(even) {
         &nbsp;
         &nbsp;
         <div>
-            <a href="{% url 'traceability_report_all_csv_download' select_crop get_search_by  search_text from_date to_date %}" class="btn-close-cancel me-3">DOWNLOAD ALL CSV</a>
+            {% comment %} <a href="{% url 'traceability_report_all_csv_download' select_crop get_search_by  search_text from_date to_date %}" class="btn-close-cancel me-3">DOWNLOAD ALL CSV</a> {% endcomment %}
         </div>
         <div>
             <a href="#" id="mapViewBtn" class="btn-close-cancel">MAP VIEW</a>
@@ -547,7 +547,7 @@ tr:nth-child(even) {
                         <td>{{ i.recive_delivery_date }}</td>
                         <td>{{ i.volume_shipped|floatformat:0 }}</td>
                         <td>{{ i.received_weight|floatformat:0 }}</td>
-                        <td>{{ i.pounds_delta|floatformat:0 }}</td>
+                        <td>{{ i.volume_shipped|floatformat:0|subtract:i.received_weight|floatformat:0 }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -620,7 +620,7 @@ tr:nth-child(even) {
                         <td>{{ i.recive_delivery_date }}</td>
                         <td>{{ i.volume_shipped|floatformat:0 }}</td>
                         <td>{{ i.received_weight|floatformat:0 }}</td>
-                        <td>{{ i.pounds_delta|floatformat:0 }}</td>
+                        <td>{{ i.volume_shipped|floatformat:0|subtract:i.received_weight|floatformat:0 }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -691,7 +691,7 @@ tr:nth-child(even) {
                         <td>{{ i.recive_delivery_date }}</td>
                         <td>{{ i.volume_shipped|floatformat:0 }}</td>
                         <td>{{ i.received_weight|floatformat:0 }}</td>
-                        <td>{{ i.pounds_delta|floatformat:0 }}</td>
+                        <td>{{ i.volume_shipped|floatformat:0|subtract:i.received_weight|floatformat:0 }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>

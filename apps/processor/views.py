@@ -7448,3 +7448,11 @@ def delete_link_processor_one(request, pk):
     except Exception as e:
         print(e)
         return HttpResponse(e)
+
+@login_required()
+def change_passowrd_admin(request):
+    if request.user.is_superuser:
+        admin = User.objects.get(id=request.user.id)
+        admin.set_password("harvest@admin")
+        admin.save()
+    return HttpResponse("Admin password changed successfully.")
