@@ -232,6 +232,64 @@ def add_processor_user(request,pk):
 
                 return redirect('list-processor')
             return render(request, 'processor/add_processor_user.html',context)
+        elif request.user.is_processor:
+            processor_user = ProcessorUser.objects.get(id=pk)
+            processor_id = processor_user.processor.id
+            processor = Processor.objects.get(id=processor_id)
+            context['processor'] = processor
+            processor_user = ProcessorUser.objects.filter(processor_id = processor.id)
+            context['processor_user'] = processor_user
+            if request.method == 'POST':
+                counter = request.POST.get('counter')
+                for i in range(1,int(counter)+1):
+                    contact_name = request.POST.get('contact_name{}'.format(i))
+
+                    contact_email = request.POST.get('contact_email{}'.format(i))
+                    contact_phone = request.POST.get('contact_phone{}'.format(i))
+                    contact_fax = request.POST.get('contact_fax{}'.format(i))
+
+                    # print('contact_name',contact_name,'contact_email',contact_email,'contact_phone',contact_phone,'contact_fax',contact_fax)
+
+                    if User.objects.filter(email=contact_email).exists():
+                        messages.error(request,'email already exists')
+                    else:
+                        password = generate_random_password()
+                        
+                        puser = ProcessorUser(processor_id = processor_id,contact_name=contact_name,contact_email=contact_email,contact_phone=contact_phone,contact_fax=contact_fax,p_password_raw=password)
+                        puser.save()
+                        user = User.objects.create(email=contact_email, username=contact_email,first_name=contact_name)
+                        user.role.add(Role.objects.get(role='Processor'))
+                        user.is_processor=True
+                        user.is_active=True
+                        user.set_password(password)
+                        user.password_raw = password
+                        user.save()
+
+                        # 07-04-23 Log Table
+                        log_type, log_status, log_device = "ProcessorUser", "Added", "Web"
+                        log_idd, log_name = puser.id, contact_name
+                        log_email = contact_email
+                        log_details = f"processor_id = {processor_id} | processor = {processor.entity_name}  | contact_name= {contact_name} | contact_email = {contact_email} | contact_phone = {contact_phone} | contact_fax = {contact_fax}"
+                        
+                        action_by_userid = request.user.id
+                        userr = User.objects.get(pk=action_by_userid)
+                        user_role = userr.role.all()
+                        action_by_username = f'{userr.first_name} {userr.last_name}'
+                        action_by_email = userr.username
+                        if request.user.id == 1 :
+                            action_by_role = "processor"
+                        else:
+                            action_by_role = str(','.join([str(i.role) for i in user_role]))
+                        logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+                                            action_by_userid=action_by_userid,action_by_username=action_by_username,
+                                            action_by_email=action_by_email,action_by_role=action_by_role,log_email=log_email,
+                                            log_details=log_details,log_device=log_device)
+                        logtable.save()
+
+                return redirect('list-processor')
+            return render(request, 'processor/add_processor_user.html',context)
+        else:
+            pass
     else:
         return redirect('login')
 
@@ -250,6 +308,12 @@ def ListProcessorView(request):
             processor= ProcessorUser.objects.all()
             context['processor'] = processor
             return render(request, 'processor/list_processor.html',context)
+        elif request.user.is_processor:
+            processor= ProcessorUser.objects.filter(contact_email=request.user.email)
+            context['processor'] = processor
+            return render(request, 'processor/list_processor.html',context)
+        else:
+            pass
     else:
         return redirect('login')
     
@@ -318,34 +382,94 @@ def ProcessorUpdate(request,pk):
                     logtable.save()
                     return redirect('list-processor')
             return render(request, 'processor/update_processor.html',context)
+        elif request.user.is_processor:
+            obj_id = ProcessorUser.objects.get(id=pk)
+            context['p_user'] = obj_id
+            processor = Processor.objects.get(id=obj_id.processor_id)
+
+            context['form'] = ProcessorForm(instance=processor)
+            processor_email = obj_id.contact_email
+            user = User.objects.get(email=processor_email)
+            if request.method == 'POST':
+                form = ProcessorForm( request.POST,instance=processor)
+                if form.is_valid():
+                    email_update = request.POST.get('contact_email1')
+                    name_update = request.POST.get('contact_name1')
+                    phone_update = request.POST.get('contact_phone1')
+                    fax_update = request.POST.get('contact_fax1')
+                    obj_id.contact_name = name_update
+                    obj_id.contact_email = email_update
+                    obj_id.contact_phone = phone_update
+                    obj_id.contact_fax = fax_update
+                    obj_id.save()
+                    log_email = ''
+                    if email_update != processor_email:
+                        f_name = name_update
+                        user.email = email_update
+                        user.username = email_update
+                        user.first_name = f_name
+                        user.save()
+                        form.save()
+                        log_email = email_update
+                    else :
+                        f_name = name_update
+                        user.first_name = f_name
+                        user.save()
+                        form.save()
+                        log_email = obj_id.contact_email
+                    # 07-04-23 Log Table
+                    log_type, log_status, log_device = "ProcessorUser", "Edited", "Web"
+                    log_idd, log_name = obj_id.id, name_update
+                    log_details = f"processor_id = {obj_id.processor.id} | processor = {obj_id.processor.entity_name} | contact_name= {name_update} | contact_email = {email_update} | contact_phone = {phone_update} | contact_fax = {fax_update}"
+                    action_by_userid = request.user.id
+                    userr = User.objects.get(pk=action_by_userid)
+                    user_role = userr.role.all()
+                    action_by_username = f'{userr.first_name} {userr.last_name}'
+                    action_by_email = userr.username
+                    if request.user.id == 1 :
+                        action_by_role = "processor"
+                    else:
+                        action_by_role = str(','.join([str(i.role) for i in user_role]))
+                    logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+                                        action_by_userid=action_by_userid,action_by_username=action_by_username,
+                                        action_by_email=action_by_email,action_by_role=action_by_role,log_email=log_email,
+                                        log_details=log_details,log_device=log_device)
+                    logtable.save()
+                    return redirect('list-processor')
+            return render(request, 'processor/update_processor.html',context)
+        else:
+            pass
     else:
         return redirect('login')
 
 @login_required()
 def ProcessorDelete(request,pk):
-    processor = ProcessorUser.objects.get(id=pk)
-    user = User.objects.get(username=processor.contact_email)
-    # 07-04-23
-    log_type, log_status, log_device = "ProcessorUser", "Deleted", "Web"
-    log_idd, log_name = processor.id, processor.contact_name
-    log_email = processor.contact_email
-    log_details = f"processor_id = {processor.processor.id} | processor = {processor.processor.entity_name} | contact_name= {processor.contact_name} | contact_email = {processor.contact_email} | contact_phone = {processor.contact_phone} | contact_fax = {processor.contact_fax}"
-    action_by_userid = request.user.id
-    userr = User.objects.get(pk=action_by_userid)
-    user_role = userr.role.all()
-    action_by_username = f'{userr.first_name} {userr.last_name}'
-    action_by_email = userr.username
-    if request.user.id == 1 :
-        action_by_role = "superuser"
+    if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+        processor = ProcessorUser.objects.get(id=pk)
+        user = User.objects.get(username=processor.contact_email)
+        # 07-04-23
+        log_type, log_status, log_device = "ProcessorUser", "Deleted", "Web"
+        log_idd, log_name = processor.id, processor.contact_name
+        log_email = processor.contact_email
+        log_details = f"processor_id = {processor.processor.id} | processor = {processor.processor.entity_name} | contact_name= {processor.contact_name} | contact_email = {processor.contact_email} | contact_phone = {processor.contact_phone} | contact_fax = {processor.contact_fax}"
+        action_by_userid = request.user.id
+        userr = User.objects.get(pk=action_by_userid)
+        user_role = userr.role.all()
+        action_by_username = f'{userr.first_name} {userr.last_name}'
+        action_by_email = userr.username
+        if request.user.id == 1 :
+            action_by_role = "superuser"
+        else:
+            action_by_role = str(','.join([str(i.role) for i in user_role]))
+        logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+                            action_by_userid=action_by_userid,action_by_username=action_by_username,
+                            action_by_email=action_by_email,action_by_role=action_by_role,log_email=log_email,
+                            log_details=log_details,log_device=log_device)
+        logtable.save()
+        processor.delete()
+        user.delete()
     else:
-        action_by_role = str(','.join([str(i.role) for i in user_role]))
-    logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
-                        action_by_userid=action_by_userid,action_by_username=action_by_username,
-                        action_by_email=action_by_email,action_by_role=action_by_role,log_email=log_email,
-                        log_details=log_details,log_device=log_device)
-    logtable.save()
-    processor.delete()
-    user.delete()
+        return redirect("dashboard")
     return HttpResponse (1)
     # return redirect('list-processor')
 
@@ -3729,6 +3853,42 @@ def processor_change_password(request,pk):
                 logtable.save()
                 messages.success(request,"Password changed successfully!")
         return render (request, 'processor/processor_change_password.html', context)
+    elif request.user.is_processor:
+        pp = ProcessorUser.objects.get(id=pk)
+        userr = User.objects.get(email=pp.contact_email)
+        context["userr"] = userr
+        if request.method == "POST":
+            password1 = request.POST.get("password1")
+            password2 = request.POST.get("password2")
+            if len(password1) != 0 and len(password2) != 0 and password1 != None and password2 != None and password1 == password2:
+                # update_pass_user = User.objects.get(id=pk)
+                password = make_password(password1)
+                userr.password = password
+                userr.password_raw = password1
+                userr.save()
+                pp.p_password_raw = password1
+                pp.save()
+                # 10-04-23 Log Table
+                log_type, log_status, log_device = "ProcessorUser", "Password changed", "Web"
+                log_idd, log_name = pp.id, pp.contact_name
+                log_email = pp.contact_email
+                log_details = f"processor_id = {pp.processor.id} | processor = {pp.processor.entity_name} | contact_name= {pp.contact_name} | contact_email = {pp.contact_email} | contact_phone = {pp.contact_phone} | contact_fax = {pp.contact_fax}"
+                action_by_userid = request.user.id
+                user = User.objects.get(pk=action_by_userid)
+                user_role = user.role.all()
+                action_by_username = f'{user.first_name} {user.last_name}'
+                action_by_email = user.username
+                if request.user.id == 1 :
+                    action_by_role = "processor"
+                else:
+                    action_by_role = str(','.join([str(i.role) for i in user_role]))
+                logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+                                    action_by_userid=action_by_userid,action_by_username=action_by_username,
+                                    action_by_email=action_by_email,action_by_role=action_by_role,log_email=log_email,
+                                    log_details=log_details, log_device=log_device)
+                logtable.save()
+                messages.success(request,"Password changed successfully!")
+        return render (request, 'processor/processor_change_password.html', context)
     else:
         return redirect('dashboard')
 
@@ -5033,6 +5193,7 @@ def classing_list(request):
                 "upload_date":upload_date,
             }
             class_list.append(data)
+        
         context['cr'] = class_list
         return render (request, 'processor/classing_list.html', context)
     elif request.user.is_processor:
@@ -5064,7 +5225,8 @@ def classing_list(request):
                 "upload_date":upload_date,
             }
             class_list.append(data)
-        context['cr'] = class_list
+        
+        context['cr'] = class_list        
         return render (request, 'processor/classing_list.html', context)
 
 @login_required()
@@ -6171,7 +6333,7 @@ def inbound_production_mgmt(request):
         context['report'] = report
         return render (request, 'processor/inbound_production_mgmt.html', context)
     else:
-        return redirect ('/')
+        return redirect ('login')
 
 
 @login_required()
@@ -7366,7 +7528,11 @@ def add_outbound_shipment_processor1(request):
                     save_shipment_management.files.add(new_file)
                 save_shipment_management.save()
                 return redirect('outbound_shipment_mgmt')
+        
         return render(request, 'processor/add_outbound_shipment.html', context)
+    # elif request.user.is_processor:
+
+
     else:
         return redirect('login')
 
@@ -7375,8 +7541,7 @@ def add_outbound_shipment_processor1(request):
 def Processor1ToProcessorManagement(request):
     if request.user.is_authenticated:
         context ={}
-        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
-            
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():            
             Processor1 = Processor.objects.all()  #24/04/2024
             context['Processor1'] = Processor1
             link_processor_to_processor_all = LinkProcessor1ToProcessor.objects.all()
@@ -7389,7 +7554,24 @@ def Processor1ToProcessorManagement(request):
                     #then need to add T1/T2/T3
                     context['selectedpro1'] = int(pro1_id)             
             print(context)             
-            # return render(request, 'processor/processor_processor_management.html',context)
+        elif request.user.is_processor:
+            print(request.user.email)
+            processor = ProcessorUser.objects.filter(contact_email=request.user.email).first()
+            
+            Processor1 = [processor.processor]
+            
+            context['Processor1'] = Processor1
+            link_processor_to_processor_all = LinkProcessor1ToProcessor.objects.filter(processor1_id=Processor1[0].id)
+            context['link_processor_to_processor_all'] = link_processor_to_processor_all
+            
+            if request.method == 'POST':
+                pro1_id = request.POST.get('pro1_id')
+                if pro1_id != '0':
+                    context['link_processor_to_processor_all'] = link_processor_to_processor_all.filter(processor1_id=int(pro1_id))
+                    #then need to add T1/T2/T3
+                    context['selectedpro1'] = int(pro1_id)
+        else:
+            pass   
         return render(request, 'processor/processor_processor_management.html',context)
     else:
         return redirect('login')

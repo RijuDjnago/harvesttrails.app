@@ -90,33 +90,29 @@
                         <table id="processorList_tbl" class="table table-striped dt-responsive nowrap" style="width:100%">
                             <thead>
                                 <tr style="border-bottom: 2px solid #e0e0e0;">
-                                    <th width="50%">T1 Processor</th>
-                                    {% if 'Processor' in request.user.get_role and request.user.is_processor %}
-                                    {% else %}
-                                    <th width="25%">processor</th>
-                                    <th width="15%">processor Type</th>
+                                    <th >T1 Processor</th>
+                                                                      
+                                    <th >processor</th>
+                                    <th>processor Type</th>
+                                   
+                                    {% if request.user.is_superuser %}  
+                                    <th>Action</th>
                                     {% endif %}
-                                    <th width="10%" >Action</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for pro in link_processor_to_processor_all %}
                                 <tr>
-                                    <td>{{pro.processor1.entity_name}}</td>   
-                                    {% if 'Processor' in request.user.get_role and request.user.is_processor %}
-                                    {% else %}                              
+                                    <td>{{pro.processor1.entity_name}}</td>                                      
+                                                              
                                     <td>{{pro.processor2.entity_name}}</td>  
-                                    {% endif %} 
-                                    <td>{{pro.processor2.processor_type.type_name}}</td>                               
-                                    <td class="backk action-td" >
-                                        <li>
-                                        <a href="#" class="map-icon-link" alt="view linked grower field and storage map" title="view linked grower field and storage map"><span class="fas fa-map-marked-alt map-Icon"></span></a>
-                                        </li>
-                                        <!-- <li>
-                                        <a href="" class="update-btn-link" alt="edit linked grower to processor" title="edit linked grower to processor"> <span class="fas fa-at"></span> </a>
-                                        </li> -->
-                                        {% if 'Processor' in request.user.get_role and request.user.is_processor %}
-                                        {% else %}
+                                    
+                                    <td>{% for pr in pro.processor2.processor_type.all %}{{pr.type_name}}{% endfor %}</td>   
+                                    {% if request.user.is_superuser %}
+                                                            
+                                    <td class="backk action-td" >                                        
+                                        
+                                        
                                         <li>
                                             <a onclick="delStorage('{% url 'delete_link_processor_one' pro.id %}')" href="{% url 'delete_link_processor_one' pro.id %}"
                                         data-mdb-toggle="modal" data-mdb-target="#deleteModal" alt="delete linked grower to processor" title="delete linked grower to processor">
