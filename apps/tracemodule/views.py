@@ -1110,7 +1110,7 @@ def outbound_Wip_Processor(crop,processor_id,processor_type,from_date,to_date) :
         pass
     if crop == 'RICE' :
         if processor_type == "T1":
-            get_shipment = ShipmentManagement.objects.filter(sender_processor_type="T1", processor_idd = processor_id, date_pulled__gte = from_date, date_pulled__lte = to_date,  status = None).values()
+            get_shipment = ShipmentManagement.objects.filter(sender_processor_type="T1", processor_idd = processor_id, date_pulled__gte = from_date, date_pulled__lte = to_date).values()
             #print(get_shipment, "shipmenttttttttt", processor_type)
         elif processor_type == "T2":
             get_shipment = ShipmentManagement.objects.filter(sender_processor_type="T2", processor_idd = processor_id, date_pulled__gte = from_date, date_pulled__lte = to_date).values()
@@ -1131,14 +1131,14 @@ def inbound_Wip_Processor(crop,processor_id,processor_type,from_date,to_date) :
     if crop == 'RICE' :
         get_shipment = []
         if processor_type == "T2":
-            get_shipment = ShipmentManagement.objects.filter(receiver_processor_type="T2", processor2_idd = processor_id, date_pulled__gte = from_date, date_pulled__lte = to_date).values()
-            # #print(get_shipment,"shipmentttttttttttttttt")
+            get_shipment = ShipmentManagement.objects.filter(receiver_processor_type="T2", processor2_idd = processor_id, date_pulled__gte = from_date, date_pulled__lte = to_date, status="APPROVED").values()
+            # print(get_shipment,"shipmentttttttttttttttt")
         elif processor_type == "T3":
-            get_shipment = ShipmentManagement.objects.filter(receiver_processor_type="T3", processor2_idd = processor_id, date_pulled__gte = from_date, date_pulled__lte = to_date).values()
-            # #print(get_shipment,"shipmentttttttttttttttt")
+            get_shipment = ShipmentManagement.objects.filter(receiver_processor_type="T3", processor2_idd = processor_id, date_pulled__gte = from_date, date_pulled__lte = to_date, status="APPROVED").values()
+            # print(get_shipment,"shipmentttttttttttttttt")
         elif processor_type == "T4":
-            get_shipment = ShipmentManagement.objects.filter(receiver_processor_type="T4", processor2_idd = processor_id, date_pulled__gte = from_date, date_pulled__lte = to_date).values()
-            #print(get_shipment,"shipmentttttttttttttttt")
+            get_shipment = ShipmentManagement.objects.filter(receiver_processor_type="T4", processor2_idd = processor_id, date_pulled__gte = from_date, date_pulled__lte = to_date, status="APPROVED").values()
+            # print(get_shipment,"shipmentttttttttttttttt")
     return list(get_shipment)
 
 
@@ -1269,7 +1269,7 @@ def t2_Processor_grower(crop,check_grower_id,from_date,to_date) :
                     get_shipment = ShipmentManagement.objects.get(storage_bin_send=var)
                     processor_id = get_shipment.processor2_idd
                     processor_name = get_shipment.processor2_name
-                    sku_id = get_shipment._send
+                    sku_id = get_shipment.storage_bin_send
                     pounds_shipped = r.total_amount
                     pounds_received = r.received_amount
                     pounds_delta = ''
@@ -1946,6 +1946,8 @@ def processor_traceability_report_response(processor_id,processor_type, from_dat
             inbound4_wip = inbound_Wip_Processor('RICE',processor_id,processor_type,from_date,to_date)         
                 
             context["inbound4_wip"] = inbound4_wip
+    else:
+        context['no_rec_found_msg'] = "No Records Found"
     return context
 
 def skuid_traceability_response(search_text):
@@ -2029,7 +2031,7 @@ def skuid_traceability_response(search_text):
             context["inbound4_wip"] = inbound4_wip
             
             
-    else:
+    elif not get_sku_id:
         sku_id = ShipmentManagement.objects.filter(storage_bin_send__icontains=search_text)
         if sku_id.exists():
             get_sku_id = sku_id.first().storage_bin_send
@@ -2250,82 +2252,89 @@ def skuid_traceability_response(search_text):
                 context["origin_context"] = get_Origin_Grower
                                             
 
-        else:
+        elif not sku_id:
             get_sku = ShipmentManagement.objects.filter(storage_bin_recive__icontains=search_text)
-            sender_processor_id = get_sku.first().processor_idd
-            sender_processor_type = get_sku.first().sender_processor_type
-            sku_id = get_sku.first().storage_bin_recive
-            if sender_processor_type == "T4":
-                inbound4_wip = list(ShipmentManagement.objects.filter(storage_bin_recive=sku_id, status="APPROVED")).values()
-                context["inbound4_wip"] = inbound4_wip
+            if get_sku:
+                sender_processor_id = get_sku.first().processor_idd
+                sender_processor_type = get_sku.first().sender_processor_type
+                sku_id = get_sku.first().storage_bin_recive
+                if sender_processor_type == "T4":
+                    inbound4_wip = list(ShipmentManagement.objects.filter(storage_bin_recive=sku_id, status="APPROVED")).values()
+                    context["inbound4_wip"] = inbound4_wip
 
-                outbound4_wip = list(ShipmentManagement.objects.filter(storage_bin_recive=sku_id, status="APPROVED")).values()
-                context["outbound4_wip"] = outbound4_wip
+                    outbound4_wip = list(ShipmentManagement.objects.filter(storage_bin_recive=sku_id, status="APPROVED")).values()
+                    context["outbound4_wip"] = outbound4_wip
 
-                inbound3_wip = []
-                outbound3_wip = []
-                sku_id_list = [i["storage_bin_send"] for i in outbound4_wip]
-                for i in sku_id_list:
-                    inbound3_wip_ = list(ShipmentManagement.objects.filter(storage_bin_recive=i, status="APPROVED").values())
-                    inbound3_wip = inbound3_wip + inbound3_wip_
-                    
-                    outbound3_wip_ = list(ShipmentManagement.objects.filter(storage_bin_recive=i).values())
-                    outbound3_wip = outbound3_wip + outbound3_wip_
+                    inbound3_wip = []
+                    outbound3_wip = []
+                    sku_id_list = [i["storage_bin_send"] for i in outbound4_wip]
+                    for i in sku_id_list:
+                        inbound3_wip_ = list(ShipmentManagement.objects.filter(storage_bin_recive=i, status="APPROVED").values())
+                        inbound3_wip = inbound3_wip + inbound3_wip_
+                        
+                        outbound3_wip_ = list(ShipmentManagement.objects.filter(storage_bin_recive=i).values())
+                        outbound3_wip = outbound3_wip + outbound3_wip_
 
-                context["inbound3_wip"] = inbound3_wip
-                context["outbound3_wip"] = outbound3_wip
+                    context["inbound3_wip"] = inbound3_wip
+                    context["outbound3_wip"] = outbound3_wip
 
-                inbound2_wip = []
-                outbound2_wip = []
-                sku_id_list_ = [i["storage_bin_send"] for i in outbound3_wip]
-                for i in sku_id_list_:
-                    inbound2_wip_ = list(ShipmentManagement.objects.filter(storage_bin_recive=i, status="APPROVED").values())
-                    inbound2_wip = inbound2_wip + inbound2_wip_
-                    
-                    outbound2_wip_ = list(ShipmentManagement.objects.filter(storage_bin_recive=i).values())
-                    outbound2_wip = outbound2_wip + outbound2_wip_
+                    inbound2_wip = []
+                    outbound2_wip = []
+                    sku_id_list_ = [i["storage_bin_send"] for i in outbound3_wip]
+                    for i in sku_id_list_:
+                        inbound2_wip_ = list(ShipmentManagement.objects.filter(storage_bin_recive=i, status="APPROVED").values())
+                        inbound2_wip = inbound2_wip + inbound2_wip_
+                        
+                        outbound2_wip_ = list(ShipmentManagement.objects.filter(storage_bin_recive=i).values())
+                        outbound2_wip = outbound2_wip + outbound2_wip_
 
-                context["inbound2_wip"] = inbound2_wip
-                context["outbound2_wip"] = outbound2_wip
+                    context["inbound2_wip"] = inbound2_wip
+                    context["outbound2_wip"] = outbound2_wip
 
-                t1_processor_ = []
-                outbound1_wip_ = []
-                field_ids = []
-                skuid_list = [i["storage_bin_send"] for i in skuid_list]
-                for i in grower_sku_id_list:
-                    # inbound
-                    t1_processor = list(GrowerShipment.objects.filter(sku=i, status="APPROVED").values("processor__entity_name","shipment_id","approval_date","grower__name","field__farm__name","field__name","total_amount","received_amount"))
-                    if len(t1_processor) != 0:
-                        t1_processor[0]["processor_name"] = t1_processor[0]["processor__entity_name"]
-                        t1_processor[0]["deliveryid"] = t1_processor[0]["shipment_id"]
-                        t1_processor[0]["date"] = t1_processor[0]["approval_date"]
-                        t1_processor[0]["grower"] = t1_processor[0]["grower__name"]
-                        t1_processor[0]["farm"] = t1_processor[0]["field__farm__name"]
-                        t1_processor[0]["field"] = t1_processor[0]["field__name"]
-                        t1_processor[0]["pounds_received"] = t1_processor[0]["received_amount"]
-                        t1_processor[0]["pounds_shipped"] = t1_processor[0]["total_amount"]
-                        try:
-                            t1_processor[0]["pounds_delta"] = float(t1_processor[0]["total_amount"]) - float(t1_processor[0]["received_amount"])
-                        except:
-                            t1_processor[0]["pounds_delta"] = "Something is wrong"
-                    t1_processor_ = t1_processor_ + t1_processor
+                    t1_processor_ = []
+                    outbound1_wip_ = []
+                    field_ids = []
+                    skuid_list = [i["storage_bin_send"] for i in skuid_list]
+                    for i in grower_sku_id_list:
+                        # inbound
+                        t1_processor = list(GrowerShipment.objects.filter(sku=i, status="APPROVED").values("processor__entity_name","shipment_id","approval_date","grower__name","field__farm__name","field__name","total_amount","received_amount"))
+                        if len(t1_processor) != 0:
+                            t1_processor[0]["processor_name"] = t1_processor[0]["processor__entity_name"]
+                            t1_processor[0]["deliveryid"] = t1_processor[0]["shipment_id"]
+                            t1_processor[0]["date"] = t1_processor[0]["approval_date"]
+                            t1_processor[0]["grower"] = t1_processor[0]["grower__name"]
+                            t1_processor[0]["farm"] = t1_processor[0]["field__farm__name"]
+                            t1_processor[0]["field"] = t1_processor[0]["field__name"]
+                            t1_processor[0]["pounds_received"] = t1_processor[0]["received_amount"]
+                            t1_processor[0]["pounds_shipped"] = t1_processor[0]["total_amount"]
+                            try:
+                                t1_processor[0]["pounds_delta"] = float(t1_processor[0]["total_amount"]) - float(t1_processor[0]["received_amount"])
+                            except:
+                                t1_processor[0]["pounds_delta"] = "Something is wrong"
+                        t1_processor_ = t1_processor_ + t1_processor
 
-                    #outbound
-                    outbound1_wip = list(GrowerShipment.objects.filter(sku=i).values("shipment_id", "processor__entity_name", "date_time","total_amount"))
-                    if len(outbound1_wip) != 0:
-                        outbound1_wip[0]["deliveryid"] = outbound1_wip[0]["shipment_id"]
-                        outbound1_wip[0]["destination"] = outbound1_wip[0]["processor__entity_name"]
-                        outbound1_wip[0]["date"] = outbound1_wip[0]["date_time"]
-                        outbound1_wip[0]["quantity"] = outbound1_wip[0]["total_amount"]
-                        outbound1_wip[0]["transportation"] = ""
-                    outbound1_wip_ = outbound1_wip_ + outbound1_wip
-                    field_ids_ = list(GrowerShipment.objects.filter(sku=i).values_list("field_id"))
-                    field_ids = field_ids + field_ids_
-                context["outbound1_wip"] = outbound1_wip_
-                context["t1_processor"] = t1_processor_
+                        #outbound
+                        outbound1_wip = list(GrowerShipment.objects.filter(sku=i).values("shipment_id", "processor__entity_name", "date_time","total_amount"))
+                        if len(outbound1_wip) != 0:
+                            outbound1_wip[0]["deliveryid"] = outbound1_wip[0]["shipment_id"]
+                            outbound1_wip[0]["destination"] = outbound1_wip[0]["processor__entity_name"]
+                            outbound1_wip[0]["date"] = outbound1_wip[0]["date_time"]
+                            outbound1_wip[0]["quantity"] = outbound1_wip[0]["total_amount"]
+                            outbound1_wip[0]["transportation"] = ""
+                        outbound1_wip_ = outbound1_wip_ + outbound1_wip
+                        field_ids_ = list(GrowerShipment.objects.filter(sku=i).values_list("field_id"))
+                        field_ids = field_ids + field_ids_
+                    context["outbound1_wip"] = outbound1_wip_
+                    context["t1_processor"] = t1_processor_
 
-                get_Origin_Grower = Origin_searchby_Grower('RICE',search_text,*field_ids)                                              
-                context["origin_context"] = get_Origin_Grower                
+                    get_Origin_Grower = Origin_searchby_Grower('RICE',search_text,*field_ids)                                              
+                    context["origin_context"] = get_Origin_Grower
+                else:
+                    context['no_rec_found_msg'] = "No Records Found"
+        else:
+            context['no_rec_found_msg'] = "No Records Found"  
+    else:
+        context['no_rec_found_msg'] = "No Records Found"           
     
     return context
 
@@ -2635,6 +2644,119 @@ def location_response(context):
     
     
 
+def grower_location(context):
+    origin_context = context.get("origin_context", [])
+    t1_processor = context.get("t1_processor",[])
+    inbound2_wip = context.get("inbound2_wip", [])
+    inbound3_wip = context.get("inbound3_wip", [])
+    inbound4_wip = context.get("inbound4_wip", [])
+    field_location_list = []
+    if origin_context:
+        for i in context["origin_context"]:
+            j = {"grower":"","field":"", "lat": 0.0, "lng": 0.0}
+            field_id = i["field_id"]
+            field = Field.objects.filter(id=field_id)
+            if field:
+                field_lat = field.first().latitude
+                field_long = field.first().longitude
+                j["grower"] = field.first().grower.name
+                j["field"] = field.first().name
+                try:
+                    j["lat"] = float(field_lat)
+                    j["lng"] = float(field_long)
+                except:
+                    j["lat"] = 0.0
+                    j["lng"] = 0.0
+            else:
+                j["grower"] = None
+                j["field"] = None
+                j["lat"] = 0.0
+                j["lng"] = 0.0
+            field_location_list.append(j)    
+    t1_location_list = []
+    if t1_processor:
+        for i in context["t1_processor"]:
+            j = {"processor":"", "lat":0.0, "lng":0.0}
+            processor = i["processor_name"]
+            processor_location = Location.objects.filter(processor__entity_name=processor)
+            if processor_location:
+                j["processor"] = processor
+                try:
+                    j["lat"] = float(processor_location.first().latitude)
+                    j["lng"] = float(processor_location.first().longitude)
+                except:
+                    j["lat"] = 0.0
+                    j["lng"] = 0.0
+            else:
+                j["processor"] = None                
+                j["lat"] = 0.0
+                j["lng"] = 0.0
+            t1_location_list.append(j)
+    t2_location_list = []
+    if inbound2_wip:
+        for i in context["inbound2_wip"]:
+            j = {"processor":"", "lat":0.0, "lng":0.0}
+            processor_id = i["processor2_idd"]
+            processor = i["processor2_name"]
+            processor_location = Processor2Location.objects.filter(processor_id=processor_id)
+            if processor_location:
+                j["processor"] = processor
+                try:
+                    j["lat"] = float(processor_location.first().latitude)
+                    j["lng"] = float(processor_location.first().longitude)
+                except:
+                    j["lat"] = 0.0
+                    j["lng"] = 0.0
+            else:
+                j["processor"] = None                
+                j["lat"] = 0.0
+                j["lng"] = 0.0
+            t2_location_list.append(j)
+    t3_location_list = []
+    if inbound3_wip:
+        for i in context["inbound3_wip"]:
+            j = {"processor":"", "lat":0.0, "lng":0.0}
+            processor_id = i["processor2_idd"]
+            processor = i["processor2_name"]
+            processor_location = Processor2Location.objects.filter(processor_id=processor_id)
+            if processor_location:
+                j["processor"] = processor
+                try:
+                    j["lat"] = float(processor_location.first().latitude)
+                    j["lng"] = float(processor_location.first().longitude)
+                except:
+                    j["lat"] = 0.0
+                    j["lng"] = 0.0
+            else:
+                j["processor"] = None                
+                j["lat"] = 0.0
+                j["lng"] = 0.0
+            t3_location_list.append(j)
+    t4_location_list = []
+    if inbound2_wip:
+        for i in context["inbound4_wip"]:
+            j = {"processor":"", "lat":0.0, "lng":0.0}
+            processor_id = i["processor2_idd"]
+            processor = i["processor2_name"]
+            processor_location = Processor2Location.objects.filter(processor_id=processor_id)
+            if processor_location:
+                j["processor"] = processor
+                try:
+                    j["lat"] = float(processor_location.first().latitude)
+                    j["lng"] = float(processor_location.first().longitude)
+                except:
+                    j["lat"] = 0.0
+                    j["lng"] = 0.0
+            else:
+                j["processor"] = None                
+                j["lat"] = 0.0
+                j["lng"] = 0.0
+            t4_location_list.append(j)
+
+    context.update({"field_location_list":field_location_list,"t1_location_list":t1_location_list,"t2_location_list":t2_location_list,"t3_location_list":t3_location_list, "t4_location_list":t4_location_list})       
+    return context     
+
+  
 @login_required()
 def traceability_report_list(request):
     context = {}
@@ -2653,7 +2775,7 @@ def traceability_report_list(request):
                 context['to_date'] = to_date
                 context['search_text'] = search_text
                 context['get_search_by'] = get_search_by
-                # crop == 'COTTON'
+                
                 if select_crop == 'COTTON' :
                     # Origin ........
                     # priority order [grower,field,processor, delivery id]
@@ -2761,7 +2883,7 @@ def traceability_report_list(request):
                     else:
                         context['no_rec_found_msg'] = "No Records Found"
                     
-                # crop == 'RICE'
+                
                 if select_crop == 'RICE' :
                     # Origin ........
                     # search by Grower ....
@@ -2778,12 +2900,32 @@ def traceability_report_list(request):
 
                                 processor_id = LinkGrowerToProcessor.objects.filter(grower_id=check_grower_id).first().processor.id
                                 entity_name = LinkGrowerToProcessor.objects.filter(grower_id=check_grower_id).first().processor.entity_name
+                                t1_processor = list(GrowerShipment.objects.filter(processor_id=processor_id, grower_id=check_grower_id, status="APPROVED").values("processor__entity_name","shipment_id","approval_date","grower__name","field__farm__name","field__name","total_amount","received_amount"))
+                                
+
+                                if len(t1_processor) != 0:
+                                    for entry in t1_processor:
+                                        entry["processor_name"] = entry["processor__entity_name"]
+                                        entry["deliveryid"] = entry["shipment_id"]
+                                        entry["date"] = entry["approval_date"]
+                                        entry["grower"] = entry["grower__name"]
+                                        entry["farm"] = entry["field__farm__name"]
+                                        entry["field"] = entry["field__name"]
+                                        entry["pounds_received"] = entry["received_amount"]
+                                        entry["pounds_shipped"] = entry["total_amount"]
+                                        try:
+                                            entry["pounds_delta"] = float(entry["total_amount"]) - float(entry["received_amount"])
+                                        except (ValueError, TypeError):
+                                            entry["pounds_delta"] = "Something is wrong"
+                                
+                                context["t1_processor"] = t1_processor                                
                                 processor_type = "T1"
                                 return_context = processor_traceability_report_response(processor_id, processor_type, from_date, to_date, entity_name)
-                                new_context = location_response(return_context)
+                                new_context = location_response(return_context)                                
                                 del return_context["origin_context"]
-                                context.update(return_context)                                
-                                context.update(new_context)
+                                del return_context["t1_processor"]
+                                context.update(return_context)                                                                
+                                context.update(new_context)  
                                 
                             else:
                                 context['no_rec_found_msg'] = "No Records Found"
@@ -2816,8 +2958,8 @@ def traceability_report_list(request):
                             del return_context["outbound1_wip"]
                             del return_context["t1_processor"]
                             
-                            context.update(return_context)
-                            context.update(new_context)
+                            context.update(return_context)                            
+                            context.update(new_context)                            
                             
                         else:
                             context['no_rec_found_msg'] = "No Records Found"
@@ -2828,7 +2970,7 @@ def traceability_report_list(request):
                             processor_type = check_processor["type"]
                             processor_id = check_processor["id"]
                             context2 = processor_traceability_report_response(processor_id,processor_type, from_date, to_date, search_text)
-                            new_context = location_response(context2)
+                            new_context = location_response(context2)                           
                             context.update(context2)
                             context.update(new_context)
                             # #print(context)
@@ -2837,19 +2979,16 @@ def traceability_report_list(request):
 
                         
                     elif get_search_by and get_search_by == 'sku_id':
-                        context2 = skuid_traceability_response(search_text)
-                        context.update(context2)
-                        context["get_search_by"] = "sku_id"
-                        # context.update(context2)
-                        
-                        if len(context["origin_context"]) == 0:
-                            context["no_rec_found_msg"] = "Not Found Origin"
+                        context_ = skuid_traceability_response(search_text)                        
+                        context["get_search_by"] = "sku_id" 
+                        origin_context = context_.get("origin_context",[]) 
+                        if origin_context:                  
+                            new_context = location_response(context_)                            
+                            context.update(context_)
+                            context.update(new_context)  
+                                                     
                         else:
-                            new_context = location_response(context2)
-                            context.update(new_context)
-                            
-            
-                        
+                            context["no_rec_found_msg"] = "Not Found Origin"
                     elif get_search_by and get_search_by == 'deliveryid' :
 
                         get_delivery_id3 = GrowerShipment.objects.filter(shipment_id__icontains=search_text)
@@ -2860,21 +2999,24 @@ def traceability_report_list(request):
                             if len(context_["origin_context"]) == 0:
                                 context["no_rec_found_msg"] = "Not Found Origin"
                             else:
-                                
                                 context.update(context_)
-                                new_context = location_response(context_)
-                                context.update(new_context)
+                                new_context = location_response(context_)                                
+                                context.update(new_context)                               
+
                         elif not get_delivery_id3:
-                            sku_id = ShipmentManagement.objects.filter(shipment_id__icontains=search_text).first().storage_bin_send
-                            context_ = skuid_traceability_response(sku_id)
-                            context["get_search_by"] = "deliveryid"
-                            if len(context_["origin_context"]) == 0:
-                                context["no_rec_found_msg"] = "Not Found Origin"
+                            get_sku_id = ShipmentManagement.objects.filter(shipment_id__icontains=search_text)
+                            if get_sku_id:
+                                sku_id = get_sku_id.first().storage_bin_send
+                                context_ = skuid_traceability_response(sku_id)
+                                context["get_search_by"] = "deliveryid"
+                                if len(context_["origin_context"]) == 0:
+                                    context["no_rec_found_msg"] = "Not Found Origin"
+                                else:                                    
+                                    context.update(context_)                                    
+                                    new_context = location_response(context_)
+                                    context.update(new_context)                                    
                             else:
-                                
-                                context.update(context_)
-                                new_context = location_response(context_)
-                                context.update(new_context)
+                                context['no_rec_found_msg'] = "No Records Found"
                         else:
                             context['no_rec_found_msg'] = "No Records Found"    
                     
@@ -2882,8 +3024,8 @@ def traceability_report_list(request):
                         context['no_rec_found_msg'] = "No Records Found"
                 map_show = request.POST.get("map_view")
                 table_show = request.POST.get("table_view")
-                print("map_show", map_show)
-                print("table_show", table_show)
+                # print("map_show", map_show)
+                # print("table_show", table_show)
                 context = grower_location(context)
                 if map_show:
                     return render (request, 'tracemodule/traceability_map_show.html', context)

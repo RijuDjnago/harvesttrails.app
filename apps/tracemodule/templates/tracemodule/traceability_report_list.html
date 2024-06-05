@@ -226,7 +226,7 @@ tr:nth-child(even) {
         &nbsp;
         &nbsp;
         <div>
-            <a href="{% url 'traceability_report_all_csv_download' select_crop get_search_by  search_text from_date to_date %}" class="btn-close-cancel me-3">DOWNLOAD ALL CSV</a>
+            {% comment %} <a href="{% url 'traceability_report_all_csv_download' select_crop get_search_by  search_text from_date to_date %}" class="btn-close-cancel me-3">DOWNLOAD ALL CSV</a> {% endcomment %}
         </div>
         <div>
             <input type="submit" class="btn-close-cancel" name="map_view" value="MAP VIEW">

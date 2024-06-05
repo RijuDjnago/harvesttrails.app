@@ -182,8 +182,8 @@
             <div class="card card-padding">
                 <div class="main-simple-table-with-search col-12">
                     <div class="row d-flex">
-                        <div class="col-md-2 col-sm-6 col-12">
-                            <div class=" mb-3">
+                        <div class="col-3">
+                            
                                 <select name="pro_id" id="mult_select"  class="form-control selectpicker" data-live-search="true">
                                     <option value='0'>Select Processor</option>
                                     {% for pro in processor2 %}
@@ -196,8 +196,7 @@
                                 {% endfor %}
                             </select>
                         </div>
-                        <div class="col-4">
-                        </div>
+                       <div class="col-5"></div>
 
                         <!-- Search section on the right side -->
                         <div class="col-4">
@@ -205,11 +204,10 @@
                                 <div class="col-8">
                                     <input class="form-control" name="search_name" type="search" placeholder="Search" autocomplete="off" aria-label="Search" id="search_name" {% if search_name %}value="{{search_name}}"{% else %}{% endif %} >
                                 </div>
-                                <div class="col-4">
+                                <div class="col-3">
                                     <button class="btn btn-outline-success btn-block" type="submit">Search</button>
                                 </div>
                             </div>
-
                         </div>
                     </div>
         
