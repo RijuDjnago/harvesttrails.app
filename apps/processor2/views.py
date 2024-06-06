@@ -1359,17 +1359,11 @@ def inbound_shipment_list(request):
                 else:   
                     context["table_data"] = list(ShipmentManagement.objects.filter(receiver_processor_type="T2", processor2_idd=context["select_processor"]).values())
             return render (request, 'processor2/inbound_management_table.html', context)
-        elif request.user.is_processor2 :
-            processor_email = request.user.email
-            p = ProcessorUser2.objects.get(contact_email=processor_email)
-            processor_id = Processor2.objects.get(id=p.processor2.id).id
-            #inbound management list for processor
-            context["table_data"] = list(ShipmentManagement.objects.filter(receiver_processor_type="T2", processor2_idd=processor_id).values())
-            return render (request, 'processor2/inbound_management_table.html', context)
+        
         else:
             return redirect('login')  
     # except:
-        return render (request, 'processor2/inbound_management_table.html') 
+        # return render (request, 'processor2/inbound_management_table.html') 
     
 @login_required
 def inbound_shipment_view(request, pk):
@@ -1666,11 +1660,10 @@ def all_shipments_csv_download_for_t2(request):
         return redirect ('dashboard')
 
 
-
-
 @login_required()
 def processor2_processor_management(request):
     if request.user.is_authenticated:
+        # Superuser................
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
             context ={}
             processor2 = Processor2.objects.filter(processor_type__type_name="T2")  #24/04/2024
@@ -1683,8 +1676,8 @@ def processor2_processor_management(request):
                 if pro1_id != '0':
                     context['link_processor_to_processor_all'] = link_processor_to_processor_all.filter(processor_id=int(pro1_id))
                     #then need to add T1/T2/T3
-                    context['selectedpro1'] = int(pro1_id)             
-            #print(context)             
+                    context['selectedpro1'] = int(pro1_id)           
+                         
             return render(request, 'processor2/processor2_processor_management.html',context)
     else:
         return redirect('login')

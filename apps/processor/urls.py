@@ -54,7 +54,7 @@ urlpatterns = [
     
     # work
     # path('classing_report_list', views.classing_report_list, name='classing_report_list'),
-    path('production_report_list', views.production_report_list, name='production_report_list'),
+    path('production_report_list/', views.production_report_list, name='production_report_list'),
     path('classing_report_delete/<int:pk>', views.classing_report_delete, name='classing_report_delete'),
     path('production_report_delete/<int:pk>', views.production_report_delete, name='production_report_delete'),
     

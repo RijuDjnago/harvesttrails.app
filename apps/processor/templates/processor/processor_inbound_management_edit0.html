@@ -9,7 +9,7 @@
         <span class="farm headingtop">Receive Delivery Edit</span>
         <div class="card farm-fields-container">
             <div class="container-fluid">
-
+                {% if request.user.is_superuser or request.user.is_processor %}
                 <form method="post" class="farm-fields-form">
                     {% csrf_token %}
                     <div class="row" style="margin-bottom:10px">
@@ -218,7 +218,8 @@
                         </div>
                     </div>
                 </form>
-
+                {% endif %}
+                
             </div>
         </div>
 

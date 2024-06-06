@@ -52,53 +52,58 @@
             <div class="main-simple-table-with-search">
                 <div class="both-data-in" style="display: inherit;">
                     <div class="simple-responsive-table">
-                        <table id="processorList_tbl" class="table table-striped dt-responsive nowrap" style="width:100%">
-                            <thead>
-                                <tr style="border-bottom: 2px solid #e0e0e0;">
-                                    <th width="10%">Processor</th>
-                                    <th width="10%">Grower</th>
-                                    <th width="10%">Field Name</th>
-                                    <th width="30%">File Name</th>
-                                    <th width="10%">Upload Date</th>
-                                    <th width="20%">Report Type</th>
-                                    <th width="10%">Action</th>
+                      <table id="processorList_tbl" class="table table-striped dt-responsive nowrap display" style="width:100%">
+                        <thead>
+                            <tr style="border-bottom: 2px solid #e0e0e0;">
+                                <th width="10%">Processor</th>
+                                <th width="10%">Grower</th>
+                                <th width="10%">Field Name</th>
+                                <th width="30%">File Name</th>
+                                <th width="10%">Upload Date</th>
+                                <th width="20%">Report Type</th>
+                                <th width="10%">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if cr %}
+                                {% for i in cr %}
+                                    <tr>
+                                        <td>{{ i.entity_name }}</td>
+                                        <td>{{ i.grower_name }}</td>
+                                        <td>{{ i.field_name }}</td>
+                                        <td>{{ i.csv_path }}</td>
+                                        <td>{{ i.upload_date }}</td>
+                                        <td>{{ i.csv_type }}</td>
+                                        <td class="backk action-td">
+                                            <ul style="height: 65px;">
+                                                <li>
+                                                    <a href="{{ i.csv_download_path }}" alt="download" title="download"><span class="fas fa-download"></span></a>
+                                                </li>
+                                                {% if 'Processor' in request.user.get_role and not request.user.is_superuser %}
+                                                {% else %}
+                                                <li>
+                                                    <a href="{% url 'classing_edit' i.id %}" alt="edit" title="edit"><span class="fas fa-edit"></span></a>
+                                                </li>
+                                                {% endif %}
+                                                <li>
+                                                    <a href="{% url 'classing_csv_list_grower' i.id %}" alt="view" title="view"><span class="fas fa-eye"></span></a>
+                                                </li>
+                                                <li>
+                                                    <a onclick="delreport('{% url 'classing_delete' i.id %}')" href="{% url 'classing_delete' i.id %}"
+                                                       data-mdb-toggle="modal" data-mdb-target="#deleteModal" alt="delete" title="delete">
+                                                        <span class="fas fa-trash"></span></a>
+                                                </li>
+                                            </ul>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td class="text-center" colspan="7">No data available in table</td>
                                 </tr>
-                            </thead>
-                            <tbody>
-                              {% for i in cr %}
-                              <tr>
-                                <td>{{i.entity_name}}</td>
-                                <td>{{i.grower_name}}</td>
-                                <td>{{i.field_name}}</td>
-                                <td>{{i.csv_path}}</td>                                   
-                                <td>{{i.upload_date}}</td>                                   
-                                <td>{{i.csv_type}}</td>                                   
-                                <td class="backk action-td">
-                                  <ul style="height: 65px;">
-                                    <li>
-                                        <a href="{{i.csv_download_path}}" alt="download" title="download"><span class="fas fa-download"></span></a>
-                                    </li>
-                                    {% if 'Processor' in request.user.get_role and not request.user.is_superuser %}
-                                    {% else %}
-                                    <li>
-                                      <a href="{% url 'classing_edit' i.id %}" alt="edit" title="edit"><span class="fas fa-edit"></span></a>
-                                    </li>
-                                    {% endif %}
-                                    <li>
-                                      <a href="{% url 'classing_csv_list_grower' i.id %}" alt="view" title="view"><span class="fas fa-eye"></span></a>
-                                    </li>
-                                    <li>
-                                    <a onclick="delreport('{% url 'classing_delete' i.id %}')" href="{% url 'classing_delete' i.id %}"
-                                    data-mdb-toggle="modal" data-mdb-target="#deleteModal" alt="delete" title="delete">
-                                    <span class="fas fa-trash"></span></a>
-                                    </li>
-                                  </ul>
-                                </td>
-                              </tr>
-                              {% endfor %}
-                            </tbody>
-                        </table>
-                        
+                            {% endif %}
+                        </tbody>
+                    </table>                       
                     </div>
                 </div>
             </div>

@@ -48,8 +48,8 @@
                                 </tr>
                             </thead>
                             <tbody>
+                              {% if pr %}
                                 {% for i in pr %}
-
                                 <tr>
                                     <td data-sort='YYYYMMDD'>{{i.uploaded_date}}</td>
                                     <td>{{i.processor.entity_name}}</td>
@@ -67,6 +67,11 @@
                                     </td>
                                 </tr>
                                 {% endfor %}
+                                {% else %}
+                                <tr>
+                                    <td class="text-center" colspan="7">No data available in table</td>
+                                </tr>
+                            {% endif %}
                             </tbody>
                         </table>
                         

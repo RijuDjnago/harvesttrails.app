@@ -372,25 +372,25 @@
         
             <li><a id="Processor-Management" href="{% url 'list-processor' %}">User Management</a></li>  
          <li><a id="Location-Management" href="{% url 'list-location' %}">Location Management</a></li>
-         
+         {% if request.user.is_processor %}
          <li><a id="Grower-to-Processor" href="{% url 'grower_processor_management' %}">                  
             Assigned Grower               
          </a>
-         </li>               
-         <li><a id="Processor1-Processor-Management" href="{% url 'Processor1ToProcessorManagement' %}">Processor To Processor Management</a></li>              
-         <li><a id="Inbound-Management" href="{% url 'processor_inbound_management' %}">Inbound Management</a></li>
-         
-         <li><a id="Production-Management" href="{% url 'inbound_production_mgmt' %}">Production Management</a></li>
+         </li>
+         {% endif %}               
+         <li><a id="Processor1-Processor-Management" href="{% url 'Processor1ToProcessorManagement' %}">Processor To Processor Management</a></li> 
+         <li><a id="Production-Management" href="{% url 'inbound_production_mgmt' %}">Production Management</a></li>       
+                      
+         <li><a id="Inbound-Management" href="{% url 'processor_inbound_management' %}">Inbound Management</a></li>         
         
-         
          <li><a id="Shipment-Management" href="{% url 'outbound_shipment_mgmt' %}">Shipment Management</a></li>
-         
+         {% if request.user.is_processor %}
          <li><a id="Classing-All-Reports" href="{% url 'classing_list' %}">Classing All Reports</a></li>
          
          <li><a id="Production-Report" href="{% url 'production_report_list' %}">Production Report</a></li>
          
          <li><a id="EWR-Report" href="{% url 'classing_ewr_report_list' %}">EWR Report</a></li>
-         
+         {% endif %}
       </ul>
    </li>
     {% else %}

@@ -33,9 +33,11 @@
         <div class="page-title-with-or-without-btn">
             <span class="farm headingtop">Processor Management</span>
             <!-- Create button for add-processor-->
+            {% if request.user.is_superuser %}
             <div class="flex-header-btn">
                 <a href="{% url 'add-processor' %}" class="btn-close-cancel">Create Processor</a>
             </div>
+            {% endif %}
         </div>
         <div class="card card-padding">
             <div class="main-simple-table-with-search">
@@ -54,18 +56,25 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for i in processor %}
+                                {% for i in processor %}                                
                                 <tr>
+                                  {% if request.user.is_superuser %}                                 
+                                  
                                     <td>{{i.processor.entity_name}}</td>
                                     <td>{{i.processor.fein}}</td>
+                                    {% endif %}
+                                    {% if request.user.is_processor2 %}
+                                    <td>{{i.processor2.entity_name}}</td>
+                                    <td>{{i.processor2.fein}}</td>
+                                  {% endif %}
                                     <td>{{i.contact_name}}</td>
                                     <td>{{i.contact_email}}</td>
                                     <td>{{i.p_password_raw}}</td>
                                     <td>{{i.contact_phone}}</td>                                   
-                                    <td class="backk action-td" >
+                                    <td class="backk action-td" >                                     
                                         <li>
                                           <a href="{% url 'add_processor_user' i.pk %}" class="map-icon-link" alt="add user" title="add user"><span class="fas fa-user-plus"></span></a>
-                                        </li>
+                                        </li>                                       
                                         <li>
                                         <a href="{% url 'add-location' %}" class="map-icon-link" alt="add location" title="add location"><span class="fas fa-globe-americas"></span></a>
                                         </li>
@@ -81,7 +90,7 @@
                                         <span class="fas fa-trash"></span></a>
                                         </li>
                                     </td>
-                                </tr>
+                                </tr>                             
                                 {% endfor %}
                             </tbody>
                         </table>
