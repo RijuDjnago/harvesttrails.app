@@ -155,6 +155,9 @@
             background-color: transparent;
             border: 0;
         }
+        button[mult_select]{
+            border-radius: 30px !important;
+        }
     </style>
     <main>
         {% include '_alerts.html' %}
@@ -353,7 +356,7 @@
                     <div class="row d-flex">
                         <div class="col-3">
                             
-                                <select name="pro_id" id="mult_select"  class="form-control selectpicker" data-live-search="true">
+                                <select name="pro_id" id="mult_select"  class="form-control selectpicker" data-live-search="true" style="border-radius: 30px">
                                     <option value='0'>Select Processor</option>
                                     {% for pro in processor2 %}
                     

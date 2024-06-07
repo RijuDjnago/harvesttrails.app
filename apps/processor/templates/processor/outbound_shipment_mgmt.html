@@ -136,7 +136,7 @@
                 <div class="row">
                     {% comment %} {% if request.user.is_processor %}
                     {% else %} {% endcomment %}
-                    <div class="col-4">
+                    <div class="col-8">
                         <div class="inline-apply-filter">
                             <div class="three-fields-with-label">
                                 <select name="selectprocessor_id" id="mult_select"  class="form-control selectpicker" data-live-search="true">
@@ -154,9 +154,8 @@
                             <input style="display : none;" id="submitBtn" type="submit"
                                 class="apply-filter-btn primary-btn" value="Apply Filter" />
                         </div>
-                    </div>
+                    </div>                    
                     
-                    <div class="col-4"></div>
                     {% comment %} {% endif %} {% endcomment %}
                     <div class="col-4">
                         <div class="row">

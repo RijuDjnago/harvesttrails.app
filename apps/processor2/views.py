@@ -125,7 +125,7 @@ def add_processor2(request):
                         processor_user = ProcessorUser2(processor2_id = processor2.id,contact_name=contact_name,contact_email=contact_email,contact_phone=contact_phone,contact_fax=contact_fax,p_password_raw=password)
                         processor_user.save()
                         user = User.objects.create(email=contact_email, username=contact_email,first_name=contact_name)
-                        user.role.add(Role.objects.get(role='Processor2'))
+                        user.role.add(Role.objects.get(role='Processor'))
                         user.is_processor2=True
                         user.is_active=True
                         user.set_password(password)
@@ -500,7 +500,7 @@ def add_processor2_user(request,pk):
                     puser = ProcessorUser2(processor2_id = processor2_id,contact_name=contact_name,contact_email=contact_email,contact_phone=contact_phone,contact_fax=contact_fax,p_password_raw=password)
                     puser.save()
                     user = User.objects.create(email=contact_email, username=contact_email,first_name=contact_name)
-                    user.role.add(Role.objects.get(role='Processor2'))
+                    user.role.add(Role.objects.get(role='Processor'))
                     user.is_processor2=True
                     user.is_active=True
                     user.set_password(password)
