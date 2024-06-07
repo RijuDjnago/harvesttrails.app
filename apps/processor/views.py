@@ -87,6 +87,23 @@ def generate_sku_id():
 
 	return "".join(sku_id)
 
+from django.db.models import Sum, FloatField
+from django.db.models.functions import Cast
+
+def calculate_milled_volume(processor_id, processor_type):
+    if processor_type == "T1":
+        inbound_shipment_sum = GrowerShipment.objects.filter(processor_id=processor_id, status="APPROVED").annotate(received_amount_float=Cast('received_amount', FloatField())).aggregate(
+                total_received_amount=Sum('received_amount_float'))['total_received_amount']
+        print(inbound_shipment_sum)
+        total_outbound_sum = ShipmentManagement.objects.filter(processor_idd=processor_id, sender_processor_type="T1", status="APPROVED").annotate(shipped_amount_float=Cast("volume_shipped", FloatField())).aggregate(total_shipped_amount=Sum('shipped_amount_float'))["total_shipped_amount"]
+        milled_volume = inbound_shipment_sum - total_outbound_sum
+    if processor_type in ["T2", "T3","T4"]:
+        inbound_shipment_sum = ShipmentManagement.objects.filter(processor2_idd=processor_id, status="APPROVED").annotate(received_amount_float=Cast("received_weight", FloatField())).aggregate(total_received_amount=Sum('received_amount_float'))["total_received_amount"]
+        total_outbound_sum = ShipmentManagement.objects.filter(processor_idd=processor_id, status="APPROVED").annotate(shipped_amount_float=Cast("volume_shipped", FloatField())).aggregate(total_shipped_amount=Sum('shipped_amount_float'))["total_shipped_amount"]
+        milled_volume = inbound_shipment_sum - total_outbound_sum
+    return milled_volume
+    
+
 
 @login_required()
 def AddProcessorView(request):
@@ -3317,20 +3334,30 @@ def processor_receive_delivery(request):
             processor_type = Processor2.objects.get(id=p.processor2_id).processor_type.all().first().type_name  
             context["processor_type"] = processor_type
             if processor_type == "T2":  
-                context["processor"] = list(LinkProcessor1ToProcessor.objects.filter(processor2_id=processor_id).values("processor1__id", "processor1__entity_name"))
+                processor1 = list(LinkProcessor1ToProcessor.objects.filter(processor2_id=processor_id).values("processor1__id", "processor1__entity_name"))
+                linked_processor = []
+                for pro1 in processor1:
+                    dict_ = {"processor__id":None, "processor__entity_name":None,"processor_type":None } 
+                    dict_["processor__id"] = pro1["processor1__id"]
+                    dict_["processor__entity_name"] = pro1["processor1__entity_name"]
+                    dict_["processor_type"] = "T1"
+                    linked_processor.append(dict_)
+                context["processor"] = linked_processor    
             if processor_type == "T3":
                 processor1 = list(LinkProcessor1ToProcessor.objects.filter(processor2_id=processor_id).values("processor1__id", "processor1__entity_name"))
                 processor2 = list(LinkProcessorToProcessor.objects.filter(linked_processor_id=processor_id).values("processor__id", "processor__entity_name"))
                 linked_processor = []
                 for pro1 in processor1:
-                    dict_ = {"processor__id":None, "processor__entity_name":None} 
+                    dict_ = {"processor__id":None, "processor__entity_name":None,"processor_type":None } 
                     dict_["processor__id"] = pro1["processor1__id"]
                     dict_["processor__entity_name"] = pro1["processor1__entity_name"]
+                    dict_["processor_type"] = "T1"
                     linked_processor.append(dict_)
                 for pro2 in processor2:
-                    dict_ = {"processor__id":None, "processor__entity_name":None} 
+                    dict_ = {"processor__id":None, "processor__entity_name":None, "processor_type":None} 
                     dict_["processor__id"] = pro2["processor__id"]
                     dict_["processor__entity_name"] = pro2["processor__entity_name"]
+                    dict_["processor_type"] = Processor2.objects.filter(id=int(pro2["processor__id"])).first().processor_type.all().first().type_name
                     linked_processor.append(dict_)
                 context["processor"] = linked_processor
             if processor_type == "T4":
@@ -3338,14 +3365,16 @@ def processor_receive_delivery(request):
                 processor2 = list(LinkProcessorToProcessor.objects.filter(linked_processor_id=processor_id).values("processor__id", "processor__entity_name"))
                 linked_processor = []
                 for pro1 in processor1:
-                    dict_ = {"processor__id":None, "processor__entity_name":None} 
+                    dict_ = {"processor__id":None, "processor__entity_name":None, "processor_type":None} 
                     dict_["processor__id"] = pro1["processor1__id"]
                     dict_["processor__entity_name"] = pro1["processor1__entity_name"]
+                    dict_["processor_type"] = "T1"
                     linked_processor.append(dict_)
                 for pro2 in processor2:
-                    dict_ = {"processor__id":None, "processor__entity_name":None} 
+                    dict_ = {"processor__id":None, "processor__entity_name":None, "processor_type":None} 
                     dict_["processor__id"] = pro2["processor__id"]
                     dict_["processor__entity_name"] = pro2["processor__entity_name"]
+                    dict_["processor_type"] = Processor2.objects.filter(id=int(pro2["processor__id"])).first().processor_type.all().first().type_name
                     linked_processor.append(dict_)
                 context["processor"] = linked_processor
             print(context)
@@ -3358,9 +3387,14 @@ def processor_receive_delivery(request):
 
             if request.method == "POST":
                 data = request.POST
-                bin_pull = data.get("bin_pull")                
+                get_bin_pull = data.get("bin_pull") 
+                bin_pull, bin_pull_type = get_bin_pull.split("_")[0],get_bin_pull.split("_")[1]
+                if bin_pull_type == "T1":
+                    select_processor_name = Processor.objects.filter(id=int(bin_pull)).first().entity_name
+                else:
+                    select_processor_name = Processor2.objects.filter(id=int(bin_pull)).first().entity_name
                 context.update({
-                    "select_processor_name": Processor.objects.filter(id=int(bin_pull)).first().entity_name,
+                    "select_processor_name": select_processor_name,
                     "select_processor_id": bin_pull,
                     "processor2_id": data.get("processor2_id"),
                     "exp_yield": data.get("exp_yield"),
@@ -3384,23 +3418,23 @@ def processor_receive_delivery(request):
                 })
 
                 if bin_pull and not data.get("save"):
-                    list_get_bin_location = []
-                    get_bin_location = list(ProductionManagement.objects.filter(processor_id=int(bin_pull)).values_list('milled_volume', flat=True))
+                    # list_get_bin_location = []
+                    # get_bin_location = list(ProductionManagement.objects.filter(processor_id=int(bin_pull)).values_list('milled_volume', flat=True))
 
-                    if get_bin_location:
-                        for i in get_bin_location:
-                            list_get_bin_location.append(float(i))
+                    # if get_bin_location:
+                    #     for i in get_bin_location:
+                    #         list_get_bin_location.append(float(i))
 
-                    total_shiped_volume = []
-                    shiped_volume = list(ShipmentManagement.objects.filter(bin_location=bin_pull).values_list('volume_shipped', flat=True))
-                    if shiped_volume:
-                        for i in shiped_volume :
-                            total_shiped_volume.append(float(i))
+                    # total_shiped_volume = []
+                    # shiped_volume = list(ShipmentManagement.objects.filter(bin_location=bin_pull).values_list('volume_shipped', flat=True))
+                    # if shiped_volume:
+                    #     for i in shiped_volume :
+                    #         total_shiped_volume.append(float(i))
 
-                    sum_total_volume = sum(list_get_bin_location) if get_bin_location else 0
-                    sum_shiped_volume = sum(total_shiped_volume) if shiped_volume else 0
-                    
-                    context["milled_value"] =  float(sum_total_volume) - float(sum_shiped_volume)
+                    # sum_total_volume = sum(list_get_bin_location) if get_bin_location else 0
+                    # sum_shiped_volume = sum(total_shiped_volume) if shiped_volume else 0
+                    sender_processor_type = bin_pull_type
+                    context["milled_value"] =  calculate_milled_volume(int(bin_pull),sender_processor_type )
                 
                     
                     return render(request, 'processor/add_processor_receive_delivery.html',context)
@@ -3422,8 +3456,7 @@ def processor_receive_delivery(request):
                     volume_left = float(context["milled_value"]) - float(context["volume_shipped"])
                     shipment_id = generate_shipment_id()
                     
-                    processor_e_name = Processor.objects.filter(id=int(bin_pull)).first().entity_name
-                    save_shipment_management = ShipmentManagement(shipment_id=shipment_id,processor_idd=bin_pull,processor_e_name=processor_e_name, sender_processor_type="T1", bin_location=bin_pull,
+                    save_shipment_management = ShipmentManagement(shipment_id=shipment_id,processor_idd=bin_pull,processor_e_name=select_processor_name, sender_processor_type=sender_processor_type, bin_location=bin_pull,
                             equipment_type=context["equipment_type"],equipment_id=context["equipment_id"],storage_bin_send=context["storage_bin_id"],moisture_percent = context["moist_percentage"],weight_of_product_raw = context["weight_prod"],
                             weight_of_product=cal_weight,weight_of_product_unit=context["weight_prod_unit_id"], excepted_yield_raw =context["exp_yield"],excepted_yield=cal_exp_yield,excepted_yield_unit=context["exp_yield_unit_id"],recive_delivery_date=context["approval_date"],
                             purchase_order_number=context["purchase_number"],lot_number=context["lot_number"],volume_shipped=context["volume_shipped"],milled_volume=milled_volume,volume_left=volume_left,editable_obj=True,status=context["status"],
@@ -8126,23 +8159,23 @@ def add_outbound_shipment_processor1(request):
             })
 
             if bin_pull and not data.get("save"):
-                list_get_bin_location = []
-                get_bin_location = list(ProductionManagement.objects.filter(processor_id=int(bin_pull)).values_list('milled_volume', flat=True))
+                # list_get_bin_location = []
+                # get_bin_location = list(ProductionManagement.objects.filter(processor_id=int(bin_pull)).values_list('milled_volume', flat=True))
 
-                if get_bin_location:
-                    for i in get_bin_location:
-                        list_get_bin_location.append(float(i))
+                # if get_bin_location:
+                #     for i in get_bin_location:
+                #         list_get_bin_location.append(float(i))
 
-                total_shiped_volume = []
-                shiped_volume = list(ShipmentManagement.objects.filter(bin_location=bin_pull).values_list('volume_shipped', flat=True))
-                if shiped_volume:
-                    for i in shiped_volume :
-                        total_shiped_volume.append(float(i))
+                # total_shiped_volume = []
+                # shiped_volume = list(ShipmentManagement.objects.filter(bin_location=bin_pull).values_list('volume_shipped', flat=True))
+                # if shiped_volume:
+                #     for i in shiped_volume :
+                #         total_shiped_volume.append(float(i))
 
-                sum_total_volume = sum(list_get_bin_location) if get_bin_location else 0
-                sum_shiped_volume = sum(total_shiped_volume) if shiped_volume else 0
-                
-                context["milled_value"] =  float(sum_total_volume) - float(sum_shiped_volume)
+                # sum_total_volume = sum(list_get_bin_location) if get_bin_location else 0
+                # sum_shiped_volume = sum(total_shiped_volume) if shiped_volume else 0
+                processor_type="T1"
+                context["milled_value"] =  calculate_milled_volume(int(bin_pull), processor_type)
                
                 processor2 = LinkProcessor1ToProcessor.objects.filter(processor1_id=bin_pull, processor2__processor_type__type_name = "T2").values("processor2__id", "processor2__entity_name")
                 processor3 = LinkProcessor1ToProcessor.objects.filter(processor1_id=bin_pull, processor2__processor_type__type_name = "T3").values("processor2__id", "processor2__entity_name")
@@ -8225,23 +8258,25 @@ def add_outbound_shipment_processor1(request):
         p = ProcessorUser.objects.get(contact_email=request.user.email)
         context["processor"] = list(Processor.objects.filter(id=p.processor_id).values("id", "entity_name"))
         bin_pull = context["processor"][0]["id"] 
-        list_get_bin_location = []
-        get_bin_location = list(ProductionManagement.objects.filter(processor_id=int(bin_pull)).values_list('milled_volume', flat=True))
 
-        if get_bin_location:
-            for i in get_bin_location:
-                list_get_bin_location.append(float(i))
+        # list_get_bin_location = []
+        # get_bin_location = list(ProductionManagement.objects.filter(processor_id=int(bin_pull)).values_list('milled_volume', flat=True))
 
-        total_shiped_volume = []
-        shiped_volume = list(ShipmentManagement.objects.filter(bin_location=bin_pull).values_list('volume_shipped', flat=True))
-        if shiped_volume:
-            for i in shiped_volume :
-                total_shiped_volume.append(float(i))
+        # if get_bin_location:
+        #     for i in get_bin_location:
+        #         list_get_bin_location.append(float(i))
 
-        sum_total_volume = sum(list_get_bin_location) if get_bin_location else 0
-        sum_shiped_volume = sum(total_shiped_volume) if shiped_volume else 0
+        # total_shiped_volume = []
+        # shiped_volume = list(ShipmentManagement.objects.filter(bin_location=bin_pull).values_list('volume_shipped', flat=True))
+        # if shiped_volume:
+        #     for i in shiped_volume :
+        #         total_shiped_volume.append(float(i))
+
+        # sum_total_volume = sum(list_get_bin_location) if get_bin_location else 0
+        # sum_shiped_volume = sum(total_shiped_volume) if shiped_volume else 0
         
-        context["milled_value"] =  float(sum_total_volume) - float(sum_shiped_volume)
+        processor_type="T1"
+        context["milled_value"] =  calculate_milled_volume(int(bin_pull), processor_type)
         
         processor2 = LinkProcessor1ToProcessor.objects.filter(processor1_id=bin_pull, processor2__processor_type__type_name = "T2").values("processor2__id", "processor2__entity_name")
         processor3 = LinkProcessor1ToProcessor.objects.filter(processor1_id=bin_pull, processor2__processor_type__type_name = "T3").values("processor2__id", "processor2__entity_name")
@@ -8347,23 +8382,25 @@ def add_outbound_shipment_processor1(request):
         p = ProcessorUser2.objects.get(contact_email=request.user.email)
         context["processor"] = list(Processor2.objects.filter(id=p.processor2_id).values("id", "entity_name"))
         bin_pull = context["processor"][0]["id"] 
-        list_get_bin_location = []
-        get_bin_location = list(ProductionManagementProcessor2.objects.filter(processor_id=int(bin_pull)).values_list('milled_volume', flat=True))
 
-        if get_bin_location:
-            for i in get_bin_location:
-                list_get_bin_location.append(float(i))
+        # list_get_bin_location = []
+        # get_bin_location = list(ProductionManagementProcessor2.objects.filter(processor_id=int(bin_pull)).values_list('milled_volume', flat=True))
 
-        total_shiped_volume = []
-        shiped_volume = list(ShipmentManagement.objects.filter(bin_location=bin_pull).values_list('volume_shipped', flat=True))
-        if shiped_volume:
-            for i in shiped_volume :
-                total_shiped_volume.append(float(i))
+        # if get_bin_location:
+        #     for i in get_bin_location:
+        #         list_get_bin_location.append(float(i))
 
-        sum_total_volume = sum(list_get_bin_location) if get_bin_location else 0
-        sum_shiped_volume = sum(total_shiped_volume) if shiped_volume else 0
-        
-        context["milled_value"] =  float(sum_total_volume) - float(sum_shiped_volume)        
+        # total_shiped_volume = []
+        # shiped_volume = list(ShipmentManagement.objects.filter(bin_location=bin_pull).values_list('volume_shipped', flat=True))
+        # if shiped_volume:
+        #     for i in shiped_volume :
+        #         total_shiped_volume.append(float(i))
+
+        # sum_total_volume = sum(list_get_bin_location) if get_bin_location else 0
+        # sum_shiped_volume = sum(total_shiped_volume) if shiped_volume else 0
+
+        sender_processor_type = Processor2.objects.filter(id=int(bin_pull)).first().processor_type.all().first().type_name
+        context["milled_value"] =  calculate_milled_volume(int(bin_pull), sender_processor_type)        
         
         processor3 = LinkProcessorToProcessor.objects.filter(processor_id=bin_pull, linked_processor__processor_type__type_name = "T3").values("linked_processor__id", "linked_processor__entity_name")
         processor4 = LinkProcessorToProcessor.objects.filter(processor_id=bin_pull, linked_processor__processor_type__type_name = "T4").values("linked_processor__id", "linked_processor__entity_name")
@@ -8420,7 +8457,7 @@ def add_outbound_shipment_processor1(request):
             shipment_id = generate_shipment_id()
             
             processor_e_name = Processor2.objects.filter(id=int(bin_pull)).first().entity_name
-            save_shipment_management = ShipmentManagement(shipment_id=shipment_id,processor_idd=bin_pull,processor_e_name=processor_e_name, sender_processor_type="T2", bin_location=bin_pull,
+            save_shipment_management = ShipmentManagement(shipment_id=shipment_id,processor_idd=bin_pull,processor_e_name=processor_e_name, sender_processor_type=sender_processor_type, bin_location=bin_pull,
                     equipment_type=context["equipment_type"],equipment_id=context["equipment_id"],storage_bin_send=context["storage_bin_id"],moisture_percent = context["moist_percentage"],weight_of_product_raw = context["weight_prod"],
                     weight_of_product=cal_weight,weight_of_product_unit=context["weight_prod_unit_id"], excepted_yield_raw =context["exp_yield"],excepted_yield=cal_exp_yield,excepted_yield_unit=context["exp_yield_unit_id"],
                     purchase_order_number=context["purchase_number"],lot_number=context["lot_number"],volume_shipped=context["volume_shipped"],milled_volume=milled_volume,volume_left=volume_left,editable_obj=True,

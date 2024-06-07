@@ -382,7 +382,7 @@
                                 <option value="all" disabled selected>Select Bin Location Pulled from</option>
                                 {% endif %}                                
                                 {% for pro in processor %}                                
-                                <option value="{{pro.processor__id}}">{{pro.processor__entity_name}}</option>    
+                                <option value="{{pro.processor__id}}_{{pro.processor_type}}">{{pro.processor__entity_name}}</option>    
                                 {% endfor %}
                               
                             </select>

@@ -22,6 +22,7 @@ from apps.processor.views import generate_shipment_id
 import qrcode, time, json
 from django.core.files.base import ContentFile
 from apps.processor2.forms import *
+from apps.processor.views import calculate_milled_volume
 
 
 
@@ -583,11 +584,7 @@ def add_outbound_shipment_processor3(request):
     context = {}
 
     if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
-        # processor= Processor2.objects.filter(processor_type__type_name="T2").values("entity_name","id").order_by('entity_name')
-        # processor3= Processor2.objects.filter(processor_type__type_name="T3").values("entity_name","id").order_by('entity_name')
-        # processor4= Processor2.objects.filter(processor_type__type_name="T4").values("entity_name","id").order_by('entity_name')
-        # context["processor3"] = processor3
-        # context["processor4"] = processor4
+        
         context["processor"] = list(Processor2.objects.filter(processor_type__type_name="T3").values("id", "entity_name"))
         
         context.update({
@@ -620,22 +617,22 @@ def add_outbound_shipment_processor3(request):
             })
 
             if bin_pull and not data.get("save"):
-                list_get_bin_location = []
-                get_bin_location = list(ProductionManagementProcessor2.objects.filter(processor_id=int(bin_pull)).values_list('milled_volume', flat=True))
+                # list_get_bin_location = []
+                # get_bin_location = list(ProductionManagementProcessor2.objects.filter(processor_id=int(bin_pull)).values_list('milled_volume', flat=True))
 
-                if get_bin_location:
-                    for i in get_bin_location:
-                        list_get_bin_location.append(float(i))
+                # if get_bin_location:
+                #     for i in get_bin_location:
+                #         list_get_bin_location.append(float(i))
 
-                total_shiped_volume = []
-                shiped_volume = ShipmentManagement.objects.filter(bin_location=bin_pull).values('volume_shipped')
-                if shiped_volume:
-                    for i in shiped_volume :
-                        total_shiped_volume.append(float(i['volume_shipped']))
+                # total_shiped_volume = []
+                # shiped_volume = ShipmentManagement.objects.filter(bin_location=bin_pull).values('volume_shipped')
+                # if shiped_volume:
+                #     for i in shiped_volume :
+                #         total_shiped_volume.append(float(i['volume_shipped']))
 
-                sum_total_volume = sum(list_get_bin_location) if get_bin_location else 0
-                sum_shiped_volume = sum(total_shiped_volume) if shiped_volume else 0
-                context["milled_value"] =  float(sum_total_volume) - float(sum_shiped_volume)
+                # sum_total_volume = sum(list_get_bin_location) if get_bin_location else 0
+                # sum_shiped_volume = sum(total_shiped_volume) if shiped_volume else 0
+                context["milled_value"] =  calculate_milled_volume(int(bin_pull), "T3")
                 
                 processor3 = LinkProcessorToProcessor.objects.filter(processor_id=bin_pull, linked_processor__processor_type__type_name = "T3").values("linked_processor__id", "linked_processor__entity_name")
                 processor4 = LinkProcessorToProcessor.objects.filter(processor_id=bin_pull, linked_processor__processor_type__type_name = "T4").values("linked_processor__id", "linked_processor__entity_name")
@@ -681,6 +678,8 @@ def add_outbound_shipment_processor3(request):
                 return redirect('outbound_shipment_list_processor3')
 
         return render(request, 'processor3/add_outbound_shipment_processor3.html', context)
+    else:
+        return redirect("dashboard")
 
 @login_required()
 def outbound_shipment_list_processor3(request):  
