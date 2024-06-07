@@ -57,6 +57,7 @@
 
         <div class="card farm-fields-container">
             <div class="container-fluid">
+                {% if request.user.is_processor or request.user.is_superuser %}
                 {% for grower_shipment in grower_shipment %}
                     <div class="row" style="margin-bottom: 20px;">
                         <div class="col-md-3" style="margin-bottom: 10px;">
@@ -186,12 +187,179 @@
                         </div>
                     </div>
                     {% endfor %} 
+                    {% endif %}
+
+                    {% if request.user.is_processor2 %}
+                    {% for ship in shipment %}
+                    <div class="row" style="margin-bottom: 20px;">
+                        <div class="col-md-3" style="margin-bottom: 10px;">
+                            <label for="shipment" style="font-weight:bold;">SHIPMENT ID</label>
+                            <p>{{ship.shipment_id}}</p>
+                            
+                        </div>
+                        <div class="col-md-3" style="margin-bottom: 10px;">
+                            <label for="shipment" style="font-weight:bold;">SENDER PROCESSOR</label>
+                            <p>{{ship.processor_e_name}}</p>
+                            
+                        </div>
+                        
+                        <div class="col-md-3" style="margin-bottom: 10px;">
+                            <label for="shipment" style="font-weight:bold;">RECEIVER PROCESSOR</label>
+                            <p>{{ship.processor2_name}}</p>
+                            
+                        </div>
+
+                        <div class="col-md-3" style="margin-bottom: 10px;">
+                            <label for="shipment" style="font-weight:bold;">VOLUME SHIPPED</label>
+                            <p>{{ship.volume_shipped}} LBS</p>
+                            
+                        </div>
+                        
+                        <div class="col-md-3" style="margin-bottom: 10px;">
+                            <label for="shipment" style="font-weight:bold;">DATE PULLED</label>
+                            <p>{{ship.date_pulled}}</p>
+                           
+                        </div>
+
+                        <div class="col-md-3" style="margin-bottom: 10px;">
+                            <label for="shipment" style="font-weight:bold;">MILLED VOLUME</label>
+                            <p>{{ship.milled_volume}}</p>
+                            
+                        </div>
+                        <div class="col-md-3" style="margin-bottom: 10px;">
+                            <label for="shipment" style="font-weight:bold;">EQUIPMENT TYPE</label>
+                            <p>{{ship.equipment_type}}</p>
+                            
+                        </div>
+                        <div class="col-md-3" style="margin-bottom: 10px;">
+                            <label for="shipment" style="font-weight:bold;">EQUIPMENT ID </label>
+                            <p>{{ship.equipment_id}}</p>
+                            
+                        </div>
+                        <div class="col-md-3" style="margin-bottom: 10px;">
+                            <label for="shipment" style="font-weight:bold;">PURCHASE ORDER NUMBER</label>
+                            <p>{{ship.purchase_order_number}}</p>
+                        </div>
+                        <div class="col-md-3" style="margin-bottom: 10px;">
+                            <label for="shipment" style="font-weight:bold;"> LOT NUMBER </label>
+                            <p>{{ship.lot_number}}</p>
+                        </div>
+
+                        {% if grower_shipment.crop != "COTTON" %}
+                        <div class="col-md-3" style="margin-bottom: 10px;">
+                            <label for="shipment" style="font-weight:bold;"> VOLUME LEFT </label>
+                            <p>{{ship.volume_left}}</p>
+                        </div>
+                        <div class="col-md-3" style="margin-bottom: 10px;">
+                            <label for="shipment" style="font-weight:bold;"> SENDER SKU ID </label>
+                            <p>{{ship.storage_bin_send}}</p>
+                        </div>
+                        {% endif %}
+                        <div class="col-md-3" style="margin-bottom: 10px;">
+                            <label for="shipment" style="font-weight:bold;"> RECEIVER SKU ID </label>
+                            <p>{% if ship.storage_bin_recive %}
+                                {{ship.storage_bin_recive}}
+                            {% else %}
+                            -
+                            {% endif %}</p>
+                        </div>
+                        <div class="col-md-3" style="margin-bottom: 10px;">
+                            <label for="shipment" style="font-weight:bold;"> WEIGHT OF PRODUCT </label>
+                            <p>
+                                {{ship.weight_of_product}}
+                            </p>
+                        </div>
+                        <div class="col-md-3" style="margin-bottom: 10px;">
+                            <label for="shipment" style="font-weight:bold;"> WEIGHT OF PRODUCT RAW </label>
+                            <p>{{ship.weight_of_product_raw}}</p>
+                        </div>
+
+                        <div class="col-md-3" style="margin-bottom: 10px;">
+                            <label for="shipment" style="font-weight:bold;"> WEIGHT UNIT </label>
+                            <p>{{ship.weight_of_product_unit}}</p>
+                        </div>
+                        <div class="col-md-3" style="margin-bottom: 10px;">
+                            <label for="shipment" style="font-weight:bold;"> EXPECTED YIELD </label>
+                            <p>
+                                {{ship.excepted_yield}}
+                            </p>
+                        </div>
+                        <div class="col-md-3" style="margin-bottom: 10px;">
+                            <label for="shipment" style="font-weight:bold;"> EXPECTED YIELD RAW </label>
+                            <p>
+                                {{ship.excepted_yield_raw}}
+                            </p>
+                        </div>
+                        <div class="col-md-3" style="margin-bottom: 10px;">
+                            <label for="shipment" style="font-weight:bold;"> EXPECTED YIELD UNIT </label>
+                            <p>
+                                {{ship.excepted_yield_unit}}
+                            </p>
+                        </div>
+                        <div class="col-md-3" style="margin-bottom: 10px;">
+                            <label for="shipment" style="font-weight:bold;"> MOISTURE PERCENTAGE </label>
+                            <p>
+                                {{ship.moisture_percent}}
+                            </p>
+                        </div>
+                        {% if ship.status %}
+                        {% if ship.status == 'APPROVED' %}
+                        <div class="col-md-3" style="margin-bottom: 10px;">
+                            <label for="shipment" style="font-weight:bold;"> RECEIVED WEIGHT</label>
+                            <p>{{ship.received_weight}} LBS</p>
+                        </div>
+                        <div class="col-md-3" style="margin-bottom: 10px;">
+                            <label for="shipment" style="font-weight:bold;">APPROVAL DATE </label>
+                            <p>{{ship.recive_delivery_date}}</p>
+                        </div>
+                        <div class="col-md-3" style="margin-bottom: 10px;">
+                            <label for="shipment" style="font-weight:bold;">TICKET NUMBER</label>
+                            <p>{{ship.ticket_number}}</p>
+                        </div>
+                        {% else %}
+                        <div class="col-md-3" style="margin-bottom: 10px;">
+                            <label for="shipment" style="font-weight:bold;">REASON FOR DISAPPROVAL</label>
+                            <p>{{ship.reason_for_disapproval}}</p>
+                        </div>
+                        {% endif %}
+                        
+                        {% endif %}
+
+                        <div class="col-md-6" style="margin-bottom: 10px;">
+                            <label for="UploadedFiles" style="font-weight:bold;">Uploaded Files</label>
+                            <div>
+                                {% if files %}
+                                    {% for file in files %}
+                                    <li><a href="/media/{{ file.file }}" target="_blank">{{ file.name }}</a></li>
+                                    {% endfor %}
+                            
+                                {% else %}
+                                    <p>No files available</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6" style="margin-bottom: 10px;">
+                            <label for="shipment" style="font-weight:bold;">QR CODE</label>
+                            <div>
+                                <img src="/media/{{img_name}}" alt="qr code" style="max-width: 350px;">
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}                    
+                
+                    {% endif %}
                     <div class="row" style="margin-top: 10px;">
                         <div class="form-btn-row">
+                            {% if request.user.is_processor or request.user.is_superuser %}
                             {% for shipment in grower_shipment %}
                             <a href="{% url 'processor_inbound_management_edit' shipment.id %}" class="btn-close-cancel btn-space">Take Action</a>
                             {% endfor %}
-                        
+                            {% endif %}
+                            {% if request.user.is_processor2 %}
+                            {% for ship in shipment %}
+                            <a href="{% url 'processor_inbound_management_edit' ship.id %}" class="btn-close-cancel btn-space">Take Action</a>
+                            {% endfor %}
+                            {% endif %}                        
                             <a href="{% url 'processor_inbound_management' %}" class="btn-close-cancel btn-space">Back</a>
                         </div>
                     </div> 

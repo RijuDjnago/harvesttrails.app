@@ -79,7 +79,7 @@
                             <select id="growerSelction" name="processor_id" class="gro_dd" style="width: 100%;padding-left:10px ;">
                                 <option value=''> Select All Processors </option>
                                 {% for processor in processor %}
-                                <option value="{{ processor.pk }}">{{processor.entity_name}} - {{ processor.pk }}</option>
+                                <option value="{{ processor.pk }}"{% if processor.id == selected_processor %} selected {% endif %}>{{processor.entity_name}} - {{ processor.pk }}</option>
                                 {% endfor %}
                             </select>
                             <p id="disp1" style="color: red;"></p>

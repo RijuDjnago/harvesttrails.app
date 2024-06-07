@@ -88,7 +88,6 @@ class GrowerShipment(models.Model):
     echelon_id = models.CharField(max_length=200, null=True, blank=True,verbose_name='Echelon Id')
     date_time = models.DateTimeField(auto_created=True, auto_now_add=True,verbose_name='Shipment Date')
     shipment_id = models.CharField(max_length=200, null=True, blank=True,verbose_name='Shipment Id')
-    qr_code = models.TextField(null=True, blank=True,verbose_name='QR code')
     location = models.ForeignKey(Location, on_delete=models.CASCADE, null=True, blank=True,verbose_name='Select Location')
     date_time_location = models.DateTimeField(auto_created=True, auto_now_add=True,verbose_name='Location Date')
     process_amount = models.CharField(max_length=200, null=True, blank=True,verbose_name='Processed Amount')

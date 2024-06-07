@@ -334,6 +334,7 @@ def Origin_searchby_Grower(crop,search_text,*grower_field_ids):
                                 "yield_delta":yield_delta, "storage_quanitty":storage_quanitty,"pf_sus":pf_sus,"water_savings":water_savings,"water_per_pound_savings":water_per_pound_savings,"land_use":land_use,
                                 "less_GHG":less_GHG,"co2_eQ_footprint":co2_eQ_footprint,"premiums_to_growers":premiums_to_growers}])
     if crop == 'RICE' :
+        print(grower_field_ids)
         for i in grower_field_ids :
             get_field = Field.objects.get(id=i)
             grower_name = get_field.grower.name
@@ -2173,7 +2174,7 @@ def skuid_traceability_response(search_text):
                         outbound1_wip[0]["quantity"] = outbound1_wip[0]["total_amount"]
                         outbound1_wip[0]["transportation"] = ""
                     outbound1_wip_ = outbound1_wip_ + outbound1_wip
-                    field_ids_ = list(GrowerShipment.objects.filter(sku=i).values_list("field_id"))
+                    field_ids_ = list(GrowerShipment.objects.filter(sku=i).values_list("field_id", flat=True))
                     field_ids = field_ids + field_ids_
                 context["outbound1_wip"] = outbound1_wip_
                 context["t1_processor"] = t1_processor_

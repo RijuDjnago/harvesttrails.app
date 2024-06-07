@@ -219,18 +219,13 @@
                                     {% endif %}</td>
                                     <td class="backk action-td rmv-bd">
                                     <ul>
+                                        {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role or 'Processor' in request.user.get_role %}
                                         <li>
-                                            <a href="{% url 'outbound_shipment_view' shipment.id %}"
+                                            <a href="{% url 'outbound_shipment_mgmt_view' shipment.id %}"
                                                 class="update-btn-link" alt="view inbound management" title="view inbound management"> <span class="fas fa-eye"></span> </a>
                                         </li>
-                                        
-                                        {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role or 'Processor2' in request.user.get_role %}
-                                        
-                                        
-                                        {% comment %} <li>
-                                            <a href="{% url 'inbound_shipment_edit' shipment.id %}" class="update-btn-link" alt="edit inbound management" title="edit inbound management"> <span class="fas fa-edit"></span></a>
-                                        </li> {% endcomment %}
                                         {% endif %}
+                                       
                                         {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
                                         <li>
                                             <a onclick="delShipment('{% url 'outbound_shipment_delete' shipment.id %}')"
