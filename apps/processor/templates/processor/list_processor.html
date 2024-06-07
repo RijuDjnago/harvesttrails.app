@@ -58,7 +58,7 @@
                             <tbody>
                                 {% for i in processor %}                                
                                 <tr>
-                                  {% if request.user.is_superuser %}                                 
+                                  {% if request.user.is_superuser or request.user.is_processor %}                                 
                                   
                                     <td>{{i.processor.entity_name}}</td>
                                     <td>{{i.processor.fein}}</td>
@@ -66,7 +66,7 @@
                                     {% if request.user.is_processor2 %}
                                     <td>{{i.processor2.entity_name}}</td>
                                     <td>{{i.processor2.fein}}</td>
-                                  {% endif %}
+                                    {% endif %}
                                     <td>{{i.contact_name}}</td>
                                     <td>{{i.contact_email}}</td>
                                     <td>{{i.p_password_raw}}</td>

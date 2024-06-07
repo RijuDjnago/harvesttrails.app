@@ -29,6 +29,9 @@
         padding-bottom: 11px;
         border-radius: 4px;
     }
+    .extra_border_select{
+        border: 1px solid #ccc
+    }
 
 .ui-menu{height: 20vh;overflow-y: auto;padding: 0px 10px;margin: 0px 15px;}
 .ui-menu::-webkit-scrollbar{width:6px;max-height:20px;padding-right: 10px;}
@@ -50,17 +53,19 @@
                     <div class="row" style="margin-bottom:10px">
                         <div class="col-md-5 mb-2">
                             <label for="id_bin_location_pull">Bin Location Pulled from<span class="asteriskField">*</span></label>
-                            <select name="bin_pull" id="mult_select"  class="form-control selectpicker" data-live-search="true" onchange="this.form.submit()">
-                                {% if select_processor_name %}
-                                <option value="{{select_processor_id}}" selected>{{select_processor_name}}</option>
-                                {% else %}
-                                <option value="all" disabled selected>Select Bin Location Pulled from</option>                              
-                                
-                                {% for pro in processor %}
-                                <option value="{{pro.id}}">{{pro.entity_name}}</option>
-                                {% endfor %}  
-                                {% endif %}
-                            </select>
+                            <div class='extra_border_select'>
+                                <select name="bin_pull" id="mult_select"  class="form-control selectpicker" data-live-search="true" onchange="this.form.submit()">
+                                    {% if select_processor_name %}
+                                    <option value="{{select_processor_id}}" selected>{{select_processor_name}}</option>
+                                    {% else %}
+                                    <option value="all" disabled selected>Select Bin Location Pulled from</option>                              
+                                    
+                                    {% for pro in processor %}
+                                    <option value="{{pro.id}}">{{pro.entity_name}}</option>
+                                    {% endfor %}  
+                                    {% endif %}
+                                </select>
+                            </div>
                         </div>
                         
                         <div class="col-md-6 mb-2 text-center">

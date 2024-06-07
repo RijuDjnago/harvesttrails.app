@@ -5890,7 +5890,7 @@ td.backk1 li {
 }
 
 .dropdown.bootstrap-select.form-control .btn {
-    border-radius: 1.5rem;
+    border-radius: 8px;
     border-color: #ccc;
     background-color: #fff;
     box-shadow: none;
