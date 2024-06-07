@@ -60,9 +60,9 @@ def list_processor2(request):
         processor2 = ProcessorUser2.objects.filter(processor2__processor_type__type_name="T2")
         context['processor'] = processor2
         return render(request, 'processor2/list_processor2.html',context)
-    # Processor 
-    if request.user.is_processor2 :
-        pass
+    else:
+        return redirect("dashboard")
+
 
 @login_required()
 def add_processor2(request):
@@ -79,20 +79,14 @@ def add_processor2(request):
                 main_fax = request.POST.get('main_fax')
                 website = request.POST.get('website')
                 counter = request.POST.get('counter')
-                processor_type = request.POST.getlist('processor_type')
-                #print(processor_type)
-                #print(fein, entity_name, billing_address, shipping_address)
+                processor_type = request.POST.getlist('processor_type')                
                 if not counter:
-                    counter = 0
-                #print(counter)
+                    counter = 0      
                 processor2 = Processor2(fein=fein,entity_name=entity_name,billing_address=billing_address,shipping_address=shipping_address,main_number=main_number,main_fax=main_fax,website=website)
                 processor2.save()
-                #print(processor2)
                 for type in processor_type:
                     check_type = ProcessorType.objects.filter(id=type).first()
                     processor2.processor_type.add(check_type)
-                
-                
                 # 20-04-23 Log Table
                 log_type, log_status, log_device = "Processor2", "Added", "Web"
                 log_idd, log_name = processor2.id, entity_name
@@ -153,9 +147,8 @@ def add_processor2(request):
                         logtable.save()
                 return redirect('list_processor2')
         return render(request, 'processor2/add_processor2.html',context)
-    # Processor 
-    if request.user.is_processor2 :
-        pass
+    else:
+        return redirect("dashboard")
 
 @login_required()
 def processor2_update(request,pk):
@@ -216,35 +209,39 @@ def processor2_update(request,pk):
                 return redirect('list_processor2')
         return render(request, 'processor2/update_processor2.html',context)
     else:
-        return redirect('login')
+        return redirect('dashboard')
 
 
 @login_required()
 def processor2_delete(request,pk):
-    processor2 = ProcessorUser2.objects.get(id=pk)
-    user = User.objects.get(username=processor2.contact_email)
-    # 20-04-23 Log Table
-    log_type, log_status, log_device = "ProcessorUser2", "Deleted", "Web"
-    log_idd, log_name = processor2.id, processor2.contact_name
-    log_email = processor2.contact_email
-    log_details = f"processor_id = {processor2.processor2.id} | processor = {processor2.processor2.entity_name} | contact_name= {processor2.contact_name} | contact_email = {processor2.contact_email} | contact_phone = {processor2.contact_phone} | contact_fax = {processor2.contact_fax}"
-    action_by_userid = request.user.id
-    userr = User.objects.get(pk=action_by_userid)
-    user_role = userr.role.all()
-    action_by_username = f'{userr.first_name} {userr.last_name}'
-    action_by_email = userr.username
-    if request.user.id == 1 :
-        action_by_role = "superuser"
+    if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+        processor2 = ProcessorUser2.objects.get(id=pk)
+        user = User.objects.get(username=processor2.contact_email)
+        # 20-04-23 Log Table
+        log_type, log_status, log_device = "ProcessorUser2", "Deleted", "Web"
+        log_idd, log_name = processor2.id, processor2.contact_name
+        log_email = processor2.contact_email
+        log_details = f"processor_id = {processor2.processor2.id} | processor = {processor2.processor2.entity_name} | contact_name= {processor2.contact_name} | contact_email = {processor2.contact_email} | contact_phone = {processor2.contact_phone} | contact_fax = {processor2.contact_fax}"
+        action_by_userid = request.user.id
+        userr = User.objects.get(pk=action_by_userid)
+        user_role = userr.role.all()
+        action_by_username = f'{userr.first_name} {userr.last_name}'
+        action_by_email = userr.username
+        if request.user.id == 1 :
+            action_by_role = "superuser"
+        else:
+            action_by_role = str(','.join([str(i.role) for i in user_role]))
+        logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+                            action_by_userid=action_by_userid,action_by_username=action_by_username,
+                            action_by_email=action_by_email,action_by_role=action_by_role,log_email=log_email,
+                            log_details=log_details,log_device=log_device)
+        logtable.save()
+        processor2.delete()
+        user.delete()
+        return HttpResponse (1)
     else:
-        action_by_role = str(','.join([str(i.role) for i in user_role]))
-    logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
-                        action_by_userid=action_by_userid,action_by_username=action_by_username,
-                        action_by_email=action_by_email,action_by_role=action_by_role,log_email=log_email,
-                        log_details=log_details,log_device=log_device)
-    logtable.save()
-    processor2.delete()
-    user.delete()
-    return HttpResponse (1)
+        return redirect('dashboard')
+    
 
 @login_required()
 def processor2_change_password(request,pk):
@@ -287,6 +284,7 @@ def processor2_change_password(request,pk):
         return render (request, 'processor2/processor2_change_password.html', context)
     else:
         return redirect('dashboard')
+
 
 @login_required()
 def add_bale_processor2(request):
@@ -470,8 +468,8 @@ def add_bale_processor2(request):
                 messages.success(request,"CSV uploaded successfully")
                 messages.error(request,f"The bale(s) are not assigned : {unassignedbale_id}")
         return render(request, 'processor2/add_bale_processor2.html',context)
-    if request.user.is_processor2 :
-        pass
+    else:
+        return redirect('dashboard')
 
 
 @login_required()
@@ -528,7 +526,7 @@ def add_processor2_user(request,pk):
             return redirect('list_processor2')
         return render(request, 'processor2/add_processor2_user.html',context)
     else:
-        return redirect('login')
+        return redirect('dashboard')
 
 
 @login_required()
@@ -747,13 +745,12 @@ def processor2_classing_csv_all2(request):
         return response
 
     else:
-        return redirect('/')
+        return redirect('dashboard')
     
 
 @login_required()
 def t2_classing_ewr_report_list(request):
-    context = {}
-    
+    context = {}    
     if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
         context['p2_id'] = 'all'
         context['level'] = 'all'
@@ -825,7 +822,7 @@ def t2_classing_ewr_report_list(request):
 
 
 @login_required()
-def t2_classing_ewr_report_all_downlaod(request,p2_id,level):
+def t2_classing_ewr_report_all_downlaod(request, p2_id,level):
     response = HttpResponse(content_type='text/plain') 
     current_date = date.today().strftime("%m-%d-%Y")
     report = ""
@@ -856,47 +853,7 @@ import shapefile
 @login_required()
 def addlocation_processor2(request):
     if request.user.is_authenticated:
-        context ={}
-        # Processor ....
-        if request.user.is_processor2 :
-            context = {}
-            form = Processor2LocationForm()
-            context['form']=form
-            user_id = request.user.id
-            user = User.objects.get(id=user_id)
-            processor_email =user.username
-
-            p = ProcessorUser2.objects.get(contact_email=processor_email)
-            processor_obj = Processor2.objects.get(id=p.processor_id)
-
-            # processor_obj = Processor.objects.get(contact_email=processor_email)
-            #print(processor_obj.id)
-            if request.method == 'POST':
-                form = Processor2LocationForm(request.POST)
-                name = request.POST.get('name')
-                upload_type = request.POST.get('upload_type')
-                processor = processor_obj.id
-                if request.FILES.get('zip_file'):
-                    zip_file = request.FILES.get('zip_file')
-                    Processor2Location(processor_id=processor, name=name,upload_type=upload_type,shapefile_id=zip_file).save()
-                    location_obj = Processor2Location.objects.filter(processor_id=processor).filter(name=name)        
-                    location_var = [i.id for i in location_obj][0]
-                    location_id = Processor2Location.objects.get(id=location_var)
-                    sf = shapefile.Reader(location_id.shapefile_id.path)
-                    features = sf.shapeRecords()
-                    for feat in features:
-                        eschlon_id = feat.record["id"]
-                        location_id.eschlon_id = eschlon_id
-                        location_id.save()
-
-                if request.POST.get('latitude') and request.POST.get('longitude'):
-                    latitude = request.POST.get('latitude')
-                    longitude = request.POST.get('longitude')
-                    Processor2Location(processor_id=processor, name=name,upload_type=upload_type,latitude=latitude,longitude=longitude).save()
-                
-                return redirect('location_list_processor2')
-
-            return render(request, 'processor2/add_location_processor2.html',context)
+        context ={}        
         # Super User ...
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
             form = Processor2LocationForm()
@@ -929,26 +886,15 @@ def addlocation_processor2(request):
                     
                 return redirect('location_list_processor3')
             return render(request, 'processor3/add_location_processor3.html',context)
-        else:
-            context["message"] = "You are not allowed to add location."
-            return render(request, 'processor3/add_location_processor3.html',context)
+        else:            
+            return redirect("dashboard")
     else:
         return redirect('login')
     
 
 @login_required()   
 def location_list_processor2(request):
-    if request.user.is_authenticated:
-        # processor ...
-        if request.user.is_processor2 :
-            context ={}
-            user_email = request.user.email
-            p = ProcessorUser2.objects.get(contact_email=user_email)
-            processor = Processor2.objects.get(id=p.processor_id)
-            location = Processor2Location.objects.filter(processor= processor)
-            context['location'] = location
-            return render(request, 'processor2/list_location.html',context)
-
+    if request.user.is_authenticated: 
         # superuser ...
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
             context ={}
@@ -975,65 +921,16 @@ def location_list_processor2(request):
                     context['selectedprocessor'] = Processor2.objects.get(id=processor_id)
                     return render(request, 'processor2/list_location.html',context)
                    
-            return render(request, 'processor2/list_location.html',context)
-        
-        return render(request, 'processor2/list_location.html',context)
+            return render(request, 'processor2/list_location.html',context)        
+        else:
+            return redirect("dashboard")
     else:
         return redirect('login')
 
 
-
+@login_required()
 def location_edit_processor2(request,pk):
-    if request.user.is_authenticated:
-        # processor ...
-        if request.user.is_processor2 :
-            context = {}
-            location = Processor2Location.objects.get(id=pk)
-            form = Processor2LocationForm(instance=location)
-            user_email = request.user.email
-            p = ProcessorUser2.objects.get(contact_email=user_email)
-            processor = Processor2.objects.filter(id=p.processor_id)
-            context['form'] = form
-            context['processor'] = processor
-            context['selectedprocessor'] = location.processor_id
-            context['uploadtypeselect'] = location.upload_type
-            location = Processor2Location.objects.filter(id=pk)
-            context['location'] = location
-            if request.method == 'POST':
-                name = request.POST.get('name')
-                uploadtypeSelction = request.POST.get('uploadtypeSelction')
-                shapefile_id = request.FILES.get('zip_file')
-                latitude = request.POST.get('latitude')
-                longitude = request.POST.get('longitude')
-                location_update = Processor2Location.objects.get(id=pk)
-                if uploadtypeSelction == 'shapefile':
-                    if request.FILES.get('zip_file'):
-                        location_update.name = name
-                        location_update.upload_type = 'shapefile'
-                        location_update.shapefile_id = shapefile_id
-                        location_update.latitude = None
-                        location_update.longitude = None
-                        location_update.save()
-                        
-                        sf = shapefile.Reader(location_update.shapefile_id.path)
-                        features = sf.shapeRecords()
-                        for feat in features:
-                            eschlon_id = feat.record["id"]
-                            location_update.eschlon_id = eschlon_id
-                            location_update.save()
-                    
-                else:
-                    location_update.name = name
-                    location_update.upload_type = 'coordinates'
-                    location_update.shapefile_id = None
-                    location_update.eschlon_id = None
-                    location_update.latitude = latitude
-                    location_update.longitude = longitude
-                    location_update.save()
-
-                return redirect('location_list_processor2')
-
-            return render(request, 'processor2/location_edit.html',context)
+    if request.user.is_authenticated:        
         # superuser ....
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
             context ={}
@@ -1086,27 +983,26 @@ def location_edit_processor2(request,pk):
                 return redirect('location_list_processor2')
             return render(request, 'processor2/location_edit.html',context)
         else:
-            return render(request, 'processor2/location_edit.html',context)
+            return redirect("dashboard")
     else:
         return redirect('login')
 
+
 @login_required()
 def location_delete_processor2(request,pk):
-    location = Location.objects.get(id=pk)
-    location.delete()
-    return redirect('location_list_processor2')  
+    if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+        location = Location.objects.get(id=pk)
+        location.delete()
+        return redirect('location_list_processor2')  
+    else:
+        return redirect("dashboard")
 
 
 @login_required
 def add_outbound_shipment_processor2(request):
     context = {}
-
     if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
-        # processor= Processor2.objects.filter(processor_type__type_name="T2").values("entity_name","id").order_by('entity_name')
-        # processor3= Processor2.objects.filter(processor_type__type_name="T3").values("entity_name","id").order_by('entity_name')
-        # processor4= Processor2.objects.filter(processor_type__type_name="T4").values("entity_name","id").order_by('entity_name')
-        # context["processor3"] = processor3
-        # context["processor4"] = processor4
+       
         context["processor"] = list(Processor2.objects.filter(processor_type__type_name="T2").values("id", "entity_name"))
         
         context.update({
@@ -1202,11 +1098,14 @@ def add_outbound_shipment_processor2(request):
                 return redirect('outbound_shipment_list')
 
         return render(request, 'processor2/add_outbound_shipment_processor2.html', context)
+    else:
+        return redirect("dashboard")
+
 
 @login_required()
 def outbound_shipment_list(request):  
-    try:
-        context = {}
+    context = {"messages":None}
+    try:        
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
             #inbound management list for admin
             output = ShipmentManagement.objects.filter(sender_processor_type="T2")
@@ -1241,46 +1140,12 @@ def outbound_shipment_list(request):
             context["table_data"] = report
             #print(context)
             return render (request, 'processor2/outbound_shipment_list.html', context)
-        elif request.user.is_processor2 :
-            processor_email = request.user.email
-            p = ProcessorUser2.objects.get(contact_email=processor_email)
-            processor_id = Processor2.objects.get(id=p.processor2.id).id
-            #inbound management list for processor
-            output = ShipmentManagement.objects.filter(sender_processor_type="T2", processor_idd=processor_id)
-            p_id = [i.processor_idd for i in output]
-            processors = Processor2.objects.filter(id__in = p_id).order_by('entity_name')
-            context['processors'] = processors
-
-            search_name = request.GET.get('search_name')
-            selectprocessor_id = request.GET.get('selectprocessor_id')
-
-            if search_name == None and selectprocessor_id == None :
-                output = output
-            else:
-                output = ShipmentManagement.objects.filter(sender_processor_type="T2", processor_idd=processor_id).order_by('bin_location','id')
-                if search_name and search_name != 'All':
-                    output = output.filter(Q(processor_e_name__icontains=search_name) | Q(date_pulled__icontains=search_name) |
-                    Q(bin_location__icontains=search_name) | Q(equipment_type__icontains=search_name) | Q(equipment_id__icontains=search_name) | 
-                    Q(purchase_order_number__icontains=search_name) | Q(lot_number__icontains=search_name))
-                    context['search_name'] = search_name
-                if selectprocessor_id and selectprocessor_id != 'All':
-                    output = output.filter(processor_idd=selectprocessor_id)
-                    selectedProcessors = Processor2.objects.get(id=selectprocessor_id)
-                    context['selectedProcessors'] = selectedProcessors
-            paginator = Paginator(output, 100)
-            page = request.GET.get('page')
-            try:
-                report = paginator.page(page)
-            except PageNotAnInteger:
-                report = paginator.page(1)
-            except EmptyPage:
-                report = paginator.page(paginator.num_pages)
-            context["table_data"] = report            
-            return render (request, 'processor2/outbound_shipment_list.html', context)
         else:
-            return redirect('login')  
-    except:
-        return render (request, 'processor2/outbound_shipment_list.html') 
+            return redirect('dashboard')  
+    except Exception as e:
+        context["messages"] = str(e)
+        return render (request, 'processor2/outbound_shipment_list.html', context)
+
 
 @login_required()
 def outbound_shipment_view(request,pk):   

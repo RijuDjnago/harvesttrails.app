@@ -531,7 +531,7 @@ def ProcessorUpdate(request,pk):
                 form = ProcessorForm2(request.POST,instance=processor2)
                 # print(form)
                 if form.is_valid():
-                    print("000000000000")
+                    
                     email_update = request.POST.get('contact_email1')
                     name_update = request.POST.get('contact_name1')
                     phone_update = request.POST.get('contact_phone1')
@@ -715,7 +715,7 @@ def addlocation(request):
                 form = Processor2LocationForm(request.POST)
                 name = request.POST.get('name')
                 upload_type = request.POST.get('upload_type')
-                processor = processor_obj.id
+                processor = processor_obj.first().id
                 if request.FILES.get('zip_file'):
                     zip_file = request.FILES.get('zip_file')
                     Processor2Location(processor_id=processor, name=name,upload_type=upload_type,shapefile_id=zip_file).save()
@@ -3319,9 +3319,35 @@ def processor_receive_delivery(request):
             if processor_type == "T2":  
                 context["processor"] = list(LinkProcessor1ToProcessor.objects.filter(processor2_id=processor_id).values("processor1__id", "processor1__entity_name"))
             if processor_type == "T3":
-                context["processor"] = list(LinkProcessorToProcessor.objects.filter(linked_processor_id=processor_id).values("processor__id", "processor__entity_name"))
+                processor1 = list(LinkProcessor1ToProcessor.objects.filter(processor2_id=processor_id).values("processor1__id", "processor1__entity_name"))
+                processor2 = list(LinkProcessorToProcessor.objects.filter(linked_processor_id=processor_id).values("processor__id", "processor__entity_name"))
+                linked_processor = []
+                for pro1 in processor1:
+                    dict_ = {"processor__id":None, "processor__entity_name":None} 
+                    dict_["processor__id"] = pro1["processor1__id"]
+                    dict_["processor__entity_name"] = pro1["processor1__entity_name"]
+                    linked_processor.append(dict_)
+                for pro2 in processor2:
+                    dict_ = {"processor__id":None, "processor__entity_name":None} 
+                    dict_["processor__id"] = pro2["processor__id"]
+                    dict_["processor__entity_name"] = pro2["processor__entity_name"]
+                    linked_processor.append(dict_)
+                context["processor"] = linked_processor
             if processor_type == "T4":
-                context["processor"] = list(LinkProcessorToProcessor.objects.filter(linked_processor_id=processor_id).values("processor__id", "processor__entity_name"))
+                processor1 = list(LinkProcessor1ToProcessor.objects.filter(processor2_id=processor_id).values("processor1__id", "processor1__entity_name"))
+                processor2 = list(LinkProcessorToProcessor.objects.filter(linked_processor_id=processor_id).values("processor__id", "processor__entity_name"))
+                linked_processor = []
+                for pro1 in processor1:
+                    dict_ = {"processor__id":None, "processor__entity_name":None} 
+                    dict_["processor__id"] = pro1["processor1__id"]
+                    dict_["processor__entity_name"] = pro1["processor1__entity_name"]
+                    linked_processor.append(dict_)
+                for pro2 in processor2:
+                    dict_ = {"processor__id":None, "processor__entity_name":None} 
+                    dict_["processor__id"] = pro2["processor__id"]
+                    dict_["processor__entity_name"] = pro2["processor__entity_name"]
+                    linked_processor.append(dict_)
+                context["processor"] = linked_processor
             print(context)
             
             context.update({
@@ -4207,7 +4233,7 @@ def processor_change_password(request,pk):
                 log_type, log_status, log_device = "ProcessorUser2", "Password changed", "Web"
                 log_idd, log_name = pp.id, pp.contact_name
                 log_email = pp.contact_email
-                log_details = f"processor2_id = {pp.processor.id} | processor2 = {pp.processor.entity_name} | contact_name= {pp.contact_name} | contact_email = {pp.contact_email} | contact_phone = {pp.contact_phone} | contact_fax = {pp.contact_fax}"
+                log_details = f"processor2_id = {pp.processor2.id} | processor2 = {pp.processor2.entity_name} | contact_name= {pp.contact_name} | contact_email = {pp.contact_email} | contact_phone = {pp.contact_phone} | contact_fax = {pp.contact_fax}"
                 action_by_userid = request.user.id
                 user = User.objects.get(pk=action_by_userid)
                 user_role = user.role.all()
@@ -4226,6 +4252,7 @@ def processor_change_password(request,pk):
         return render (request, 'processor/processor_change_password.html', context)
     else:
         return redirect('dashboard')
+    return render (request, 'processor/processor_change_password.html', context)
 
 
 @login_required()
@@ -7171,6 +7198,7 @@ def outbound_shipment_mgmt(request):
                 output = output.filter(processor_idd=selectprocessor_id)
                 selectedProcessors = Processor.objects.get(id=selectprocessor_id)
                 context['selectedProcessors'] = selectedProcessors
+        output = output.order_by('-id')
         paginator = Paginator(output, 100)
         page = request.GET.get('page')
         try:
@@ -7221,6 +7249,7 @@ def outbound_shipment_mgmt(request):
                 context['search_name'] = search_name
             else:
                 pass
+        output = output.order_by('-id')
         paginator = Paginator(output, 100)
         page = request.GET.get('page')
         try:
@@ -7271,6 +7300,7 @@ def outbound_shipment_mgmt(request):
                 context['search_name'] = search_name
             else:
                 pass
+        output = output.order_by('-id')
         paginator = Paginator(output, 100)
         page = request.GET.get('page')
         try:
@@ -7285,6 +7315,7 @@ def outbound_shipment_mgmt(request):
     else:
         messages.error(request, "Not a valid request.")
         return redirect("dashboard")
+    # return render (request, 'processor/outbound_shipment_mgmt.html', context)
 
 
 @login_required()
@@ -8472,21 +8503,26 @@ def Processor1ToProcessorManagement(request):
             p = ProcessorUser2.objects.filter(contact_email=request.user.email).first()
             processor2 = Processor2.objects.filter(id=p.processor2_id)
             context['Processor1'] = processor2
-            link_processor = LinkProcessor1ToProcessor.objects.filter(Q(processor1_id=processor2.first().id)| Q(processor2_id=processor2.first().id))
+            link_processor = LinkProcessor1ToProcessor.objects.filter(processor2_id=processor2.first().id)
             link_processor_ = LinkProcessorToProcessor.objects.filter(Q(processor_id=processor2.first().id)| Q(linked_processor_id=processor2.first().id))
             
             link_processor_to_processor_all = []
             for i in link_processor:
                 my_dict = {"processor":"", "linked_processor":"", "processor_type":""}
-                my_dict["processor"] = i.processor1
-                my_dict["linked_processor"] = i.processor2
-                my_dict["processor_type"] = i.processor2.processor_type.all().first().type_name
+                my_dict["processor"] = i.processor2
+                my_dict["linked_processor"] = i.processor1
+                my_dict["processor_type"] = "T1"
                 link_processor_to_processor_all.append(my_dict)
             for j in link_processor_:
                 my_dict = {"processor":"", "linked_processor":"", "processor_type":""}
-                my_dict["processor"] = j.processor
-                my_dict["linked_processor"] = j.linked_processor
-                my_dict["processor_type"] = j.linked_processor.processor_type.all().first().type_name
+                if request.user ==j.processor:
+                    my_dict["processor"] = j.processor
+                    my_dict["linked_processor"] = j.linked_processor
+                    my_dict["processor_type"] = j.linked_processor.processor_type.all().first().type_name
+                else:
+                    my_dict["processor"] = j.linked_processor
+                    my_dict["linked_processor"] = j.processor
+                    my_dict["processor_type"] = j.processor.processor_type.all().first().type_name
                 link_processor_to_processor_all.append(my_dict)
             context['link_processor_to_processor_all'] = link_processor_to_processor_all            
                

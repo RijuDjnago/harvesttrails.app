@@ -71,8 +71,8 @@
                             {{form.name|as_crispy_field}}
                             <p id="disp0" style="color: red;"></p>
                         </div>
-                        {% if request.user.is_processor %}
-                        {% else %}
+                        {% if request.user.is_processor or request.user.is_superuser or request.user.is_processor2 %}
+                       
                         <div class="col-md-4">
                             <lable>Select Processor <span class="asteriskField">*</span></lable>
                             <br>
@@ -84,6 +84,7 @@
                             </select>
                             <p id="disp1" style="color: red;"></p>
                         </div>
+                        {% else %}
                         {% endif %}
                         <div class="col-md-4" onchange="myFunction()">
                             {{form.upload_type|as_crispy_field}}
