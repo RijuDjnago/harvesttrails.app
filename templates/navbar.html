@@ -434,7 +434,7 @@
 
          <!-- 16-02-23 -->
          {% if request.user.is_authenticated %}
-         {% if request.user.is_processor2 or request.user.is_processor or request.user.grower or request.user.is_consultant or request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
+         {% if request.user.grower or request.user.is_consultant or request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
          <li><a id="Chat-Section" href="{% url 'chat_ag' %}"> <span class="rightimg"><i class="fas fa-comment-dots"></i></span>
             <span>Chat</span>&nbsp;( <span id="show-chat-noti" style="color: red;">0</span> )</a>
          </li>

@@ -112,8 +112,7 @@
                             <thead>
                                 <tr style="border-bottom: 2px solid #e0e0e0;">
                                     <th width="20%"> Processor Name</th>
-                                    <th width="20%"> Location Name</th>
-                                    <th width="20%">Echelon ID</th>
+                                    <th width="20%"> Location Name</th>                                
                                     <th width="20%">Coordinate</th>
                                     <th width="20%" class="text-center">Action</th>
                                 </tr>
@@ -122,8 +121,7 @@
                                 {% for location in location %}
                                 <tr>
                                     <td>{{location.processor.entity_name}}</td>
-                                    <td>{{location.name}}</td>
-                                    <td>{{location.eschlon_id}}</td>
+                                    <td>{{location.name}}</td>                                
                                     <td>Lat: {{location.latitude}}, Lon: {{location.longitude}}</td>                                  
                                     <td class="backk justify-content-center action-td" >
                                         <!-- <li>
@@ -131,11 +129,16 @@
                                         </li> -->
                                         <li><a href="{% url 'location-edit' location.pk %}" class="update-btn-link" alt="edit location" title="edit location"> <span class="fas fa-edit"></span> </a>
                                         </li>
+                                        {% if request.user.is_superuser %}
+                                        
+                                      
                                           <li>
                                         <a onclick="delStorage('{% url 'delete-location' location.pk %}')" href="{% url 'delete-location' location.pk %}"
                                         data-mdb-toggle="modal" data-mdb-target="#deleteModal" alt="delete location" title="delete location">
                                         <span class="fas fa-trash"></span></a>
                                         </li>
+                                        {% else %}
+                                        {% endif %}
                                     </td>
                                 </tr>
                                 {% endfor %}

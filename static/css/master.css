@@ -4016,7 +4016,7 @@ button.gallery-btn {
 }
 
 .three-fields-with-label select {
-    border-radius: 50px !important;
+    border-radius: 8px !important;
     padding: 7px 5px;
     background: #fff !important;
     outline: none !important;

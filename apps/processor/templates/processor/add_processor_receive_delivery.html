@@ -380,17 +380,11 @@
                                 <option value="{{select_processor_id}}" selected>{{select_processor_name}}</option>
                                 {% else %}
                                 <option value="all" disabled selected>Select Bin Location Pulled from</option>
-                                {% endif %}
-                                {% if processor_type == "T2" %}
+                                {% endif %}                                
                                 {% for pro in processor %}                                
-                                <option value="{{pro.processor1__id}}">{{pro.processor1__entity_name}}</option>                                
+                                <option value="{{pro.processor__id}}_{{pro.processor_type}}">{{pro.processor__entity_name}}</option>    
                                 {% endfor %}
-                                {% endif %} 
-                                {% if processor_type == "T3" or processor_type == "T4" %}
-                                {% for pro in processor %}                                
-                                <option value="{{pro.processor__id}}">{{pro.processor__entity_name}}</option>                                
-                                {% endfor %}
-                                {% endif %} 
+                              
                             </select>
                         </div>
                         

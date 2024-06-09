@@ -43,9 +43,11 @@
                     <div class="col-md-4">
                         {{ form.website|as_crispy_field }}
                     </div>
+                    {% if request.user.is_processor2 %}
                     <div class="col-md-4" style="display:none;">
                         {{ form.processor_type|as_crispy_field }}
                     </div>
+                    {% endif %}
                     <br>
                     <hr>
 
@@ -92,19 +94,7 @@
 {% endblock %}
 
 {% block jquery %}
-<!--<script>
-    var super_user = '{{user.is_superuser}}';
-    $('#id_grower').removeClass('disabled-consultants');
 
-    if(super_user!="True")
-    {
-        $('#id_grower').addClass('disabled-consultants');
-        $('#id_grower option').prop('disabled', true);
-        var logged_in_grower_id = "{{grower}}";
-        $('#id_grower').val(logged_in_grower_id);
-        $('#id_grower option[value="'+logged_in_grower_id+'"]').prop('disabled', false);
-    }
-</script>-->
 <script>
     $('#Processor-active').addClass('activeLink');
   

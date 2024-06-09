@@ -173,6 +173,7 @@ def inbound_shipment_view(request, pk):
             return redirect('login')  
     except:
         return render (request, 'processor4/inbound_management_view.html', context) 
+ 
     
 @login_required()
 def inbound_shipment_edit(request, pk):
