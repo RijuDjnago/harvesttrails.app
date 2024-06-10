@@ -41,7 +41,7 @@
             <span class="farm headingtop">Tier 3 Processor list Management</span>
             <!-- Create button for add-processor-->
             <div class="flex-header-btn">
-                <a href="{% url 'add_processor2' %}" class="btn-close-cancel">Create Tier 3 Processor</a>
+                <a href="{% url 'add_processor3' %}" class="btn-close-cancel">Create Tier 3 Processor</a>
             </div>
         </div>
         <div class="card card-padding">
@@ -71,16 +71,16 @@
                                     <td>{{i.contact_phone}}</td>                                   
                                     <td class="backk action-td" >
                                         <li>
-                                          <a href="{% url 'add_processor2_user' i.pk %}" class="map-icon-link" alt="add user" title="add user"><span class="fas fa-user-plus"></span></a>
+                                          <a href="{% url 'add_processor3_user' i.pk %}" class="map-icon-link" alt="add user" title="add user"><span class="fas fa-user-plus"></span></a>
                                         </li>
                                         <li>
-                                        <a href="{% url 'processor2_update' i.pk %}" class="update-btn-link" alt="edit processor" title="edit processor"> <span class="fas fa-edit"></span> </a>
+                                        <a href="{% url 'update_processor3' i.pk %}" class="update-btn-link" alt="edit processor" title="edit processor"> <span class="fas fa-edit"></span> </a>
                                         </li>
                                         <li>
-                                          <a href="{% url 'processor2_change_password' i.pk %}" alt="change password" title="change password"><span class="fas fa-key" data-mdb-toggle="modal" data-mdb-target="#exampleModal"></span></a>
+                                          <a href="{% url 'processor3_change_password' i.pk %}" alt="change password" title="change password"><span class="fas fa-key" data-mdb-toggle="modal" data-mdb-target="#exampleModal"></span></a>
                                         </li>
                                         <li>
-                                        <a onclick="delprocessor3('{% url 'processor2_delete' i.pk %}')" href="{% url 'processor2_delete' i.pk %}"
+                                        <a onclick="delprocessor3('{% url 'processor3_delete' i.pk %}')" href="{% url 'processor3_delete' i.pk %}"
                                         data-mdb-toggle="modal" data-mdb-target="#deleteModal" alt="delete processor" title="delete processor">
                                         <span class="fas fa-trash"></span></a>
                                         </li>

@@ -75,7 +75,7 @@
 
                 <div class="row">
                     <div class="form-btn-row">
-                        <a href="{% url 'list_processor3' %}" class="btn-close-cancel btn-space">Cancel</a>
+                        <a href="{% url 'list_processor4' %}" class="btn-close-cancel btn-space">Cancel</a>
                         <input type="submit" class="btn-save-submit" value="Save"> 
                     </div>
                 </div>
@@ -88,26 +88,14 @@
 {% endblock %}
 
 {% block jquery %}
-<!--<script>
-    var super_user = '{{user.is_superuser}}';
-    $('#id_grower').removeClass('disabled-consultants');
 
-    if(super_user!="True")
-    {
-        $('#id_grower').addClass('disabled-consultants');
-        $('#id_grower option').prop('disabled', true);
-        var logged_in_grower_id = "{{grower}}";
-        $('#id_grower').val(logged_in_grower_id);
-        $('#id_grower option[value="'+logged_in_grower_id+'"]').prop('disabled', false);
-    }
-</script>-->
 <script>
-    $('#Tier3-Processor-active').addClass('activeLink');
+    $('#Tier4-Processor-active').addClass('activeLink');
   
-  $('#Tier3-Processor-down').addClass('down');
-  $('#Tier3-Processor-sub').show();
+  $('#Tier4-Processor-down').addClass('down');
+  $('#Tier4-Processor-sub').show();
 
-  $('#Processor3-List').addClass('activeLink active-nav');
+  $('#User-Management-Processor4').addClass('activeLink active-nav');
   
   </script>
 {% endblock jquery %}
