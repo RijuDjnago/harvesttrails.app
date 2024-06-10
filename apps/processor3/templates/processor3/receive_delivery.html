@@ -69,14 +69,34 @@
                             <label for="id_bin_location_pull">Bin Location Pulled from<span class="asteriskField">*</span></label>
                             <select name="bin_pull" id="pull" class="textinput textInput form-control" onchange="this.form.submit()">
                                 {% if select_processor_name %}
-                                <option value="{{select_processor_id}}" selected>{{select_processor_name}}</option>
+                                <option value="{{select_processor_id}}_{{sender_processor_type}}" selected>{{select_processor_name}}</option>
                                 {% else %}
                                 <option value="all" disabled selected>Select Bin Location Pulled from</option>
                                 {% endif %}
                                 
-                                {% for pro in processor %}
-                                <option value="{{pro.id}}">{{pro.entity_name}}</option>
-                                {% endfor %}  
+                                {% with t1_processors=processor|dictsort:"type" %}
+                                {% if t1_processors %}
+                                    <optgroup label="Select T1 Processor">
+                                    {% for pro in t1_processors %}
+                                        {% if pro.type == "T1" %}
+                                            <option value="{{pro.id}}_{{pro.type}}">{{pro.entity_name}}</option>
+                                        {% endif %}
+                                    {% endfor %}
+                                    </optgroup>
+                                {% endif %}
+                            {% endwith %}
+
+                            {% with t2_processors=processor|dictsort:"type" %}
+                                {% if t2_processors %}
+                                    <optgroup label="Select T2 Processor">
+                                    {% for pro in t2_processors %}
+                                        {% if pro.type == "T2" %}
+                                            <option value="{{pro.id}}_{{pro.type}}">{{pro.entity_name}}</option>
+                                        {% endif %}
+                                    {% endfor %}
+                                    </optgroup>
+                                {% endif %}
+                            {% endwith %}
                             </select>
                         </div>
                         
@@ -203,21 +223,13 @@
                         <div class="col-md-4 mb-2">
                             <label for="">Select Destination<span class="asteriskField">*</span></label>
                             <select id="processor2_id" name="processor2_id" class="textinput textInput form-control">
-                                <option value='All' selected disabled>Select Destination</option>
-                                <optgroup label="Select T3 Processor">
+                                <option value='All' selected disabled>Select Destination</option>                               
                                     {% for processor in processor3 %}
                                     <option value="{{ processor.linked_processor__id }} T3" {% if processor2_id == processor.linked_processor__id|stringformat:"s" %}selected{% endif %}>{{ processor.linked_processor__entity_name }} - {{ processor.linked_processor__id }}</option>
-                                    {% endfor %}
-                                </optgroup>
-                                <optgroup label="Select T4 Processor">
-                                    {% for processor in processor4 %}
-                                    <option value="{{ processor.linked_processor__id }} T4" {% if processor2_id == processor.linked_processor__id|stringformat:"s" %}selected{% endif %}>{{ processor.linked_processor__entity_name }} - {{ processor.linked_processor__id }}</option>
-                                    {% endfor %}
-                                </optgroup>
+                                    {% endfor %}                                                          
                             </select>
                         </div>
                     </div>
-
                     </div>
                     <div class="row">
                         <div class="form-btn-row">
@@ -230,11 +242,8 @@
                         </div>
                     </div>
                 </form>
-
             </div>
         </div>
-
-
     </main>
     {% include 'footer.html' %}
 </div>

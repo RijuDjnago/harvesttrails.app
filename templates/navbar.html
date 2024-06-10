@@ -285,7 +285,7 @@
                <li><a id="Processor1-Processor-Management" href="{% url 'Processor1ToProcessorManagement' %}">Processor To Processor Management</a></li>              
                <li><a id="Inbound-Management" href="{% url 'processor_inbound_management' %}">Inbound Management</a></li>
                
-               <li><a id="Production-Management" href="{% url 'inbound_production_mgmt' %}">Production Management</a></li>
+               {% comment %} <li><a id="Production-Management" href="{% url 'inbound_production_mgmt' %}">Production Management</a></li> {% endcomment %}
               
                
                <li><a id="Shipment-Management" href="{% url 'outbound_shipment_mgmt' %}">Shipment Management</a></li>
@@ -309,9 +309,9 @@
                <ul id="Tier2-Processor-sub" class="dropdown-1010" style="display: none;">
                   
                      <li><a id="Tier2-Processor-Management" href="{% url 'list_processor2' %}">T2 Processor Management</a></li>  <!-- Tier 2 Processor Management-->
-                     <li><a id="Assign-Bale-To-Tier2" href="{% url 'add_bale_processor2' %}">Assign Bale To T2 </a></li>  <!--Assign Bale To T2 Tier 2-->
+                     {% comment %} <li><a id="Assign-Bale-To-Tier2" href="{% url 'add_bale_processor2' %}">Assign Bale To T2 </a></li>  <!--Assign Bale To T2 Tier 2-->
                      <li><a id="Classing-List-Tier2" href="{% url 'list_bale_processor2' %}">Classing List T2 </a></li>   <!--Classing List T2 Tier 2-->
-                     <li><a id="EWR-Report-Tier2" href="{% url 't2_classing_ewr_report_list' %}">EWR Report T2 </a></li>  <!--EWR Report T2 Tier 2-->
+                     <li><a id="EWR-Report-Tier2" href="{% url 't2_classing_ewr_report_list' %}">EWR Report T2 </a></li>  <!--EWR Report T2 Tier 2--> {% endcomment %}
                     
                      <li><a id="Processor2-Processor-Management" href="{% url 'processor2_processor_management' %}">Processor To Processor Management</a></li>
                      
@@ -319,7 +319,7 @@
                      
                      <li><a id="Inbound-Management-Processor2" href="{% url 'inbound_shipment_list' %}">Inbound Management</a></li>
                      
-                     <li><a id="Production-Management-Processor2" href="{% url 'inbound_production_management' %}">Production Management</a></li>
+                     {% comment %} <li><a id="Production-Management-Processor2" href="{% url 'inbound_production_management' %}">Production Management</a></li> {% endcomment %}
                      
                      <li><a id="Shipment-Management-Processor2" href="{% url 'outbound_shipment_list' %}">Shipment Management</a></li>  
                      
@@ -340,7 +340,7 @@
             <li class="ms-2"><a id="location-Management-Processor3" href="{% url 'location_list_processor3' %}">Location Management</a></li>
             <li class="ms-2"><a id="Processor3-Processor-Management" href="{% url 'processor3_processor_management' %}">Processor To Processor Management</a></li>
             <li class="ms-2"><a id="Inbound-Management-Processor3" href="{% url 'inbound_shipment_list3' %}">Inbound Management</a></li>
-            <li class="ms-2"><a id="Production-Management-Processor3" href="{% url 'inbound_production_management_processor3' %}">Production Management</a></li>
+            {% comment %} <li class="ms-2"><a id="Production-Management-Processor3" href="{% url 'inbound_production_management_processor3' %}">Production Management</a></li> {% endcomment %}
             <li class="ms-2"><a id="Shipment-Management-Processor3" href="{% url 'outbound_shipment_list_processor3' %}">Shipment Management</a></li>
         </ul>
     </li>
@@ -356,7 +356,7 @@
             <li class="ms-2"><a id="User-Management-Processor4" href="{% url 'processor4_list' %}">T4 Processor Management</a></li>
             <li class="ms-2"><a id="location-Management-Processor4" href="{% url 'location_list_processor4' %}">Location Management</a></li>
             <li class="ms-2"><a id="Inbound-Management-Processor4" href="{% url 'inbound_shipment_list4' %}">Inbound Management</a></li>
-            <li class="ms-2"><a id="Production-Management-Processor4" href="{% url 'inbound_production_management_processor4' %}">Production Management</a></li>
+            {% comment %} <li class="ms-2"><a id="Production-Management-Processor4" href="{% url 'inbound_production_management_processor4' %}">Production Management</a></li> {% endcomment %}
         </ul>
     </li>
     {% endif %}
@@ -379,7 +379,7 @@
          </li>
          {% endif %}               
          <li><a id="Processor1-Processor-Management" href="{% url 'Processor1ToProcessorManagement' %}">Processor To Processor Management</a></li> 
-         <li><a id="Production-Management" href="{% url 'inbound_production_mgmt' %}">Production Management</a></li>       
+         {% comment %} <li><a id="Production-Management" href="{% url 'inbound_production_mgmt' %}">Production Management</a></li>        {% endcomment %}
                       
          <li><a id="Inbound-Management" href="{% url 'processor_inbound_management' %}">Inbound Management</a></li>         
         
