@@ -267,7 +267,7 @@
                                         {% else %}
                                         -
                                         {% endif %}</td>
-                                        <td>{{shipment.weight_of_product}}</td>
+                                        <td>{% if shipment.received_weight %}{{shipment.received_weight}} {{shipment.weight_of_product_unit}} {% else %} - {% endif %}</td>
                                         <td>{% if shipment.processor_e_name %} {{shipment.processor_e_name}}-{{shipment.sender_processor_type}} {% endif %}</td>
                                         <td>{{shipment.processor2_name}} - {{shipment.receiver_processor_type}}</td>
                                         <td>{% if shipment.recive_delivery_date %}

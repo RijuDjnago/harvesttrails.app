@@ -68,20 +68,7 @@
                 </div>
                 <div class="form-inline justify-content-end">
                     <div class="table-filter-col ml-auto">
-                    <!--<ul class="nav nav-tabs">
-                            <li class="nav-item">
-                                <a class="nav-link active" href="#">
-                                    <img src="/static/img/tbIcon-b-1.svg" class="tbIcon tbIcon-b">
-                                    <img src="/static/img/tbIcon-w-1.svg" class="tbIcon tbIcon-w">
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="#">
-                                    <img src="/static/img/tbIcon-b-2.svg" class="tbIcon tbIcon-b">
-                                    <img src="/static/img/tbIcon-w-2.svg" class="tbIcon tbIcon-w">
-                                </a>
-                            </li>
-                        </ul>-->
+                    
                     </div>
                 </div>
                 </div>
@@ -107,14 +94,9 @@
                                     {% else %}                              
                                     <td>{{pro.linked_processor.entity_name}}</td>  
                                     {% endif %} 
-                                    <td>{{pro.linked_processor.processor_type.type_name}}</td>                               
+                                    <td>{% for type in pro.linked_processor.processor_type.all %} {{type.type_name}} {% endfor %}</td>                               
                                     <td class="backk action-td" >
-                                        <li>
-                                        <a href="#" class="map-icon-link" alt="view linked grower field and storage map" title="view linked grower field and storage map"><span class="fas fa-map-marked-alt map-Icon"></span></a>
-                                        </li>
-                                        <!-- <li>
-                                        <a href="" class="update-btn-link" alt="edit linked grower to processor" title="edit linked grower to processor"> <span class="fas fa-at"></span> </a>
-                                        </li> -->
+                                        
                                         {% if 'Processor2' in request.user.get_role and request.user.is_processor %}
                                         {% else %}
                                         <li>
