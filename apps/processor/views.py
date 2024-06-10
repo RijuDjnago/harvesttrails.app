@@ -20,8 +20,6 @@ from apps.processor2.forms import Processor2LocationForm, ProcessorForm2
 from apps.accounts.models import User, Role, ShowNotification, LogTable
 from apps.grower.models import Grower, Consultant
 from apps.farms.models import Farm
-from apps.processor2.models import *
-from apps.processor3.models import *
 from apps.processor.models import GrowerShipmentFile
 from apps.growerpayments.models import GrowerPayments
 from apps.field.models import Field, ShapeFileDataCo
@@ -3237,9 +3235,8 @@ def processor_receive_delivery(request):
                                                 log_device=log_device)
                             logtable.save()
 
-                            return redirect('processor_inbound_management')
-                        
-                # return render(request, 'processor/processor_receive_delivery.html',context)
+                            return redirect('processor_inbound_management')                        
+                
                 return render(request, 'processor/add_processor_receive_delivery.html',context)
             # Superuser............ 
             elif request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
@@ -3479,63 +3476,66 @@ def processor_receive_delivery(request):
                         
                         return render(request, 'processor/add_processor_receive_delivery.html',context)
                     else:
-                        #print("okay piu")
-                        if context["weight_prod_unit_id"] == "LBS" :
-                            cal_weight = round(float(context["weight_prod"]),2)
-                        if context["weight_prod_unit_id"] == "BU" :
-                            cal_weight = round(float(context["weight_prod"]) * 45,2)
-                        if context["exp_yield_unit_id"] == "LBS" :
-                            cal_exp_yield = round(float(context["exp_yield"]),2)
-                        if context["exp_yield_unit_id"] == "BU" :
-                            cal_exp_yield = round(float(context["exp_yield"]) * 45,2)
-                        select_proc_id = processor_id
-                        select_destination_ = processor_name
-                        receiver_processor_type = processor_type
-                    
-                        milled_volume = context["milled_value"]
-                        volume_left = float(context["milled_value"]) - float(context["volume_shipped"])
-                        shipment_id = generate_shipment_id()
-                        
-                        save_shipment_management = ShipmentManagement(shipment_id=shipment_id,processor_idd=bin_pull,processor_e_name=select_processor_name, sender_processor_type=context["sender_processor_type"], bin_location=bin_pull,
-                                equipment_type=context["equipment_type"],equipment_id=context["equipment_id"],storage_bin_send=context["storage_bin_id"],moisture_percent = context["moist_percentage"],weight_of_product_raw = context["weight_prod"],
-                                weight_of_product=cal_weight,weight_of_product_unit=context["weight_prod_unit_id"], excepted_yield_raw =context["exp_yield"],excepted_yield=cal_exp_yield,excepted_yield_unit=context["exp_yield_unit_id"],recive_delivery_date=context["approval_date"],
-                                purchase_order_number=context["purchase_number"],lot_number=context["lot_number"],volume_shipped=context["volume_shipped"],milled_volume=milled_volume,volume_left=volume_left,editable_obj=True,status=context["status"],
-                                storage_bin_recive=context["receiver_sku_id"],ticket_number=context["ticket_number"],received_weight=context["received_weight"],processor2_idd=select_proc_id,processor2_name=select_destination_, receiver_processor_type=receiver_processor_type)
-                        save_shipment_management.save()
-
-                        files = request.FILES.getlist('files')
-                        for file in files:
-                            new_file = File.objects.create(file=file)
-                            save_shipment_management.files.add(new_file)
-                        save_shipment_management.save()
-
-                        log_type, log_status, log_device = "ShipmentManagement", "Added", "Web"
-                        log_idd, log_name = save_shipment_management.id, save_shipment_management.bin_location
-                        log_details = f"processor2 = {save_shipment_management.processor_e_name} | processor2_id = {save_shipment_management.processor_idd} | date_pulled = {save_shipment_management.date_pulled} | bin_location = {save_shipment_management.bin_location} | milled_volume = {save_shipment_management.milled_volume} | equipment_type = {save_shipment_management.equipment_type} | equipment_id = {save_shipment_management.equipment_id} | purchase_order_number = {save_shipment_management.purchase_order_number} | lot_number = {save_shipment_management.lot_number} | volume_shipped = {save_shipment_management.volume_shipped} | volume_left = {save_shipment_management.volume_left} | editable_obj = {save_shipment_management.editable_obj} "
-                        action_by_userid = request.user.id
-                        user = User.objects.get(pk=action_by_userid)
-                        user_role = user.role.all()
-                        action_by_username = f'{user.first_name} {user.last_name}'
-                        action_by_email = user.username
-                        if request.user.id == 1 :
-                            action_by_role = "superuser"
+                        if context["milled_value"] < context["volume_shipped"]:
+                            context["error_messages"] = "Processor does not have the required milled volume."
+                            return render(request, 'processor2/recive_delevery.html', context) 
                         else:
-                            action_by_role = str(','.join([str(i.role) for i in user_role]))
-                        logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
-                                            action_by_userid=action_by_userid,action_by_username=action_by_username,
-                                            action_by_email=action_by_email,action_by_role=action_by_role,log_details=log_details,
-                                            log_device=log_device)
-                        logtable.save()
-                        update_obj = ShipmentManagement.objects.filter(processor_idd=int(bin_pull)).exclude(id=save_shipment_management.id).values('id','editable_obj')
+                            if context["weight_prod_unit_id"] == "LBS" :
+                                cal_weight = round(float(context["weight_prod"]),2)
+                            if context["weight_prod_unit_id"] == "BU" :
+                                cal_weight = round(float(context["weight_prod"]) * 45,2)
+                            if context["exp_yield_unit_id"] == "LBS" :
+                                cal_exp_yield = round(float(context["exp_yield"]),2)
+                            if context["exp_yield_unit_id"] == "BU" :
+                                cal_exp_yield = round(float(context["exp_yield"]) * 45,2)
+                            select_proc_id = processor_id
+                            select_destination_ = processor_name
+                            receiver_processor_type = processor_type
                         
-                        if update_obj.exists():
-                            for i in update_obj :
-                                get_obj = ShipmentManagement.objects.get(id=i['id'])
-                                get_obj.editable_obj = False
-                                get_obj.save()
-                        else:
-                            pass
-                        return redirect('processor_inbound_management')
+                            milled_volume = context["milled_value"]
+                            volume_left = float(context["milled_value"]) - float(context["volume_shipped"])
+                            shipment_id = generate_shipment_id()
+                            
+                            save_shipment_management = ShipmentManagement(shipment_id=shipment_id,processor_idd=bin_pull,processor_e_name=select_processor_name, sender_processor_type=context["sender_processor_type"], bin_location=bin_pull,
+                                    equipment_type=context["equipment_type"],equipment_id=context["equipment_id"],storage_bin_send=context["storage_bin_id"],moisture_percent = context["moist_percentage"],weight_of_product_raw = context["weight_prod"],
+                                    weight_of_product=cal_weight,weight_of_product_unit=context["weight_prod_unit_id"], excepted_yield_raw =context["exp_yield"],excepted_yield=cal_exp_yield,excepted_yield_unit=context["exp_yield_unit_id"],recive_delivery_date=context["approval_date"],
+                                    purchase_order_number=context["purchase_number"],lot_number=context["lot_number"],volume_shipped=context["volume_shipped"],milled_volume=milled_volume,volume_left=volume_left,editable_obj=True,status=context["status"],
+                                    storage_bin_recive=context["receiver_sku_id"],ticket_number=context["ticket_number"],received_weight=context["received_weight"],processor2_idd=select_proc_id,processor2_name=select_destination_, receiver_processor_type=receiver_processor_type)
+                            save_shipment_management.save()
+
+                            files = request.FILES.getlist('files')
+                            for file in files:
+                                new_file = File.objects.create(file=file)
+                                save_shipment_management.files.add(new_file)
+                            save_shipment_management.save()
+
+                            log_type, log_status, log_device = "ShipmentManagement", "Added", "Web"
+                            log_idd, log_name = save_shipment_management.id, save_shipment_management.bin_location
+                            log_details = f"processor2 = {save_shipment_management.processor_e_name} | processor2_id = {save_shipment_management.processor_idd} | date_pulled = {save_shipment_management.date_pulled} | bin_location = {save_shipment_management.bin_location} | milled_volume = {save_shipment_management.milled_volume} | equipment_type = {save_shipment_management.equipment_type} | equipment_id = {save_shipment_management.equipment_id} | purchase_order_number = {save_shipment_management.purchase_order_number} | lot_number = {save_shipment_management.lot_number} | volume_shipped = {save_shipment_management.volume_shipped} | volume_left = {save_shipment_management.volume_left} | editable_obj = {save_shipment_management.editable_obj} "
+                            action_by_userid = request.user.id
+                            user = User.objects.get(pk=action_by_userid)
+                            user_role = user.role.all()
+                            action_by_username = f'{user.first_name} {user.last_name}'
+                            action_by_email = user.username
+                            if request.user.id == 1 :
+                                action_by_role = "superuser"
+                            else:
+                                action_by_role = str(','.join([str(i.role) for i in user_role]))
+                            logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+                                                action_by_userid=action_by_userid,action_by_username=action_by_username,
+                                                action_by_email=action_by_email,action_by_role=action_by_role,log_details=log_details,
+                                                log_device=log_device)
+                            logtable.save()
+                            update_obj = ShipmentManagement.objects.filter(processor_idd=int(bin_pull)).exclude(id=save_shipment_management.id).values('id','editable_obj')
+                            
+                            if update_obj.exists():
+                                for i in update_obj :
+                                    get_obj = ShipmentManagement.objects.get(id=i['id'])
+                                    get_obj.editable_obj = False
+                                    get_obj.save()
+                            else:
+                                pass
+                            return redirect('processor_inbound_management')
                 
                 return render(request, 'processor/add_processor_receive_delivery.html',context)
             else:

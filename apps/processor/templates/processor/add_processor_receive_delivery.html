@@ -61,6 +61,21 @@
     <main>
         <span class="farm headingtop">Receive Delivery</span>
         <div class="card farm-fields-container">
+            <nav aria-label="breadcrumb m-5">
+                {% if error_messages %}
+                <div id="alertMessage" class="alert alert-warning alert-dismissible fade show" role="alert">
+                    <strong>{{error_messages}}</strong>  
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>                         
+                  </div> 
+                  <script>                            
+                    setTimeout(function() {
+                        document.getElementById('alertMessage').style.display = 'none';
+                    }, 5000);
+                </script>                          
+                  {% endif %}
+            </nav>
             <div class="container-fluid">
                 {% if request.user.is_superuser or request.user.is_processor %}
                 <form method="post" class="farm-fields-form" enctype="multipart/form-data">
@@ -251,12 +266,12 @@
                             </select>
                         </div>
                         
-                        <div class="col-md-6 mb-2 text-center">
+                        <div class="col-md-6 mb-2 text-center" style="display:none;">
                             <label for="id_storage"><strong>Milled Volume</strong></label>
                             {% if milled_value == "None" %}
                             <div style="padding: 10px 5px;font-size: 18px;">Not Selected Pull From</div>
                             {% else %}
-                            <div style="padding: 10px 5px;font-size: 18px;">{{milled_value}}</div>
+                            <div style="padding: 10px 5px;font-size: 18px;" id="milled_volume">{{milled_value}}</div>
                             {% endif %}
                         
                             <input type="hidden" name="milled_value" id="sum_total_bin_location_milled_volume_java" value="{{milled_value}}">
@@ -376,15 +391,25 @@
                     </div>
                     <div class="row">
                         <div class="form-btn-row">
-                            <a href="{% url 'processor_inbound_management' %}"
-                                class="btn-close-cancel btn-space">Cancel</a>
-                            <input style="display: none;" id="hide_btn1" type="submit" class="btn-save-submit"
-                                value="Save" name="save">
-                            <!-- <input type="button" id="hide_btn2" class="btn-save-submit" value="Save" onclick="btnClick()"> -->
+                            <a href="{% url 'processor_inbound_management' %}" class="btn-close-cancel btn-space">Cancel</a>
+                            <input style="display: none;" id="hide_btn1" type="submit" class="btn-save-submit" value="Save" name="save">
                             <input type="submit" name="save" class="btn-save-submit" value="Save" onclick="activityButton1()">
                         </div>
                     </div>
                 </form>
+                
+                <script>
+                function validateForm() {
+                    var milledVolume = parseFloat(document.getElementById('milled_volume').innerText);
+                    var volumeShipped = parseFloat(document.getElementById('volume_shipped').value);
+                
+                    if (milledVolume < volumeShipped) {
+                        alert("Processor does not have that much volume for shipment.");
+                        return false; // Prevent form submission
+                    }
+                    return true; // Allow form submission
+                }
+                </script>
 
                 {% endif %}
             </div>

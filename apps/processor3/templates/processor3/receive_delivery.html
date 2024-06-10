@@ -61,6 +61,21 @@
     <main>
         <span class="farm headingtop">Receive Delivery</span>
         <div class="card farm-fields-container">
+            <nav aria-label="breadcrumb m-5">
+                {% if error_messages %}
+                <div id="alertMessage" class="alert alert-warning alert-dismissible fade show" role="alert">
+                    <strong>{{error_messages}}</strong>  
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>                         
+                  </div> 
+                  <script>                            
+                    setTimeout(function() {
+                        document.getElementById('alertMessage').style.display = 'none';
+                    }, 5000);
+                </script>                          
+                  {% endif %}
+            </nav>
             <div class="container-fluid">
                 <form method="post" class="farm-fields-form" enctype="multipart/form-data">
                     {% csrf_token %}
@@ -100,7 +115,7 @@
                             </select>
                         </div>
                         
-                        <div class="col-md-6 mb-2 text-center">
+                        <div class="col-md-6 mb-2 text-center" style="display:none;">
                             <label for="id_storage"><strong>Milled Volume</strong></label>
                             {% if milled_value == "None" %}
                             <div style="padding: 10px 5px;font-size: 18px;">Not Selected Pull From</div>

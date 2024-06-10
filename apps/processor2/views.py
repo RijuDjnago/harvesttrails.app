@@ -1434,7 +1434,7 @@ def recive_shipment(request):
                     return render(request, 'processor2/recive_delevery.html', context)
                 else:
                     if context["milled_value"] < context["volume_shipped"]:
-                        context["messages"] = "Processor does not have the required milled volume."
+                        context["error_messages"] = "Processor does not have the required milled volume."
                         return render(request, 'processor2/recive_delevery.html', context) 
                     else:             
                         if context["weight_prod_unit_id"] == "LBS" :
