@@ -66,20 +66,6 @@
                 <form method="post" class="farm-fields-form" enctype="multipart/form-data">
                     {% csrf_token %}
                     <div class="row" style="margin-bottom:10px">
-                        {% comment %} <div class="col-md-3 mb-2">
-                            <label for="id_grower">Grower<span class="asteriskField">*</span></label>
-                            <select id="id_grower" name="id_grower" class="textinput textInput form-control"
-                                style="width: 100%;padding-left:10px ;" required>
-                                <option value='all'>Select Grower</option>
-                                {% for grower in get_grower %}
-                                {% if grower == selected_grower %}
-                                <option value="{{ grower.pk }}" selected>{{grower.name}} - {{grower.pk }}</option>
-                                {% else %}
-                                <option value="{{ grower.pk }}">{{grower.name}} - {{grower.pk }}</option>
-                                {% endif %}
-                                {% endfor %}
-                            </select>
-                        </div>  {% endcomment %}
 
                         <div class="col-md-3 mb-2">
                             <div class="form-group">
@@ -96,17 +82,6 @@
                                 </select>
                             </div>
                         </div>
-
-                        {% comment %} <div class="col-md-3 mb-2">
-                            <label for="id_storage">Storage</label>
-                            <select id="id_storage" name="id_storage" class="textinput textInput form-control"
-                                style="width: 100%;padding-left:10px ;">
-                                {% for storage in storage %}
-                                <option value="{{ storage.pk }}">{{storage.storage_name}} - {{storage.pk }}</option>
-                                {% endfor %}
-                            </select>
-                        </div> {% endcomment %}
-                        
                         <div class="col-md-3 mb-2">
                             <div class="form-group">
                                 <label for="id_storage">Storage</label>
@@ -118,18 +93,6 @@
                                 </select>
                             </div>
                         </div>
-
-                        {% comment %} <div class="col-md-3 mb-2">
-                            <label for="id_storage">Field<span class="asteriskField">*</span></label>
-                            <select id="id_field" onchange="custom_option_deselect()" name="id_field" class="textinput textInput form-control"
-                                style="width: 100%;padding-left:10px ;">
-                                <option value="select">Select Field</option>
-                                {% for field in field %}
-                                <option value="{{ field.pk }}" data-crop="{{field.crop}}">{{field.name}} - {{field.pk}}</option>
-                                {% endfor %}
-                            </select>
-                            <p id="disp0" style="color: red;"></p>
-                        </div> {% endcomment %}
                         
                         <div class="col-md-3 mb-2">
                             <div class="form-group">
@@ -246,107 +209,7 @@
                                     <input type="text"  name="bin_location_processor" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;">
                                 </div>
                             </div>
-                        </div>
-                        
-                        
-                        {% comment %} {% else %}
-                            <div class="col-md-12 mb-2">
-                                <div class="row">
-                                    <div class="col-md-3">
-                                        <label for="id_status">Status<span class="asteriskField">*</span></label>
-                                        <input type="text" value="{{get_status}}" name="id_status" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" readonly>
-                                    </div>
-                                </div>
-                            </div>
-                        {% if get_crop != "COTTON" %}
-                        {% if get_status == "APPROVED" %}
-                        <div class="col-md-12">
-                            <div class="row">
-                                <div class="col-md-3 mb-2">
-                                    <label for="">Recieved Weight</label>
-                                    <input type="number" step="0.01"  value="{{recieved_weight}}" name="recieved_weight" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;">
-                                </div>
-                                <div class="col-md-3 mb-2">
-                                    <label for="">SKU ID</label>
-                                    <input type="text" value="{{sku_id}}" name="sku_id" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;">
-                                </div>
-                                
-                                <div class="col-md-3 mb-2">
-                                    <label for="">Ticket Number</label>
-                                    <input type="text" value="{{ticket_number}}" name="ticket_number" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;">
-                                </div>
-
-                                <div class="col-md-3 mb-2">
-                                    <label for="">Approval Date</label>
-                                    <input type="date" value="{{approval_date}}" name="approval_date" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;">
-                                </div>
-                                
-                            </div>
-                        </div>
-                        {% elif get_status == "DISAPPROVED" %}
-                        <div class="col-md-9" id="">
-                                <label for="">Reason for rejection<span class="asteriskField">*</span></label>
-                                <select id="reason_for_disapproval" name="reason_for_disapproval" class="textinput textInput form-control">
-                                    {% if reason_for_disapproval == "Moisture Level" %}
-                                    <option value="Moisture Level" selected>Moisture Level</option>
-                                    <option value="Fancy Count">Fancy Count</option>
-                                    <option value="Head Count">Head Count</option>
-                                    {% elif reason_for_disapproval == "Fancy Count" %}
-                                    <option value="Moisture Level">Moisture Level</option>
-                                    <option value="Fancy Count" selected>Fancy Count</option>
-                                    <option value="Head Count">Head Count</option>
-                                    {% elif reason_for_disapproval == "Head Count" %}
-                                    <option value="Moisture Level">Moisture Level</option>
-                                    <option value="Fancy Count">Fancy Count</option>
-                                    <option value="Head Count" selected>Head Count</option>
-                                    {% else %}
-                                    <option value="Moisture Level">Moisture Level</option>
-                                    <option value="Fancy Count">Fancy Count</option>
-                                    <option value="Head Count">Head Count</option>
-                                    {% endif %}
-                                </select>
-                                <!-- <input type="text" value="{{reason_for_disapproval}}" name="reason_for_disapproval" class="textinput textInput form-control"> -->
-                        </div>
-                        {% endif %}
-                        <div class="col-md-12">
-                            <div class="row">
-                                <div class="col-md-3 mb-2">
-                                    <label for="">Moisture Level ( 0- 100 %)</label>
-                                    <input type="number" min="0" max="100" step="0.0001" value="{{moisture_level}}" name="moisture_level" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;">
-                                </div>
-                                <div class="col-md-3 mb-2">
-                                    <label for="">Fancy Count</label>
-                                    <input type="number" value="{{fancy_count}}" name="fancy_count" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;">
-                                </div>
-                                <div class="col-md-3 mb-2">
-                                    <label for="">Head Count</label>
-                                    <input type="number" value="{{head_count}}" name="head_count" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;">
-                                </div>
-                                <div class="col-md-3 mb-2">
-                                    <label for="">Bin Location at Processor</label>
-                                    <input type="text" value="{{bin_location_processor}}" name="bin_location_processor" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;">
-                                </div>
-                            </div>
-                        </div>
-
-                        {% endif %}
-                        {% endif %}  {% endcomment %}
-
-                        {% comment %} <div class="col-md-4 mb-2">
-                            <label for="multi_file">Upload File <span class="asteriskField">*</span></label>
-                            <input type="file" name="files" multiple accept=".jpg,.png,.xlsx,.csv,.pdf" id="multi_file" class="textinput textInput form-control">
-                            <div id="file_names_container">
-                                {% for file in files %}
-                                    <div class="file-item">
-                                        <input type="hidden" name="files" value="{{ file.file.name }}">
-                                        <input type="hidden" name="file_id" value="{{ file.id }}">
-                                        <span>{{ file.file.name }}</span>
-                                        <button type="submit" name ="remove" value="remove" class="remove-file" data-file="{{ file.file.name }}"><span style="color:red;">&#10060;</span></button>
-                                    </div>
-                                {% endfor %}
-                            </div>
-                            <p id="alert_msg8" style="color:red"></p>
-                        </div> {% endcomment %}
+                        </div>                        
 
                         <div class="col-md-4 mb-2">
                             <label for="multi_file">Upload File <span class="asteriskField">*</span></label>
@@ -377,7 +240,7 @@
                             <label for="id_bin_location_pull">Bin Location Pulled from<span class="asteriskField">*</span></label>
                             <select name="bin_pull" id="pull" class="textinput textInput form-control selectpicker" data-live-search="true" onchange="this.form.submit()">
                                 {% if select_processor_name %}
-                                <option value="{{select_processor_id}}" selected>{{select_processor_name}}</option>
+                                <option value="{{select_processor_id}}_{{sender_processor_type}}" selected>{{select_processor_name}}</option>
                                 {% else %}
                                 <option value="all" disabled selected>Select Bin Location Pulled from</option>
                                 {% endif %}                                
@@ -513,7 +376,7 @@
                     </div>
                     <div class="row">
                         <div class="form-btn-row">
-                            <a href="{% url 'inbound_shipment_list' %}"
+                            <a href="{% url 'processor_inbound_management' %}"
                                 class="btn-close-cancel btn-space">Cancel</a>
                             <input style="display: none;" id="hide_btn1" type="submit" class="btn-save-submit"
                                 value="Save" name="save">

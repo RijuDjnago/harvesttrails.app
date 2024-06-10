@@ -396,7 +396,7 @@
                                         <th width="10%">STORAGE BIN</th>
                                         <th width="10%">SENDER SKU ID</th>
                                         <th width="10%">RECIVER SKU ID</th>
-                                        <th width="10%">Weight</th>
+                                        <th width="10%">Received Weight</th>
                                         <th width="10%">PROCESSOR (Sender)</th>
                                         <th width="10%">PROCESSOR (Reciver)</th>
                                         <th width="10%">RECIVE Date</th>
@@ -440,7 +440,7 @@
                                         {% else %}
                                         -
                                         {% endif %}</td>
-                                        <td>{{shipment.weight_of_product}}</td>
+                                        <td>{{shipment.received_weight}} {{shipment.weight_of_product_unit}}</td>
                                         <td>{% if shipment.processor_e_name %} {{shipment.processor_e_name}}-{{shipment.sender_processor_type}} {% endif %}</td>
                                         <td>{{shipment.processor2_name}} - {{shipment.receiver_processor_type}}</td>
                                         <td>{% if shipment.recive_delivery_date %}

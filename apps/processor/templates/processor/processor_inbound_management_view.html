@@ -220,12 +220,7 @@
                             <p>{{ship.date_pulled}}</p>
                            
                         </div>
-
-                        <div class="col-md-3" style="margin-bottom: 10px;">
-                            <label for="shipment" style="font-weight:bold;">MILLED VOLUME</label>
-                            <p>{{ship.milled_volume}}</p>
-                            
-                        </div>
+                        
                         <div class="col-md-3" style="margin-bottom: 10px;">
                             <label for="shipment" style="font-weight:bold;">EQUIPMENT TYPE</label>
                             <p>{{ship.equipment_type}}</p>
@@ -245,16 +240,11 @@
                             <p>{{ship.lot_number}}</p>
                         </div>
 
-                        {% if grower_shipment.crop != "COTTON" %}
-                        <div class="col-md-3" style="margin-bottom: 10px;">
-                            <label for="shipment" style="font-weight:bold;"> VOLUME LEFT </label>
-                            <p>{{ship.volume_left}}</p>
-                        </div>
+                        
                         <div class="col-md-3" style="margin-bottom: 10px;">
                             <label for="shipment" style="font-weight:bold;"> SENDER SKU ID </label>
                             <p>{{ship.storage_bin_send}}</p>
-                        </div>
-                        {% endif %}
+                        </div>                     
                         <div class="col-md-3" style="margin-bottom: 10px;">
                             <label for="shipment" style="font-weight:bold;"> RECEIVER SKU ID </label>
                             <p>{% if ship.storage_bin_recive %}
