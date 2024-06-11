@@ -2748,7 +2748,6 @@ def traceability_report_list(request):
                     else:
                         context['no_rec_found_msg'] = "No Records Found"
                     
-                
                 if select_crop == 'RICE' :
                     # Origin ........
                     # search by Grower ....
@@ -2889,8 +2888,6 @@ def traceability_report_list(request):
                         context['no_rec_found_msg'] = "No Records Found"
                 map_show = request.POST.get("map_view")
                 table_show = request.POST.get("table_view")
-                # print("map_show", map_show)
-                # print("table_show", table_show)
                 context = grower_location(context)
                 if map_show:
                     return render (request, 'tracemodule/traceability_map_show.html', context)
@@ -3091,27 +3088,35 @@ def traceability_report_Origin_csv_download(request,select_crop,get_search_by,se
             if get_search_by and get_search_by == 'grower' :
                 check_grower = Grower.objects.filter(name__icontains=search_text)
                 if check_grower.exists() :
-                    check_grower_id = [i.id for i in check_grower][0]
+                    check_grower_id = check_grower.first().id
                     check_grower_field_crop = Field.objects.filter(crop='RICE',grower_id=check_grower_id)
                     if check_grower_field_crop.exists() :
                         grower_field_ids = [i.id for i in check_grower_field_crop]
                         output = Origin_searchby_Grower('RICE',search_text,*grower_field_ids) 
+                    else:
+                        output = []
+                else:
+                    output = []
 
             elif get_search_by and get_search_by == 'field' :
                 check_field = Field.objects.filter(name__icontains=search_text,crop='RICE')
                 if check_field.exists() :
                     field_name = search_text
-                    field_id = [i.id for i in check_field]
-                    output = Origin_searchby_Grower('RICE',search_text,*field_id)
+                    field_id = check_field.first().id
+                    warehouse_wh_id = ''
+                    output = get_Origin_deliveryid('RICE',field_id,field_name,'',warehouse_wh_id)
+                else:
+                    output = []    
                     
             elif get_search_by and get_search_by == 'processor' :
-                check_processor = Processor.objects.filter(entity_name__icontains=search_text)
-                if check_processor.exists() :
-                    processor_id = [i.id for i in check_processor][0]
-                    get_shipment = GrowerShipment.objects.filter(processor_id=processor_id,crop='RICE').values("id")
-                    if get_shipment.exists() :
-                        bale_id = [i["id"] for i in get_shipment]
-                        output = Origin_searchby_Processor('RICE',*bale_id) 
+                check_processor = get_processor_type(search_text)
+                if check_processor:
+                    processor_type = check_processor["type"]
+                    processor_id = check_processor["id"]
+                    context_ = processor_traceability_report_response(processor_id,processor_type, from_date, to_date, search_text)
+                    output = context_.get("origin_context")
+                else:
+                    output = []
 
             elif get_search_by and get_search_by == 'sku_id' :
                 context_ = skuid_traceability_response(search_text)
@@ -3160,21 +3165,37 @@ def traceability_report_WIP1_csv_download(request,select_crop,get_search_by,sear
             if get_search_by and get_search_by == 'grower' :
                 check_grower = Grower.objects.filter(name__icontains=search_text)
                 if check_grower.exists() :
-                    grower_id = check_grower.first().id
+                    check_grower_id = check_grower.first().id
+                    check_grower_field_crop = Field.objects.filter(crop='RICE',grower_id=check_grower_id)
+                    if check_grower_field_crop.exists() :
+                        processor_id = LinkGrowerToProcessor.objects.filter(grower_id=check_grower_id).first().processor.id
+                        entity_name = LinkGrowerToProcessor.objects.filter(grower_id=check_grower_id).first().processor.entity_name
+                                                       
+                        processor_type = "T1"
+                        context_ = processor_traceability_report_response(processor_id, processor_type, from_date, to_date, entity_name)      
+                        output = context_.get("outbound1_wip")
+                    else:
+                        output = []
+                else:
+                    output = []
 
-                    output = list(GrowerShipment.objects.filter(grower_id=grower_id,crop='RICE').values("shipment_id","date_time","total_amount","processor__entity_name"))      
-            
             elif get_search_by and get_search_by == 'field' :
                 check_field = Field.objects.filter(name__icontains=search_text,crop='RICE')
                 if check_field.exists() :
-                    field_id = check_field.first().id
-                    output = list(GrowerShipment.objects.filter(field_id=field_id,crop='RICE').values("shipment_id","date_time","total_amount","processor__entity_name"))
-
+                    field_name = search_text
+                    field_id = check_field.first().id                 
+                    output = outbound1_Wip_field('RICE',search_text,from_date,to_date,field_id)
+                else:
+                    output = []
             elif get_search_by and get_search_by == 'processor' :
-                check_processor = Processor.objects.filter(entity_name__icontains=search_text)
-                if check_processor.exists() :
-                    processor_id = check_processor.first().id
-                    output = list(GrowerShipment.objects.filter(processor_id=processor_id,crop='RICE').values("shipment_id","date_time","total_amount","processor__entity_name"))
+                check_processor = get_processor_type(search_text)
+                if check_processor:
+                    processor_type = check_processor["type"]
+                    processor_id = check_processor["id"]
+                    context_ = processor_traceability_report_response(processor_id,processor_type, from_date, to_date, search_text)
+                    output = context_.get("outbound1_wip")
+                else:
+                    output = []
                     
             elif get_search_by and get_search_by == 'sku_id' :
                 context_ = skuid_traceability_response(search_text)  
@@ -3199,7 +3220,7 @@ def traceability_report_WIP1_csv_download(request,select_crop,get_search_by,sear
             else:
                 output = []
             for i in output:
-                writer.writerow([i["shipment_id"], i["date_time"], i["total_amount"], i["processor__entity_name"]])
+                writer.writerow([i["deliveryid"], i["date"], i["quantity"], i["destination"]])
         return response
     else:
         return redirect ('dashboard')
@@ -3273,25 +3294,52 @@ def traceability_report_T1_Processor_csv_download(request,select_crop,get_search
                 check_grower = Grower.objects.filter(name__icontains=search_text)
                 if check_grower.exists() :
                     check_grower_id = check_grower.first().id
-                    output = list(GrowerShipment.objects.filter(grower_id=check_grower_id, crop="RICE", status="APPROVED").values("processor__entity_name", "shipment_id", "processor_id","grower__name","field__name","field__farm__name","approval_date","total_amount","received_amount"))
-       
+                    check_grower_field_crop = Field.objects.filter(crop='RICE',grower_id=check_grower_id)
+                    if check_grower_field_crop.exists() :
+                        grower_field_ids = [i.id for i in check_grower_field_crop]                       
+
+                        processor_id = LinkGrowerToProcessor.objects.filter(grower_id=check_grower_id).first().processor.id
+                        entity_name = LinkGrowerToProcessor.objects.filter(grower_id=check_grower_id).first().processor.entity_name
+                        t1_processor = list(GrowerShipment.objects.filter(processor_id=processor_id, grower_id=check_grower_id, status="APPROVED").values("processor__entity_name","shipment_id","approval_date","grower__name","field__farm__name","field__name","total_amount","received_amount"))
+
+                        if len(t1_processor) != 0:
+                            for entry in t1_processor:
+                                entry["processor_name"] = entry["processor__entity_name"]
+                                entry["deliveryid"] = entry["shipment_id"]
+                                entry["date"] = entry["approval_date"]
+                                entry["grower"] = entry["grower__name"]
+                                entry["farm"] = entry["field__farm__name"]
+                                entry["field"] = entry["field__name"]
+                                entry["pounds_received"] = entry["received_amount"]
+                                entry["pounds_shipped"] = entry["total_amount"]
+                                try:
+                                    entry["pounds_delta"] = float(entry["total_amount"]) - float(entry["received_amount"])
+                                except (ValueError, TypeError):
+                                    entry["pounds_delta"] = "Something is wrong"                        
+                        output = t1_processor 
+                    else:
+                        output = []
+                else:
+                    output = []
             
             elif get_search_by and get_search_by == 'field' :
                 check_field = Field.objects.filter(name__icontains=search_text,crop='RICE')
                 if check_field.exists() :
                     field_name = search_text
-                    field_id = [i.id for i in check_field][0]
-                    warehouse_wh_id = ''
+                    field_id = check_field.first().id                    
                     output = t1_Processor_field('RICE',search_text,field_id,from_date,to_date)
-            
+                else:
+                    output = []   
+
             elif get_search_by and get_search_by == 'processor' :
-                check_processor = Processor.objects.filter(entity_name__icontains=search_text)
-                if check_processor.exists() :
-                    processor_id = [i.id for i in check_processor][0]
-                    get_shipment = GrowerShipment.objects.filter(processor_id=processor_id,crop='RICE').values("id")
-                    if get_shipment.exists() :
-                        bale_id = [i["id"] for i in get_shipment]
-                        output = t1_Processor_Processor('RICE',processor_id,from_date,to_date,*bale_id)
+                check_processor = get_processor_type(search_text)
+                if check_processor:
+                    processor_type = check_processor["type"]
+                    processor_id = check_processor["id"]
+                    context_ = processor_traceability_report_response(processor_id,processor_type, from_date, to_date, search_text)
+                    output = context_.get("t1_processor")
+                else:
+                    output = []
             
             elif get_search_by and get_search_by == 'sku_id' :
                 context_ = skuid_traceability_response(search_text)  
@@ -3357,27 +3405,43 @@ def traceability_report_WIP2_csv_download(request,select_crop,get_search_by,sear
             if get_search_by and get_search_by == 'grower' :
                 check_grower = Grower.objects.filter(name__icontains=search_text)
                 if check_grower.exists() :
-                    check_grower_id = [i.id for i in check_grower][0]
+                    check_grower_id = check_grower.first().id
                     check_grower_field_crop = Field.objects.filter(crop='RICE',grower_id=check_grower_id)
                     if check_grower_field_crop.exists() :
-                        grower_field_ids = [i.id for i in check_grower_field_crop]
-                        # 20-03-23
-                        output = outbound2_Wip_Grower('RICE',check_grower_id,from_date,to_date,*grower_field_ids)               
+                        processor_id = LinkGrowerToProcessor.objects.filter(grower_id=check_grower_id).first().processor.id
+                        entity_name = LinkGrowerToProcessor.objects.filter(grower_id=check_grower_id).first().processor.entity_name
+                                                       
+                        processor_type = "T1"
+                        context_ = processor_traceability_report_response(processor_id, processor_type, from_date, to_date, entity_name)      
+                        output = context_.get("outbound2_wip")
+                    else:
+                        output = []
+                else:
+                    output = []               
             
             elif get_search_by and get_search_by == 'field' :
                 check_field = Field.objects.filter(name__icontains=search_text,crop='RICE')
                 if check_field.exists() :
                     field_name = search_text
-                    field_id = [i.id for i in check_field][0]
-                    output = outbound2_Wip_Field('RICE',field_name,field_id,from_date,to_date)         
+                    field_id = check_field.first().id                    
+                    grower_id =  check_field.first().grower.id                    
+                    processor_id = LinkGrowerToProcessor.objects.filter(grower_id=grower_id).first().processor.id
+                    entity_name = LinkGrowerToProcessor.objects.filter(grower_id=grower_id).first().processor.entity_name
+                    processor_type = "T1"
+                    context_ = processor_traceability_report_response(processor_id, processor_type, from_date, to_date, entity_name)
+                    output = context_.get("outbound2_wip")
+                else:
+                    output = []        
                             
             elif get_search_by and get_search_by == 'processor' :
-                check_processor = Processor.objects.filter(entity_name__icontains=search_text)
-                if check_processor.exists() :
-                    processor_id = [i.id for i in check_processor][0]
-                    get_shipment = GrowerShipment.objects.filter(processor_id=processor_id,crop='RICE').values("id")
-                    if get_shipment.exists() :
-                        output = outbound2_Wip_Processor('RICE',search_text,processor_id,from_date,to_date)
+                check_processor = get_processor_type(search_text)
+                if check_processor:
+                    processor_type = check_processor["type"]
+                    processor_id = check_processor["id"]
+                    context_ = processor_traceability_report_response(processor_id,processor_type, from_date, to_date, search_text)
+                    output = context_.get("outbound2_wip")
+                else:
+                    output = []
 
             elif get_search_by and get_search_by == 'sku_id' :
                 context_ = skuid_traceability_response(search_text)  
@@ -3473,27 +3537,43 @@ def traceability_report_T2_Processor_csv_download(request,select_crop,get_search
             if get_search_by and get_search_by == 'grower' :
                 check_grower = Grower.objects.filter(name__icontains=search_text)
                 if check_grower.exists() :
-                    check_grower_id = [i.id for i in check_grower][0]
+                    check_grower_id = check_grower.first().id
                     check_grower_field_crop = Field.objects.filter(crop='RICE',grower_id=check_grower_id)
                     if check_grower_field_crop.exists() :
-                        output = t2_Processor_grower('RICE',check_grower_id,from_date,to_date)
+                        processor_id = LinkGrowerToProcessor.objects.filter(grower_id=check_grower_id).first().processor.id
+                        entity_name = LinkGrowerToProcessor.objects.filter(grower_id=check_grower_id).first().processor.entity_name
+                                                       
+                        processor_type = "T1"
+                        context_ = processor_traceability_report_response(processor_id, processor_type, from_date, to_date, entity_name)      
+                        output = context_.get("inbound2_wip")
+                    else:
+                        output = []
+                else:
+                    output = []
        
             elif get_search_by and get_search_by == 'field' :
                 check_field = Field.objects.filter(name__icontains=search_text,crop='RICE')
                 if check_field.exists() :
                     field_name = search_text
-                    field_id = [i.id for i in check_field][0]
-                    warehouse_wh_id = ''
-                    output = t2_Processor_field('RICE',search_text,field_id,from_date,to_date)
+                    field_id = check_field.first().id                    
+                    grower_id =  check_field.first().grower.id                    
+                    processor_id = LinkGrowerToProcessor.objects.filter(grower_id=grower_id).first().processor.id
+                    entity_name = LinkGrowerToProcessor.objects.filter(grower_id=grower_id).first().processor.entity_name
+                    processor_type = "T1"
+                    context_ = processor_traceability_report_response(processor_id, processor_type, from_date, to_date, entity_name)
+                    output = context_.get("inbound2_wip")
+                else:
+                    output = []
             
             elif get_search_by and get_search_by == 'processor' :
-                check_processor = Processor.objects.filter(entity_name__icontains=search_text)
-                if check_processor.exists() :
-                    processor_id = [i.id for i in check_processor][0]
-                    get_shipment = GrowerShipment.objects.filter(processor_id=processor_id,crop='RICE').values("id")
-                    if get_shipment.exists() :
-                        bale_id = [i["id"] for i in get_shipment]
-                        output = t2_Processor_Processor('RICE',processor_id,from_date,to_date,*bale_id)
+                check_processor = get_processor_type(search_text)
+                if check_processor:
+                    processor_type = check_processor["type"]
+                    processor_id = check_processor["id"]
+                    context_ = processor_traceability_report_response(processor_id,processor_type, from_date, to_date, search_text)
+                    output = context_.get("inbound2_wip")
+                else:
+                    output = []
 
             elif get_search_by and get_search_by == 'sku_id' :
                 context_ = skuid_traceability_response(search_text)  
@@ -3540,27 +3620,43 @@ def traceability_report_WIP3_csv_download(request,select_crop,get_search_by,sear
             if get_search_by and get_search_by == 'grower' :
                 check_grower = Grower.objects.filter(name__icontains=search_text)
                 if check_grower.exists() :
-                    check_grower_id = [i.id for i in check_grower][0]
+                    check_grower_id = check_grower.first().id
                     check_grower_field_crop = Field.objects.filter(crop='RICE',grower_id=check_grower_id)
                     if check_grower_field_crop.exists() :
-                        grower_field_ids = [i.id for i in check_grower_field_crop]
-                        # 20-03-23
-                        output = outbound2_Wip_Grower('RICE',check_grower_id,from_date,to_date,*grower_field_ids)               
+                        processor_id = LinkGrowerToProcessor.objects.filter(grower_id=check_grower_id).first().processor.id
+                        entity_name = LinkGrowerToProcessor.objects.filter(grower_id=check_grower_id).first().processor.entity_name
+                                                       
+                        processor_type = "T1"
+                        context_ = processor_traceability_report_response(processor_id, processor_type, from_date, to_date, entity_name)      
+                        output = context_.get("outbound3_wip")
+                    else:
+                        output = []
+                else:
+                    output = []              
             
             elif get_search_by and get_search_by == 'field' :
                 check_field = Field.objects.filter(name__icontains=search_text,crop='RICE')
                 if check_field.exists() :
                     field_name = search_text
-                    field_id = [i.id for i in check_field][0]
-                    output = outbound2_Wip_Field('RICE',field_name,field_id,from_date,to_date)         
+                    field_id = check_field.first().id                    
+                    grower_id =  check_field.first().grower.id                    
+                    processor_id = LinkGrowerToProcessor.objects.filter(grower_id=grower_id).first().processor.id
+                    entity_name = LinkGrowerToProcessor.objects.filter(grower_id=grower_id).first().processor.entity_name
+                    processor_type = "T1"
+                    context_ = processor_traceability_report_response(processor_id, processor_type, from_date, to_date, entity_name)
+                    output = context_.get("outbound3_wip")
+                else:
+                    output = []         
                             
             elif get_search_by and get_search_by == 'processor' :
-                check_processor = Processor.objects.filter(entity_name__icontains=search_text)
-                if check_processor.exists() :
-                    processor_id = [i.id for i in check_processor][0]
-                    get_shipment = GrowerShipment.objects.filter(processor_id=processor_id,crop='RICE').values("id")
-                    if get_shipment.exists() :
-                        output = outbound2_Wip_Processor('RICE',search_text,processor_id,from_date,to_date)
+                check_processor = get_processor_type(search_text)
+                if check_processor:
+                    processor_type = check_processor["type"]
+                    processor_id = check_processor["id"]
+                    context_ = processor_traceability_report_response(processor_id,processor_type, from_date, to_date, search_text)
+                    output = context_.get("outbound3_wip")
+                else:
+                    output = []
 
             elif get_search_by and get_search_by == 'sku_id' :
                 context_ = skuid_traceability_response(search_text)  
@@ -3608,27 +3704,43 @@ def traceability_report_T3_Processor_csv_download(request,select_crop,get_search
             if get_search_by and get_search_by == 'grower' :
                 check_grower = Grower.objects.filter(name__icontains=search_text)
                 if check_grower.exists() :
-                    check_grower_id = [i.id for i in check_grower][0]
+                    check_grower_id = check_grower.first().id
                     check_grower_field_crop = Field.objects.filter(crop='RICE',grower_id=check_grower_id)
                     if check_grower_field_crop.exists() :
-                        output = t2_Processor_grower('RICE',check_grower_id,from_date,to_date)
+                        processor_id = LinkGrowerToProcessor.objects.filter(grower_id=check_grower_id).first().processor.id
+                        entity_name = LinkGrowerToProcessor.objects.filter(grower_id=check_grower_id).first().processor.entity_name
+                                                       
+                        processor_type = "T1"
+                        context_ = processor_traceability_report_response(processor_id, processor_type, from_date, to_date, entity_name)      
+                        output = context_.get("inbound3_wip")
+                    else:
+                        output = []
+                else:
+                    output = []
        
             elif get_search_by and get_search_by == 'field' :
                 check_field = Field.objects.filter(name__icontains=search_text,crop='RICE')
                 if check_field.exists() :
                     field_name = search_text
-                    field_id = [i.id for i in check_field][0]
-                    warehouse_wh_id = ''
-                    output = t2_Processor_field('RICE',search_text,field_id,from_date,to_date)
+                    field_id = check_field.first().id                    
+                    grower_id =  check_field.first().grower.id                    
+                    processor_id = LinkGrowerToProcessor.objects.filter(grower_id=grower_id).first().processor.id
+                    entity_name = LinkGrowerToProcessor.objects.filter(grower_id=grower_id).first().processor.entity_name
+                    processor_type = "T1"
+                    context_ = processor_traceability_report_response(processor_id, processor_type, from_date, to_date, entity_name)
+                    output = context_.get("inbound3_wip")
+                else:
+                    output = []
             
             elif get_search_by and get_search_by == 'processor' :
-                check_processor = Processor.objects.filter(entity_name__icontains=search_text)
-                if check_processor.exists() :
-                    processor_id = [i.id for i in check_processor][0]
-                    get_shipment = GrowerShipment.objects.filter(processor_id=processor_id,crop='RICE').values("id")
-                    if get_shipment.exists() :
-                        bale_id = [i["id"] for i in get_shipment]
-                        output = t2_Processor_Processor('RICE',processor_id,from_date,to_date,*bale_id)
+                check_processor = get_processor_type(search_text)
+                if check_processor:
+                    processor_type = check_processor["type"]
+                    processor_id = check_processor["id"]
+                    context_ = processor_traceability_report_response(processor_id,processor_type, from_date, to_date, search_text)
+                    output = context_.get("inbound3_wip")
+                else:
+                    output = []
 
             elif get_search_by and get_search_by == 'sku_id' :
                 context_ = skuid_traceability_response(search_text)  
@@ -3675,27 +3787,43 @@ def traceability_report_WIP4_csv_download(request,select_crop,get_search_by,sear
             if get_search_by and get_search_by == 'grower' :
                 check_grower = Grower.objects.filter(name__icontains=search_text)
                 if check_grower.exists() :
-                    check_grower_id = [i.id for i in check_grower][0]
+                    check_grower_id = check_grower.first().id
                     check_grower_field_crop = Field.objects.filter(crop='RICE',grower_id=check_grower_id)
                     if check_grower_field_crop.exists() :
-                        grower_field_ids = [i.id for i in check_grower_field_crop]
-                        # 20-03-23
-                        output = outbound2_Wip_Grower('RICE',check_grower_id,from_date,to_date,*grower_field_ids)               
+                        processor_id = LinkGrowerToProcessor.objects.filter(grower_id=check_grower_id).first().processor.id
+                        entity_name = LinkGrowerToProcessor.objects.filter(grower_id=check_grower_id).first().processor.entity_name
+                                                       
+                        processor_type = "T1"
+                        context_ = processor_traceability_report_response(processor_id, processor_type, from_date, to_date, entity_name)      
+                        output = context_.get("outbound4_wip")
+                    else:
+                        output = []
+                else:
+                    output = []               
             
             elif get_search_by and get_search_by == 'field' :
                 check_field = Field.objects.filter(name__icontains=search_text,crop='RICE')
                 if check_field.exists() :
                     field_name = search_text
-                    field_id = [i.id for i in check_field][0]
-                    output = outbound2_Wip_Field('RICE',field_name,field_id,from_date,to_date)         
+                    field_id = check_field.first().id                    
+                    grower_id =  check_field.first().grower.id                    
+                    processor_id = LinkGrowerToProcessor.objects.filter(grower_id=grower_id).first().processor.id
+                    entity_name = LinkGrowerToProcessor.objects.filter(grower_id=grower_id).first().processor.entity_name
+                    processor_type = "T1"
+                    context_ = processor_traceability_report_response(processor_id, processor_type, from_date, to_date, entity_name)
+                    output = context_.get("outbound4_wip")
+                else:
+                    output = []         
                             
             elif get_search_by and get_search_by == 'processor' :
-                check_processor = Processor.objects.filter(entity_name__icontains=search_text)
-                if check_processor.exists() :
-                    processor_id = [i.id for i in check_processor][0]
-                    get_shipment = GrowerShipment.objects.filter(processor_id=processor_id,crop='RICE').values("id")
-                    if get_shipment.exists() :
-                        output = outbound2_Wip_Processor('RICE',search_text,processor_id,from_date,to_date)
+                check_processor = get_processor_type(search_text)
+                if check_processor:
+                    processor_type = check_processor["type"]
+                    processor_id = check_processor["id"]
+                    context_ = processor_traceability_report_response(processor_id,processor_type, from_date, to_date, search_text)
+                    output = context_.get("outbound4_wip")
+                else:
+                    output = []
 
             elif get_search_by and get_search_by == 'sku_id' :
                 context_ = skuid_traceability_response(search_text)  
@@ -3743,27 +3871,43 @@ def traceability_report_T4_Processor_csv_download(request,select_crop,get_search
             if get_search_by and get_search_by == 'grower' :
                 check_grower = Grower.objects.filter(name__icontains=search_text)
                 if check_grower.exists() :
-                    check_grower_id = [i.id for i in check_grower][0]
+                    check_grower_id = check_grower.first().id
                     check_grower_field_crop = Field.objects.filter(crop='RICE',grower_id=check_grower_id)
                     if check_grower_field_crop.exists() :
-                        output = t2_Processor_grower('RICE',check_grower_id,from_date,to_date)
+                        processor_id = LinkGrowerToProcessor.objects.filter(grower_id=check_grower_id).first().processor.id
+                        entity_name = LinkGrowerToProcessor.objects.filter(grower_id=check_grower_id).first().processor.entity_name
+                                                       
+                        processor_type = "T1"
+                        context_ = processor_traceability_report_response(processor_id, processor_type, from_date, to_date, entity_name)      
+                        output = context_.get("inbound4_wip")
+                    else:
+                        output = []
+                else:
+                    output = []
        
             elif get_search_by and get_search_by == 'field' :
                 check_field = Field.objects.filter(name__icontains=search_text,crop='RICE')
                 if check_field.exists() :
                     field_name = search_text
-                    field_id = [i.id for i in check_field][0]
-                    warehouse_wh_id = ''
-                    output = t2_Processor_field('RICE',search_text,field_id,from_date,to_date)
+                    field_id = check_field.first().id                    
+                    grower_id =  check_field.first().grower.id                    
+                    processor_id = LinkGrowerToProcessor.objects.filter(grower_id=grower_id).first().processor.id
+                    entity_name = LinkGrowerToProcessor.objects.filter(grower_id=grower_id).first().processor.entity_name
+                    processor_type = "T1"
+                    context_ = processor_traceability_report_response(processor_id, processor_type, from_date, to_date, entity_name)
+                    output = context_.get("inbound4_wip")
+                else:
+                    output = []
             
             elif get_search_by and get_search_by == 'processor' :
-                check_processor = Processor.objects.filter(entity_name__icontains=search_text)
-                if check_processor.exists() :
-                    processor_id = [i.id for i in check_processor][0]
-                    get_shipment = GrowerShipment.objects.filter(processor_id=processor_id,crop='RICE').values("id")
-                    if get_shipment.exists() :
-                        bale_id = [i["id"] for i in get_shipment]
-                        output = t2_Processor_Processor('RICE',processor_id,from_date,to_date,*bale_id)
+                check_processor = get_processor_type(search_text)
+                if check_processor:
+                    processor_type = check_processor["type"]
+                    processor_id = check_processor["id"]
+                    context_ = processor_traceability_report_response(processor_id,processor_type, from_date, to_date, search_text)
+                    output = context_.get("inbound4_wip")
+                else:
+                    output = []
 
             elif get_search_by and get_search_by == 'sku_id' :
                 context_ = skuid_traceability_response(search_text)  
