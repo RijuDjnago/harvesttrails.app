@@ -112,8 +112,7 @@
                             <thead>
                                 <tr style="border-bottom: 2px solid #e0e0e0;">
                                     <th width="20%"> Processor Name </th>
-                                    <th width="20%"> Location Name </th>
-                                    <th width="20%"> Echelon ID </th>
+                                    <th width="20%"> Location Name </th>                                   
                                     <th width="20%"> Coordinate </th>
                                     <th width="20%" class="text-center">Action</th>
                                 </tr>
@@ -122,8 +121,7 @@
                                 {% for location in location %}
                                 <tr>
                                     <td>{{location.processor.entity_name}}</td>
-                                    <td>{{location.name}}</td>
-                                    <td>{{location.eschlon_id}}</td>
+                                    <td>{{location.name}}</td>                                
                                     <td>Lat: {{location.latitude}}, Lon: {{location.longitude}}</td>                                  
                                     <td class="backk action-td" >
                                         <!-- <li>

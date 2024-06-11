@@ -978,8 +978,11 @@ def link_processor_three(request):
 def delete_link_processor_three(request, pk):
     try:
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+            print(pk,"pk")
             link = LinkProcessorToProcessor.objects.filter(id=pk).first()
-            link.delete()
+            print("link",link)
+            LinkProcessorToProcessor.objects.filter(id=pk).delete()
+            return redirect('processor3_processor_management') 
         else:
             return redirect('login')
     except Exception as e:
