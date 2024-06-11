@@ -41,9 +41,9 @@ from urllib.parse import urlparse
 import geojson
 import numpy as np
 # import geopandas as gpd
-import matplotlib.pyplot as plt
-from descartes import PolygonPatch
-import matplotlib.patches as mpatches
+# import matplotlib.pyplot as plt
+# from descartes import PolygonPatch
+# import matplotlib.patches as mpatches
 from apps.grower.signals import send_contract_verification_email
 from apps.growersurvey.views import render_to_pdf
 from docusign_esign import EnvelopesApi
