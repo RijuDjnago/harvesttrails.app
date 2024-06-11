@@ -163,67 +163,70 @@ def add_processor2(request):
 @login_required()
 def processor2_update(request,pk):
     context = {}
-    try:        
+    # try:        
         # superadmin and others ................
-        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
-            obj_id = ProcessorUser2.objects.get(id=pk)
-            context['p_user'] = obj_id
-            processor2 = Processor2.objects.get(id=obj_id.processor2_id)
-            context['form'] = ProcessorForm2(instance=processor2)
-            processor_email = obj_id.contact_email
-            user = User.objects.get(email=processor_email)
-            if request.method == 'POST':
-                form = ProcessorForm2( request.POST,instance=processor2)
-                if form.is_valid():
-                    email_update = request.POST.get('contact_email1')
-                    name_update = request.POST.get('contact_name1')
-                    phone_update = request.POST.get('contact_phone1')
-                    fax_update = request.POST.get('contact_fax1')
-                    obj_id.contact_name = name_update
-                    obj_id.contact_email = email_update
-                    obj_id.contact_phone = phone_update
-                    obj_id.contact_fax = fax_update
-                    obj_id.save()
-                    log_email = ''
-                    if email_update != processor_email:
-                        f_name = name_update
-                        user.email = email_update
-                        user.username = email_update
-                        user.first_name = f_name
-                        user.save()
-                        form.save()
-                        log_email = email_update
-                    else :
-                        f_name = name_update
-                        user.first_name = f_name
-                        user.save()
-                        form.save()
-                        log_email = obj_id.contact_email
-                    # 07-04-23 Log Table
-                    log_type, log_status, log_device = "ProcessorUser2", "Edited", "Web"
-                    log_idd, log_name = obj_id.id, name_update
-                    log_details = f"processor2_id = {obj_id.processor2.id} | processor2 = {obj_id.processor2.entity_name} | contact_name= {name_update} | contact_email = {email_update} | contact_phone = {phone_update} | contact_fax = {fax_update}"
-                    action_by_userid = request.user.id
-                    userr = User.objects.get(pk=action_by_userid)
-                    user_role = userr.role.all()
-                    action_by_username = f'{userr.first_name} {userr.last_name}'
-                    action_by_email = userr.username
-                    if request.user.id == 1 :
-                        action_by_role = "superuser"
-                    else:
-                        action_by_role = str(','.join([str(i.role) for i in user_role]))
-                    logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
-                                        action_by_userid=action_by_userid,action_by_username=action_by_username,
-                                        action_by_email=action_by_email,action_by_role=action_by_role,log_email=log_email,
-                                        log_details=log_details,log_device=log_device)
-                    logtable.save()
-                    return redirect('list_processor2')
-            return render(request, 'processor2/update_processor2.html',context)
-        else:
-            return redirect('dashboard')
-    except Exception as e:
-        context["messages"] = str(e)
+    if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+        print("update view called")
+        obj_id = ProcessorUser2.objects.get(id=pk)
+        context['p_user'] = obj_id
+        processor2 = Processor2.objects.get(id=obj_id.processor2_id)
+        context['form'] = ProcessorForm2(instance=processor2)
+        processor_email = obj_id.contact_email
+        user = User.objects.get(email=processor_email)
+        if request.method == 'POST':
+            form = ProcessorForm2( request.POST,instance=processor2)
+            print(form)
+            if form.is_valid():
+                print("0000000000000")
+                email_update = request.POST.get('contact_email1')
+                name_update = request.POST.get('contact_name1')
+                phone_update = request.POST.get('contact_phone1')
+                fax_update = request.POST.get('contact_fax1')
+                obj_id.contact_name = name_update
+                obj_id.contact_email = email_update
+                obj_id.contact_phone = phone_update
+                obj_id.contact_fax = fax_update
+                obj_id.save()
+                log_email = ''
+                if email_update != processor_email:
+                    f_name = name_update
+                    user.email = email_update
+                    user.username = email_update
+                    user.first_name = f_name
+                    user.save()
+                    form.save()
+                    log_email = email_update
+                else :
+                    f_name = name_update
+                    user.first_name = f_name
+                    user.save()
+                    form.save()
+                    log_email = obj_id.contact_email
+                # 07-04-23 Log Table
+                log_type, log_status, log_device = "ProcessorUser2", "Edited", "Web"
+                log_idd, log_name = obj_id.id, name_update
+                log_details = f"processor2_id = {obj_id.processor2.id} | processor2 = {obj_id.processor2.entity_name} | contact_name= {name_update} | contact_email = {email_update} | contact_phone = {phone_update} | contact_fax = {fax_update}"
+                action_by_userid = request.user.id
+                userr = User.objects.get(pk=action_by_userid)
+                user_role = userr.role.all()
+                action_by_username = f'{userr.first_name} {userr.last_name}'
+                action_by_email = userr.username
+                if request.user.id == 1 :
+                    action_by_role = "superuser"
+                else:
+                    action_by_role = str(','.join([str(i.role) for i in user_role]))
+                logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+                                    action_by_userid=action_by_userid,action_by_username=action_by_username,
+                                    action_by_email=action_by_email,action_by_role=action_by_role,log_email=log_email,
+                                    log_details=log_details,log_device=log_device)
+                logtable.save()
+                return redirect('list_processor2')
         return render(request, 'processor2/update_processor2.html',context)
+    else:
+        return redirect('dashboard')
+    # except Exception as e:
+    #     context["messages"] = str(e)
+    #     return render(request, 'processor2/update_processor2.html',context)
 
 
 @login_required()
