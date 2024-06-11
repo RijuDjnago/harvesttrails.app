@@ -123,10 +123,36 @@
                                         {% if 'Processor' in request.user.get_role and request.user.is_processor %}
                                         {% else %}
                                         <li>
-                                            <a onclick="delStorage('{% url 'delete_link_processor_two' pro.id %}')" href="{% url 'delete_link_processor_two' pro.id %}"
-                                        data-mdb-toggle="modal" data-mdb-target="#deleteModal" alt="delete linked grower to processor" title="delete linked grower to processor">
+                                            <a type="button"
+                                        data-mdb-toggle="modal" data-mdb-target="#deleteModal{{pro.id}}" alt="delete linked processor to processor" title="delete linked processor to processor">
                                         <span class="fas fa-trash"></span></a>
                                         </li>
+
+                                        <div class="modal fade" id="deleteModal{{pro.id}}" aria-hidden="true" aria-labelledby="exampleModalToggleLabel22" tabindex="-1">
+                                            <div class="modal-dialog">
+                                              <div class="modal-content">
+                                          
+                                                <div class="modal-body">
+                                                  <button type="button" class="btn-close cust-close-ds-btn" data-mdb-dismiss="modal" aria-label="Close"></button>
+                                                  <div class="center-content-status">
+                                                    <img src="{% static 'img/trash.png' %}" alt="right" id="rightImg" class="warning-icon">
+                                                    <p id="message" class="modal-title titlepad">Are you sure you want to delete?</p>
+                                                  </div>
+                                                  <div class="modal-center-btn-footer">
+                                                    <button onclick="reloadwindow()" id="closeBtnpopup" type="button" class="btn-close-cancel btn-space"
+                                                      data-mdb-dismiss="modal">
+                                                      Close
+                                                    </button>
+                                                    <!-- <button type="submit" class="btn-save-submit">Delete</button> -->
+                                                    
+                                                    <a href="{% url 'delete_link_processor_two' pro.id %}" id="storageDelete" class="btn-save-submit">Delete</a>
+                                                   
+                                                  </div>
+                                                </div>
+                                          
+                                              </div>
+                                            </div>
+                                          </div>
                                         {% endif %}  
                                     </td>
                                 </tr>
@@ -142,34 +168,7 @@
     </main>
     {% include 'footer.html' %}
 </div>
-<!-- Delete Popup -->
-<div class="modal fade" id="deleteModal" aria-hidden="true" aria-labelledby="exampleModalToggleLabel22" tabindex="-1">
-    <div class="modal-dialog">
-      <div class="modal-content">
-  
-        <div class="modal-body">
-          <button type="button" class="btn-close cust-close-ds-btn" data-mdb-dismiss="modal" aria-label="Close"></button>
-          <div class="center-content-status">
-            <img src="{% static 'img/trash.png' %}" alt="right" id="rightImg" class="warning-icon">
-            <p id="message" class="modal-title titlepad">Are you sure you want to delete?</p>
-          </div>
-          <div class="modal-center-btn-footer">
-            <button onclick="reloadwindow()" id="closeBtnpopup" type="button" class="btn-close-cancel btn-space"
-              data-mdb-dismiss="modal">
-              Close
-            </button>
-            <!-- <button type="submit" class="btn-save-submit">Delete</button> -->
-            
-            <a onclick="storagedeleteNow()" href="" id="storageDelete" ><button type=""
-                class="btn-save-submit">Delete</button></a>
-           
-          </div>
-        </div>
-  
-      </div>
-    </div>
-  </div>
-<!-- end -->
+
 
 {% endblock content %}
 
@@ -205,25 +204,7 @@
             $('#submitBtn').click();
         });
     });
-// delete storage
-function delStorage(url){
-    $('#storageDelete').show();
-    $('#storageDelete').attr('url',url);
-}
 
-function storagedeleteNow(){
-  url = $('#storageDelete').attr('url');
-  console.log(url)
-  $.ajax({
-  url: url,
-  data: { },
-  success: function (data) {
-    if (data==1){
-      location.reload();
-    }
-  }
-});
-}
 </script>
 <script>
     $('#Tier2-Processor-active').addClass('activeLink');

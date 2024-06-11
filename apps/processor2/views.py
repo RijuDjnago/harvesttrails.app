@@ -257,7 +257,7 @@ def processor2_delete(request,pk):
             logtable.save()
             processor2.delete()
             user.delete()
-            return HttpResponse (1)
+            return redirect("list_processor2")
         else:
             return redirect('dashboard')
     except Exception as e:
@@ -1485,13 +1485,13 @@ def rejected_shipments_csv_download_for_t2(request) :
     # superuser................  
     if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
         today_date = date.today()
-        filename = f'Rejected Shipments CSV {today_date}.csv'
+        filename = f'Rejected Shipments Tier2 CSV {today_date}.csv'
         response = HttpResponse(
             content_type='text/csv',
             headers={'Content-Disposition': 'attachment; filename="{}"'.format(filename)},
         )
         writer = csv.writer(response)
-        writer.writerow(['Shipment ID','Lot Number #','Shipment Date', 'Send Processor','Recive Processor','Total Weight (LBS)','Disapproval Date','Reason For Disapproval','Moisture Level'])
+        writer.writerow(['Shipment ID','Lot Number #','Shipment Date', 'Sender Processor','Receiver Processor','Volume Shipped (LBS)','Disapproval Date','Reason For Disapproval','Moisture Level'])
         output = ShipmentManagement.objects.filter(status='DISAPPROVED', receiver_processor_type="T2").order_by('-id').values('shipment_id','lot_number','date_pulled','processor_e_name','processor2_name',
                                                                                             'weight_of_product','recive_delivery_date','reason_for_disapproval','moisture_percent')
         for i in output:
@@ -1501,7 +1501,7 @@ def rejected_shipments_csv_download_for_t2(request) :
                 i['date_pulled'].strftime("%m-%d-%Y"),
                 i['processor_e_name'], 
                 i['processor2_name'], 
-                i['weight_of_product'],
+                i['volume_shipped'],
                 i['recive_delivery_date'], 
                 i['reason_for_disapproval'], 
                 i['moisture_percent']])
@@ -1515,15 +1515,14 @@ def all_shipments_csv_download_for_t2(request):
     # superuser............... 
     if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
         today_date = date.today()
-        filename = f'All Shipments CSV {today_date}.csv'
+        filename = f'All Shipments Tier2 CSV {today_date}.csv'
         response = HttpResponse(
             content_type='text/csv',
             headers={'Content-Disposition': 'attachment; filename="{}"'.format(filename)},
         )
         writer = csv.writer(response)
-        writer.writerow(['Shipment ID','Lot Number #','Shipment Date', 'Send Processor','Recive Processor','Total Weight (LBS)','Disapproval Date','Reason For Disapproval','Moisture Level'])
-        output = ShipmentManagement.objects.filter(receiver_processor_type="T2").order_by('-id').values('shipment_id','lot_number','date_pulled','processor_e_name','processor2_name',
-                                                                                            'weight_of_product','recive_delivery_date','reason_for_disapproval','moisture_percent')
+        writer.writerow(['Shipment ID','Lot Number #','Shipment Date', 'Sender Processor','Receiver Processor','Purchase Order Number','Lot Number','Sender SKU Id','Receiver SKU Id','Volume Shipped','Weight Of Product','Expected Yield','Receiver Processor Type','Status','Received Weight','Ticket Number','Approval/Disapproval Date','Reason For Disapproval','Moisture Level'])
+        output = ShipmentManagement.objects.filter(receiver_processor_type="T2").order_by('-id').values()
         for i in output:
             writer.writerow([
                 i['shipment_id'], 
@@ -1531,13 +1530,44 @@ def all_shipments_csv_download_for_t2(request):
                 i['date_pulled'].strftime("%m-%d-%Y"),
                 i['processor_e_name'], 
                 i['processor2_name'], 
+                i['purchase_order_number'],
+                i['lot_number'],
+                i['storage_bin_send'],
+                i['storage_bin_recive'], 
+                i['volume_shipped'],               
                 i['weight_of_product'],
+                i['excepted_yield'],
+                i['receiver_processor_type'],
+                i['status'],
+                i['received_weight'],
+                i['ticket_number'],
                 i['recive_delivery_date'], 
                 i['reason_for_disapproval'], 
                 i['moisture_percent']])
         return response
     else:
         return redirect ('dashboard')
+
+
+@login_required() 
+def outbound_shipment_processor2_csv_download(request):  
+    if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+        filename = 'SHIPMENT MANAGEMENT TIER2.csv'
+        response = HttpResponse(
+            content_type='text/csv',
+            headers={'Content-Disposition': 'attachment; filename="{}"'.format(filename)},
+        )
+        writer = csv.writer(response)
+        # writer.writerow(['PROCESSOR', 'DATE PULLED', 'BIN LOCATION', 'MILLED VOLUME (LBS)', 'VOLUME SHIPPED (LBS)', 'BALANCE (LBS)', 'EQUIPMENT TYPE', 'EQUIPMENT ID', 'PURCHASE ORDER NUMBER', 'LOT NUMBER'])
+        writer.writerow(['PROCESSOR', 'DATE PULLED', 'BIN LOCATION','SENDER SKU ID','RECEIVER SKU ID','WEIGHT OF PRODUCT','EXPECTED YIELD','MOISTURE PERCENTAGE','MILLED VOLUME (LBS)', 'VOLUME SHIPPED (LBS)', 'BALANCE (LBS)', 'EQUIPMENT TYPE', 'EQUIPMENT ID', 'PURCHASE ORDER NUMBER', 'LOT NUMBER','T2 PROCESSOR'])
+        output = ShipmentManagement.objects.filter(sender_processor_type="T2").order_by('bin_location')
+        for i in output:            
+           
+            writer.writerow([i.processor_e_name, i.date_pulled, i.bin_location,i.storage_bin_send,i.storage_bin_recive, i.weight_of_product ,i.excepted_yield,i.moisture_percent, i.milled_volume, i.volume_shipped, i.volume_left, 
+            i.equipment_type, i.equipment_id, i.purchase_order_number, i.lot_number,i.processor2_name])
+        return response   
+    else:
+        return redirect("dashboard")
 
 
 @login_required()
@@ -1611,8 +1641,9 @@ def delete_link_processor_two(request, pk):
     context = {}
     try:
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
-            link = LinkProcessorToProcessor.objects.filter(id=pk).first()
-            link.delete()
+            LinkProcessorToProcessor.objects.filter(id=pk).delete()
+            
+            return redirect('processor2_processor_management')
         else:
             return redirect('dashboard')
     except Exception as e:
