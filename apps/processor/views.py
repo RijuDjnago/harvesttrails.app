@@ -642,7 +642,7 @@ def ProcessorDelete(request,pk):
             logtable.save()
             processor.delete()
             user.delete()
-            return HttpResponse(1)
+            return redirect('list-processor')
         else:
             messages.error(request, "Not a valid request.")
             return redirect("dashboard")
@@ -1000,7 +1000,7 @@ def LocationDelete(request,pk):
     if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
         location = Location.objects.get(id=pk)
         location.delete()
-        return HttpResponse (1)
+        return redirect('list-location')
     else:
         messages.error(request, "Not a valid request.")
         return redirect("dashboard")
@@ -2587,7 +2587,7 @@ def processor_inbound_management_view(request,pk):
 def processor_inbound_management_delete(request,pk):
     if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
         shipment = GrowerShipment.objects.get(pk=pk)
-        # 07-04-23
+        print(shipment)
         log_type, log_status, log_device = "GrowerShipment", "Deleted", "Web"
         log_idd, log_name = shipment.id, shipment.shipment_id
         log_details = f"status = {shipment.status} | total_amount = {shipment.total_amount} | unit_type2 = {shipment.unit_type2} | amount2 = {shipment.amount2} | echelon_id = {shipment.echelon_id} | sustainability_score = {shipment.sustainability_score} | amount = {shipment.amount} | variety = {shipment.variety} | crop = {shipment.crop} | shipment_id = {shipment.shipment_id} | processor_id = {shipment.processor.id} | grower_id = {shipment.grower.id} | field_id = {shipment.field.id} | module_number = {shipment.module_number} | unit_type = {shipment.unit_type} | "
@@ -2607,7 +2607,7 @@ def processor_inbound_management_delete(request,pk):
         logtable.save()
 
         shipment.delete()
-        return HttpResponse (1)
+        return redirect('processor_inbound_management')
     else:
         return redirect("dashboard")
 
@@ -7656,7 +7656,6 @@ def delete_outbound_shipment(request,pk):
 
 @login_required() 
 def outbound_shipment_mgmt_csv_download(request):  
-    context = {}
     if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
         filename = 'SHIPMENT MANAGEMENT.csv'
         response = HttpResponse(
@@ -7665,16 +7664,14 @@ def outbound_shipment_mgmt_csv_download(request):
         )
         writer = csv.writer(response)
         # writer.writerow(['PROCESSOR', 'DATE PULLED', 'BIN LOCATION', 'MILLED VOLUME (LBS)', 'VOLUME SHIPPED (LBS)', 'BALANCE (LBS)', 'EQUIPMENT TYPE', 'EQUIPMENT ID', 'PURCHASE ORDER NUMBER', 'LOT NUMBER'])
-        writer.writerow(['PROCESSOR', 'DATE PULLED', 'BIN LOCATION','STORAGE BIN (SKU ID)','WEIGHT OF PRODUCT','EXPECTED YIELD','MOISTURE PERCENTAGE','MILLED VOLUME (LBS)', 'VOLUME SHIPPED (LBS)', 'BALANCE (LBS)', 'EQUIPMENT TYPE', 'EQUIPMENT ID', 'PURCHASE ORDER NUMBER', 'LOT NUMBER','T2 PROCESSOR'])
-        output = ShipmentManagement.objects.all().order_by('bin_location')
-        for i in output:
-            
-            # writer.writerow([i.processor_e_name, i.date_pulled, i.bin_location, i.milled_volume, i.volume_shipped, i.volume_left, 
-            # i.equipment_type, i.equipment_id, i.purchase_order_number, i.lot_number])
-            writer.writerow([i.processor_e_name, i.date_pulled, i.bin_location,i.storage_bin, i.weight_of_product ,i.excepted_yield,i.moisture_percent, i.milled_volume, i.volume_shipped, i.volume_left, 
+        writer.writerow(['PROCESSOR', 'DATE PULLED', 'BIN LOCATION','SENDER SKU ID','RECEIVER SKU ID','WEIGHT OF PRODUCT','EXPECTED YIELD','MOISTURE PERCENTAGE','MILLED VOLUME (LBS)', 'VOLUME SHIPPED (LBS)', 'BALANCE (LBS)', 'EQUIPMENT TYPE', 'EQUIPMENT ID', 'PURCHASE ORDER NUMBER', 'LOT NUMBER','T2 PROCESSOR'])
+        output = ShipmentManagement.objects.filter(sender_processor_type="T1").order_by('bin_location')
+        for i in output:            
+           
+            writer.writerow([i.processor_e_name, i.date_pulled, i.bin_location,i.storage_bin_send,i.storage_bin_recive, i.weight_of_product ,i.excepted_yield,i.moisture_percent, i.milled_volume, i.volume_shipped, i.volume_left, 
             i.equipment_type, i.equipment_id, i.purchase_order_number, i.lot_number,i.processor2_name])
-        return response
-    
+        return response 
+       
     elif request.user.is_processor :
         user_email = request.user.email
         p = ProcessorUser.objects.get(contact_email=user_email)
@@ -7687,16 +7684,36 @@ def outbound_shipment_mgmt_csv_download(request):
             headers={'Content-Disposition': 'attachment; filename="{}"'.format(filename)},
         )
         writer = csv.writer(response)
-        # writer.writerow(['PROCESSOR', 'DATE PULLED', 'BIN LOCATION', 'MILLED VOLUME (LBS)', 'VOLUME SHIPPED (LBS)', 'BALANCE (LBS)', 'EQUIPMENT TYPE', 'EQUIPMENT ID', 'PURCHASE ORDER NUMBER', 'LOT NUMBER'])
-        writer.writerow(['PROCESSOR', 'DATE PULLED', 'BIN LOCATION','STORAGE BIN (SKU ID)','WEIGHT OF PRODUCT','EXPECTED YIELD','MOISTURE PERCENTAGE','MILLED VOLUME (LBS)', 'VOLUME SHIPPED (LBS)', 'BALANCE (LBS)', 'EQUIPMENT TYPE', 'EQUIPMENT ID', 'PURCHASE ORDER NUMBER', 'LOT NUMBER','T2 PROCESSOR'])
-        for i in output:
+        
+        writer.writerow(['PROCESSOR', 'DATE PULLED', 'BIN LOCATION','SENDER SKU ID','RECEIVER SKU ID','WEIGHT OF PRODUCT','EXPECTED YIELD','MOISTURE PERCENTAGE','MILLED VOLUME (LBS)', 'VOLUME SHIPPED (LBS)', 'BALANCE (LBS)', 'EQUIPMENT TYPE', 'EQUIPMENT ID', 'PURCHASE ORDER NUMBER', 'LOT NUMBER','T2 PROCESSOR'])
+        for i in output:            
             
-            # writer.writerow([i.processor_e_name, i.date_pulled, i.bin_location, i.milled_volume, i.volume_shipped, i.volume_left, 
-            # i.equipment_type, i.equipment_id, i.purchase_order_number, i.lot_number])
-            writer.writerow([i.processor_e_name, i.date_pulled, i.bin_location,i.storage_bin, i.weight_of_product ,i.excepted_yield,i.moisture_percent, i.milled_volume, i.volume_shipped, i.volume_left, 
+            writer.writerow([i.processor_e_name, i.date_pulled, i.bin_location,i.storage_bin_send,i.storage_bin_recive, i.weight_of_product ,i.excepted_yield,i.moisture_percent, i.milled_volume, i.volume_shipped, i.volume_left, 
+            i.equipment_type, i.equipment_id, i.purchase_order_number, i.lot_number,i.processor2_name])
+        return 
+    
+    elif request.user.is_processor2 :
+        user_email = request.user.email
+        p = ProcessorUser2.objects.get(contact_email=user_email)
+        processor_id = Processor2.objects.get(id=p.processor2.id).id
+        entity_name = Processor2.objects.get(id=processor_id).entity_name
+        output = ShipmentManagement.objects.filter(processor_idd=processor_id).order_by('bin_location')
+        filename = f'SHIPMENT MANAGEMENT_{entity_name}.csv'
+        response = HttpResponse(
+            content_type='text/csv',
+            headers={'Content-Disposition': 'attachment; filename="{}"'.format(filename)},
+        )
+        writer = csv.writer(response)
+        
+        writer.writerow(['PROCESSOR', 'DATE PULLED', 'BIN LOCATION','SENDER SKU ID','RECEIVER SKU ID','WEIGHT OF PRODUCT','EXPECTED YIELD','MOISTURE PERCENTAGE','MILLED VOLUME (LBS)', 'VOLUME SHIPPED (LBS)', 'BALANCE (LBS)', 'EQUIPMENT TYPE', 'EQUIPMENT ID', 'PURCHASE ORDER NUMBER', 'LOT NUMBER','T2 PROCESSOR'])
+        for i in output:            
+            
+            writer.writerow([i.processor_e_name, i.date_pulled, i.bin_location,i.storage_bin_send,i.storage_bin_recive, i.weight_of_product ,i.excepted_yield,i.moisture_percent, i.milled_volume, i.volume_shipped, i.volume_left, 
             i.equipment_type, i.equipment_id, i.purchase_order_number, i.lot_number,i.processor2_name])
         return response
-    
+    else:
+        return redirect("dashboard")
+
 
 @login_required()
 def rejected_shipments_csv_download(request) :  
@@ -8237,8 +8254,8 @@ def link_processor_one(request):
 def delete_link_processor_one(request, pk):
     try:
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
-            link = LinkProcessor1ToProcessor.objects.filter(id=pk).first()
-            link.delete()
+            LinkProcessor1ToProcessor.objects.filter(id=pk).delete()
+            return redirect("Processor1ToProcessorManagement")
         else:
             return redirect('login')
     except Exception as e:

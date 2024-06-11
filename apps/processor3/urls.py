@@ -22,6 +22,7 @@ urlpatterns = [
     path('outbound_shipment_list_processor3/', views.outbound_shipment_list_processor3, name="outbound_shipment_list_processor3"),
     path('outbound_shipment_view_processor3/<int:pk>/', views.outbound_shipment_view_processor3, name="outbound_shipment_view_processor3"),
     path('outbound_shipment_delete_processor3/<int:pk>/', views.outbound_shipment_delete_processor3, name="outbound_shipment_delete_processor3"),
+    path('outbound_shipment_processor3_csv_download/', views.outbound_shipment_processor3_csv_download, name='outbound_shipment_processor3_csv_download'),
 
     path('processor3_processor_management/', views.processor3_processor_management, name="processor3_processor_management"),
     path('link_processor_three/', views.link_processor_three, name="link_processor_three"),

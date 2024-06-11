@@ -300,11 +300,34 @@
                                             {% endif %}
                                             {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
                                             <li>
-                                                <a onclick="delShipment('{% url 'inbound_shipment_delete_processor4' shipment.id %}')"
-                                                    href="{% url 'inbound_shipment_delete_processor4' shipment.id %}"
-                                                    data-mdb-toggle="modal" data-mdb-target="#deleteModal" alt="delete inbound management" title="delete inbound management">
-                                                    <span class="fas fa-trash"></span></a>
+                                                <a type="button"
+                                            data-mdb-toggle="modal" data-mdb-target="#deleteModal{{shipment.id}}" alt="delete inbound shipment" title="delete inbound shipment">
+                                            <span class="fas fa-trash"></span></a>
                                             </li>
+      
+                                            <div class="modal fade" id="deleteModal{{shipment.id}}" aria-hidden="true" aria-labelledby="exampleModalToggleLabel22" tabindex="-1">
+                                                <div class="modal-dialog">
+                                                  <div class="modal-content">
+                                              
+                                                    <div class="modal-body">
+                                                      <button type="button" class="btn-close cust-close-ds-btn" data-mdb-dismiss="modal" aria-label="Close"></button>
+                                                      <div class="center-content-status">
+                                                        <img src="{% static 'img/trash.png' %}" alt="right" id="rightImg" class="warning-icon">
+                                                        <p id="message" class="modal-title titlepad">Are you sure you want to delete?</p>
+                                                      </div>
+                                                      <div class="modal-center-btn-footer">
+                                                        <button onclick="reloadwindow()" id="closeBtnpopup" type="button" class="btn-close-cancel btn-space"
+                                                          data-mdb-dismiss="modal">
+                                                          Close
+                                                        </button>                                                   
+                                                        
+                                                        <a href="{% url 'inbound_shipment_delete_processor4' shipment.id %}" id="storageDelete"class="btn-save-submit">
+                                                            Delete</a>                                                 
+                                                      </div>
+                                                    </div>                                        
+                                                  </div>
+                                                </div>
+                                              </div>
                                             {% endif %}
                                         </ul>
                                         </td>
@@ -368,45 +391,12 @@
                     </div>
                 </div>
             </div>
-        </form>   
-
+        </form>  
 </div>
 </main>
 {% include 'footer.html' %}
 </div>
 
-<!-- Add Que Popup -->
-
-<!-- end -->
-<!-- Delete Popup -->
-<div class="modal fade" id="deleteModal" aria-hidden="true" aria-labelledby="exampleModalToggleLabel22"
-    tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-
-            <div class="modal-body">
-                <button type="button" class="btn-close cust-close-ds-btn" data-mdb-dismiss="modal"
-                    aria-label="Close"></button>
-                <div class="center-content-status">
-                    <img src="{% static 'img/trash.png' %}" alt="right" id="rightImg" class="warning-icon">
-                    <p id="message" class="modal-title titlepad">Are you sure you want to delete?</p>
-                </div>
-                <div class="modal-center-btn-footer">
-                    <button onclick="reloadwindow()" id="closeBtnpopup" type="button"
-                        class="btn-close-cancel btn-space" data-mdb-dismiss="modal">
-                        Close
-                    </button>
-
-                    <a onclick="shipmentdeleteNow()" href="" id="shipmentDelete"><button type=""
-                            class="btn-save-submit">Delete</button></a>
-
-                </div>
-            </div>
-
-        </div>
-    </div>
-</div>
-<!-- end -->
     {% endblock content %}
 
     {% block scripts %}
@@ -416,40 +406,7 @@
     <script src="https://cdn.datatables.net/responsive/2.2.9/js/responsive.bootstrap4.min.js"></script>
     <script src="{% static 'js/farm/farm_list.js' %}"></script>
     <script src="https://cdn.datatables.net/fixedcolumns/4.2.1/js/dataTables.fixedColumns.min.js"></script>
-
-    <script>
-        // delete storage
-        function delShipment(url) {
-            $('#shipmentDelete').attr('data-url', url); // Use data-url attribute for better semantics
-        }
-        
-        // Function to perform the AJAX deletion and reload the page on success
-        function shipmentdeleteNow() {
-            const url = $('#shipmentDelete').attr('data-url'); // Retrieve the URL
-            const csrfToken = '{{ csrf_token }}'; // Django template tag to get CSRF token
-        
-            $.ajax({
-                type: 'POST', // Use POST method
-                url: url,
-                data: {
-                    csrfmiddlewaretoken: csrfToken // Include CSRF token
-                },
-                success: function(response) {
-                    if (response.success) { // Check if the response indicates success
-                        location.reload(); // Reload the page
-                    } else {
-                        console.error('Deletion failed:', response.error); // Log error message
-                    }
-                },
-                error: function(xhr, status, error) {
-                    console.error('Deletion failed:', error); // Log any AJAX error
-                }
-            });
-        }
-    </script>
-
-    <script>
-        
+    <script>        
         function showQR(grower_shipment_pk) {
             console.log(grower_shipment_pk)
             $.ajax({
