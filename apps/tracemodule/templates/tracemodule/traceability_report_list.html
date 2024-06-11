@@ -367,7 +367,7 @@ tr:nth-child(even) {
                             <th>Yield Delta</th>
                             <th>Storage Quantity</th>
                             <th>Variety</th>
-                            <th>Sustainability Metrics</th>
+                            {% comment %} <th>Sustainability Metrics</th> {% endcomment %}
                         </tr>
                     </thead>
                     <tbody>
@@ -383,10 +383,10 @@ tr:nth-child(even) {
                             <td>{{ i.yield_delta|floatformat:0 }}</td>
                             <td>{{ i.storage_quanitty|floatformat:0 }}</td>
                             <td>{{ i.variety}}</td>
-                            <td>
-                                <a onclick="showTraceability({{i.field_id}})" class="update-btn-link" alt="view" title="view" style="cursor: pointer;" data-mdb-toggle="modal" data-mdb-target="#addqueModal"><span class="fas fa-eye"></span> </a>
+                            {% comment %} <td>
+                                <a onclick="showTraceability({{i.field_id}})" class="update-btn-link" alt="view" title="under development" style="cursor: pointer;" data-mdb-toggle="modal" data-mdb-target="#addqueModal"><span class="fas fa-eye"></span> </a>
                                 <p style="display: none;" id="search_by">{{search_by}}</p>
-                            </td>
+                            </td> {% endcomment %}
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -421,7 +421,7 @@ tr:nth-child(even) {
                         <tr>
                             <td>{{ i.deliveryid }}</td>
                             <td>{{ i.destination }}</td>
-                            <td>{{ i.date }}</td>
+                            <td>{{ i.date|date:"Y-m-d" }}</td>
                             <td>{{ i.quantity|floatformat:0 }}</td>
                             <td>{{ i.transportation }}</td>
                             
@@ -454,7 +454,7 @@ tr:nth-child(even) {
                             <th>Quantity Shipped</th>
                             <th>Quantity Received</th>
                             <th>Quantity Delta</th>
-                            <th>Quality Metrics</th>
+                            {% comment %} <th>Quality Metrics</th> {% endcomment %}
                         </tr>
                     </thead>
                     <tbody>
@@ -462,17 +462,17 @@ tr:nth-child(even) {
                         <tr>
                             <td>{{ i.processor_name }}</td>
                             <td>{{ i.deliveryid }}</td>
-                            <td>{{ i.date }}</td>
+                            <td>{{ i.date| date:"Y-m-d" }}</td>
                             <td>{{ i.grower }}</td>
                             <td>{{ i.farm }}</td>
                             <td>{{ i.field }}</td>
                             <td>{{ i.pounds_shipped|floatformat:0 }}</td>
                             <td>{{ i.pounds_received|floatformat:0 }}</td>
                             <td>{{ i.pounds_delta|floatformat:0}}</td>
-                            <td>
-                                <a onclick="showQuality({{i.deliveryid}})" class="update-btn-link" alt="view" title="view" style="cursor: pointer;" data-mdb-toggle="modal" data-mdb-target="#addQualityModal"><span class="fas fa-eye"></span> </a>
+                            {% comment %} <td>
+                                <a onclick="showQuality({{i.deliveryid}})" class="update-btn-link" alt="view" title="under development" style="cursor: pointer;" data-mdb-toggle="modal" data-mdb-target="#addQualityModal"><span class="fas fa-eye"></span> </a>
                                 <p style="display: none;" id="deliveryid">{{i.deliveryid}}</p>
-                            </td>
+                            </td> {% endcomment %}
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -506,7 +506,7 @@ tr:nth-child(even) {
                         <tr>
                             <td>{{ i.shipment_id }}</td>
                             <td>{{ i.processor2_name }}</td>
-                            <td>{{ i.date_pulled }}</td>
+                            <td>{{ i.date_pulled|date:"Y-m-d" }}</td>
                             <td>{{ i.volume_shipped|floatformat:0 }}</td>
                             <td>{{ i.equipment_type }}  / {{i.equipment_id}}</td>
                             
@@ -543,7 +543,7 @@ tr:nth-child(even) {
                         <tr>
                             <td>{{ i.processor_e_name }}</td>
                             <td>{{ i.shipment_id }}</td>
-                            <td>{{ i.recive_delivery_date }}</td>
+                            <td>{{ i.recive_delivery_date|date:"Y-m-d" }}</td>
                             <td>{{ i.volume_shipped|floatformat:0 }}</td>
                             <td>{{ i.received_weight|floatformat:0 }}</td>
                             <td>{{ i.volume_shipped|floatformat:0|subtract:i.received_weight|floatformat:0 }}</td>
@@ -580,7 +580,7 @@ tr:nth-child(even) {
                         <tr>
                             <td>{{i.shipment_id}}</td>
                             <td>{{i.processor2_name}}</td>
-                            <td>{{i.date_pulled}}</td>
+                            <td>{{i.date_pulled|date:"Y-m-d"}}</td>
                             <td>{{i.volume_shipped}}</td>
                             <td>{{i.equipment_type}}</td>
                         </tr>
@@ -616,7 +616,7 @@ tr:nth-child(even) {
                         <tr>
                             <td>{{ i.processor_e_name }}</td>
                             <td>{{ i.shipment_id }}</td>
-                            <td>{{ i.recive_delivery_date }}</td>
+                            <td>{{ i.recive_delivery_date|date:"Y-m-d" }}</td>
                             <td>{{ i.volume_shipped|floatformat:0 }}</td>
                             <td>{{ i.received_weight|floatformat:0 }}</td>
                             <td>{{ i.volume_shipped|floatformat:0|subtract:i.received_weight|floatformat:0 }}</td>
@@ -652,7 +652,7 @@ tr:nth-child(even) {
                         <tr>
                             <td>{{i.shipment_id}}</td>
                             <td>{{i.processor2_name}}</td>
-                            <td>{{i.date_pulled}}</td>
+                            <td>{{i.date_pulled|date:"Y-m-d"}}</td>
                             <td>{{i.volume_shipped}}</td>
                             <td>{{i.equipment_type}}</td>
                         </tr>
@@ -687,7 +687,7 @@ tr:nth-child(even) {
                         <tr>
                             <td>{{ i.processor_e_name }}</td>
                             <td>{{ i.shipment_id }}</td>
-                            <td>{{ i.recive_delivery_date }}</td>
+                            <td>{{ i.recive_delivery_date|date:"Y-m-d" }}</td>
                             <td>{{ i.volume_shipped|floatformat:0 }}</td>
                             <td>{{ i.received_weight|floatformat:0 }}</td>
                             <td>{{ i.volume_shipped|floatformat:0|subtract:i.received_weight|floatformat:0 }}</td>

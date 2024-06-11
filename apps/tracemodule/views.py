@@ -1966,28 +1966,31 @@ def skuid_traceability_response(search_text):
             # outbound one
             outbound1_wip = list(get_sku_id.values("shipment_id", "processor__entity_name", "date_time","total_amount"))
             if len(outbound1_wip) != 0:
-                outbound1_wip[0]["deliveryid"] = outbound1_wip[0]["shipment_id"]
-                outbound1_wip[0]["destination"] = outbound1_wip[0]["processor__entity_name"]
-                outbound1_wip[0]["date"] = outbound1_wip[0]["date_time"]
-                outbound1_wip[0]["quantity"] = outbound1_wip[0]["total_amount"]
-                outbound1_wip[0]["transportation"] = ""
+                for item in outbound1_wip:
+                    item["deliveryid"] = item.get("shipment_id")
+                    item["destination"] = item.get("processor__entity_name")
+                    item["date"] = item.get("date_time")
+                    item["quantity"] = item.get("total_amount")
+                    item["transportation"] = ""
             context["outbound1_wip"] = outbound1_wip
             
             # inbound one
             t1_processor = list(get_sku_id.values("processor__entity_name","shipment_id","approval_date","grower__name","field__farm__name","field__name","total_amount","received_amount"))
             if len(t1_processor) != 0:
-                t1_processor[0]["processor_name"] = t1_processor[0]["processor__entity_name"]
-                t1_processor[0]["deliveryid"] = t1_processor[0]["shipment_id"]
-                t1_processor[0]["date"] = t1_processor[0]["approval_date"]
-                t1_processor[0]["grower"] = t1_processor[0]["grower__name"]
-                t1_processor[0]["farm"] = t1_processor[0]["field__farm__name"]
-                t1_processor[0]["field"] = t1_processor[0]["field__name"]
-                t1_processor[0]["pounds_received"] = t1_processor[0]["received_amount"]
-                t1_processor[0]["pounds_shipped"] = t1_processor[0]["total_amount"]
-                try:
-                    t1_processor[0]["pounds_delta"] = float(t1_processor[0]["total_amount"]) - float(t1_processor[0]["received_amount"])
-                except:
-                    t1_processor[0]["pounds_delta"] = "Something is wrong"
+                for processor in t1_processor:
+                    processor["processor_name"] = processor.get("processor__entity_name")
+                    processor["deliveryid"] = processor.get("shipment_id")
+                    processor["date"] = processor.get("approval_date")
+                    processor["grower"] = processor.get("grower__name")
+                    processor["farm"] = processor.get("field__farm__name")
+                    processor["field"] = processor.get("field__name")
+                    processor["pounds_received"] = processor.get("received_amount")
+                    processor["pounds_shipped"] = processor.get("total_amount")
+
+                    try:
+                        processor["pounds_delta"] = float(processor["pounds_shipped"]) - float(processor["pounds_received"])
+                    except (TypeError, ValueError):
+                        processor["pounds_delta"] = "Something is wrong"
             
             context["t1_processor"] = t1_processor
 
@@ -2047,28 +2050,31 @@ def skuid_traceability_response(search_text):
                 #outbound 1
                 outbound1_wip = list(GrowerShipment.objects.filter(sku=get_sku_id).values("shipment_id", "processor__entity_name", "date_time","total_amount"))
                 if len(outbound1_wip) != 0:
-                    outbound1_wip[0]["deliveryid"] = outbound1_wip[0]["shipment_id"]
-                    outbound1_wip[0]["destination"] = outbound1_wip[0]["processor__entity_name"]
-                    outbound1_wip[0]["date"] = outbound1_wip[0]["date_time"]
-                    outbound1_wip[0]["quantity"] = outbound1_wip[0]["total_amount"]
-                    outbound1_wip[0]["transportation"] = ""
+                    for item in outbound1_wip:
+                        item["deliveryid"] = item.get("shipment_id")
+                        item["destination"] = item.get("processor__entity_name")
+                        item["date"] = item.get("date_time")
+                        item["quantity"] = item.get("total_amount")
+                        item["transportation"] = ""
                 context["outbound1_wip"] = outbound1_wip
 
                 #inbound 1
                 t1_processor = list(GrowerShipment.objects.filter(sku=get_sku_id, status="APPROVED").values("processor__entity_name","shipment_id","approval_date","grower__name","field__farm__name","field__name","total_amount","received_amount"))
                 if len(t1_processor) != 0:
-                    t1_processor[0]["processor_name"] = t1_processor[0]["processor__entity_name"]
-                    t1_processor[0]["deliveryid"] = t1_processor[0]["shipment_id"]
-                    t1_processor[0]["date"] = t1_processor[0]["approval_date"]
-                    t1_processor[0]["grower"] = t1_processor[0]["grower__name"]
-                    t1_processor[0]["farm"] = t1_processor[0]["field__farm__name"]
-                    t1_processor[0]["field"] = t1_processor[0]["field__name"]
-                    t1_processor[0]["pounds_received"] = t1_processor[0]["received_amount"]
-                    t1_processor[0]["pounds_shipped"] = t1_processor[0]["total_amount"]
-                    try:
-                        t1_processor[0]["pounds_delta"] = float(t1_processor[0]["total_amount"]) - float(t1_processor[0]["received_amount"])
-                    except:
-                        t1_processor[0]["pounds_delta"] = "Something is wrong"
+                    for processor in t1_processor:
+                        processor["processor_name"] = processor.get("processor__entity_name")
+                        processor["deliveryid"] = processor.get("shipment_id")
+                        processor["date"] = processor.get("approval_date")
+                        processor["grower"] = processor.get("grower__name")
+                        processor["farm"] = processor.get("field__farm__name")
+                        processor["field"] = processor.get("field__name")
+                        processor["pounds_received"] = processor.get("received_amount")
+                        processor["pounds_shipped"] = processor.get("total_amount")
+
+                        try:
+                            processor["pounds_delta"] = float(processor["pounds_shipped"]) - float(processor["pounds_received"])
+                        except (TypeError, ValueError):
+                            processor["pounds_delta"] = "Something is wrong"
                 
                 context["t1_processor"] = t1_processor
 
@@ -2151,28 +2157,31 @@ def skuid_traceability_response(search_text):
                     # inbound
                     t1_processor = list(GrowerShipment.objects.filter(sku=i, status="APPROVED").values("processor__entity_name","shipment_id","approval_date","grower__name","field__farm__name","field__name","total_amount","received_amount"))
                     if len(t1_processor) != 0:
-                        t1_processor[0]["processor_name"] = t1_processor[0]["processor__entity_name"]
-                        t1_processor[0]["deliveryid"] = t1_processor[0]["shipment_id"]
-                        t1_processor[0]["date"] = t1_processor[0]["approval_date"]
-                        t1_processor[0]["grower"] = t1_processor[0]["grower__name"]
-                        t1_processor[0]["farm"] = t1_processor[0]["field__farm__name"]
-                        t1_processor[0]["field"] = t1_processor[0]["field__name"]
-                        t1_processor[0]["pounds_received"] = t1_processor[0]["received_amount"]
-                        t1_processor[0]["pounds_shipped"] = t1_processor[0]["total_amount"]
-                        try:
-                            t1_processor[0]["pounds_delta"] = float(t1_processor[0]["total_amount"]) - float(t1_processor[0]["received_amount"])
-                        except:
-                            t1_processor[0]["pounds_delta"] = "Something is wrong"
+                        for processor in t1_processor:
+                            processor["processor_name"] = processor.get("processor__entity_name")
+                            processor["deliveryid"] = processor.get("shipment_id")
+                            processor["date"] = processor.get("approval_date")
+                            processor["grower"] = processor.get("grower__name")
+                            processor["farm"] = processor.get("field__farm__name")
+                            processor["field"] = processor.get("field__name")
+                            processor["pounds_received"] = processor.get("received_amount")
+                            processor["pounds_shipped"] = processor.get("total_amount")
+
+                            try:
+                                processor["pounds_delta"] = float(processor["pounds_shipped"]) - float(processor["pounds_received"])
+                            except (TypeError, ValueError):
+                                processor["pounds_delta"] = "Something is wrong"
                     t1_processor_ = t1_processor_ + t1_processor
 
                     #outbound
                     outbound1_wip = list(GrowerShipment.objects.filter(sku=i).values("shipment_id", "processor__entity_name", "date_time","total_amount"))
                     if len(outbound1_wip) != 0:
-                        outbound1_wip[0]["deliveryid"] = outbound1_wip[0]["shipment_id"]
-                        outbound1_wip[0]["destination"] = outbound1_wip[0]["processor__entity_name"]
-                        outbound1_wip[0]["date"] = outbound1_wip[0]["date_time"]
-                        outbound1_wip[0]["quantity"] = outbound1_wip[0]["total_amount"]
-                        outbound1_wip[0]["transportation"] = ""
+                        for item in outbound1_wip:
+                            item["deliveryid"] = item.get("shipment_id")
+                            item["destination"] = item.get("processor__entity_name")
+                            item["date"] = item.get("date_time")
+                            item["quantity"] = item.get("total_amount")
+                            item["transportation"] = ""
                     outbound1_wip_ = outbound1_wip_ + outbound1_wip
                     field_ids_ = list(GrowerShipment.objects.filter(sku=i).values_list("field_id", flat=True))
                     field_ids = field_ids + field_ids_
@@ -2221,28 +2230,31 @@ def skuid_traceability_response(search_text):
                     # inbound
                     t1_processor = list(GrowerShipment.objects.filter(sku=i, status="APPROVED").values("processor__entity_name","shipment_id","approval_date","grower__name","field__farm__name","field__name","total_amount","received_amount"))
                     if len(t1_processor) != 0:
-                        t1_processor[0]["processor_name"] = t1_processor[0]["processor__entity_name"]
-                        t1_processor[0]["deliveryid"] = t1_processor[0]["shipment_id"]
-                        t1_processor[0]["date"] = t1_processor[0]["approval_date"]
-                        t1_processor[0]["grower"] = t1_processor[0]["grower__name"]
-                        t1_processor[0]["farm"] = t1_processor[0]["field__farm__name"]
-                        t1_processor[0]["field"] = t1_processor[0]["field__name"]
-                        t1_processor[0]["pounds_received"] = t1_processor[0]["received_amount"]
-                        t1_processor[0]["pounds_shipped"] = t1_processor[0]["total_amount"]
-                        try:
-                            t1_processor[0]["pounds_delta"] = float(t1_processor[0]["total_amount"]) - float(t1_processor[0]["received_amount"])
-                        except:
-                            t1_processor[0]["pounds_delta"] = "Something is wrong"
+                        for processor in t1_processor:
+                            processor["processor_name"] = processor.get("processor__entity_name")
+                            processor["deliveryid"] = processor.get("shipment_id")
+                            processor["date"] = processor.get("approval_date")
+                            processor["grower"] = processor.get("grower__name")
+                            processor["farm"] = processor.get("field__farm__name")
+                            processor["field"] = processor.get("field__name")
+                            processor["pounds_received"] = processor.get("received_amount")
+                            processor["pounds_shipped"] = processor.get("total_amount")
+
+                            try:
+                                processor["pounds_delta"] = float(processor["pounds_shipped"]) - float(processor["pounds_received"])
+                            except (TypeError, ValueError):
+                                processor["pounds_delta"] = "Something is wrong"
                     t1_processor_ = t1_processor_ + t1_processor
 
                     #outbound
                     outbound1_wip = list(GrowerShipment.objects.filter(sku=i).values("shipment_id", "processor__entity_name", "date_time","total_amount"))
                     if len(outbound1_wip) != 0:
-                        outbound1_wip[0]["deliveryid"] = outbound1_wip[0]["shipment_id"]
-                        outbound1_wip[0]["destination"] = outbound1_wip[0]["processor__entity_name"]
-                        outbound1_wip[0]["date"] = outbound1_wip[0]["date_time"]
-                        outbound1_wip[0]["quantity"] = outbound1_wip[0]["total_amount"]
-                        outbound1_wip[0]["transportation"] = "" 
+                        for item in outbound1_wip:
+                            item["deliveryid"] = item.get("shipment_id")
+                            item["destination"] = item.get("processor__entity_name")
+                            item["date"] = item.get("date_time")
+                            item["quantity"] = item.get("total_amount")
+                            item["transportation"] = "" 
                     outbound1_wip_ = outbound1_wip_ + outbound1_wip
                     field_ids_ = list(GrowerShipment.objects.filter(sku=i).values_list("field_id"))
                     field_ids = field_ids + field_ids_
@@ -2300,28 +2312,31 @@ def skuid_traceability_response(search_text):
                         # inbound
                         t1_processor = list(GrowerShipment.objects.filter(sku=i, status="APPROVED").values("processor__entity_name","shipment_id","approval_date","grower__name","field__farm__name","field__name","total_amount","received_amount"))
                         if len(t1_processor) != 0:
-                            t1_processor[0]["processor_name"] = t1_processor[0]["processor__entity_name"]
-                            t1_processor[0]["deliveryid"] = t1_processor[0]["shipment_id"]
-                            t1_processor[0]["date"] = t1_processor[0]["approval_date"]
-                            t1_processor[0]["grower"] = t1_processor[0]["grower__name"]
-                            t1_processor[0]["farm"] = t1_processor[0]["field__farm__name"]
-                            t1_processor[0]["field"] = t1_processor[0]["field__name"]
-                            t1_processor[0]["pounds_received"] = t1_processor[0]["received_amount"]
-                            t1_processor[0]["pounds_shipped"] = t1_processor[0]["total_amount"]
-                            try:
-                                t1_processor[0]["pounds_delta"] = float(t1_processor[0]["total_amount"]) - float(t1_processor[0]["received_amount"])
-                            except:
-                                t1_processor[0]["pounds_delta"] = "Something is wrong"
+                           for processor in t1_processor:
+                                processor["processor_name"] = processor.get("processor__entity_name")
+                                processor["deliveryid"] = processor.get("shipment_id")
+                                processor["date"] = processor.get("approval_date")
+                                processor["grower"] = processor.get("grower__name")
+                                processor["farm"] = processor.get("field__farm__name")
+                                processor["field"] = processor.get("field__name")
+                                processor["pounds_received"] = processor.get("received_amount")
+                                processor["pounds_shipped"] = processor.get("total_amount")
+
+                                try:
+                                    processor["pounds_delta"] = float(processor["pounds_shipped"]) - float(processor["pounds_received"])
+                                except (TypeError, ValueError):
+                                    processor["pounds_delta"] = "Something is wrong"
                         t1_processor_ = t1_processor_ + t1_processor
 
                         #outbound
                         outbound1_wip = list(GrowerShipment.objects.filter(sku=i).values("shipment_id", "processor__entity_name", "date_time","total_amount"))
                         if len(outbound1_wip) != 0:
-                            outbound1_wip[0]["deliveryid"] = outbound1_wip[0]["shipment_id"]
-                            outbound1_wip[0]["destination"] = outbound1_wip[0]["processor__entity_name"]
-                            outbound1_wip[0]["date"] = outbound1_wip[0]["date_time"]
-                            outbound1_wip[0]["quantity"] = outbound1_wip[0]["total_amount"]
-                            outbound1_wip[0]["transportation"] = ""
+                            for item in outbound1_wip:
+                                item["deliveryid"] = item.get("shipment_id")
+                                item["destination"] = item.get("processor__entity_name")
+                                item["date"] = item.get("date_time")
+                                item["quantity"] = item.get("total_amount")
+                                item["transportation"] = ""
                         outbound1_wip_ = outbound1_wip_ + outbound1_wip
                         field_ids_ = list(GrowerShipment.objects.filter(sku=i).values_list("field_id"))
                         field_ids = field_ids + field_ids_
@@ -2516,8 +2531,7 @@ def location_response(context):
         origin = f"{org_lat},{org_lng}"
         destination = f"{des_lat},{des_lng}"
         
-        i["map_url"] = generate_static_map_url(origin, destination)
-        
+        i["map_url"] = generate_static_map_url(origin, destination)       
         
             
     for j in context["outbound3_wip"]:
@@ -2607,156 +2621,7 @@ def location_response(context):
     # #print(context["outbound2_wip"])
     return context
 
-
-###
-# def location_response(context):   
-#     def get_location(processor_id, processor_type_name):
-#         location = Processor2Location.objects.filter(processor_id=processor_id, processor__processor_type__type_name=processor_type_name)
-#         if location:
-#             lat = float(location.first().latitude)
-#             lng = float(location.first().longitude)
-#         else:
-#             lat = 0
-#             lng = 0
-#         return lat, lng
-    
-#     for entry in context["outbound2_wip"]:
-#         processor1 = entry["processor_idd"]
-#         processor2 = entry["processor2_idd"]
-#         org_lat, org_lng = get_location(processor1, "T2")
-#         des_lat, des_lng = get_location(processor2, "T2")
-#         entry["map_url"] = generate_static_map_url(f"{org_lat},{org_lng}", f"{des_lat},{des_lng}")
-        
-#     for entry in context["outbound3_wip"]:
-#         processor1 = entry["processor_idd"]
-#         processor2 = entry["processor2_idd"]
-#         org_lat, org_lng = get_location(processor1, "T2")
-#         des_lat, des_lng = get_location(processor2, "T3")
-#         entry["map_url"] = generate_static_map_url(f"{org_lat},{org_lng}", f"{des_lat},{des_lng}")
-    
-#     for entry in context["outbound4_wip"]:
-#         processor1 = entry["processor_idd"]
-#         processor2 = entry["processor2_idd"]
-#         org_lat, org_lng = get_location(processor1, "T3")
-#         des_lat, des_lng = get_location(processor2, "T4")
-#         entry["map_url"] = generate_static_map_url(f"{org_lat},{org_lng}", f"{des_lat},{des_lng}")
-        
-#     return context
-    
-    
-
-def grower_location(context):
-    origin_context = context.get("origin_context", [])
-    t1_processor = context.get("t1_processor",[])
-    inbound2_wip = context.get("inbound2_wip", [])
-    inbound3_wip = context.get("inbound3_wip", [])
-    inbound4_wip = context.get("inbound4_wip", [])
-    field_location_list = []
-    if origin_context:
-        for i in context["origin_context"]:
-            j = {"grower":"","field":"", "lat": 0.0, "lng": 0.0}
-            field_id = i["field_id"]
-            field = Field.objects.filter(id=field_id)
-            if field:
-                field_lat = field.first().latitude
-                field_long = field.first().longitude
-                j["grower"] = field.first().grower.name
-                j["field"] = field.first().name
-                try:
-                    j["lat"] = float(field_lat)
-                    j["lng"] = float(field_long)
-                except:
-                    j["lat"] = 0.0
-                    j["lng"] = 0.0
-            else:
-                j["grower"] = None
-                j["field"] = None
-                j["lat"] = 0.0
-                j["lng"] = 0.0
-            field_location_list.append(j)    
-    t1_location_list = []
-    if t1_processor:
-        for i in context["t1_processor"]:
-            j = {"processor":"", "lat":0.0, "lng":0.0}
-            processor = i["processor_name"]
-            processor_location = Location.objects.filter(processor__entity_name=processor)
-            if processor_location:
-                j["processor"] = processor
-                try:
-                    j["lat"] = float(processor_location.first().latitude)
-                    j["lng"] = float(processor_location.first().longitude)
-                except:
-                    j["lat"] = 0.0
-                    j["lng"] = 0.0
-            else:
-                j["processor"] = None                
-                j["lat"] = 0.0
-                j["lng"] = 0.0
-            t1_location_list.append(j)
-    t2_location_list = []
-    if inbound2_wip:
-        for i in context["inbound2_wip"]:
-            j = {"processor":"", "lat":0.0, "lng":0.0}
-            processor_id = i["processor2_idd"]
-            processor = i["processor2_name"]
-            processor_location = Processor2Location.objects.filter(processor_id=processor_id)
-            if processor_location:
-                j["processor"] = processor
-                try:
-                    j["lat"] = float(processor_location.first().latitude)
-                    j["lng"] = float(processor_location.first().longitude)
-                except:
-                    j["lat"] = 0.0
-                    j["lng"] = 0.0
-            else:
-                j["processor"] = None                
-                j["lat"] = 0.0
-                j["lng"] = 0.0
-            t2_location_list.append(j)
-    t3_location_list = []
-    if inbound3_wip:
-        for i in context["inbound3_wip"]:
-            j = {"processor":"", "lat":0.0, "lng":0.0}
-            processor_id = i["processor2_idd"]
-            processor = i["processor2_name"]
-            processor_location = Processor2Location.objects.filter(processor_id=processor_id)
-            if processor_location:
-                j["processor"] = processor
-                try:
-                    j["lat"] = float(processor_location.first().latitude)
-                    j["lng"] = float(processor_location.first().longitude)
-                except:
-                    j["lat"] = 0.0
-                    j["lng"] = 0.0
-            else:
-                j["processor"] = None                
-                j["lat"] = 0.0
-                j["lng"] = 0.0
-            t3_location_list.append(j)
-    t4_location_list = []
-    if inbound2_wip:
-        for i in context["inbound4_wip"]:
-            j = {"processor":"", "lat":0.0, "lng":0.0}
-            processor_id = i["processor2_idd"]
-            processor = i["processor2_name"]
-            processor_location = Processor2Location.objects.filter(processor_id=processor_id)
-            if processor_location:
-                j["processor"] = processor
-                try:
-                    j["lat"] = float(processor_location.first().latitude)
-                    j["lng"] = float(processor_location.first().longitude)
-                except:
-                    j["lat"] = 0.0
-                    j["lng"] = 0.0
-            else:
-                j["processor"] = None                
-                j["lat"] = 0.0
-                j["lng"] = 0.0
-            t4_location_list.append(j)
-
-    context.update({"field_location_list":field_location_list,"t1_location_list":t1_location_list,"t2_location_list":t2_location_list,"t3_location_list":t3_location_list, "t4_location_list":t4_location_list})       
-    return context     
-
+ 
   
 @login_required()
 def traceability_report_list(request):
