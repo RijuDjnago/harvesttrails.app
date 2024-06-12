@@ -121,7 +121,7 @@ def add_processor4(request):
         else:
             return redirect("dashboard")
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render(request, 'processor4/add_processor4.html',context)
 
     
@@ -187,7 +187,7 @@ def processor4_update(request,pk):
         else:
             return redirect('dashboard')
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render(request, 'processor4/update_processor4.html',context)
     
  
@@ -235,7 +235,7 @@ def processor4_change_password(request,pk):
         else:
             return redirect('dashboard')
     except:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render (request, 'processor4/processor4_change_password.html', context)
     
     
@@ -332,7 +332,7 @@ def add_processor4_user(request,pk):
         else:
             return redirect('dashboard')
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render(request, 'processor4/add_processor4_user.html',context)
 
 
@@ -342,7 +342,7 @@ def inbound_shipment_list(request):
     try:
         # Superuser...............
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
-            context["table_data"] = list(ShipmentManagement.objects.filter(receiver_processor_type="T4").values())
+            context["table_data"] = list(ShipmentManagement.objects.filter(receiver_processor_type="T4").order_by("-id").values())
             context["processor4"] = Processor2.objects.filter(processor_type__type_name="T4")
             search_name = request.GET.get("search_name")
             context["search_name"] = search_name
@@ -352,19 +352,20 @@ def inbound_shipment_list(request):
                 context["select_processor"] = None
             if context["select_processor"] == '0' or not context["select_processor"]:
                 if search_name:
-                    context["table_data"] = list(ShipmentManagement.objects.filter(receiver_processor_type="T4").filter(Q(shipment_id__icontains = search_name)|Q(processor_e_name__icontains = search_name)).values())
+                    queryset = list(ShipmentManagement.objects.filter(receiver_processor_type="T4").filter(Q(shipment_id__icontains = search_name)|Q(processor_e_name__icontains = search_name)).values())
                 return render (request, 'processor4/inbound_management_table.html', context)
             else:
                 if search_name:
                     # print("hit", search, search_name)
-                    context["table_data"] = list(ShipmentManagement.objects.filter(receiver_processor_type="T4", processor2_idd=context["select_processor"]).filter(Q(shipment_id__icontains = search_name)|Q(processor_e_name__icontains = search_name)).values())
+                    queryset = list(ShipmentManagement.objects.filter(receiver_processor_type="T4", processor2_idd=context["select_processor"]).filter(Q(shipment_id__icontains = search_name)|Q(processor_e_name__icontains = search_name)).values())
                 else:   
-                    context["table_data"] = list(ShipmentManagement.objects.filter(receiver_processor_type="T4", processor2_idd=context["select_processor"]).values())
+                    queryset = list(ShipmentManagement.objects.filter(receiver_processor_type="T4", processor2_idd=context["select_processor"]).values())
+            context["table_data"] = queryset.order_by("-id")
             return render (request, 'processor4/inbound_management_table.html', context)
         else:
             return redirect('dashboard')  
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render (request, 'processor4/inbound_management_table.html', context) 
 
 
@@ -542,7 +543,7 @@ def inbound_shipment_edit(request, pk):
         else:
             return redirect('dashboard')  
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render(request, 'processor4/inbound_management_edit.html', context)
 
 
@@ -693,7 +694,7 @@ def receive_shipment(request):
         else:
             return redirect('dashboard')
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render(request, 'processor4/receive_delivery.html', context)
     
 
@@ -738,7 +739,7 @@ def inbound_production_management_processor4(request):
         else:
             return redirect ('dashboard')
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render (request, 'processor4/inbound_production_management.html', context)
 
 
@@ -810,7 +811,7 @@ def add_volume_pulled_processor4(request):
         else:
             return redirect ('dashboard')
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render (request, 'processor4/add_volume_pulled.html', context)
 
 
@@ -856,7 +857,7 @@ def edit_volume_pulled_processor4(request,pk):
         else:
             return redirect ('dashboard')
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render (request, 'processor4/edit_volume_pulled.html', context)
         
 
@@ -951,7 +952,7 @@ def addlocation_processor4(request):
         else:
             return redirect('login')
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render(request, 'processor4/add_location_processor4.html',context)
     
 
@@ -990,7 +991,7 @@ def location_list_processor4(request):
         else:
             return redirect('login')
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render(request, 'processor4/location_managment.html',context)
 
 
@@ -1054,7 +1055,7 @@ def location_edit_processor4(request,pk):
         else:
             return redirect('login')
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render(request, 'processor4/location_edit.html',context)
 
 

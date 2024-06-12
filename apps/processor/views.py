@@ -199,7 +199,7 @@ def AddProcessorView(request):
         else:
             return redirect('login')
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render(request, 'processor/add_processor.html',context)
 
 
@@ -379,7 +379,7 @@ def add_processor_user(request,pk):
         else:
             return redirect('login')
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render(request, 'processor/add_processor_user.html',context)
 
 
@@ -419,7 +419,7 @@ def ListProcessorView(request):
         else:
             return redirect('login')
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render(request, 'processor/list_processor.html',context)
 
 
@@ -610,7 +610,7 @@ def ProcessorUpdate(request,pk):
         else:
             return redirect('login')
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render(request, 'processor/update_processor.html',context)
 
 
@@ -775,7 +775,7 @@ def addlocation(request):
         else:
             return redirect('login')
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render(request, 'processor/add_location.html',context)
 
 
@@ -832,7 +832,7 @@ def location_list(request):
         else:
             return redirect('login')
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render(request, 'processor/location_list.html',context)
 
 
@@ -990,7 +990,7 @@ def location_edit(request,pk):
         else:
             return redirect('login')
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render(request, 'processor/location_edit.html',context)
 
     
@@ -1078,7 +1078,7 @@ def LinkGrowertoProcessor(request):
         else:
             return redirect('login')
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render(request, 'processor/link_grower_processor.html',context)
 
 
@@ -1142,7 +1142,7 @@ def GrowerProcessorManagement(request):
         else:
             return redirect('login')
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render(request, 'processor/grower_processor_management.html',context)
 
 
@@ -1336,7 +1336,7 @@ def all_grower_map_to_processor(request):
         else:
             return redirect('login')
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render(request, 'processor/all_grower_map_to_processor.html',context)
 
 
@@ -1512,7 +1512,7 @@ def grower_map_to_processor(request,pk):
         else:
             return redirect('login')
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render(request, 'processor/grower_map_to_processor.html',context)
 
 
@@ -2275,7 +2275,7 @@ def processor_inbound_management(request):
         else:
             return redirect('login')
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render(request, 'processor/processor_inbound_management.html',context)
 
 
@@ -2347,7 +2347,7 @@ def processor_upcoming_inbound_management(request):
         else:
             return redirect("login")
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render(request, 'processor/processor_upcoming_inbound_management.html',context)
 
 
@@ -2579,7 +2579,7 @@ def processor_inbound_management_view(request,pk):
         else:
             return redirect('login')
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render(request, 'processor/processor_inbound_management_view.html',context)
 
 
@@ -2916,7 +2916,7 @@ def processor_inbound_management_edit(request,pk):
         else:
             return redirect('login')
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render(request, 'processor/processor_inbound_management_edit.html',context)
     
 
@@ -3544,7 +3544,7 @@ def processor_receive_delivery(request):
         else:
             return redirect('login')
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render(request, 'processor/add_processor_receive_delivery.html',context)
 
 
@@ -4331,7 +4331,7 @@ def processor_change_password(request,pk):
             return redirect('dashboard')
         return render (request, 'processor/processor_change_password.html', context)
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render (request, 'processor/processor_change_password.html', context)
 
 
@@ -6798,7 +6798,7 @@ def inbound_production_mgmt(request):
         else:
             return redirect ('login')
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render (request, 'processor/inbound_production_mgmt.html', context)
 
 
@@ -7401,7 +7401,7 @@ def outbound_shipment_mgmt(request):
             messages.error(request, "Not a valid request.")
             return redirect("dashboard")
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render (request, 'processor/outbound_shipment_mgmt.html', context)
 
 
@@ -7468,7 +7468,7 @@ def outbound_shipment_mgmt_view(request,pk):
         else:
             return redirect('login') 
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render (request, 'processor/outbound_shipment_mgmt_view_test.html', context)
 
 
@@ -7606,7 +7606,7 @@ def edit_outbound_shipment(request,pk):
             messages.error(request,'This is not a valid request')
             return redirect("dashboard")
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render (request, 'processor/edit_outbound_shipment.html', context) 
 
 
@@ -8130,7 +8130,7 @@ def add_outbound_shipment_processor1(request):
         else:
             return redirect('login')
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render (request, 'processor/add_outbound_shipment.html', context)
 
 
@@ -8202,7 +8202,7 @@ def Processor1ToProcessorManagement(request):
         else:
             return redirect('login')
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render(request, 'processor/processor_processor_management.html',context)
 
 
@@ -8246,7 +8246,7 @@ def link_processor_one(request):
         else:
             return redirect('login')
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render(request, 'processor/link_processor.html', context)
 
 

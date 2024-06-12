@@ -66,7 +66,7 @@ def list_processor2(request):
         else:
             return redirect("dashboard")
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render(request, 'processor2/list_processor2.html',context)
         
 
@@ -156,7 +156,7 @@ def add_processor2(request):
         else:
             return redirect("dashboard")
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render(request, 'processor2/add_processor2.html',context)
 
 
@@ -225,7 +225,7 @@ def processor2_update(request,pk):
     else:
         return redirect('dashboard')
     # except Exception as e:
-    #     context["messages"] = str(e)
+    #     context["error_messages"] = str(e)
     #     return render(request, 'processor2/update_processor2.html',context)
 
 
@@ -308,7 +308,7 @@ def processor2_change_password(request,pk):
         else:
             return redirect('dashboard')
     except:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render (request, 'processor2/processor2_change_password.html', context)
 
 
@@ -556,7 +556,7 @@ def add_processor2_user(request,pk):
         else:
             return redirect('dashboard')
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render(request, 'processor2/add_processor2_user.html',context)
 
 
@@ -923,7 +923,7 @@ def addlocation_processor2(request):
         else:
             return redirect('login')
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render(request, 'processor2/add_location_processor2.html',context)
     
 
@@ -961,7 +961,7 @@ def location_list_processor2(request):
         else:
             return redirect('login')
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render(request, 'processor2/list_location.html',context)
 
 
@@ -1025,7 +1025,7 @@ def location_edit_processor2(request,pk):
         else:
             return redirect('login')
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render(request, 'processor2/location_edit.html',context)
 
 
@@ -1041,7 +1041,7 @@ def location_delete_processor2(request,pk):
         else:
             return redirect("dashboard")
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return redirect('location_list_processor2', context)
 
 
@@ -1130,7 +1130,7 @@ def add_outbound_shipment_processor2(request):
         else:
             return redirect("dashboard")
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render(request, 'processor2/add_outbound_shipment_processor2.html', context) 
 
 
@@ -1150,7 +1150,7 @@ def outbound_shipment_list(request):
             if search_name == None and selectprocessor_id == None :
                 output = output
             else:
-                output = ShipmentManagement.objects.filter(sender_processor_type="T2").order_by('bin_location','id')
+                output = ShipmentManagement.objects.filter(sender_processor_type="T2")
                 if search_name and search_name != 'All':
                     output = output.filter(Q(processor_e_name__icontains=search_name) | Q(date_pulled__icontains=search_name) |
                     Q(bin_location__icontains=search_name) | Q(equipment_type__icontains=search_name) | Q(equipment_id__icontains=search_name) | 
@@ -1160,6 +1160,7 @@ def outbound_shipment_list(request):
                     output = output.filter(processor_idd=selectprocessor_id)
                     selectedProcessors = Processor2.objects.get(id=selectprocessor_id)
                     context['selectedProcessors'] = selectedProcessors
+            output = output.order_by("-id")
             paginator = Paginator(output, 100)
             page = request.GET.get('page')
             try:
@@ -1173,7 +1174,7 @@ def outbound_shipment_list(request):
         else:
             return redirect('dashboard')  
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render (request, 'processor2/outbound_shipment_list.html', context)
 
 
@@ -1201,7 +1202,7 @@ def outbound_shipment_view(request,pk):
         else:
             return redirect('dashboard')  
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render (request, 'processor2/outbound_shipment_list.html', context)
 
 
@@ -1232,7 +1233,7 @@ def outbound_shipment_delete(request,pk):
         else:
             return redirect("dashboard")
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render (request, 'processor2/outbound_shipment_list.html', context)
 
 
@@ -1242,7 +1243,7 @@ def inbound_shipment_list(request):
     try:
         # Superuser..................
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
-            context["table_data"] = list(ShipmentManagement.objects.filter(receiver_processor_type="T2").values())
+            context["table_data"] = list(ShipmentManagement.objects.filter(receiver_processor_type="T2").order_by("-id").values())
             context["processor2"] = Processor2.objects.filter(processor_type__type_name="T2")
             search_name = request.GET.get("search_name")
             context["search_name"] = search_name           
@@ -1252,18 +1253,19 @@ def inbound_shipment_list(request):
                 context["select_processor"] = None
             if context["select_processor"] == '0' or not context["select_processor"]:
                 if search_name:
-                    context["table_data"] = list(ShipmentManagement.objects.filter(receiver_processor_type="T2").filter(Q(shipment_id__icontains = search_name)|Q(processor_e_name__icontains = search_name)).values())
+                    queryset = list(ShipmentManagement.objects.filter(receiver_processor_type="T2").filter(Q(shipment_id__icontains = search_name)|Q(processor_e_name__icontains = search_name)).values())
                 return render (request, 'processor2/inbound_management_table.html', context)
             else:
                 if search_name:
-                    context["table_data"] = list(ShipmentManagement.objects.filter(receiver_processor_type="T2", processor2_idd=context["select_processor"]).filter(Q(shipment_id__icontains = search_name)|Q(processor_e_name__icontains = search_name)).values())
+                    queryset = list(ShipmentManagement.objects.filter(receiver_processor_type="T2", processor2_idd=context["select_processor"]).filter(Q(shipment_id__icontains = search_name)|Q(processor_e_name__icontains = search_name)).values())
                 else:   
-                    context["table_data"] = list(ShipmentManagement.objects.filter(receiver_processor_type="T2", processor2_idd=context["select_processor"]).values())
+                    queryset = list(ShipmentManagement.objects.filter(receiver_processor_type="T2", processor2_idd=context["select_processor"]).values())
+            context["table_data"] = queryset.order_by("-id")
             return render (request, 'processor2/inbound_management_table.html', context)        
         else:
             return redirect('dashboard')  
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render (request, 'processor2/inbound_management_table.html', context) 
 
 
@@ -1315,7 +1317,7 @@ def inbound_shipment_view(request, pk):
         else:
             return redirect('dashboard')
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render (request, 'processor2/inbound_management_view.html', context) 
 
 
@@ -1368,7 +1370,7 @@ def inbound_shipment_edit(request, pk):
         else:
             return redirect('dashboard')  
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render(request, 'processor2/inbound_management_edit.html', context)
 
 
@@ -1384,7 +1386,7 @@ def inbound_shipment_delete(request,pk):
         else:
             return redirect("dashboard")
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return redirect('inbound_shipment_list', context)
 
     
@@ -1476,7 +1478,7 @@ def recive_shipment(request):
         else:
             return redirect('dashboard')
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render(request, 'processor2/recive_delevery.html', context)
 
 
@@ -1592,7 +1594,7 @@ def processor2_processor_management(request):
         else:
             return redirect('dashboard')
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render(request, 'processor2/processor2_processor_management.html',context)
 
 
@@ -1632,7 +1634,7 @@ def link_processor_two(request):
         else:
             return redirect("dashboard") 
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render(request, 'processor2/link_processor2.html', context)
 
 
@@ -1647,7 +1649,7 @@ def delete_link_processor_two(request, pk):
         else:
             return redirect('dashboard')
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return HttpResponse(e)
 
 
@@ -1689,7 +1691,7 @@ def inbound_production_management(request):
         else:
             return redirect ('dashboard')
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render (request, 'processor2/inbound_production_management.html', context)
 
 
@@ -1762,7 +1764,7 @@ def add_volume_pulled_processor2(request):
         else:
             return redirect ('dashboard')
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render (request, 'processor2/add_volume_pulled.html', context)
 
 
@@ -1807,7 +1809,7 @@ def edit_volume_pulled_processor2(request,pk):
         else:
             return redirect ('dashboard')
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render (request, 'processor2/edit_volume_pulled.html', context)
 
 
@@ -1841,7 +1843,7 @@ def delete_volume_pulled_processor2(request,pk):
         else:        
             return redirect ('dashboard')
     except Exception as e:
-        context["messages"] = str(e)
+        context["error_messages"] = str(e)
         return render (request, 'processor2/inbound_production_management.html', context)
 
 
