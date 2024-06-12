@@ -246,13 +246,13 @@ tr:nth-child(even) {
                         <option value='' >Select Crop</option>
                         {% if select_crop == 'RICE' %}
                         <option value='RICE' selected>RICE</option>
-                        <option value='COTTON' >COTTON</option>
-                        {% elif select_crop == 'COTTON' %}
+                        {% comment %} <option value='COTTON' >COTTON</option> {% endcomment %}
+                        {% comment %} {% elif select_crop == 'COTTON' %}
                         <option value='RICE' >RICE</option>
-                        <option value='COTTON' selected>COTTON</option>
+                        <option value='COTTON' selected>COTTON</option> {% endcomment %}
                         {% else %}
                         <option value='RICE'>RICE</option>
-                        <option value='COTTON' >COTTON</option>
+                        {% comment %} <option value='COTTON' >COTTON</option> {% endcomment %}
                         {% endif %}
                     </select>
                 </div>
@@ -698,7 +698,7 @@ tr:nth-child(even) {
             </div>
         </div>
         <!-- Buyer -->
-        <div class="both-data-in" style="display: inherit; margin-top: 25px;">
+        {% comment %} <div class="both-data-in" style="display: inherit; margin-top: 25px;">
             <div class="row">
                 <div class="col-10" style="background-color: #81A179;padding: 12px 0px 0px 20px;text-align: left;color: #fff;font-size: 20px;">
                     <p>Buyer</p>
@@ -721,7 +721,7 @@ tr:nth-child(even) {
                     </thead>
                     <tbody>
                         
-                        {% comment %} {% for i in inbound4_wip  %}
+                        {% for i in inbound4_wip  %}
                         <tr>
                             <td>{{i.processor_e_name}}</td>
                             <td>{{i.shipment_id}}</td>
@@ -730,12 +730,12 @@ tr:nth-child(even) {
                             <td>{{i.weight_received}}</td>
                             <td></td>
                         </tr>
-                        {% endfor %} {% endcomment %}
+                        {% endfor %} 
                         
                     </tbody>
                 </table>
             </div>
-        </div>
+        </div> {% endcomment %}
     </div>
     {% else %}
     
