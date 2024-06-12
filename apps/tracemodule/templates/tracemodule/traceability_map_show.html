@@ -135,7 +135,7 @@
                             {% for pro in t1_processor|unique_processor %}                   
                                   
                             <ul style="list-style: none; padding: 0; margin: 0;">
-                                
+                                <li style="font-weight: 500;">Entity Name: <em style="font-weight: 400; font-style: normal;">{{pro.processor_name}}</em></li>
                                 <li style="font-weight: 500;">SKU Id: <em style="font-weight: 400; font-style: normal;">{{pro.skuid}}</em></li>
                             </ul>
                             <ul style="list-style: none; padding: 0; margin: 0; margin-top: 30px;">
@@ -183,8 +183,7 @@
                                             </div>
                                         </div>
                                     </div>
-                                    {% endfor %}
-        
+                                    {% endfor %}        
                                 </li>
                             </ul>
                         </div>
@@ -202,8 +201,8 @@
                             {% for pro in inbound2_wip|unique1_processor %}                   
                                   
                             <ul style="list-style: none; padding: 0; margin: 0;">
-                                
-                                <li style="font-weight: 500;">SKU Id: <em style="font-weight: 400; font-style: normal;">{{pro.skuid}}</em></li>
+                                <li style="font-weight: 500;">Entity Name: <em style="font-weight: 400; font-style: normal;">{{pro.processor2_name}}</em></li>
+                                <li style="font-weight: 500;">SKU Id: <em style="font-weight: 400; font-style: normal;">{{pro.storage_bin_recive}}</em></li>
                             </ul>
                             <ul style="list-style: none; padding: 0; margin: 0; margin-top: 30px;">
                                 <li style="font-weight: 500; margin-bottom: 5px;">Processing Date: <em style="font-weight: 400; font-style: normal;">{{pro.recive_delivery_date}}</em></li>
@@ -250,16 +249,13 @@
                                             </div>
                                         </div>
                                     </div>
-                                    {% endfor %}
-        
+                                    {% endfor %}        
                                 </li>
                             </ul>
                         </div>
                     </div>
                 </div>
                 {% endif %}
-
-
                 {% if inbound3_wip %}
                 <div class="row" style="padding-top: 15px; margin-top: 30px; border-top: 1px solid #dadada; display: flex;">
                     <div class="col-6 mb-3">
@@ -269,8 +265,8 @@
                             {% for pro in inbound3_wip|unique1_processor %}                   
                                   
                             <ul style="list-style: none; padding: 0; margin: 0;">
-                                
-                                <li style="font-weight: 500;">SKU Id: <em style="font-weight: 400; font-style: normal;">{{pro.skuid}}</em></li>
+                                <li style="font-weight: 500;">Entity Name: <em style="font-weight: 400; font-style: normal;">{{pro.processor2_name}}</em></li>
+                                <li style="font-weight: 500;">SKU Id: <em style="font-weight: 400; font-style: normal;">{{pro.storage_bin_recive}}</em></li>
                             </ul>
                             <ul style="list-style: none; padding: 0; margin: 0; margin-top: 30px;">
                                 <li style="font-weight: 500; margin-bottom: 5px;">Processing Date: <em style="font-weight: 400; font-style: normal;">{{pro.recive_delivery_date}}</em></li>
@@ -295,8 +291,7 @@
                         <div class="text_wapper">
                             <h3 style="font-size: 30px; margin-bottom: 40px;">Transport to Processor 4</h3>
                             <ul style="list-style: none; padding: 0; margin: 0;">
-                                <li style="margin-bottom: 30px;">
-        
+                                <li style="margin-bottom: 30px;">        
                                     {% for out4 in outbound4_wip %}
                                     <div class="container-fluid">
                                         <div class="main_map_container">
@@ -317,15 +312,13 @@
                                             </div>
                                         </div>
                                     </div>
-                                    {% endfor %}
-        
+                                    {% endfor %}        
                                 </li>
                             </ul>
                         </div>
                     </div>
                 </div>
                 {% endif %}
-
                 {% if inbound4_wip %}
                 <div class="row" style="padding-top: 15px; margin-top: 30px; border-top: 1px solid #dadada; display: flex;">
                     <div class="col-6 mb-3">
@@ -335,8 +328,8 @@
                             {% for pro in inbound4_wip|unique1_processor %}                   
                                   
                             <ul style="list-style: none; padding: 0; margin: 0;">
-                                
-                                <li style="font-weight: 500;">SKU Id: <em style="font-weight: 400; font-style: normal;">{{pro.skuid}}</em></li>
+                                <li style="font-weight: 500;">Enity Name: <em style="font-weight: 400; font-style: normal;">{{pro.processor2_name}}</em></li>
+                                <li style="font-weight: 500;">SKU Id: <em style="font-weight: 400; font-style: normal;">{{pro.storage_bin_recive}}</em></li>
                             </ul>
                             <ul style="list-style: none; padding: 0; margin: 0; margin-top: 30px;">
                                 <li style="font-weight: 500; margin-bottom: 5px;">Processing Date: <em style="font-weight: 400; font-style: normal;">{{pro.recive_delivery_date}}</em></li>
