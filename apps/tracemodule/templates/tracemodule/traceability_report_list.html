@@ -412,7 +412,7 @@ tr:nth-child(even) {
                             <th>Destination</th>
                             <th>Date</th>
                             <th>Quantity</th>
-                            <th>Transportation Mode</th>
+                            {% comment %} <th>Transportation Mode</th> {% endcomment %}
                             
                         </tr>
                     </thead>
@@ -423,7 +423,7 @@ tr:nth-child(even) {
                             <td>{{ i.destination }}</td>
                             <td>{{ i.date|date:"Y-m-d" }}</td>
                             <td>{{ i.quantity|floatformat:0 }}</td>
-                            <td>{{ i.transportation }}</td>
+                            {% comment %} <td>{{ i.transportation }}</td> {% endcomment %}
                             
                         </tr>
                         {% endfor %}
@@ -447,6 +447,7 @@ tr:nth-child(even) {
                         <tr style="background-color: #B0C69F;">
                             <th>Processor Name</th>
                             <th>Delivery ID</th>
+                            <th>SKU ID</th>
                             <th>Date</th>
                             <th>Grower</th>
                             <th>Farm</th>
@@ -462,6 +463,7 @@ tr:nth-child(even) {
                         <tr>
                             <td>{{ i.processor_name }}</td>
                             <td>{{ i.deliveryid }}</td>
+                            <td>{{ i.skuid }}</td>
                             <td>{{ i.date| date:"Y-m-d" }}</td>
                             <td>{{ i.grower }}</td>
                             <td>{{ i.farm }}</td>
@@ -494,6 +496,7 @@ tr:nth-child(even) {
                     <thead>
                         <tr style="background-color: #B0C69F;">
                             <th>Delivery ID</th>
+                            <th>Sender SKU ID</th>
                             <th>Destination</th>
                             <th>Date</th>
                             <th>Quantity</th>
@@ -505,6 +508,7 @@ tr:nth-child(even) {
                         {% for i in outbound2_wip %}
                         <tr>
                             <td>{{ i.shipment_id }}</td>
+                            <td>{{ i.storage_bin_send }}</td>
                             <td>{{ i.processor2_name }}</td>
                             <td>{{ i.date_pulled|date:"Y-m-d" }}</td>
                             <td>{{ i.volume_shipped|floatformat:0 }}</td>
@@ -532,9 +536,11 @@ tr:nth-child(even) {
                         <tr style="background-color: #B0C69F;">
                             <th>Processor Name</th>
                             <th>Delivery ID</th>
+                            <th>Sender SKU ID</th>
                             <th>Date</th>
                             <th>Quantity Pounds Shipped</th>
-                            <th>Quantity Pounds Received</th>
+                            <th>Receiver SKU ID</th>
+                            <th>Quantity Pounds Received</th>                            
                             <th>Quantity Delta</th>
                         </tr>
                     </thead>
@@ -543,8 +549,10 @@ tr:nth-child(even) {
                         <tr>
                             <td>{{ i.processor_e_name }}</td>
                             <td>{{ i.shipment_id }}</td>
+                            <td>{{ i.storage_bin_send }}</td>
                             <td>{{ i.recive_delivery_date|date:"Y-m-d" }}</td>
                             <td>{{ i.volume_shipped|floatformat:0 }}</td>
+                            <td>{{ i.storage_bin_recive }}</td>
                             <td>{{ i.received_weight|floatformat:0 }}</td>
                             <td>{{ i.volume_shipped|floatformat:0|subtract:i.received_weight|floatformat:0 }}</td>
                         </tr>
@@ -569,6 +577,7 @@ tr:nth-child(even) {
                     <thead>
                         <tr style="background-color: #B0C69F;">
                             <th>Delivery ID</th>
+                            <th>Sender SKU ID</th>
                             <th>Destination</th>
                             <th>Date</th>
                             <th>Quantity</th>
@@ -579,6 +588,7 @@ tr:nth-child(even) {
                         {% for i in outbound3_wip %}
                         <tr>
                             <td>{{i.shipment_id}}</td>
+                            <td>{{i.storage_bin_send}}</td>
                             <td>{{i.processor2_name}}</td>
                             <td>{{i.date_pulled|date:"Y-m-d"}}</td>
                             <td>{{i.volume_shipped}}</td>
@@ -605,8 +615,10 @@ tr:nth-child(even) {
                         <tr style="background-color: #B0C69F;">
                             <th>Processor Name</th>
                             <th>Delivery ID</th>
+                            <th>Sender SKU ID</th>
                             <th>Date</th>
                             <th>Quantity Pounds Shipped</th>
+                            <th>Receiver SKU ID</th>
                             <th>Quantity Pounds Received</th>
                             <th>Quantity Delta</th>
                         </tr>
@@ -616,8 +628,10 @@ tr:nth-child(even) {
                         <tr>
                             <td>{{ i.processor_e_name }}</td>
                             <td>{{ i.shipment_id }}</td>
+                            <td>{{ i.storage_bin_send }}</td>
                             <td>{{ i.recive_delivery_date|date:"Y-m-d" }}</td>
                             <td>{{ i.volume_shipped|floatformat:0 }}</td>
+                            <td>{{ i.storage_bin_recive }}</td>
                             <td>{{ i.received_weight|floatformat:0 }}</td>
                             <td>{{ i.volume_shipped|floatformat:0|subtract:i.received_weight|floatformat:0 }}</td>
                         </tr>
@@ -641,6 +655,7 @@ tr:nth-child(even) {
                     <thead>
                         <tr style="background-color: #B0C69F;">
                             <th>Delivery ID</th>
+                            <th>Sender SKU ID</th>
                             <th>Destination</th>
                             <th>Date</th>
                             <th>Quantity</th>
@@ -651,6 +666,7 @@ tr:nth-child(even) {
                         {% for i in outbound4_wip %}
                         <tr>
                             <td>{{i.shipment_id}}</td>
+                            <td>{{i.storage_bin_send}}</td>
                             <td>{{i.processor2_name}}</td>
                             <td>{{i.date_pulled|date:"Y-m-d"}}</td>
                             <td>{{i.volume_shipped}}</td>
@@ -676,8 +692,10 @@ tr:nth-child(even) {
                         <tr style="background-color: #B0C69F;">
                             <th>Processor Name</th>
                             <th>Delivery ID</th>
+                            <th>Sender SKU ID</th>
                             <th>Date</th>
                             <th>Quantity Pounds Shipped</th>
+                            <th>Receiver SKU ID</th>
                             <th>Quantity Pounds Received</th>
                             <th>Quantity Delta</th>
                         </tr>
@@ -687,8 +705,10 @@ tr:nth-child(even) {
                         <tr>
                             <td>{{ i.processor_e_name }}</td>
                             <td>{{ i.shipment_id }}</td>
+                            <td>{{ i.storage_bin_send }}</td>
                             <td>{{ i.recive_delivery_date|date:"Y-m-d" }}</td>
                             <td>{{ i.volume_shipped|floatformat:0 }}</td>
+                            <td>{{ i.storage_bin_recive }}</td>
                             <td>{{ i.received_weight|floatformat:0 }}</td>
                             <td>{{ i.volume_shipped|floatformat:0|subtract:i.received_weight|floatformat:0 }}</td>
                         </tr>

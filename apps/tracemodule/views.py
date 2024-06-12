@@ -1781,9 +1781,7 @@ def processor_traceability_report_response(processor_id,processor_type, from_dat
             context["origin_context"] = grower_list
             context["search_by"] = "processor"
             context["outbound1_wip"] = outbound1
-            context["t1_processor"] = inbound1
-
-            
+            context["t1_processor"] = inbound1            
 
             processor_type = "T2"  
             outbound3_wip = outbound_Wip_Processor('RICE',processor_id,processor_type,from_date,to_date)  
@@ -1953,7 +1951,7 @@ def processor_traceability_report_response(processor_id,processor_type, from_dat
 
 def skuid_traceability_response(search_text):
     context = {}
-    get_sku_id = GrowerShipment.objects.filter(sku__icontains=search_text)
+    get_sku_id = GrowerShipment.objects.filter(sku=search_text)
     if get_sku_id.exists():                            
         field = list(get_sku_id.values_list('field_id', flat=True))
         sku_id = get_sku_id.first().sku                            
@@ -1975,11 +1973,12 @@ def skuid_traceability_response(search_text):
             context["outbound1_wip"] = outbound1_wip
             
             # inbound one
-            t1_processor = list(get_sku_id.values("processor__entity_name","shipment_id","approval_date","grower__name","field__farm__name","field__name","total_amount","received_amount"))
+            t1_processor = list(get_sku_id.values("processor__entity_name","shipment_id","sku","approval_date","grower__name","field__farm__name","field__name","total_amount","received_amount"))
             if len(t1_processor) != 0:
                 for processor in t1_processor:
                     processor["processor_name"] = processor.get("processor__entity_name")
                     processor["deliveryid"] = processor.get("shipment_id")
+                    processor["skuid"] = processor.get("sku")
                     processor["date"] = processor.get("approval_date")
                     processor["grower"] = processor.get("grower__name")
                     processor["farm"] = processor.get("field__farm__name")
@@ -2030,13 +2029,16 @@ def skuid_traceability_response(search_text):
             #inbound 4
             inbound4_wip = []
             for l_sku4 in t3_sku_id:
-                inbound4_wip_ = list(ShipmentManagement.objects.filter(storage_bin_send=l_sku2).values())
+                inbound4_wip_ = list(ShipmentManagement.objects.filter(storage_bin_send=l_sku4).values())
                 inbound4_wip = inbound4_wip + inbound4_wip_
             context["inbound4_wip"] = inbound4_wip
             
             
     elif not get_sku_id:
-        sku_id = ShipmentManagement.objects.filter(storage_bin_send__icontains=search_text)
+        
+        sku_id = ShipmentManagement.objects.filter(storage_bin_send=search_text)
+        print(sku_id.values())
+
         if sku_id.exists():
             get_sku_id = sku_id.first().storage_bin_send
             sender_processor_id = sku_id.first().processor_idd
@@ -2059,11 +2061,12 @@ def skuid_traceability_response(search_text):
                 context["outbound1_wip"] = outbound1_wip
 
                 #inbound 1
-                t1_processor = list(GrowerShipment.objects.filter(sku=get_sku_id, status="APPROVED").values("processor__entity_name","shipment_id","approval_date","grower__name","field__farm__name","field__name","total_amount","received_amount"))
+                t1_processor = list(GrowerShipment.objects.filter(sku=get_sku_id, status="APPROVED").values("processor__entity_name","shipment_id","sku","approval_date","grower__name","field__farm__name","field__name","total_amount","received_amount"))
                 if len(t1_processor) != 0:
                     for processor in t1_processor:
                         processor["processor_name"] = processor.get("processor__entity_name")
                         processor["deliveryid"] = processor.get("shipment_id")
+                        processor["skuid"] = processor.get("sku")
                         processor["date"] = processor.get("approval_date")
                         processor["grower"] = processor.get("grower__name")
                         processor["farm"] = processor.get("field__farm__name")
@@ -2155,11 +2158,12 @@ def skuid_traceability_response(search_text):
                 field_ids = []
                 for i in sku_id_list:
                     # inbound
-                    t1_processor = list(GrowerShipment.objects.filter(sku=i, status="APPROVED").values("processor__entity_name","shipment_id","approval_date","grower__name","field__farm__name","field__name","total_amount","received_amount"))
+                    t1_processor = list(GrowerShipment.objects.filter(sku=i, status="APPROVED").values("processor__entity_name","shipment_id","sku","approval_date","grower__name","field__farm__name","field__name","total_amount","received_amount"))
                     if len(t1_processor) != 0:
                         for processor in t1_processor:
                             processor["processor_name"] = processor.get("processor__entity_name")
                             processor["deliveryid"] = processor.get("shipment_id")
+                            processor["skuid"] = processor.get("sku")
                             processor["date"] = processor.get("approval_date")
                             processor["grower"] = processor.get("grower__name")
                             processor["farm"] = processor.get("field__farm__name")
@@ -2192,6 +2196,7 @@ def skuid_traceability_response(search_text):
                 
 
             if sender_processor_type == "T3":
+                # print("enter2")
                 #outbound 4
                 outbound4_wip = list(ShipmentManagement.objects.filter(storage_bin_send=get_sku_id, receiver_processor_type="T4").values())
                 context["outbound4_wip"] = outbound4_wip
@@ -2199,6 +2204,7 @@ def skuid_traceability_response(search_text):
                 #inbound 4
                 inbound4_wip = list(ShipmentManagement.objects.filter(storage_bin_send=get_sku_id, status="APPROVED").values())
                 context["inbound4_wip"] = inbound4_wip
+                print(inbound4_wip, "inbounddddddddddddd")
 
                 #inbound 3
                 inbound3_wip = list(ShipmentManagement.objects.filter(storage_bin_recive=get_sku_id, status="APPROVED").values())
@@ -2228,11 +2234,12 @@ def skuid_traceability_response(search_text):
                 field_ids = []
                 for i in grower_sku_id_list:
                     # inbound
-                    t1_processor = list(GrowerShipment.objects.filter(sku=i, status="APPROVED").values("processor__entity_name","shipment_id","approval_date","grower__name","field__farm__name","field__name","total_amount","received_amount"))
+                    t1_processor = list(GrowerShipment.objects.filter(sku=i, status="APPROVED").values("processor__entity_name","shipment_id","sku","approval_date","grower__name","field__farm__name","field__name","total_amount","received_amount"))
                     if len(t1_processor) != 0:
                         for processor in t1_processor:
                             processor["processor_name"] = processor.get("processor__entity_name")
                             processor["deliveryid"] = processor.get("shipment_id")
+                            processor["skuid"] = processor.get("sku")
                             processor["date"] = processor.get("approval_date")
                             processor["grower"] = processor.get("grower__name")
                             processor["farm"] = processor.get("field__farm__name")
@@ -2264,18 +2271,17 @@ def skuid_traceability_response(search_text):
                 get_Origin_Grower = Origin_searchby_Grower('RICE',search_text,*field_ids)                                              
                 context["origin_context"] = get_Origin_Grower
                                             
-
-        elif not sku_id:
-            get_sku = ShipmentManagement.objects.filter(storage_bin_recive__icontains=search_text)
+        elif not sku_id.exists():
+            get_sku = ShipmentManagement.objects.filter(storage_bin_recive=search_text)
             if get_sku:
                 sender_processor_id = get_sku.first().processor_idd
                 sender_processor_type = get_sku.first().sender_processor_type
                 sku_id = get_sku.first().storage_bin_recive
-                if sender_processor_type == "T4":
-                    inbound4_wip = list(ShipmentManagement.objects.filter(storage_bin_recive=sku_id, status="APPROVED")).values()
+                if sender_processor_type == "T3":
+                    inbound4_wip = list(ShipmentManagement.objects.filter(storage_bin_recive=sku_id, status="APPROVED").values())
                     context["inbound4_wip"] = inbound4_wip
 
-                    outbound4_wip = list(ShipmentManagement.objects.filter(storage_bin_recive=sku_id, status="APPROVED")).values()
+                    outbound4_wip = list(ShipmentManagement.objects.filter(storage_bin_recive=sku_id, status="APPROVED").values())
                     context["outbound4_wip"] = outbound4_wip
 
                     inbound3_wip = []
@@ -2307,14 +2313,15 @@ def skuid_traceability_response(search_text):
                     t1_processor_ = []
                     outbound1_wip_ = []
                     field_ids = []
-                    skuid_list = [i["storage_bin_send"] for i in skuid_list]
-                    for i in grower_sku_id_list:
+                    skuid_list = [i["storage_bin_send"] for i in outbound2_wip]
+                    for i in skuid_list:
                         # inbound
-                        t1_processor = list(GrowerShipment.objects.filter(sku=i, status="APPROVED").values("processor__entity_name","shipment_id","approval_date","grower__name","field__farm__name","field__name","total_amount","received_amount"))
+                        t1_processor = list(GrowerShipment.objects.filter(sku=i, status="APPROVED").values("processor__entity_name","shipment_id","sku","approval_date","grower__name","field__farm__name","field__name","total_amount","received_amount"))
                         if len(t1_processor) != 0:
                            for processor in t1_processor:
                                 processor["processor_name"] = processor.get("processor__entity_name")
                                 processor["deliveryid"] = processor.get("shipment_id")
+                                processor["skuid"] = processor.get("sku")
                                 processor["date"] = processor.get("approval_date")
                                 processor["grower"] = processor.get("grower__name")
                                 processor["farm"] = processor.get("field__farm__name")
@@ -2338,7 +2345,7 @@ def skuid_traceability_response(search_text):
                                 item["quantity"] = item.get("total_amount")
                                 item["transportation"] = ""
                         outbound1_wip_ = outbound1_wip_ + outbound1_wip
-                        field_ids_ = list(GrowerShipment.objects.filter(sku=i).values_list("field_id"))
+                        field_ids_ = list(GrowerShipment.objects.filter(sku=i).values_list("field_id", flat=True))
                         field_ids = field_ids + field_ids_
                     context["outbound1_wip"] = outbound1_wip_
                     context["t1_processor"] = t1_processor_
@@ -2347,6 +2354,8 @@ def skuid_traceability_response(search_text):
                     context["origin_context"] = get_Origin_Grower
                 else:
                     context['no_rec_found_msg'] = "No Records Found"
+            else:
+                context['no_rec_found_msg'] = "No Records Found"
         else:
             context['no_rec_found_msg'] = "No Records Found"  
     else:
@@ -2617,8 +2626,6 @@ def location_response(context):
         destination = f"{des_lat},{des_lng}"
         k["map_url"] = generate_static_map_url(origin, destination)
 
-    print(context["outbound2_wip"], "piuuuuuuuuuuuuuuuuuuuuuuuu")
-    # #print(context["outbound2_wip"])
     return context
 
    
@@ -2764,13 +2771,14 @@ def traceability_report_list(request):
 
                                 processor_id = LinkGrowerToProcessor.objects.filter(grower_id=check_grower_id).first().processor.id
                                 entity_name = LinkGrowerToProcessor.objects.filter(grower_id=check_grower_id).first().processor.entity_name
-                                t1_processor = list(GrowerShipment.objects.filter(processor_id=processor_id, grower_id=check_grower_id, status="APPROVED").values("processor__entity_name","shipment_id","approval_date","grower__name","field__farm__name","field__name","total_amount","received_amount"))
+                                t1_processor = list(GrowerShipment.objects.filter(processor_id=processor_id, grower_id=check_grower_id, status="APPROVED").values("processor__entity_name","shipment_id","sku","approval_date","grower__name","field__farm__name","field__name","total_amount","received_amount"))
                                 
 
                                 if len(t1_processor) != 0:
                                     for entry in t1_processor:
                                         entry["processor_name"] = entry["processor__entity_name"]
                                         entry["deliveryid"] = entry["shipment_id"]
+                                        entry["skuid"] = entry["sku"]
                                         entry["date"] = entry["approval_date"]
                                         entry["grower"] = entry["grower__name"]
                                         entry["farm"] = entry["field__farm__name"]
@@ -2846,11 +2854,10 @@ def traceability_report_list(request):
                         context_ = skuid_traceability_response(search_text)                        
                         context["get_search_by"] = "sku_id" 
                         origin_context = context_.get("origin_context",[]) 
-                        if origin_context:                  
-                            new_context = location_response(context_)                            
+                        if origin_context:                                              
+                            new_context = location_response(context_)                          
                             context.update(context_)
-                            context.update(new_context)  
-                                                     
+                            context.update(new_context)                                                     
                         else:
                             context["no_rec_found_msg"] = "Not Found Origin"
                     elif get_search_by and get_search_by == 'deliveryid' :
@@ -3012,9 +3019,6 @@ def showquality_metrics(request,get_search_by,delivery_idd):
     
     return JsonResponse(responce)
 
-
-
-#### change
 
 @login_required()
 def traceability_report_Origin_csv_download(request,select_crop,get_search_by,search_text,from_date,to_date):
