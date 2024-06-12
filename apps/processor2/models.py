@@ -55,6 +55,9 @@ class Processor2Location(models.Model):
     latitude = models.CharField(max_length=200,null=True, blank=True,verbose_name='Latitude2')
     longitude = models.CharField(max_length=200,null=True, blank=True,verbose_name='Longitude2')
     eschlon_id = models.CharField(max_length=200, null=True, blank=True)
+
+    def __str__(self):
+        return f"Processor = {self.processor}, Location = {self.name}"
     
 
 class AssignedBaleProcessor2(models.Model):
@@ -103,12 +106,15 @@ class AssignedBaleProcessor2(models.Model):
     mark_id = models.CharField(max_length=200, null=True, blank=True)
     gin_id = models.CharField(max_length=200, null=True, blank=True)
 
-
+    def __str__(self):
+        return f"Processor = {self.processor2}, Bale = {self.bale}"
 
 class LinkProcessorToProcessor(models.Model):
     processor = models.ForeignKey(Processor2, on_delete=models.CASCADE, null=True, blank=True, related_name="processor")
     linked_processor = models.ForeignKey(Processor2, on_delete=models.CASCADE, null=True, blank=True, related_name="linked_procesor")
 
+    def __str__(self):
+        return f"Processor = {self.processor}, Linked processor = {self.linked_processor}"
 
 class ProductionManagementProcessor2(models.Model):
     processor = models.ForeignKey(Processor2, on_delete=models.CASCADE, null=True, blank=True)
@@ -122,6 +128,9 @@ class ProductionManagementProcessor2(models.Model):
     volume_left = models.CharField(max_length=200, null=True, blank=True)
     milled_storage_bin = models.CharField(max_length=200, null=True, blank=True)
     editable_obj = models.BooleanField(null=True, blank=True)
+
+    def __str__(self):
+        return f"Processor = {self.processor}"
 
 STATUS_CHOICES = (
     ("APPROVED", "APPROVED"),
@@ -174,6 +183,12 @@ class ShipmentManagement(models.Model):
     qr_code_processor = models.FileField(upload_to='qr_code_processor/',null=True, blank=True)
     reason_for_disapproval = models.CharField(max_length=200, null=True, blank=True,verbose_name='Reason For Disapproval')
 
+    def __str__(self):
+        return f"Shipment Id = {self.shipment_id}, Sender Processor = {self.processor_e_name}, Receiver processor = {self.processor2_name}"
+
 class LinkProcessor1ToProcessor(models.Model):
     processor1 = models.ForeignKey(Processor, on_delete=models.CASCADE, null=True,blank=True)
     processor2 = models.ForeignKey(Processor2, on_delete=models.CASCADE, null=True, blank=True)
+
+    def __str__(self):
+        return f"Processor = {self.processor1}, Linked processor = {self.processor2}"

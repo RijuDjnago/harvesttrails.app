@@ -174,9 +174,7 @@
                     <a href="{% url 'all_shipments_csv_download_t4' %}" class="btn-close-cancel" target="_blank">All Shipments CSV</a>
                 {% endif %}
             </div>
-
         </div>
-
         
         <form action="" method="get" class="">
             <div class="card card-padding">
@@ -208,10 +206,9 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
-        
+                    </div>        
                     <br>
-
+                   
                     <div class="both-data-in" style="display: inherit;">
                         <div class="table-responsive">
                             <table id="" class="table table-striped dt-responsive nowrap"
@@ -293,7 +290,6 @@
                                             
                                             {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role or 'Processor2' in request.user.get_role %}
                                             
-                                            
                                             <li>
                                                 <a href="{% url 'inbound_shipment_edit4' shipment.id %}" class="update-btn-link" alt="edit inbound management" title="edit inbound management"> <span class="fas fa-edit"></span></a>
                                             </li>
@@ -359,33 +355,32 @@
                             </table>
                         </div>
 
-                        <div class="row align-items-center">
+                        <div class="row align-items-center mt-2">
                             <div class="col-md-12 col-sm-12 col-12 text-center">
-                                {% if grower_shipment.has_other_pages %}
-                                <ul class="pagination" id="nav_1">
-                                {% if grower_shipment.has_previous %}
-                                    <li><a href="?selectgrower_id={% if selectedGrower.id  %}{{selectedGrower.id}}{% else %}{{selectedGrower}}{% endif %}&search_name={% if get_search_name  %}{{get_search_name}}{% endif %}&page={{ grower_shipment.previous_page_number }}">&laquo;</a></li>
-                                    {% else %}
-                                    <li class="disabled"><span>&laquo;</span></li>
+                                {% if table_data.has_other_pages %}
+                                    <ul class="pagination" id="nav_1">
+                                    {% if table_data.has_previous %}
+                                        <li><a href="?selectprocessor_id={%if selectedProcessors.id %}{{selectedProcessors.id}}{% else %}All{% endif %}&search_name={%if search_name %}{{search_name}}{% else %}All{% endif %}&page={{ table_data.previous_page_number }}">&laquo;</a></li>
+                                        {% else %}
+                                        <li class="disabled"><span>&laquo;</span></li>
+                                        {% endif %}
+                                        {% for i in table_data.paginator.page_range %}
+                                        {% if table_data.number == i %}
+                                        <li class="active pagi" id="getactive"><span>{{ i }} <span class="sr-only">(current)</span></span></li>
+                                        {% else %}
+                                        <li><a href="?selectprocessor_id={%if selectedProcessors.id %}{{selectedProcessors.id}}{% else %}All{% endif %}&search_name={%if search_name %}{{search_name}}{% else %}All{% endif %}&page={{ i }}">{{ i }}</a></li>
+                                        {% endif %}
+                                        {% endfor %}
+                                        {% if table_data.has_next %}
+                                        <li><a href="?selectprocessor_id={%if selectedProcessors.id %}{{selectedProcessors.id}}{% else %}All{% endif %}&search_name={%if search_name %}{{search_name}}{% else %}All{% endif %}&page={{ table_data.next_page_number }}">&raquo;</a></li>
+                                        {% else %}
+                                        <li class="disabled"><span>&raquo;</span></li>
                                     {% endif %}
-                                    {% for i in grower_shipment.paginator.page_range %}
-                                    {% if grower_shipment.number == i %}
-                                    <li class="active pagi" id="getactive"><span>{{ i }} <span class="sr-only">(current)</span></span></li>
-                                    {% else %}
-                                    <li><a href="?selectgrower_id={% if selectedGrower.id  %}{{selectedGrower.id}}{% else %}{{selectedGrower}}{% endif %}&search_name={% if get_search_name  %}{{get_search_name}}{% endif %}&page={{ i }}">{{ i }}</a></li>
-                                    {% endif %}
-                                    {% endfor %}
-                                    {% if grower_shipment.has_next %}
-                                    <li><a href="?selectgrower_id={% if selectedGrower.id  %}{{selectedGrower.id}}{% else %}{{selectedGrower}}{% endif %}&search_name={% if get_search_name  %}{{get_search_name}}{% endif %}&page={{ grower_shipment.next_page_number }}">&raquo;</a></li>
-                                    {% else %}
-                                    <li class="disabled"><span>&raquo;</span></li>
+                                    </ul>
                                 {% endif %}
-                                </ul>
-                            {% endif %}
                             </div>
                             <div class="col-md-12 col-sm-12 col-12 text-center mt-2" style="text-align:right">
-                                <span>Showing  {{ grower_shipment.start_index }} - {{ grower_shipment.end_index }} of {{ grower_shipment.paginator.count }} entries
-                                </span>
+                                <span>Showing  {{ table_data.start_index }} - {{ table_data.end_index }} of {{ table_data.paginator.count }} entries</span>
                             </div>
                         </div>
                     </div>

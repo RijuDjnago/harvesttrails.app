@@ -10,131 +10,7 @@ import csv
 from django.db.models import Q
 import datetime
 import requests
-# Create your views here.
 
-
-
-
-def get_Origin(crop,field_id,field_name,bale_id,warehouse_wh_id) :
-    if type(field_id) != None and field_id !=  None :
-        get_field = Field.objects.get(id=field_id)
-    elif type(field_name) != None and field_name !=  None :
-        get_field = Field.objects.get(id=field_id)
-    else:
-        get_field = ''
-    variety = get_field.variety if get_field.variety else ''
-    field_name = get_field.name if get_field.name else ''
-    field_id = get_field.id if get_field.id else ''
-    projected_yeild = float(get_field.total_yield) if get_field.total_yield else ''
-    reported_yeild = ''
-    yield_delta = ''
-    harvest_date = get_field.harvest_date if get_field.harvest_date else ''
-    water_savings = get_field.gal_water_saved if get_field.gal_water_saved else ''
-    water_per_pound_savings = get_field.water_lbs_saved if get_field.water_lbs_saved else ''
-    land_use = get_field.land_use_efficiency if get_field.land_use_efficiency else ''
-    less_GHG = get_field.ghg_reduction if get_field.ghg_reduction else ''
-    co2_eQ_footprint = get_field.co2_eq_reduced if get_field.co2_eq_reduced else ''
-    premiums_to_growers = get_field.grower_premium_percentage if get_field.grower_premium_percentage else ''
-    surveyscore1 = get_field.get_survey1()
-    surveyscore2 = get_field.get_survey2()
-    surveyscore3 = get_field.get_survey3()
-    if surveyscore1 != '' and surveyscore1 != None :
-        surveyscore1 = float(surveyscore1)
-    else:
-        surveyscore1 = 0
-    if surveyscore2 != '' and surveyscore2 != None :
-        surveyscore2 = float(surveyscore2)
-    else:
-        surveyscore2 = 0
-    if surveyscore3 != '' and surveyscore3 != None :
-        surveyscore3 = float(surveyscore3)
-    else:
-        surveyscore3 = 0
-    composite_score = round((surveyscore1*0.25)+(surveyscore2*0.50)+(surveyscore3*0.25),2)
-    if crop == "RICE":
-        if composite_score >= 70:
-            pf_sus = "Pass"
-        elif composite_score < 70:
-            pf_sus = "Fail"
-    elif crop == "COTTON":
-        if composite_score >= 75:
-            pf_sus = "Pass"
-        elif composite_score < 75:
-            pf_sus = "Fail"
-
-    if crop == 'COTTON' :
-        get_bale = BaleReportFarmField.objects.filter(bale_id=bale_id,warehouse_wh_id=warehouse_wh_id)
-        if len(get_bale) == 1 :
-            get_bale_id = [i.id for i in get_bale][0]
-            get_bale = BaleReportFarmField.objects.get(id=get_bale_id)
-            reported_yeild = float(get_bale.net_wt.strip())
-            pf_sus = get_bale.ob5
-            level = get_bale.level
-            grade = get_bale.gr
-            leaf = get_bale.lf
-            staple = get_bale.st
-            length = get_bale.len_num
-            strength = get_bale.str_no
-            mic = get_bale.mic
-            storage_quanitty = get_bale.net_wt
-            if get_field.total_yield :
-                projected_yeild = float(get_field.total_yield)
-                reported_yeild = reported_yeild
-                yield_delta = reported_yeild - projected_yeild
-            else :
-                projected_yeild = ''
-                reported_yeild = reported_yeild
-                yield_delta = ''
-        #  search by Field 
-        else:
-            if get_field.total_yield :
-                projected_yeild = float(get_field.total_yield)
-            else:
-                projected_yeild = ''
-            reported_yeild = ''
-            yield_delta = ''
-            level = ''
-            grade = ''
-            leaf = ''
-            staple = ''
-            length = ''
-            strength = ''
-            mic = ''
-            storage_quanitty = ''
-    if crop == 'RICE' :
-        shipment = GrowerShipment.objects.filter(shipment_id=bale_id)
-        if shipment.exists() :
-            shipment = GrowerShipment.objects.get(shipment_id=bale_id)
-            variety = shipment.variety
-            field_name = shipment.field.name
-            field_id = shipment.field.id
-            reported_yeild = shipment.total_amount
-            storage_quanitty = shipment.total_amount
-
-            if get_field.total_yield :
-                projected_yeild = float(get_field.total_yield)
-                reported_yeild = float(reported_yeild)
-                yield_delta = reported_yeild - projected_yeild
-            else :
-                projected_yeild = ''
-                reported_yeild = reported_yeild
-                yield_delta = ''
-        else:
-            pass
-        level = ''
-        grade = ''
-        leaf = ''
-        staple = ''
-        length = ''
-        strength = ''
-        mic = ''
-        storage_quanitty = ''
-    return {"get_select_crop":crop,"variety":variety,"field_name":field_name,"field_id":field_id,"grower_name":get_field.grower.name,
-        "grower_id":get_field.grower.id,"farm_name":get_field.farm.name,"farm_id":get_field.farm.id,
-        "harvest_date":harvest_date,"projected_yeild":projected_yeild,"reported_yeild":reported_yeild,"yield_delta":yield_delta,
-        "pf_sus":pf_sus,"water_savings":water_savings,"water_per_pound_savings":water_per_pound_savings,"land_use":land_use,
-        "less_GHG":less_GHG,"co2_eQ_footprint":co2_eQ_footprint,"premiums_to_growers":premiums_to_growers,"level":level,
-        "grade":grade,"leaf":leaf,"staple":staple,"length":length,"strength":strength,"mic":mic,"storage_quanitty":storage_quanitty}
 
 def get_Origin_deliveryid(crop,field_id,field_name,bale_id,warehouse_wh_id) :
     if type(field_id) != None and field_id !=  None :
@@ -256,7 +132,8 @@ def get_Origin_deliveryid(crop,field_id,field_name,bale_id,warehouse_wh_id) :
         "pf_sus":pf_sus,"water_savings":water_savings,"water_per_pound_savings":water_per_pound_savings,"land_use":land_use,
         "less_GHG":less_GHG,"co2_eQ_footprint":co2_eQ_footprint,"premiums_to_growers":premiums_to_growers,"level":level,
         "grade":grade,"leaf":leaf,"staple":staple,"length":length,"strength":strength,"mic":mic,"storage_quanitty":storage_quanitty}]
-    
+
+
 def Origin_searchby_Grower(crop,search_text,*grower_field_ids):
     return_lst = []
     if crop == 'COTTON' :
@@ -408,7 +285,8 @@ def Origin_searchby_Grower(crop,search_text,*grower_field_ids):
                                 "yield_delta":yield_delta, "storage_quanitty":storage_quanitty,"pf_sus":pf_sus,"water_savings":water_savings,"water_per_pound_savings":water_per_pound_savings,"land_use":land_use,
                                 "less_GHG":less_GHG,"co2_eQ_footprint":co2_eQ_footprint,"premiums_to_growers":premiums_to_growers}])
     return return_lst
-   
+
+
 def Origin_searchby_Processor(crop,*bale_id):
     return_lst = []
     if crop == 'COTTON' :
@@ -550,7 +428,6 @@ def Origin_searchby_Processor(crop,*bale_id):
     return return_lst
 
 
-
 def outbound1_Wip_Grower(crop,search_text,from_date,to_date,*grower_field_ids) :
     grower_field_ids = list(grower_field_ids)
     return_lst = []
@@ -573,22 +450,12 @@ def outbound1_Wip_Grower(crop,search_text,from_date,to_date,*grower_field_ids) :
         
     return return_lst
 
+
 def outbound1_Wip_field(crop,search_text,from_date,to_date,field_id):
     return_lst = []
     if crop == 'COTTON' :
         pass
-        # field = Field.objects.get(id=field_id)
-        # get_bale = BaleReportFarmField.objects.filter(field_name=search_text,ob4=field_id).values("id")
-        # if get_bale.exists() :
-        #     for i in get_bale :
-        #         get_bale_id = i["id"]
-        #         get_bale = BaleReportFarmField.objects.get(id=get_bale_id)
-        #         dt_class = get_bale.dt_class
-        #         quantity = get_bale.net_wt
-        #         deliveryid = get_bale.bale_id
-        #         transportation = ''
-        #         destination = get_bale.classing.processor.entity_name
-        #         return_lst.extend([{"deliveryid":deliveryid,"date":dt_class,"quantity":quantity,"transportation":transportation,"destination":destination}])
+        
     if crop == 'RICE' :
         get_shipment = GrowerShipment.objects.filter(field_id=field_id,status="").filter(Q(process_date__gte=from_date), Q(process_date__lte=to_date)).order_by('-id').values("id")
         if get_shipment.exists :
@@ -604,6 +471,7 @@ def outbound1_Wip_field(crop,search_text,from_date,to_date,field_id):
                 grower_name = get_shipment.grower.name
                 return_lst.extend([{"deliveryid":deliveryid,"source":grower_name,"skuid":skuid,"date":shipment_date,"quantity":quantity,"transportation":transportation,"destination":destination}])
     return return_lst
+
 
 def outbound1_Wip_Processor(crop,from_date,to_date,processorid):
     return_lst = []
@@ -624,6 +492,7 @@ def outbound1_Wip_Processor(crop,from_date,to_date,processorid):
             destination = get_shipment.processor.entity_name
             return_lst.extend([{"deliveryid":deliveryid,"source":grower_name,"date":shipment_date,"quantity":quantity,"transportation":transportation,"destination":destination}])
     return return_lst
+
 
 def outbound1_Wip_deliveryid(crop,search_text,warehouse_wh_id,from_date,to_date):
     return_lst = []
@@ -648,7 +517,6 @@ def outbound1_Wip_deliveryid(crop,search_text,warehouse_wh_id,from_date,to_date)
             grower_name = get_shipment.grower.name
             return_lst.extend([{"deliveryid":search_text,"source":grower_name,"skuid":skuid,"date":shipment_date,"quantity":quantity,"transportation":transportation,"destination":destination}])
     return return_lst
-
 
 
 def t1_Processor_grower(crop,check_grower_id,from_date,to_date) :
@@ -751,6 +619,7 @@ def t1_Processor_grower(crop,check_grower_id,from_date,to_date) :
                                 "date":dt_class,"pounds_shipped":pounds_shipped,"pounds_received":pounds_received,"pounds_delta":pounds_delta}])
                                 
     return return_lst
+
 
 def t1_Processor_field(crop,field_name,field_id,from_date,to_date) :
     return_lst = []
@@ -855,6 +724,7 @@ def t1_Processor_field(crop,field_name,field_id,from_date,to_date) :
                                     "grower":grower,"farm":farm,"field":field,}])
     return return_lst
 
+
 def t1_Processor_Processor(crop,processor_id,from_date,to_date,*bale_id) :
     return_lst = []
     if crop == 'COTTON' :
@@ -955,6 +825,7 @@ def t1_Processor_Processor(crop,processor_id,from_date,to_date,*bale_id) :
                                 "pounds_shipped":pounds_shipped,"pounds_received":pounds_received,"pounds_delta":pounds_delta,
                                 "grower":grower,"farm":farm,"field":field,}])      
     return return_lst
+
 
 def t1_Processor_deliveryid(crop,search_text,warehouse_wh_id,from_date,to_date) :
     return_lst = []
@@ -1057,7 +928,7 @@ def t1_Processor_deliveryid(crop,search_text,warehouse_wh_id,from_date,to_date) 
                                     "grower":grower,"farm":farm,"field":field}])
     return return_lst
 
-# 20-03-23
+
 def outbound2_Wip_Grower(crop,check_grower_id,from_date,to_date,*grower_field_ids):
     grower_field_ids = list(grower_field_ids)
     return_lst = []
@@ -1083,6 +954,7 @@ def outbound2_Wip_Grower(crop,check_grower_id,from_date,to_date,*grower_field_id
             return_lst.extend([{"deliveryid":purchase_order_number,"storage_skuid":storage_skuid,"date":date_pulled,"quantity":volume_shipped,"transportation":equipment_type,"destination":destination}])
     return return_lst
 
+
 def outbound2_Wip_Field(crop,field_name,field_id,from_date,to_date):
     return_lst = []
     if crop == 'COTTON' :
@@ -1104,6 +976,7 @@ def outbound2_Wip_Field(crop,field_name,field_id,from_date,to_date):
             storage_skuid = get_shipment.storage_bin_send  # add storage_bin
             return_lst.extend([{"deliveryid":purchase_order_number,"storage_skuid":storage_skuid,"date":date_pulled,"quantity":volume_shipped,"transportation":equipment_type,"destination":bin_location}])
     return return_lst
+
 
 def outbound_Wip_Processor(crop,processor_id,processor_type,from_date,to_date) :
     return_lst = []
@@ -1162,7 +1035,7 @@ def outbound2_Wip_deliveryid(crop,search_text,rice_shipment_id,from_date,to_date
             return_lst.extend([{"deliveryid":purchase_order_number,"storage_skuid":storage_skuid,"date":date_pulled,"quantity":volume_shipped,"transportation":equipment_type,"destination":bin_location}])
     return return_lst
 
-# 20-03-23
+
 def t2_Processor_grower(crop,check_grower_id,from_date,to_date) :
     return_lst = []
     if crop == 'COTTON' :
@@ -1408,6 +1281,7 @@ def t2_Processor_field(crop,field_name,field_id,from_date,to_date) :
 
         return return_lst
 
+
 def t2_Processor_Processor(crop,processor_id,from_date,to_date,*bale_id) :
     return_lst = []
     if crop == 'COTTON' :
@@ -1515,37 +1389,6 @@ def t2_Processor_Processor(crop,processor_id,from_date,to_date,*bale_id) :
         
         return return_lst
 
-def t3_Processor_Processor(crop,processor_id,from_date,to_date,*bale_id) :
-    return_lst = []
-    if crop == 'RICE' :
-        
-        check_shipment = list(bale_id)
-        get_shipment_data = ShipmentManagement.objects.filter(id__in=check_shipment,status='APPROVED')
-        if get_shipment_data.exists():
-            # shipment = ShipmentManagement.objects.all()
-            shipment = ShipmentManagement.objects.filter(processor_idd = processor_id)
-            # #print("shipment============",shipment)
-            for i in range(len(shipment)):
-                var = shipment[i].storage_bin_recive
-                grower_shipment = ShipmentManagement.objects.filter(storage_bin_send = var)
-                for r in grower_shipment :
-                    del_id = r.shipment_id
-                    shipment_date = r.approval_date
-                    get_shipment = ShipmentManagement.objects.get(storage_bin_send=var)
-                    processor_id = get_shipment.processor2_idd
-                    processor_name = get_shipment.processor2_name
-                    sku_id = get_shipment.storage_bin_send
-                    pounds_shipped = r.total_amount
-                    pounds_received = r.received_amount
-                    pounds_delta = ''
-                    try:
-                        pounds_delta = float(pounds_shipped) - float(pounds_received)
-                    except:
-                        pounds_delta = ''
-                    return_lst.extend([{"processor_name":processor_name,"processor_id":processor_id,"deliveryid":del_id,"date":shipment_date,
-                                "pounds_shipped":pounds_shipped,"pounds_received":pounds_received,"pounds_delta":pounds_delta,"skuid":sku_id}])
-        
-            return return_lst
 
 def t2_Processor_deliveryid(crop,search_text,warehouse_wh_id,from_date,to_date) :
     return_lst = []
@@ -1665,7 +1508,8 @@ def t2_Processor_deliveryid(crop,search_text,warehouse_wh_id,from_date,to_date) 
                                 "pounds_shipped":pounds_shipped,"pounds_received":pounds_received,"pounds_delta":pounds_delta,"skuid":sku_id}])
 
         return return_lst
-    
+
+
 def get_processor_type(processor_name):
     check_processor = Processor.objects.filter(entity_name=processor_name)
     if check_processor:
@@ -1682,6 +1526,7 @@ def get_processor_type(processor_name):
         else:
             processor_details = None
     return processor_details
+
 
 def processor_traceability_report_response(processor_id,processor_type, from_date, to_date, search_text):
     context = {}
@@ -1948,6 +1793,7 @@ def processor_traceability_report_response(processor_id,processor_type, from_dat
     else:
         context['no_rec_found_msg'] = "No Records Found"
     return context
+
 
 def skuid_traceability_response(search_text):
     context = {}
@@ -2649,8 +2495,7 @@ def traceability_report_list(request):
                 context['get_search_by'] = get_search_by
                 
                 if select_crop == 'COTTON' :
-                    # Origin ........
-                    # priority order [grower,field,processor, delivery id]
+                    # Origin ........                   
                     # search by Grower ....
                     if get_search_by and get_search_by == 'grower' :
                         check_grower = Grower.objects.filter(name__icontains=search_text)
@@ -2712,7 +2557,7 @@ def traceability_report_list(request):
                                 t1_processor = t1_Processor_Processor('COTTON',processor_id,from_date,to_date,*bale_id)
                                 context["t1_processor"] = t1_processor
                                 # 20-03-23
-                                outbound2_wip = outbound2_Wip_Processor('COTTON',search_text,processor_id,from_date,to_date)         
+                                outbound2_wip = outbound_Wip_Processor('COTTON',search_text,processor_id,from_date,to_date)         
                                 context["outbound2_wip"] = outbound2_wip
                                 t2_processor =  t2_Processor_Processor('COTTON',processor_id,from_date,to_date,*bale_id) 
                                 context["t2_processor"] = t2_processor
@@ -2731,8 +2576,7 @@ def traceability_report_list(request):
                             get_origin_details = get_Origin_deliveryid('COTTON',field_id,field_name,search_text,warehouse_wh_id)
                             context["origin_context"] = get_origin_details
                             context["search_by"] = "bale_id"
-                            # outbound1_wip = outbound1_Wip_deliveryid('COTTON',search_text,warehouse_wh_id)
-                            # context["outbound1_wip"] = outbound1_wip
+                            
                             t1_processor = t1_Processor_deliveryid('COTTON',search_text,warehouse_wh_id,from_date,to_date)
                             context["t1_processor"] = t1_processor
                             t2_processor =  t2_Processor_deliveryid('COTTON',search_text,warehouse_wh_id,from_date,to_date)
@@ -2744,8 +2588,7 @@ def traceability_report_list(request):
                             get_origin_details = get_Origin_deliveryid('COTTON',field_id,field_name,f"0{search_text}",warehouse_wh_id)
                             context["origin_context"] = get_origin_details
                             context["search_by"] = "bale_id"
-                            # outbound1_wip = outbound1_Wip_deliveryid('COTTON',f"0{search_text}",warehouse_wh_id)
-                            # context["outbound1_wip"] = outbound1_wip
+                            
                             t1_processor = t1_Processor_deliveryid('COTTON',f"0{search_text}",warehouse_wh_id,from_date,to_date)
                             context["t1_processor"] = t1_processor  
                             t2_processor =  t2_Processor_deliveryid('COTTON',f"0{search_text}",warehouse_wh_id,from_date,to_date)
@@ -2773,7 +2616,6 @@ def traceability_report_list(request):
                                 entity_name = LinkGrowerToProcessor.objects.filter(grower_id=check_grower_id).first().processor.entity_name
                                 t1_processor = list(GrowerShipment.objects.filter(processor_id=processor_id, grower_id=check_grower_id, status="APPROVED").values("processor__entity_name","shipment_id","sku","approval_date","grower__name","field__farm__name","field__name","total_amount","received_amount"))
                                 
-
                                 if len(t1_processor) != 0:
                                     for entry in t1_processor:
                                         entry["processor_name"] = entry["processor__entity_name"]
@@ -2931,6 +2773,7 @@ def autocomplete_suggestions(request,select_search,select_crop_id):
     # #print(responce)
     return JsonResponse(responce)
 
+
 @login_required()
 def showsustainability_metrics(request,get_search_by,field_id):
     get_field = Field.objects.get(id=field_id)
@@ -2983,6 +2826,7 @@ def showsustainability_metrics(request,get_search_by,field_id):
     responce = {"pf_sus":pf_sus,"harvest_date":harvest_date,"water_savings":water_savings,"water_per_pound_savings":water_per_pound_savings,
                 "land_use":land_use,"less_GHG":less_GHG,"co2_eQ_footprint":co2_eQ_footprint,"premiums_to_growers":premiums_to_growers}
     return JsonResponse(responce)
+
 
 @login_required()
 def showquality_metrics(request,get_search_by,delivery_idd):
@@ -3153,6 +2997,7 @@ def traceability_report_Origin_csv_download(request,select_crop,get_search_by,se
     else:
         return redirect ('dashboard')
 
+
 @login_required()
 def traceability_report_WIP1_csv_download(request,select_crop,get_search_by,search_text,from_date,to_date):
     if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
@@ -3228,6 +3073,7 @@ def traceability_report_WIP1_csv_download(request,select_crop,get_search_by,sear
         return response
     else:
         return redirect ('dashboard')
+
 
 @login_required()
 def traceability_report_T1_Processor_csv_download(request,select_crop,get_search_by,search_text,from_date,to_date):
@@ -3475,6 +3321,7 @@ def traceability_report_WIP2_csv_download(request,select_crop,get_search_by,sear
         return response
     else:
         return redirect ('dashboard')
+
 
 @login_required()
 def traceability_report_T2_Processor_csv_download(request,select_crop,get_search_by,search_text,from_date,to_date):
@@ -3977,7 +3824,7 @@ def traceability_report_all_csv_download(request,select_crop,get_search_by,searc
                         writer.writerow([""])
                         writer.writerow(["Outbound 1 WIP"])
                         writer.writerow(['DELIVERY ID OUTBOUND', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
-                        # outbound1_wip = outbound1_Wip_Grower('COTTON',search_text,from_date,to_date,*grower_field_ids)         
+                               
                         writer.writerow([""])
                         writer.writerow(["T1 Processor"])
                         writer.writerow(['PROCESSOR NAME', 'PROCESSOR ID #', 'DELIVERY ID', 'Grower', 'Farm', 'Field', 'DATE', 'QUANTITY POUNDS SHIPPED', 
@@ -3990,7 +3837,7 @@ def traceability_report_all_csv_download(request,select_crop,get_search_by,searc
                         writer.writerow([""])
                         writer.writerow(["Outbound 2 WIP"])
                         writer.writerow(['DELIVERY ID OUTBOUND', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
-                        # outbound2_wip = outbound2_Wip_Grower('COTTON',check_grower_id,from_date,to_date,*grower_field_ids)         
+                       
                         writer.writerow([""])
                         writer.writerow(["T2 Processor"])
                         writer.writerow(['PROCESSOR NAME', 'PROCESSOR ID #', 'DELIVERY ID', 'Grower', 'Farm', 'Field', 'DATE', 'QUANTITY POUNDS SHIPPED', 
@@ -4036,7 +3883,7 @@ def traceability_report_all_csv_download(request,select_crop,get_search_by,searc
                     writer.writerow([""])
                     writer.writerow(["Outbound 2 WIP"])
                     writer.writerow(['DELIVERY ID OUTBOUND', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
-                    # outbound2_wip = outbound2_Wip_Field('COTTON',field_name,field_id,from_date,to_date)         
+                           
                     writer.writerow([""])
                     writer.writerow(["T2 Processor"])
                     writer.writerow(['PROCESSOR NAME', 'PROCESSOR ID #', 'DELIVERY ID', 'Grower', 'Farm', 'Field', 'DATE', 'QUANTITY POUNDS SHIPPED', 
@@ -4111,8 +3958,7 @@ def traceability_report_all_csv_download(request,select_crop,get_search_by,searc
                             writer.writerow([i["get_select_crop"], i["variety"], i["field_name"], i["grower_name"], i["farm_name"], i["harvest_date"], 
                             i["projected_yeild"], i["reported_yeild"], i["yield_delta"],i["pf_sus"],i["water_savings"],i["land_use"],i["premiums_to_growers"],
                             i["co2_eQ_footprint"],i["water_per_pound_savings"]])
-                    # outbound1_wip = outbound1_Wip_deliveryid('COTTON',search_text,warehouse_wh_id)
-                    # context["outbound1_wip"] = outbound1_wip
+                    
                     writer.writerow([""])
                     writer.writerow(["Outbound 1 WIP"])
                     writer.writerow(['DELIVERY ID OUTBOUND', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
@@ -4148,8 +3994,7 @@ def traceability_report_all_csv_download(request,select_crop,get_search_by,searc
                             writer.writerow([i["get_select_crop"], i["variety"], i["field_name"], i["grower_name"], i["farm_name"], i["harvest_date"], 
                             i["projected_yeild"], i["reported_yeild"], i["yield_delta"],i["pf_sus"],i["water_savings"],i["land_use"],i["premiums_to_growers"],
                             i["co2_eQ_footprint"],i["water_per_pound_savings"]])
-                    # outbound1_wip = outbound1_Wip_deliveryid('COTTON',f"0{search_text}",warehouse_wh_id)
-                    # context["outbound1_wip"] = outbound1_wip
+                    
                     writer.writerow([""])
                     writer.writerow(["Outbound 1 WIP"])
                     writer.writerow(['DELIVERY ID OUTBOUND', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
@@ -4309,7 +4154,7 @@ def traceability_report_all_csv_download(request,select_crop,get_search_by,searc
                         writer.writerow([""])
                         writer.writerow(["Outbound 2 WIP"])
                         writer.writerow(['DELIVERY ID OUTBOUND', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
-                        outbound2_wip = outbound2_Wip_Processor('RICE',search_text,processor_id,from_date,to_date)         
+                        outbound2_wip = outbound_Wip_Processor('RICE',search_text,processor_id,from_date,to_date)         
                         for i in outbound2_wip:
                             writer.writerow([i["deliveryid"] , i["date"], i["quantity"], i["transportation"], i["destination"]])
                         writer.writerow([""])

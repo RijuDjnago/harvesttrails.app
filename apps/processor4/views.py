@@ -360,7 +360,16 @@ def inbound_shipment_list(request):
                     queryset = list(ShipmentManagement.objects.filter(receiver_processor_type="T4", processor2_idd=context["select_processor"]).filter(Q(shipment_id__icontains = search_name)|Q(processor_e_name__icontains = search_name)).values())
                 else:   
                     queryset = list(ShipmentManagement.objects.filter(receiver_processor_type="T4", processor2_idd=context["select_processor"]).values())
-            context["table_data"] = queryset.order_by("-id")
+            queryset = queryset.order_by("-id")
+            paginator = Paginator(queryset, 100)
+            page = request.GET.get('page')
+            try:
+                report = paginator.page(page)
+            except PageNotAnInteger:
+                report = paginator.page(1)
+            except EmptyPage:
+                report = paginator.page(paginator.num_pages)
+            context["table_data"] = report
             return render (request, 'processor4/inbound_management_table.html', context)
         else:
             return redirect('dashboard')  
