@@ -21,6 +21,8 @@ from apps.processor.views import generate_shipment_id
 import qrcode, time, json
 from django.core.files.base import ContentFile
 from apps.processor.views import calculate_milled_volume
+from apps.processor.views import create_sku_list
+
 
 # Create your views here.
 characters = list(string.ascii_letters + string.digits + "@#$%")
@@ -406,6 +408,7 @@ def rejected_shipments_csv_download_for_t4(request) :
     else:
         return redirect ('dashboard')
 
+
 @login_required()
 def all_shipments_csv_download_for_t4(request): 
     # superuser............... 
@@ -505,7 +508,8 @@ def inbound_shipment_edit(request, pk):
     try:
         # Superuser.................
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
-            context["shipment"] = ShipmentManagement.objects.get(id=pk)
+            shipment = ShipmentManagement.objects.get(id=pk)
+            context["shipment"] = shipment
             files = ShipmentManagement.objects.filter(id=pk).first().files.all().values('file', 'id')
             files_data = []
             for j in files:
@@ -540,6 +544,9 @@ def inbound_shipment_edit(request, pk):
                 ShipmentManagement.objects.filter(id=pk).update(status=status,moisture_percent=moisture_percent, recive_delivery_date=approval_date,
                                                                 received_weight=received_weight,ticket_number=ticket_number,
                                                                 storage_bin_recive=storage_bin_recive, reason_for_disapproval=reason_for_disapproval)
+                
+                processor2_id = Processor2.objects.filter(id=int(shipment.processor2_idd)).first().id
+                create_sku_list(processor2_id, shipment.receiver_processor_type, storage_bin_recive)
                 files = request.FILES.getlist('new_files')
                 shipment = ShipmentManagement.objects.get(id=pk)
                 for file in files:
@@ -617,8 +624,10 @@ def receive_shipment(request):
                 bin_pull, bin_pull_type = get_bin_pull.split("_")[0], get_bin_pull.split("_")[1]
                 print(bin_pull, bin_pull_type)
                 if bin_pull_type == "T1":
+                    select_pro_id = Processor.objects.filter(id=int(bin_pull)).first().id
                     select_processor_name = Processor.objects.filter(id=int(bin_pull)).first().entity_name
                 else:
+                    select_pro_id = Processor2.objects.filter(id=int(bin_pull)).first().id
                     select_processor_name = Processor2.objects.filter(id=int(bin_pull)).first().entity_name
                 milled_value = data.get("milled_value")
                 context.update({
@@ -692,6 +701,10 @@ def receive_shipment(request):
                                 purchase_order_number=context["purchase_number"],lot_number=context["lot_number"],volume_shipped=context["volume_shipped"],milled_volume=milled_volume,volume_left=volume_left,editable_obj=True,status=context["status"],
                                 storage_bin_recive=context["receiver_sku_id"],ticket_number=context["ticket_number"],received_weight=context["received_weight"],processor2_idd=select_proc_id,processor2_name=select_destination_, receiver_processor_type=receiver_processor_type)
                         save_shipment_management.save()
+
+                        create_sku_list(select_pro_id, save_shipment_management.sender_processor_type, save_shipment_management.storage_bin_send)
+                        processor2_id = Processor2.objects.get(id=select_proc_id).id
+                        create_sku_list(processor2_id, save_shipment_management.receiver_processor_type, save_shipment_management.storage_bin_recive)
                         files = request.FILES.getlist('files')
                         for file in files:
                             new_file = File.objects.create(file=file)
@@ -918,8 +931,6 @@ def processor4_list(request):
 ##############
 from apps.processor2.forms import *
 import shapefile
-
-
 @login_required()
 def addlocation_processor4(request):
     context ={}

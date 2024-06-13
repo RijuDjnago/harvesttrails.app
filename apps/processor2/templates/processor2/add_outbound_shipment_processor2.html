@@ -52,7 +52,7 @@
                             <label for="id_bin_location_pull">Bin Location Pulled from<span class="asteriskField">*</span></label>
                             <select name="bin_pull" id="pull" class="textinput textInput form-control selectpicker" data-live-search="true" onchange="this.form.submit()">
                                 {% if select_processor_name %}
-                                <option value="{{select_processor_id}}" selected>{{select_processor_name}}</option>
+                                <option id="pro_id" value="{{select_processor_id}}" selected>{{select_processor_name}}</option>
                                 {% else %}
                                 <option value="all" disabled selected>Select Bin Location Pulled from</option>
                                 {% endif %}
@@ -61,6 +61,7 @@
                                 <option value="{{pro.id}}">{{pro.entity_name}}</option>
                                 {% endfor %}  
                             </select>
+                            <input type="hidden" name="pro_type" id="pro_type" value="{{processor_type}}">
                         </div>
                         
                         <div class="col-md-6 mb-2 text-center">
@@ -94,15 +95,24 @@
                         <div class="col-md-4 mb-2">
                             <div>
                                 <label for="equipment_id">Equipment ID<span class="asteriskField">*</span></label>
-                                <input type="text" id="equipment_id" name="equipment_id" class="textinput textInput form-control" value="{{equipment_id}}">
+                                <input type="text" id="equipment_id" name="equipment_id"class="textinput textInput form-control" value="{{equipment_id}}">
                                 <p id="alert_msg1" style="color:red"></p>
                             </div>
-                        </div>
+                        </div>                       
                         <div class="col-md-4 mb-2">
-                            <div>
+                            <div>                                
                                 <label for="storage_bin_id">Storage Bin ID (SKU ID)<span class="asteriskField">*</span></label>
-                                <input type="text" id="storage_bin_id" name="storage_bin_id" class="textinput textInput form-control" autocomplete="off">
-                                <p id="alert_msg3" style="color:red"></p>
+                                <input type="text" id="storage_bin_id" name="storage_bin_id"  class="textinput textInput form-control" list="suggestions" autocomplete="off" placeholder="Sender SKU ID"> 
+                                <datalist id="suggestions">
+                                    {% for data in sender_sku_id_list %}
+                                    <option value="{{data}}">                                        
+                                    {% endfor %}
+                                </datalist>
+                                    {% if select_processor_name %} 
+                                    <p id="alert_msg3" style="color:red"></p>                               
+                                    {% else %}
+                                    <p id="warning" style="color:grey;"> <i>First select bin pull</i> </p> 
+                                    {% endif %}
                             </div>
                         </div>
                         <div class="col-md-4 mb-2">
@@ -212,19 +222,6 @@
    
 </script>
 
-<script>
-    $(function() {
-        $('#storage_bin_id').on('input', function() {
-            var availableTags  = {{ select_search_sku_json|safe }};
-           // console.log("availableTags==================================",availableTags)
-            $("#storage_bin_id").autocomplete({
-                source: availableTags
-            })
-        });
-    }); 
-    
-</script>
- 
 <script>
     
     $(document).ready(function() {

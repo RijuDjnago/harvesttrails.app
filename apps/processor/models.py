@@ -48,6 +48,8 @@ class Location(models.Model):
     longitude = models.CharField(max_length=200,null=True, blank=True,verbose_name='Longitude')
     eschlon_id = models.CharField(max_length=200, null=True, blank=True)
 
+    def __str__(self):
+        return f"Processor= {self.processor}, Location = {self.name}"
 
 class LinkGrowerToProcessor(models.Model):
     processor = models.ForeignKey(Processor, on_delete=models.CASCADE, null=True, blank=True,verbose_name='Select Processor')
