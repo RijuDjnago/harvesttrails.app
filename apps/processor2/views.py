@@ -24,6 +24,7 @@ import qrcode  # Ensure you have the qrcode library installed
 from django.core.files.base import ContentFile
 from apps.processor.views import calculate_milled_volume
 # Create your views here.
+from apps.processor.views import create_sku_list, get_sku_list
 
 
 characters = list(string.ascii_letters + string.digits + "@#$%")
@@ -1066,6 +1067,7 @@ def add_outbound_shipment_processor2(request):
                 context.update({
                     "select_processor_name": Processor2.objects.filter(id=int(bin_pull)).first().entity_name,
                     "select_processor_id": bin_pull,
+                    "processor_type":"T2",
                     "processor2_id": data.get("processor2_id"),
                     "exp_yield": data.get("exp_yield"),
                     "exp_yield_unit_id": data.get("exp_yield_unit_id"),
@@ -1088,7 +1090,7 @@ def add_outbound_shipment_processor2(request):
                     processor4 = LinkProcessorToProcessor.objects.filter(processor_id=bin_pull, linked_processor__processor_type__type_name = "T4").values("linked_processor__id", "linked_processor__entity_name")
                     context["processor3"] = processor3
                     context["processor4"] = processor4
-                
+                    context["sender_sku_id_list"] = get_sku_list(int(bin_pull),"T2")["data"]
                     return render(request, 'processor2/add_outbound_shipment_processor2.html', context)
                 else:
                     if context["weight_prod_unit_id"] == "LBS" :
@@ -1120,6 +1122,9 @@ def add_outbound_shipment_processor2(request):
                             purchase_order_number=context["purchase_number"],lot_number=context["lot_number"],volume_shipped=context["volume_shipped"],milled_volume=milled_volume,volume_left=volume_left,editable_obj=True,
                             processor2_idd=select_proc_id,processor2_name=select_destination_, receiver_processor_type=receiver_processor_type)
                     save_shipment_management.save()
+
+                    processor2_id = Processor2.objects.filter(id=int(bin_pull)).first().id
+                    create_sku_list(processor2_id, "T2", context["storage_bin_id"])
                     files = request.FILES.getlist('files')
                     for file in files:
                         new_file = File.objects.create(file=file)
@@ -1327,7 +1332,8 @@ def inbound_shipment_edit(request, pk):
     try: 
         # superuser...............       
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role() or request.user.is_processor2:
-            context["shipment"] = ShipmentManagement.objects.get(id=pk)
+            shipment = ShipmentManagement.objects.get(id=pk)
+            context["shipment"] = shipment
             files = ShipmentManagement.objects.filter(id=pk).first().files.all().values('file')
             files_data = []
             for j in files:
@@ -1359,6 +1365,9 @@ def inbound_shipment_edit(request, pk):
                 ShipmentManagement.objects.filter(id=pk).update(status=status,moisture_percent=moisture_percent, recive_delivery_date=approval_date,
                                                                 received_weight=received_weight,ticket_number=ticket_number,
                                                                 storage_bin_recive=storage_bin_recive, reason_for_disapproval=reason_for_disapproval)
+                
+                processor2_id = Processor2.objects.filter(id=int(shipment.processor2_idd)).first().id
+                create_sku_list(processor2_id, shipment.receiver_processor_type, storage_bin_recive)
                 files = request.FILES.getlist('new_files')
                 shipment = ShipmentManagement.objects.get(id=pk)
                 for file in files:
@@ -1401,15 +1410,20 @@ def recive_shipment(request):
                 "select_processor_name": None,
                 "select_processor_id": None,
                 "milled_value": "None",
+                "selected_processor_sku_id_list":[],
+                "selected_destination": None,
+                "selected_processor_sku_id_list_processor2": []
             })
             if request.method == "POST":
                 data = request.POST
                 bin_pull = data.get("bin_pull")
                 milled_value = data.get("milled_value")
+                
+                processor2_id = data.get("processor2_id")
                 context.update({
                     "select_processor_name": Processor.objects.filter(id=int(bin_pull)).first().entity_name,
                     "select_processor_id": bin_pull,
-                    "processor2_id": data.get("processor2_id"),
+                    "processor2_id": processor2_id,
                     "exp_yield": data.get("exp_yield"),
                     "exp_yield_unit_id": data.get("exp_yield_unit_id"),
                     "moist_percentage": data.get("moist_percentage"),
@@ -1436,7 +1450,17 @@ def recive_shipment(request):
                 
                     processor2 = LinkProcessor1ToProcessor.objects.filter(processor1_id=bin_pull, processor2__processor_type__type_name = "T2").values("processor2__id", "processor2__entity_name")
                     context["processor2"] = processor2
+
+                    context["selected_processor_sku_id_list"] = get_sku_list(int(bin_pull),sender_processor_type)["data"]
+                    if processor2_id:
+                        print(context)
+                        context["selected_destination"] = processor2_id.split()[0]
+                        context["selected_destination_name"] = Processor2.objects.filter(id=processor2_id.split()[0]).first().entity_name
+                        context["selected_processor_sku_id_list_processor2"] = get_sku_list(int(processor2_id.split()[0]),"T2")["data"]
+                        print(get_sku_list(int(processor2_id.split()[0]),"T2")["data"])
                     return render(request, 'processor2/recive_delevery.html', context)
+                
+                    
                 else:
                     if context["milled_value"] < context["volume_shipped"]:
                         context["error_messages"] = "Processor does not have the required milled volume."
@@ -1467,6 +1491,11 @@ def recive_shipment(request):
                                 purchase_order_number=context["purchase_number"],lot_number=context["lot_number"],volume_shipped=context["volume_shipped"],milled_volume=milled_volume,volume_left=volume_left,editable_obj=True,status=context["status"],
                                 storage_bin_recive=context["receiver_sku_id"],ticket_number=context["ticket_number"],received_weight=context["received_weight"],processor2_idd=select_proc_id,processor2_name=select_destination_, receiver_processor_type=receiver_processor_type)
                         save_shipment_management.save()
+
+                        processor1_id = Processor.objects.filter(id=int(bin_pull)).first().id
+                        create_sku_list(processor1_id, save_shipment_management.sender_processor_type, save_shipment_management.storage_bin_send)
+                        processor2_id = Processor2.objects.get(id=select_proc_id).id
+                        create_sku_list(processor2_id, save_shipment_management.receiver_processor_type, save_shipment_management.storage_bin_recive)
                         files = request.FILES.getlist('files')
                         for file in files:
                             new_file = File.objects.create(file=file)

@@ -138,13 +138,13 @@ STATUS_CHOICES = (
     ("", ""),
 )
 
-Processor_Type =[
+Processor_Type =(
     ("T1","T1"),
     ("T2","T2"),
     ("T3","T3"),
     ("T4","T4"),
     ("Buyer","Buyer"),
-]
+)
 
 class ShipmentManagement(models.Model):
     shipment_id = models.CharField(max_length=200, null=True, blank=True)
@@ -192,3 +192,24 @@ class LinkProcessor1ToProcessor(models.Model):
 
     def __str__(self):
         return f"Processor = {self.processor1}, Linked processor = {self.processor2}"
+
+Processor_Type2 = (
+    ("T1", "T1"),
+    ("T2", "T2"),
+)
+
+class Processor_sku(models.Model):
+    processor_type = models.CharField(max_length=5, choices=Processor_Type2)
+    processor1 = models.ForeignKey(Processor, on_delete=models.CASCADE, null=True, blank=True)
+    processor2 = models.ForeignKey(Processor2, on_delete=models.CASCADE, null=True, blank=True)
+    sku_id = models.CharField(max_length=100)
+
+
+    def _str_(self):
+        p_type = self.processor_type
+        if p_type == "T1":
+            return f"{p_type} || {self.processor1_id.entity_name} || SKU ID:-{self.sku_id}"
+        else:
+            return f"{p_type} || {self.processor2_id.entity_name} || SKU ID:-{self.sku_id}"
+
+        

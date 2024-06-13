@@ -138,10 +138,6 @@
                                 <option value=4750>ROLLS</option>
                                 {% endif %}
 
-                                <!-- <option value=1>LBS</option>
-                                <option value=3800>MODULES (8 ROLLS)</option>
-                                <option value=1900>SETS (4 ROLLS)</option>
-                                <option value=475>ROLLS</option> -->
                             </select>
                         </div>
                         <div class="col-md-1 mb-2 text-center">
@@ -181,10 +177,7 @@
                                 {% else %}
                                 <option value=4750>ROLLS</option>
                                 {% endif %}
-                                <!-- <option value=1>LBS</option>
-                                <option value=3800>MODULES (8 ROLLS)</option>
-                                <option value=1900>SETS (4 ROLLS)</option>
-                                <option value=475>ROLLS</option> -->
+                                
                             </select>
                         </div>
                         <div class="col-md-1 mb-2 text-center">
@@ -217,7 +210,12 @@
                                 <div class="row">
                                     <div class="col-md-3 mb-2">  
                                         <label for="">SKU ID<span class="asteriskField">*</span></label>
-                                        <input type="text" name="sku_id" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;">
+                                        <input type="text" name="sku_id" id="sku_id" class="textinput textInput form-control" list="suggestions" autocomplete="off" placeholder="SKU ID">
+                                        <datalist id="suggestions">
+                                            {% for data in receiver_sku_id_list %}
+                                            <option value="{{data}}">                                        
+                                            {% endfor %}
+                                        </datalist>                                            
                                     </div>
                                     <div class="col-md-3 mb-2">
                                         <label for="">Recieved Weight<span class="asteriskField">*</span></label>
@@ -557,7 +555,12 @@
                         </div>
                         <div class="col-md-4 mb-2 approved-fields">
                             <label for="storage_bin_recive">Receiver SKU Id<span class="asteriskField">*</span></label>
-                            <input type="text" name="storage_bin_recive" value="{% if shipment.storage_bin_recive %}{{shipment.storage_bin_recive}}{% else %}{% endif %}" class="textinput textInput form-control" id="storage_bin_recive">
+                            <input type="text" name="storage_bin_recive" value="{% if shipment.storage_bin_recive %}{{shipment.storage_bin_recive}}{% else %}{% endif %}" class="textinput textInput form-control" id="storage_bin_recive" list="suggestions1" autocomplete="off">
+                            <datalist id="suggestions1">
+                                {% for data in receiver_sku_id_list %}
+                                <option value="{{data}}">                                        
+                                {% endfor %}
+                            </datalist>
                             <p id="alert_msg" style="color:red"></p>
                         </div>
                         <div class="col-md-4 mb-2 disapproved-fields">

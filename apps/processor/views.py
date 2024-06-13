@@ -108,7 +108,44 @@ def calculate_milled_volume(processor_id, processor_type):
         else:
             milled_volume = 0   
     return milled_volume
-    
+
+
+def get_sku_list(processor_id, processor_type):
+    try:
+        if processor_type == "T1":
+            sku_list = list(Processor_sku.objects.filter(processor_type=processor_type,processor1_id=processor_id).values_list("sku_id", flat=True))
+        else:
+            sku_list = list(Processor_sku.objects.filter(processor_type=processor_type,processor2_id=processor_id).values_list("sku_id", flat=True))
+        return {"status":True, "error":"", "data":sku_list}
+    except Exception as e:
+        return {"status":True, "error":str(e), "data":[]}
+
+def create_sku_list(processor_id, processor_type, sku_id):
+        # print("create function called")
+    try:
+        if processor_type == "T1":
+            check_sku_id = Processor_sku.objects.filter(processor_type=processor_type, processor1_id=processor_id, sku_id=sku_id)
+            if not check_sku_id.exists():
+                Processor_sku.objects.create(processor_type=processor_type, processor1_id=processor_id, sku_id=sku_id)
+            else:
+                pass
+        else:
+            check_sku_id = Processor_sku.objects.filter(processor_type=processor_type, processor2_id=processor_id, sku_id=sku_id)
+            if not check_sku_id.exists():
+                Processor_sku.objects.create(processor_type=processor_type, processor2_id=processor_id, sku_id=sku_id)
+            else:
+                pass
+        return {"status":True, "error":""}
+    except Exception as e:
+        return {"status":False, "error":str(e)}
+
+
+@login_required()
+def autocomplete_suggestions_sku(request,pro_id,pro_type):
+    get_sku_list_ = get_sku_list(pro_id, pro_type)
+    response = {'select_search':get_sku_list_["data"]}
+    return JsonResponse(response)
+
 
 @login_required()
 def AddProcessorView(request):
@@ -1952,8 +1989,6 @@ def qr_code_view(request,pk):
 ###update
 import qrcode 
 from django.core.files.base import ContentFile
-
-
 @login_required()
 def grower_shipment_view(request,pk):
     if request.user.is_authenticated:
@@ -2616,15 +2651,13 @@ def processor_inbound_management_delete(request,pk):
 def processor_inbound_management_edit(request,pk):
     context = {}
     try:
-        if request.user.is_authenticated:        
-            # Processor Location Add ..
-            shipment = GrowerShipment.objects.get(pk=pk)
-            selected_grower = shipment.grower       
-            id_grower = selected_grower.id
-            selected_processor = shipment.processor
+        if request.user.is_authenticated:                   
             # Superuser and Processor................
             if request.user.is_superuser or request.user.is_processor or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
-            
+                shipment = GrowerShipment.objects.get(pk=pk)
+                selected_grower = shipment.grower       
+                id_grower = selected_grower.id
+                selected_processor = shipment.processor
                 context['selected_grower'] = selected_grower
                 context["selected_processor"] = selected_processor
 
@@ -2664,7 +2697,8 @@ def processor_inbound_management_edit(request,pk):
                 context['recieved_weight'] = recieved_weight
 
                 sku_id = shipment.sku
-                context['sku_id'] = sku_id   #add sku
+                context['sku_id'] = sku_id   #add 
+                context["receiver_sku_id_list"] = get_sku_list(int(selected_processor.id),"T1")["data"]
                 
                 ticket_number = shipment.token_id
                 context['ticket_number'] = ticket_number
@@ -2757,7 +2791,7 @@ def processor_inbound_management_edit(request,pk):
                             shipment.bin_location_processor=bin_location_processor
                             
                             shipment.save()
-                            
+                            create_sku_list(shipment.processor.id, "T1", sku_id)
 
                             msg_subject = 'Shipment is received as Approved'
                             msg_body = f'Dear Admin,\n\nA new shipment has been approved.\n\nThe details of the same are as below: \n\nShipment ID: {shipment.shipment_id} \nGrower: {shipment.grower.name} \nField: {shipment.field.name} \nReceived weight: {recieved_weight} LBS \nReceived date: {shipment.approval_date} \n\nRegards\nCustomer Service\nAgreeta'
@@ -2871,7 +2905,9 @@ def processor_inbound_management_edit(request,pk):
                 return render(request, 'processor/processor_inbound_management_edit.html',context)
             # Processor2............
             elif request.user.is_processor2:
-                context["shipment"] = ShipmentManagement.objects.get(id=pk)
+                shipment = ShipmentManagement.objects.get(id=pk)
+                context["shipment"] = shipment
+                context["receiver_sku_id_list"] = get_sku_list(int(shipment.processor2_idd), "T2")["data"]
                 files = ShipmentManagement.objects.filter(id=pk).first().files.all().values('file')
                 files_data = []
                 for j in files:
@@ -2905,6 +2941,8 @@ def processor_inbound_management_edit(request,pk):
                     ShipmentManagement.objects.filter(id=pk).update(status=status,moisture_percent=moisture_percent, recive_delivery_date=approval_date,
                                                                     received_weight=received_weight,ticket_number=ticket_number,
                                                                     storage_bin_recive=storage_bin_recive, reason_for_disapproval=reason_for_disapproval)
+                    processor2_id = Processor2.objects.filter(id=shipment.processor2_idd).first().id
+                    create_sku_list(processor2_id, shipment.receiver_processor_type, storage_bin_recive)
                     files = request.FILES.getlist('new_files')
                     shipment = ShipmentManagement.objects.get(id=pk)
                     for file in files:
@@ -3111,6 +3149,7 @@ def processor_receive_delivery(request):
                 user_email = request.user.email
                 p = ProcessorUser.objects.get(contact_email=user_email)
                 processor_id = Processor.objects.get(id=p.processor_id).id
+                context["sku_id_list"] = get_sku_list(processor_id, "T1")["data"]
                 grower = LinkGrowerToProcessor.objects.filter(processor_id=processor_id)
                 grower_id = [i.grower_id for i in grower]
                 get_grower = Grower.objects.filter(id__in = grower_id).order_by('name')
@@ -3213,6 +3252,7 @@ def processor_receive_delivery(request):
                                                             sustainability_score=surveyscore,amount=amount1,variety=field.variety,crop=field.crop,shipment_id=shipment_id,processor_id=processor_id,grower_id=selected_grower.id,
                                                             storage_id=id_storage,field_id=id_field,module_number=module_number,unit_type=id_unit1,received_amount =recieved_weight,sku = sku_id,token_id=ticket_number,approval_date = approval_date,moisture_level=moisture_level,fancy_count=fancy_count,head_count=head_count,bin_location_processor=bin_location_processor)
                             shipment.save()
+                            create_sku_list(processor_id, "T1",sku_id)
                             for file in files:
                                 new_file = GrowerShipmentFile.objects.create(file=file)
                                 shipment.files.add(new_file)
@@ -3324,6 +3364,7 @@ def processor_receive_delivery(request):
                             id_storage = id_storage
 
                         processor_id = LinkGrowerToProcessor.objects.get(grower_id=selected_grower.id).processor_id
+                        context["sku_id_list"] = get_sku_list(int(processor_id), "T1")["data"]
                         if id_field and module_number:
                             field = Field.objects.get(id=id_field)
                             crop = field.crop
@@ -3347,6 +3388,8 @@ def processor_receive_delivery(request):
                                                             sustainability_score=surveyscore,amount=amount1,variety=field.variety,crop=field.crop,shipment_id=shipment_id,processor_id=processor_id,grower_id=selected_grower.id,
                                                             storage_id=id_storage,field_id=id_field,module_number=module_number,unit_type=id_unit1,received_amount =recieved_weight,sku = sku_id,token_id=ticket_number,approval_date = approval_date,moisture_level=moisture_level,fancy_count=fancy_count,head_count=head_count,bin_location_processor=bin_location_processor)
                             shipment.save()
+                            id_processor = Processor.objects.filter(id=processor_id).first().id
+                            create_sku_list(id_processor, "T1", sku_id)
                             for file in files:
                                 new_file = GrowerShipmentFile.objects.create(file=file)
                                 shipment.files.add(new_file)
@@ -3380,8 +3423,8 @@ def processor_receive_delivery(request):
                 p = ProcessorUser2.objects.get(contact_email=user_email)
                 processor_id = Processor2.objects.get(id=p.processor2_id).id    
                 processor_name= Processor2.objects.get(id=p.processor2_id).entity_name  
-                processor_type = Processor2.objects.get(id=p.processor2_id).processor_type.all().first().type_name  
-                context["processor_type"] = processor_type
+                processor_type = Processor2.objects.get(id=p.processor2_id).processor_type.all().first().type_name 
+                context["receiver_sku_id_list"] = get_sku_list(int(processor_id), "T2")["data"]
                 if processor_type == "T2":  
                     processor1 = list(LinkProcessor1ToProcessor.objects.filter(processor2_id=processor_id).values("processor1__id", "processor1__entity_name"))
                     linked_processor = []
@@ -3391,7 +3434,8 @@ def processor_receive_delivery(request):
                         dict_["processor__entity_name"] = pro1["processor1__entity_name"]
                         dict_["processor_type"] = "T1"
                         linked_processor.append(dict_)
-                    context["processor"] = linked_processor    
+                    context["processor"] = linked_processor   
+                     
                 if processor_type == "T3":
                     processor1 = list(LinkProcessor1ToProcessor.objects.filter(processor2_id=processor_id).values("processor1__id", "processor1__entity_name"))
                     processor2 = list(LinkProcessorToProcessor.objects.filter(linked_processor_id=processor_id).values("processor__id", "processor__entity_name"))
@@ -3441,9 +3485,13 @@ def processor_receive_delivery(request):
                     bin_pull_ = get_bin_pull.split("_")               
                     bin_pull, bin_pull_type = bin_pull_[0], bin_pull_[1]               
                     if bin_pull_type == "T1":
+                        select_pro_id = Processor.objects.filter(id=int(bin_pull)).first().id
                         select_processor_name = Processor.objects.filter(id=int(bin_pull)).first().entity_name
+                        context["sender_sku_id_list"] = get_sku_list(int(select_pro_id), "T1")["data"]
                     else:
+                        select_pro_id = Processor2.objects.filter(id=int(bin_pull)).first().id
                         select_processor_name = Processor2.objects.filter(id=int(bin_pull)).first().entity_name
+                        context["sender_sku_id_list"] = get_sku_list(int(select_pro_id), "T2")["data"]
                     context.update({
                         "select_processor_name": select_processor_name,
                         "select_processor_id": bin_pull,
@@ -3503,6 +3551,9 @@ def processor_receive_delivery(request):
                                     storage_bin_recive=context["receiver_sku_id"],ticket_number=context["ticket_number"],received_weight=context["received_weight"],processor2_idd=select_proc_id,processor2_name=select_destination_, receiver_processor_type=receiver_processor_type)
                             save_shipment_management.save()
 
+                            
+                            create_sku_list(select_pro_id, bin_pull_type, context["storage_bin_id"])
+                            create_sku_list(processor_id, processor_type, context["receiver_sku_id"])
                             files = request.FILES.getlist('files')
                             for file in files:
                                 new_file = File.objects.create(file=file)
@@ -7494,7 +7545,7 @@ def edit_outbound_shipment(request,pk):
                 context['id_date'] = str(get_obj.date_pulled)
                 context['get_equipment_type'] = get_obj.equipment_type
                 context['equipment_id'] = get_obj.equipment_id
-                context['storage_bin_id'] = get_obj.storage_bin
+                context['storage_bin_id'] = get_obj.storage_bin_send
                 context['moist_percentage'] = get_obj.moisture_percent
                 context['weight_prod_unit_id'] = get_obj.weight_of_product_unit
                 context['exp_yield_unit_id'] = get_obj.excepted_yield_unit
@@ -7535,7 +7586,7 @@ def edit_outbound_shipment(request,pk):
                         get_obj.date_pulled = id_date
                         get_obj.equipment_type = equipment_type
                         get_obj.equipment_id = equipment_id
-                        get_obj.storage_bin = storage_bin_id
+                        get_obj.storage_bin_send = storage_bin_id
                         get_obj.weight_of_product_unit = weight_prod_unit_id
                         get_obj.excepted_yield_unit = exp_yield_unit_id
                         get_obj.moisture_percent = moist_percentage
@@ -7543,7 +7594,9 @@ def edit_outbound_shipment(request,pk):
                         get_obj.lot_number = lot_number
                         get_obj.volume_shipped = volume_shipped
                         get_obj.volume_left = volume_left
-                        
+
+                        processor1_id = Processor.objects.filter(id=int(get_obj.processor_idd)).first().id
+                        create_sku_list(processor1_id, get_obj.sender_processor_type, get_obj.storage_bin_send)
                         processor_id, processor_type = processor2_id.split()
                         if processor_type == 'T2':
                             select_destination_ = Processor2.objects.get(id=processor_id, processor_type__type_name="T2").entity_name
@@ -7773,7 +7826,7 @@ def add_outbound_shipment_processor1(request):
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
             
             context["processor"] = list(Processor.objects.all().values("id", "entity_name"))
-            
+            context["processor_type"] = "T1"
             context.update({
                 "select_processor_name": None,
                 "select_processor_id": None,
@@ -7805,23 +7858,10 @@ def add_outbound_shipment_processor1(request):
                 })
 
                 if bin_pull and not data.get("save"):
-                    # list_get_bin_location = []
-                    # get_bin_location = list(ProductionManagement.objects.filter(processor_id=int(bin_pull)).values_list('milled_volume', flat=True))
-
-                    # if get_bin_location:
-                    #     for i in get_bin_location:
-                    #         list_get_bin_location.append(float(i))
-
-                    # total_shiped_volume = []
-                    # shiped_volume = list(ShipmentManagement.objects.filter(bin_location=bin_pull).values_list('volume_shipped', flat=True))
-                    # if shiped_volume:
-                    #     for i in shiped_volume :
-                    #         total_shiped_volume.append(float(i))
-
-                    # sum_total_volume = sum(list_get_bin_location) if get_bin_location else 0
-                    # sum_shiped_volume = sum(total_shiped_volume) if shiped_volume else 0
+                    
                     processor_type="T1"
                     context["milled_value"] =  calculate_milled_volume(int(bin_pull), processor_type)
+                    context["sender_sku_id_list"] = get_sku_list(int(bin_pull), "T1")["data"]
                 
                     processor2 = LinkProcessor1ToProcessor.objects.filter(processor1_id=bin_pull, processor2__processor_type__type_name = "T2").values("processor2__id", "processor2__entity_name")
                     processor3 = LinkProcessor1ToProcessor.objects.filter(processor1_id=bin_pull, processor2__processor_type__type_name = "T3").values("processor2__id", "processor2__entity_name")
@@ -7864,6 +7904,9 @@ def add_outbound_shipment_processor1(request):
                             purchase_order_number=context["purchase_number"],lot_number=context["lot_number"],volume_shipped=context["volume_shipped"],milled_volume=milled_volume,volume_left=volume_left,editable_obj=True,
                             processor2_idd=select_proc_id,processor2_name=select_destination_, receiver_processor_type=receiver_processor_type)
                     save_shipment_management.save()
+
+                    processor1_id = Processor.objects.filter(id=int(bin_pull)).first().id
+                    create_sku_list(processor1_id, "T1", context["storage_bin_id"])
                     files = request.FILES.getlist('files')
                     for file in files:
                         new_file = File.objects.create(file=file)
@@ -7903,24 +7946,9 @@ def add_outbound_shipment_processor1(request):
         elif request.user.is_processor:
             p = ProcessorUser.objects.get(contact_email=request.user.email)
             context["processor"] = list(Processor.objects.filter(id=p.processor_id).values("id", "entity_name"))
+            context["processor_type"] = "T1"
             bin_pull = context["processor"][0]["id"] 
 
-            # list_get_bin_location = []
-            # get_bin_location = list(ProductionManagement.objects.filter(processor_id=int(bin_pull)).values_list('milled_volume', flat=True))
-
-            # if get_bin_location:
-            #     for i in get_bin_location:
-            #         list_get_bin_location.append(float(i))
-
-            # total_shiped_volume = []
-            # shiped_volume = list(ShipmentManagement.objects.filter(bin_location=bin_pull).values_list('volume_shipped', flat=True))
-            # if shiped_volume:
-            #     for i in shiped_volume :
-            #         total_shiped_volume.append(float(i))
-
-            # sum_total_volume = sum(list_get_bin_location) if get_bin_location else 0
-            # sum_shiped_volume = sum(total_shiped_volume) if shiped_volume else 0
-            
             processor_type="T1"
             context["milled_value"] =  calculate_milled_volume(int(bin_pull), processor_type)
             
@@ -7935,6 +7963,7 @@ def add_outbound_shipment_processor1(request):
                 "select_processor_id": bin_pull,
                 
             })
+            context["sender_sku_id_list"] = get_sku_list(int(bin_pull), "T1")["data"]
             if request.method == "POST":
                 data = request.POST                      
                 context.update({                
@@ -7988,6 +8017,9 @@ def add_outbound_shipment_processor1(request):
                         purchase_order_number=context["purchase_number"],lot_number=context["lot_number"],volume_shipped=context["volume_shipped"],milled_volume=milled_volume,volume_left=volume_left,editable_obj=True,
                         processor2_idd=select_proc_id,processor2_name=select_destination_, receiver_processor_type=receiver_processor_type)
                 save_shipment_management.save()
+
+                processor1_id = Processor.objects.filter(id=int(bin_pull)).first().id
+                create_sku_list(processor1_id, "T1", context["storage_bin_id"])
                 files = request.FILES.getlist('files')
                 for file in files:
                     new_file = File.objects.create(file=file)
@@ -8031,6 +8063,7 @@ def add_outbound_shipment_processor1(request):
 
             
             sender_processor_type = Processor2.objects.filter(id=int(bin_pull)).first().processor_type.all().first().type_name
+            context["processor_type"] = sender_processor_type
             context["milled_value"] =  calculate_milled_volume(int(bin_pull), sender_processor_type)        
             
             processor3 = LinkProcessorToProcessor.objects.filter(processor_id=bin_pull, linked_processor__processor_type__type_name = "T3").values("linked_processor__id", "linked_processor__entity_name")
@@ -8043,7 +8076,7 @@ def add_outbound_shipment_processor1(request):
                 "select_processor_id": bin_pull,
                 
             })
-
+            context["sender_sku_id_list"] = get_sku_list(int(bin_pull),"T2")["data"]
             if request.method == "POST":
                 data = request.POST                    
                 context.update({
@@ -8094,6 +8127,9 @@ def add_outbound_shipment_processor1(request):
                         purchase_order_number=context["purchase_number"],lot_number=context["lot_number"],volume_shipped=context["volume_shipped"],milled_volume=milled_volume,volume_left=volume_left,editable_obj=True,
                         processor2_idd=select_proc_id,processor2_name=select_destination_, receiver_processor_type=receiver_processor_type)
                 save_shipment_management.save()
+
+                processor2_id = Processor2.objects.filter(id=int(bin_pull)).first().id
+                create_sku_list(processor2_id, sender_processor_type, context["storage_bin_id"])
                 files = request.FILES.getlist('files')
                 for file in files:
                     new_file = File.objects.create(file=file)
@@ -8261,6 +8297,7 @@ def delete_link_processor_one(request, pk):
     except Exception as e:
         print(e)
         return HttpResponse(e)
+
 
 @login_required()
 def change_passowrd_admin(request):

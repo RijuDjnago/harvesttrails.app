@@ -77,6 +77,7 @@
                   {% endif %}
             </nav>
             <div class="container-fluid">
+              
                 <form method="post" class="farm-fields-form" enctype="multipart/form-data">
                     {% csrf_token %}
                     <div class="row" style="margin-bottom:10px">
@@ -94,7 +95,24 @@
                                 {% endfor %}  
                             </select>
                         </div>
-                        
+                        <div class="col-md-5 mb-2">
+                            <label for="">Select Destination<span class="asteriskField">*</span></label>
+                            <select  name="processor2_id" id="processor2_id" class="textinput textInput form-control selectpicker" data-live-search="true" onchange="this.form.submit()">
+                                <option value='All' selected disabled> {% if select_processor_name %} Select Destination {% else %} First select the bin pull {% endif %}</option>                                
+                                    
+                                    {% if selected_destination %}
+                                    <option value="{{selected_destination}} T2" selected>{{selected_destination_name}}</option>
+                                    {% else %}
+                                    <option value="all" disabled selected> {% if select_processor_name %} Select Destination {% else %} First select the bin pull {% endif %}</option>
+                                    {% endif %}
+                                    
+                                    {% for processor in processor2  %}
+                                    <option value="{{ processor.processor2__id }} T2">{{ processor.processor2__entity_name }} - {{ processor.processor2__id }}</option>
+                                    {% endfor %}                                 
+                            </select>                           
+                        </div>
+                    </div>
+                    <div class="row">
                         <div class="col-md-6 mb-2 text-center" style="display:none;">
                             <label for="id_storage"><strong>Milled Volume</strong></label>
                             {% if milled_value == "None" %}
@@ -125,11 +143,21 @@
                             </div>
                         </div>
                         <div class="col-md-4 mb-2">
-                            <div>
+                           <div>
                                 <label for="storage_bin_id">Storage Bin ID (SKU ID)<span class="asteriskField">*</span></label>
-                                <input type="text" id="storage_bin_id" name="storage_bin_id" class="textinput textInput form-control" autocomplete="off">
-                                <p id="alert_msg3" style="color:red"></p>
-                            </div>
+                                <input id="storage_bin_id" name="storage_bin_id" class="textinput textInput form-control" list="suggestions1" autocomplete="off">
+                                    <datalist id="suggestions1">
+                                        {% for data in selected_processor_sku_id_list %}
+                                        <option value="{{data}}">                                        
+                                        {% endfor %}
+                                    </datalist>
+                                    {% if select_processor_name %} 
+                                    <p id="alert_msg3" style="color:red"></p>                               
+                                    {% else %}
+                                    <p id="warning" style="color:grey;"> <i>First select bin pull</i> </p> 
+                                    {% endif %}
+                            </div>                           
+                            
                         </div>
                         <div class="col-md-4 mb-2">
                             <label for="weight_prod">Weight Of Product<span class="asteriskField">*</span></label>
@@ -180,10 +208,16 @@
                         </div>
                     </div>
                      <div class="col-md-12" >
-                            <div class="row">
+                            <div class="row">                         
                                 <div class="col-md-3 mb-2">  
                                     <label for="">Receiver SKU ID<span class="asteriskField">*</span></label>
-                                    <input type="text" name="receiver_sku_id" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;">
+                                    {% comment %} <input type="text" name="receiver_sku_id" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;"> {% endcomment %}
+                                    <input name="receiver_sku_id" id="receiver_sku_id" class="textinput textInput form-control" list="suggestions2" autocomplete="off">
+                                        <datalist id="suggestions2">
+                                            {% for data in selected_processor_sku_id_list_processor2 %}
+                                            <option value="{{data}}">                                        
+                                            {% endfor %}
+                                        </datalist> 
                                 </div>
                                 <div class="col-md-3 mb-2">
                                     <label for="">Recieved Weight<span class="asteriskField">*</span></label>
@@ -214,15 +248,7 @@
                             <input type="file" name="files" multiple accept=".jpg,.png,.xlsx,.csv,.pdf" id="multi_file" class="textinput textInput form-control" >
                             <p id="file_name_show" style="color:gray"></p>
                         </div>
-                        <div class="col-md-4 mb-2">
-                            <label for="">Select Destination<span class="asteriskField">*</span></label>
-                            <select id="processor2_id" name="processor2_id" class="textinput textInput form-control">
-                                <option value='All' selected disabled>Select Destination</option>                                
-                                    {% for processor in processor2 %}
-                                    <option value="{{ processor.processor2__id }} T2" {% if processor2_id == processor.processor2__id|stringformat:"s" %}selected{% endif %}>{{ processor.processor2__entity_name }} - {{ processor.processor2__id }}</option>
-                                    {% endfor %}                                
-                            </select>
-                        </div>
+                        
                     </div>
 
                     </div>
@@ -262,6 +288,7 @@
         }
     }
 </script>
+
 <script>
     function funcamount2() {
     
@@ -281,6 +308,17 @@
     }
 
 
+</script>
+<script>
+    function toggleInputField() {
+        var selectElement = document.getElementById('storage_bin_id');
+        var inputElement = document.getElementById('new_sku');
+        if (selectElement.value === 'new') {
+            inputElement.style.display = 'block';
+        } else {
+            inputElement.style.display = 'none';
+        }
+    }
 </script>
 <script>
     function custom_option_deselect()

@@ -126,6 +126,7 @@ urlpatterns = [
     path('ProcessorToProcessorManagement/', views.Processor1ToProcessorManagement, name="Processor1ToProcessorManagement"),
     path('link_processor_one/', views.link_processor_one, name="link_processor_one"),
 
+    path('autocomplete_suggestions_sku/<int:pro_id>/<str:pro_type>/', views.autocomplete_suggestions_sku, name='autocomplete_suggestions_sku'),
 
     path('change_passowrd_admin/', views.change_passowrd_admin, name="change_passowrd_admin"),
 ]
