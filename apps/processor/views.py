@@ -81,12 +81,13 @@ def generate_sku_id():
 	return "".join(sku_id)
 
 
-def calculate_milled_volume(processor_id, processor_type):
+def calculate_milled_volume(processor_id, processor_type, sku_id):
+    print(sku_id)
     if processor_type == "T1":
-        inbound_shipment_sum = GrowerShipment.objects.filter(processor_id=processor_id, status="APPROVED").annotate(received_amount_float=Cast('received_amount', FloatField())).aggregate(
+        inbound_shipment_sum = GrowerShipment.objects.filter(processor_id=processor_id, sku=sku_id, status="APPROVED").annotate(received_amount_float=Cast('received_amount', FloatField())).aggregate(
                 total_received_amount=Sum('received_amount_float'))['total_received_amount']
         print(inbound_shipment_sum)
-        total_outbound_sum = ShipmentManagement.objects.filter(processor_idd=processor_id, sender_processor_type="T1", status="APPROVED").annotate(shipped_amount_float=Cast("volume_shipped", FloatField())).aggregate(total_shipped_amount=Sum('shipped_amount_float'))["total_shipped_amount"]
+        total_outbound_sum = ShipmentManagement.objects.filter(processor_idd=processor_id, storage_bin_recive=sku_id, sender_processor_type="T1", status="APPROVED").annotate(shipped_amount_float=Cast("volume_shipped", FloatField())).aggregate(total_shipped_amount=Sum('shipped_amount_float'))["total_shipped_amount"]
         if inbound_shipment_sum != None and total_outbound_sum != None:
             milled_volume = inbound_shipment_sum - total_outbound_sum
         elif inbound_shipment_sum != None and total_outbound_sum in [None, 0, ""]:
@@ -97,8 +98,8 @@ def calculate_milled_volume(processor_id, processor_type):
             milled_volume = 0
 
     if processor_type in ["T2", "T3","T4"]:
-        inbound_shipment_sum = ShipmentManagement.objects.filter(processor2_idd=processor_id, status="APPROVED").annotate(received_amount_float=Cast("received_weight", FloatField())).aggregate(total_received_amount=Sum('received_amount_float'))["total_received_amount"]
-        total_outbound_sum = ShipmentManagement.objects.filter(processor_idd=processor_id, status="APPROVED").annotate(shipped_amount_float=Cast("volume_shipped", FloatField())).aggregate(total_shipped_amount=Sum('shipped_amount_float'))["total_shipped_amount"]
+        inbound_shipment_sum = ShipmentManagement.objects.filter(processor2_idd=processor_id, storage_bin_send=sku_id, status="APPROVED").annotate(received_amount_float=Cast("received_weight", FloatField())).aggregate(total_received_amount=Sum('received_amount_float'))["total_received_amount"]
+        total_outbound_sum = ShipmentManagement.objects.filter(processor_idd=processor_id,storage_bin_recive=sku_id, status="APPROVED").annotate(shipped_amount_float=Cast("volume_shipped", FloatField())).aggregate(total_shipped_amount=Sum('shipped_amount_float'))["total_shipped_amount"]
         if inbound_shipment_sum != None and total_outbound_sum != None:
             milled_volume = inbound_shipment_sum - total_outbound_sum
         elif inbound_shipment_sum != None and total_outbound_sum in [None, 0, ""]:
@@ -7889,6 +7890,7 @@ def add_outbound_shipment_processor1(request):
 
             if request.method == "POST":
                 data = request.POST
+                sku = data.get("storage_bin_id")
                 bin_pull = data.get("bin_pull")
                 milled_value = data.get("milled_value")
                 context.update({
@@ -7914,7 +7916,10 @@ def add_outbound_shipment_processor1(request):
                 if bin_pull and not data.get("save"):
                     
                     processor_type="T1"
-                    context["milled_value"] =  calculate_milled_volume(int(bin_pull), processor_type)
+                    if sku:
+                        context["milled_value"] = calculate_milled_volume(int(bin_pull), processor_type, sku)
+                    else:
+                        context["milled_value"] =  calculate_milled_volume(int(bin_pull), processor_type, sku)
                     context["sender_sku_id_list"] = get_sku_list(int(bin_pull), "T1")["data"]
                 
                     processor2 = LinkProcessor1ToProcessor.objects.filter(processor1_id=bin_pull, processor2__processor_type__type_name = "T2").values("processor2__id", "processor2__entity_name")
