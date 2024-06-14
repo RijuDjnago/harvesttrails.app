@@ -100,7 +100,7 @@
                         </div>
                         <div class="col-md-4 mb-2">
                             <div>
-                                <label for="storage_bin_id">Storage Bin ID (SKU ID)<span class="asteriskField">*</span></label>
+                                <label for="storage_bin_id">Sender Storage Bin ID (SKU ID)<span class="asteriskField">*</span></label>
                                 <input type="text" id="storage_bin_id" name="storage_bin_id" class="textinput textInput form-control" list="suggestions" autocomplete="off">
                                 <datalist id="suggestions">
                                     {% for data in sender_sku_id_list %}
@@ -134,7 +134,7 @@
                         </div>
                         <div class="col-md-4 mb-2">
                             <label for="moist_percentage">Moisture Measurement (%)<span class="asteriskField">*</span></label>
-                            <input type="text" class="textinput textInput form-control" id="moist_percentage" name="moist_percentage" value="{{moist_percentage}}">
+                            <input type="number" class="textinput textInput form-control" id="moist_percentage" name="moist_percentage" value="{{moist_percentage}}">
                             <p id="alert_msg6" style="color:red"></p>
                         </div>
                         <div class="col-md-4 mb-2">

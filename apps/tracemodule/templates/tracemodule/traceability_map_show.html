@@ -136,11 +136,11 @@
                                   
                             <ul style="list-style: none; padding: 0; margin: 0;">
                                 <li style="font-weight: 500;">Entity Name: <em style="font-weight: 400; font-style: normal;">{{pro.processor_name}}</em></li>
-                                <li style="font-weight: 500;">SKU Id: <em style="font-weight: 400; font-style: normal;">{{pro.skuid}}</em></li>
+                                <li style="font-weight: 500;">SKU Id: <em style="font-weight: 400; font-style: normal;">{% if pro.skuid %}{{pro.skuid}}{% else %} Not defined {% endif %}</em></li>
                             </ul>
                             <ul style="list-style: none; padding: 0; margin: 0; margin-top: 30px;">
                                 <li style="font-weight: 500; margin-bottom: 5px;">Processing Date: <em style="font-weight: 400; font-style: normal;">{{pro.date}}</em></li>
-                                <li style="font-weight: 500;">Resulting Lot Number: <em style="font-weight: 400; font-style: normal;">{{pro.lot_number}}</em></li>
+                                <li style="font-weight: 500;">Resulting Lot Number: <em style="font-weight: 400; font-style: normal;"> {% if pro.lot_number %} {{pro.lot_number}} {% else %} Not defined {% endif %}</em></li>
                                 
                             </ul>
                             {% endfor %}
