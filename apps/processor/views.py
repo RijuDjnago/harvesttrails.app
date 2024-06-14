@@ -420,44 +420,90 @@ def add_processor_user(request,pk):
         return render(request, 'processor/add_processor_user.html',context)
 
 
+# @login_required()
+# def ListProcessorView(request):
+#     context = {}
+#     try:
+#         if request.user.is_authenticated:        
+#             # Grower .....................
+#             if 'Grower' in request.user.get_role() and not request.user.is_superuser:
+#                 pass
+#             # consultant ..............
+#             elif request.user.is_consultant:
+#                 pass
+#             # superadmin and others ........
+#             elif request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+#                 processor= ProcessorUser.objects.all()
+#                 context['processor'] = processor
+#                 return render(request, 'processor/list_processor.html',context)
+#             # processor..........
+#             elif request.user.is_processor:
+#                 pro= ProcessorUser.objects.filter(contact_email=request.user.email).first()
+#                 entity_name = pro.processor
+#                 processor = ProcessorUser.objects.filter(processor=entity_name)
+#                 context['processor'] = processor
+#                 return render(request, 'processor/list_processor.html',context)
+#             # processor2 ............
+#             elif request.user.is_processor2:           
+#                 pro= ProcessorUser2.objects.filter(contact_email=request.user.email).first()
+#                 entity_name = pro.processor2
+#                 processor = ProcessorUser2.objects.filter(processor2=entity_name)
+#                 context['processor'] = processor
+#                 return render(request, 'processor/list_processor.html',context)
+#             else:
+#                 messages.error(request, "Not a valid request")
+#                 return redirect("dashboard")
+#         else:
+#             return redirect('login')
+#     except Exception as e:
+#         context["error_messages"] = str(e)
+#         return render(request, 'processor/list_processor.html',context)
+
+
+
+
 @login_required()
 def ListProcessorView(request):
     context = {}
     try:
-        if request.user.is_authenticated:        
-            # Grower .....................
+        if request.user.is_authenticated:
+            processor = []
             if 'Grower' in request.user.get_role() and not request.user.is_superuser:
                 pass
-            # consultant ..............
             elif request.user.is_consultant:
                 pass
-            # superadmin and others ........
             elif request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
-                processor= ProcessorUser.objects.all()
-                context['processor'] = processor
-                return render(request, 'processor/list_processor.html',context)
-            # processor..........
+                processor = ProcessorUser.objects.all()
             elif request.user.is_processor:
-                pro= ProcessorUser.objects.filter(contact_email=request.user.email).first()
+                pro = ProcessorUser.objects.filter(contact_email=request.user.email).first()
                 entity_name = pro.processor
                 processor = ProcessorUser.objects.filter(processor=entity_name)
-                context['processor'] = processor
-                return render(request, 'processor/list_processor.html',context)
-            # processor2 ............
-            elif request.user.is_processor2:           
-                pro= ProcessorUser2.objects.filter(contact_email=request.user.email).first()
+            elif request.user.is_processor2:
+                pro = ProcessorUser2.objects.filter(contact_email=request.user.email).first()
                 entity_name = pro.processor2
                 processor = ProcessorUser2.objects.filter(processor2=entity_name)
-                context['processor'] = processor
-                return render(request, 'processor/list_processor.html',context)
             else:
                 messages.error(request, "Not a valid request")
                 return redirect("dashboard")
+
+            search_name = request.GET.get('search_name', '')
+            if search_name:
+                processor = processor.filter(contact_name__icontains=search_name)
+                
+            # Pagination
+            paginator = Paginator(processor, 10)  # Show 10 processors per page.
+            page_number = request.GET.get('page')
+            page_obj = paginator.get_page(page_number)
+            context['page_obj'] = page_obj
+            context['get_search_name'] = search_name
+
+            return render(request, 'processor/list_processor.html', context)
         else:
             return redirect('login')
     except Exception as e:
         context["error_messages"] = str(e)
-        return render(request, 'processor/list_processor.html',context)
+        return render(request, 'processor/list_processor.html', context)
+
 
 
 @login_required()
@@ -815,62 +861,57 @@ def addlocation(request):
         context["error_messages"] = str(e)
         return render(request, 'processor/add_location.html',context)
 
-
 @login_required
 def location_list(request):
-    context ={}
+    context = {}
     try:
         if request.user.is_authenticated:
-            # processor ...........
-            if request.user.is_processor :           
+            # Filter based on user role
+            if request.user.is_processor:
                 user_email = request.user.email
                 p = ProcessorUser.objects.get(contact_email=user_email)
                 processor = Processor.objects.get(id=p.processor_id)
-                location = Location.objects.filter(processor= processor)
-                context['location'] = location
-                return render(request, 'processor/location_list.html',context)
-            # superuser ...............
+                location = Location.objects.filter(processor=processor)
             elif request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
                 location = Location.objects.all()
                 processor = Processor.objects.all()
-                context['location'] = location
                 context['processor'] = processor
                 if request.method == 'POST':
                     value = request.POST.get('processor_id')
-                    print(value)
-                    if value == 'all' :
+                    if value == 'all':
                         location = Location.objects.all()
-                        processor = Processor.objects.all()
-                        context['location'] = location
-                        context['processor'] = processor
-                        return render(request, 'processor/location_list.html',context)
-
                     else:
                         processor_id = request.POST.get('processor_id')
-                        processor = Processor.objects.all()
                         location = Location.objects.filter(processor_id=processor_id)
-                        context['location'] = location
-                        context['processor'] = processor
                         context['selectedprocessor'] = Processor.objects.get(id=processor_id)
-                        return render(request, 'processor/location_list.html',context)
-                    
-                return render(request, 'processor/location_list.html',context)
-            # processor2 .............
-            elif request.user.is_processor2 :            
+            elif request.user.is_processor2:
                 user_email = request.user.email
                 p = ProcessorUser2.objects.get(contact_email=user_email)
                 processor = Processor2.objects.get(id=p.processor2_id)
-                location = Processor2Location.objects.filter(processor= processor)
-                context['location'] = location
-                return render(request, 'processor/location_list.html',context)
+                location = Processor2Location.objects.filter(processor=processor)
             else:
                 messages.error(request, "Not a valid request.")
                 return redirect("dashboard")
+            
+            # Search functionality
+            search_name = request.GET.get('search_name', '')
+            if search_name:
+                location = location.filter(name__icontains=search_name)
+
+            # Pagination
+            paginator = Paginator(location, 10)  # Show 10 locations per page
+            page_number = request.GET.get('page')
+            page_obj = paginator.get_page(page_number)
+
+            context['location'] = page_obj
+            context['search_name'] = search_name
+
+            return render(request, 'processor/location_list.html', context)
         else:
             return redirect('login')
     except Exception as e:
         context["error_messages"] = str(e)
-        return render(request, 'processor/location_list.html',context)
+        return render(request, 'processor/location_list.html', context)
 
 
 @login_required()
