@@ -1992,7 +1992,7 @@ def skuid_traceability_response(search_text):
                 #inbound 4
                 inbound4_wip = []
                 for l_sku4 in t3_sku_id:
-                    inbound4_wip_ = list(ShipmentManagement.objects.filter(storage_bin_send=l_sku2).values())
+                    inbound4_wip_ = list(ShipmentManagement.objects.filter(storage_bin_send=l_sku4).values())
                     inbound4_wip = inbound4_wip + inbound4_wip_
                 context["inbound4_wip"] = inbound4_wip
 
