@@ -23,7 +23,7 @@ import qrcode, time, json
 from django.core.files.base import ContentFile
 from apps.processor2.forms import *
 from apps.processor.views import calculate_milled_volume
-from apps.processor.views import create_sku_list
+from apps.processor.views import create_sku_list, get_sku_list
 
 
 # Create your views here.
@@ -462,6 +462,7 @@ def inbound_shipment_edit(request, pk):
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role() or request.user.is_processor2:
             shipment = ShipmentManagement.objects.get(id=pk)
             context["shipment"] = shipment
+            context["receiver_sku_id_list"] = get_sku_list(int(shipment.processor2_idd), shipment.receiver_processor_type)["data"]
             files = ShipmentManagement.objects.filter(id=pk).first().files.all().values('file','id')
             files_data = []
             for j in files:
@@ -645,20 +646,26 @@ def receive_shipment(request):
                 "select_processor_name": None,
                 "select_processor_id": None,
                 "milled_value": "None",
+                "sender_sku_id_list":[],
+                "receiver_sku_id_list":[],
+                "selected_destination": None,
+                "selected_destination_name": None
             })
 
             if request.method == "POST":
                 data = request.POST
                 get_bin_pull = data.get("bin_pull")
                 bin_pull, bin_pull_type = get_bin_pull.split("_")[0], get_bin_pull.split("_")[1]
-                print(bin_pull, bin_pull_type)
                 if bin_pull_type == "T1":
                     select_pro_id = Processor.objects.filter(id=int(bin_pull)).first().id
                     select_processor_name = Processor.objects.filter(id=int(bin_pull)).first().entity_name
+                    context["sender_sku_id_list"] = get_sku_list(int(bin_pull), "T1")["data"]
                 else:
                     select_pro_id = Processor2.objects.filter(id=int(bin_pull)).first().id
                     select_processor_name = Processor2.objects.filter(id=int(bin_pull)).first().entity_name
+                    context["sender_sku_id_list"] = get_sku_list(int(bin_pull), "T2")["data"]
                 milled_value = data.get("milled_value")
+                processor2_id = data.get("processor2_id")
                 context.update({
                     "select_processor_name": select_processor_name,
                     "sender_processor_type": bin_pull_type,
@@ -697,13 +704,27 @@ def receive_shipment(request):
                             processor3.append(dict_)
                     else:
                         processor3 = LinkProcessorToProcessor.objects.filter(processor_id=bin_pull, linked_processor__processor_type__type_name = "T3").values("linked_processor__id", "linked_processor__entity_name")                
-                    context["processor3"] = processor3               
+                    context["processor3"] = processor3 
+                    if processor2_id:                        
+                        context["selected_destination"] = processor2_id.split()[0]
+                        context["selected_destination_name"] = Processor2.objects.filter(id=processor2_id.split()[0]).first().entity_name
+                        context["receiver_sku_id_list"] = get_sku_list(int(processor2_id.split()[0]),"T3")["data"]              
                 
                     return render(request, 'processor3/receive_delivery.html', context)
                 else:
-                    if context["milled_value"] < context["volume_shipped"]:
+                    try:
+                        milled_value = float(context["milled_value"])
+                    except ValueError:
+                        context["error_messages"] = "Invalid input: milled_value is not a valid number."
+                        return render(request, 'processor3/receive_delivery.html', context)
+                    try:
+                        volume_shipped = float(context["volume_shipped"])
+                    except ValueError:
+                        context["error_messages"] = "Invalid input: volume_shipped is not a valid number."
+                        return render(request, 'processor3/receive_delivery.html', context)
+                    if milled_value < volume_shipped:
                         context["error_messages"] = "Processor does not have the required milled volume."
-                        return render(request, 'processor2/recive_delevery.html', context)
+                        return render(request, 'processor3/receive_delivery.html', context)
                     else:
                         if context["weight_prod_unit_id"] == "LBS" :
                             cal_weight = round(float(context["weight_prod"]),2)
@@ -795,7 +816,7 @@ def add_outbound_shipment_processor3(request):
                     processor4 = LinkProcessorToProcessor.objects.filter(processor_id=bin_pull, linked_processor__processor_type__type_name = "T4").values("linked_processor__id", "linked_processor__entity_name")
                     context["processor3"] = processor3
                     context["processor4"] = processor4
-                
+                    context["sender_sku_id_list"] = get_sku_list(int(bin_pull), "T3")["data"]
                     return render(request, 'processor3/add_outbound_shipment_processor3.html', context)
                 else:
                     if context["weight_prod_unit_id"] == "LBS" :

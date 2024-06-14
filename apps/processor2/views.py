@@ -1334,6 +1334,7 @@ def inbound_shipment_edit(request, pk):
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role() or request.user.is_processor2:
             shipment = ShipmentManagement.objects.get(id=pk)
             context["shipment"] = shipment
+            context["receiver_sku_id_list"] = get_sku_list(int(shipment.processor2_idd), shipment.receiver_processor_type)["data"]
             files = ShipmentManagement.objects.filter(id=pk).first().files.all().values('file')
             files_data = []
             for j in files:
@@ -1417,8 +1418,7 @@ def recive_shipment(request):
             if request.method == "POST":
                 data = request.POST
                 bin_pull = data.get("bin_pull")
-                milled_value = data.get("milled_value")
-                
+                milled_value = data.get("milled_value")                
                 processor2_id = data.get("processor2_id")
                 context.update({
                     "select_processor_name": Processor.objects.filter(id=int(bin_pull)).first().entity_name,
@@ -1452,19 +1452,28 @@ def recive_shipment(request):
                     context["processor2"] = processor2
 
                     context["selected_processor_sku_id_list"] = get_sku_list(int(bin_pull),sender_processor_type)["data"]
-                    if processor2_id:
-                        print(context)
+                    if processor2_id:                        
                         context["selected_destination"] = processor2_id.split()[0]
                         context["selected_destination_name"] = Processor2.objects.filter(id=processor2_id.split()[0]).first().entity_name
                         context["selected_processor_sku_id_list_processor2"] = get_sku_list(int(processor2_id.split()[0]),"T2")["data"]
-                        print(get_sku_list(int(processor2_id.split()[0]),"T2")["data"])
-                    return render(request, 'processor2/recive_delevery.html', context)
-                
+                        
+                    return render(request, 'processor2/recive_delevery.html', context)                
                     
                 else:
-                    if context["milled_value"] < context["volume_shipped"]:
+                    try:
+                        milled_value = float(context["milled_value"])
+                    except ValueError:
+                        context["error_messages"] = "Invalid input: milled_value is not a valid number."
+                        return render(request, 'processor2/recive_delevery.html', context)
+                    try:
+                        volume_shipped = float(context["volume_shipped"])
+                    except ValueError:
+                        context["error_messages"] = "Invalid input: volume_shipped is not a valid number."
+                        return render(request, 'processor2/recive_delevery.html', context)
+                    if milled_value < volume_shipped:
                         context["error_messages"] = "Processor does not have the required milled volume."
-                        return render(request, 'processor2/recive_delevery.html', context) 
+                        return render(request, 'processor2/recive_delevery.html', context)
+ 
                     else:             
                         if context["weight_prod_unit_id"] == "LBS" :
                             cal_weight = round(float(context["weight_prod"]),2)

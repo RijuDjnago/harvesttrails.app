@@ -2706,7 +2706,6 @@ def processor_inbound_management_edit(request,pk):
                 get_crop = shipment.crop
                 context['get_crop'] = get_crop
                 
-                # context['files'] = shipment.files.all()
                 file_data = list(shipment.files.all().values())
 
                 for fff in range(len(file_data)):
@@ -2872,11 +2871,10 @@ def processor_inbound_management_edit(request,pk):
                         shipment.amount=amount1
                         shipment.variety=field.variety
                         shipment.crop=field.crop
-                        shipment.storage_id=id_storage
-                        shipment.field_id=id_field
+                        shipment.storage=Storage.objects.get(id=id_storage)
+                        shipment.field=Field.objects.get(id=id_field)
                         shipment.module_number=module_number
                         shipment.unit_type=id_unit1
-
                         
                         for file in files:
                             new_file = GrowerShipmentFile.objects.create(file=file)
@@ -2907,7 +2905,8 @@ def processor_inbound_management_edit(request,pk):
             elif request.user.is_processor2:
                 shipment = ShipmentManagement.objects.get(id=pk)
                 context["shipment"] = shipment
-                context["receiver_sku_id_list"] = get_sku_list(int(shipment.processor2_idd), "T2")["data"]
+                context["receiver_sku_id_list"] = get_sku_list(int(shipment.processor2_idd), shipment.receiver_processor_type)["data"]
+                
                 files = ShipmentManagement.objects.filter(id=pk).first().files.all().values('file')
                 files_data = []
                 for j in files:
@@ -3424,7 +3423,7 @@ def processor_receive_delivery(request):
                 processor_id = Processor2.objects.get(id=p.processor2_id).id    
                 processor_name= Processor2.objects.get(id=p.processor2_id).entity_name  
                 processor_type = Processor2.objects.get(id=p.processor2_id).processor_type.all().first().type_name 
-                context["receiver_sku_id_list"] = get_sku_list(int(processor_id), "T2")["data"]
+                context["receiver_sku_id_list"] = get_sku_list(int(processor_id), processor_type)["data"]
                 if processor_type == "T2":  
                     processor1 = list(LinkProcessor1ToProcessor.objects.filter(processor2_id=processor_id).values("processor1__id", "processor1__entity_name"))
                     linked_processor = []
@@ -3481,7 +3480,8 @@ def processor_receive_delivery(request):
 
                 if request.method == "POST":
                     data = request.POST
-                    get_bin_pull = data.get("bin_pull") 
+                    get_bin_pull = data.get("bin_pull")
+                    volume_shipped = data.get("volume_shipped")
                     bin_pull_ = get_bin_pull.split("_")               
                     bin_pull, bin_pull_type = bin_pull_[0], bin_pull_[1]               
                     if bin_pull_type == "T1":
@@ -3520,13 +3520,26 @@ def processor_receive_delivery(request):
                     if bin_pull and not data.get("save"):                    
                         
                         sender_processor_type = bin_pull_type
-                        context["milled_value"] =  calculate_milled_volume(int(bin_pull),sender_processor_type )                
+                        context["milled_value"] =  calculate_milled_volume(int(bin_pull),sender_processor_type ) 
+                        milled_volume = float(context["milled_value"])
                         
                         return render(request, 'processor/add_processor_receive_delivery.html',context)
                     else:
-                        if context["milled_value"] < context["volume_shipped"]:
+
+                        try:
+                            milled_value = float(context["milled_value"])
+                        except ValueError:
+                            context["error_messages"] = "Invalid input: milled_value is not a valid number."
+                            return render(request, 'processor/add_processor_receive_delivery.html', context)
+                        try:
+                            volume_shipped = float(volume_shipped)
+                        except ValueError:
+                            context["error_messages"] = "Invalid input: volume_shipped is not a valid number."
+                            return render(request, 'processor/add_processor_receive_delivery.html', context)
+                        if milled_value < volume_shipped:
                             context["error_messages"] = "Processor does not have the required milled volume."
-                            return render(request, 'processor2/recive_delevery.html', context) 
+                            return render(request, 'processor/add_processor_receive_delivery.html', context)
+ 
                         else:
                             if context["weight_prod_unit_id"] == "LBS" :
                                 cal_weight = round(float(context["weight_prod"]),2)
