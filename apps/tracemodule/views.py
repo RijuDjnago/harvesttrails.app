@@ -2109,7 +2109,7 @@ def skuid_traceability_response(search_text):
                             item["quantity"] = item.get("total_amount")
                             item["transportation"] = "" 
                     outbound1_wip_ = outbound1_wip_ + outbound1_wip
-                    field_ids_ = list(GrowerShipment.objects.filter(sku=i).values_list("field_id"))
+                    field_ids_ = list(GrowerShipment.objects.filter(sku=i).values_list("field_id", flat=True))
                     field_ids = field_ids + field_ids_
                 context["outbound1_wip"] = outbound1_wip_
                 context["t1_processor"] = t1_processor_
