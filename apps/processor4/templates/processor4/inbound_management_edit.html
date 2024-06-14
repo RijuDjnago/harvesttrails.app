@@ -166,7 +166,12 @@
                         </div>
                         <div class="col-md-4 mb-2 approved-fields">
                             <label for="storage_bin_recive">Receiver SKU Id<span class="asteriskField">*</span></label>
-                            <input type="text" name="storage_bin_recive" value="{% if shipment.storage_bin_recive %}{{shipment.storage_bin_recive}}{% else %}{% endif %}" class="textinput textInput form-control" id="storage_bin_recive">
+                            <input type="text" id="storage_bin_recive" name="storage_bin_recive" value="{% if shipment.storage_bin_recive %}{{shipment.storage_bin_recive}}{% else %}{% endif %}" class="textinput textInput form-control" list="suggestions", autocomplete="off">
+                            <datalist id="suggestions">
+                                {% for data in receiver_sku_id_list %}
+                                <option value="{{data}}">                                        
+                                {% endfor %}
+                            </datalist>
                             <p id="alert_msg" style="color:red"></p>
                         </div>
                         <div class="col-md-4 mb-2 disapproved-fields">

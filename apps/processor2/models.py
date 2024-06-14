@@ -196,6 +196,8 @@ class LinkProcessor1ToProcessor(models.Model):
 Processor_Type2 = (
     ("T1", "T1"),
     ("T2", "T2"),
+    ("T3", "T3"),
+    ("T4", "T4"),
 )
 
 class Processor_sku(models.Model):
