@@ -444,7 +444,7 @@
                 <form method="post" class="farm-fields-form" enctype="multipart/form-data">
                     {% csrf_token %}
                     <div class="row" style="margin-bottom:10px">
-                        <div class="col-md-5 mb-2">
+                        <div class="col-md-6 mb-2">
                             <label for="id_bin_location_pull">Bin Location Pulled from<span class="asteriskField">*</span></label>
                             <select name="bin_pull" id="pull" class="textinput textInput form-control selectpicker" data-live-search="true">                                
                                 <option value="{{shipment.processor_idd}}" selected>{{shipment.processor_e_name}}</option> 
@@ -485,11 +485,11 @@
                         </div>
                         <div class="col-md-4 mb-2">
                             <div>
-                                <label for="storage_bin_id">Storage Bin ID (SKU ID)<span class="asteriskField">*</span></label>
+                                <label for="storage_bin_id">Sender Storage Bin ID (SKU ID)<span class="asteriskField">*</span></label>
                                 <input type="text" id="storage_bin_id" name="storage_bin_id" value="{{shipment.storage_bin_send}}" class="textinput textInput form-control" autocomplete="off">
                                 <p id="alert_msg3" style="color:red"></p>
                             </div>
-                        </div>
+                        </div>                        
                         <div class="col-md-4 mb-2">
                             <label for="weight_prod">Weight Of Product<span class="asteriskField">*</span></label>
                             <div class="d-flex">
@@ -514,7 +514,7 @@
                         </div>
                         <div class="col-md-4 mb-2">
                             <label for="moist_percentage">Moisture Measurement (%)<span class="asteriskField">*</span></label>
-                            <input type="text" class="textinput textInput form-control" id="moist_percentage" name="moist_percentage" value="{{shipment.moisture_percent}}" value="{{moist_percentage}}">
+                            <input type="number" class="textinput textInput form-control" id="moist_percentage" name="moist_percentage" value="{{shipment.moisture_percent}}" value="{{moist_percentage}}">
                             <p id="alert_msg6" style="color:red"></p>
                         </div>
                         <div class="col-md-4 mb-2">
@@ -549,6 +549,16 @@
                             </div>
                         </div>
                         <div class="col-md-4 mb-2 approved-fields">
+                            <label for="storage_bin_recive">Receiver Storage Bin Id (SKU Id)<span class="asteriskField">*</span></label>
+                            <input type="text" id="storage_bin_recive" name="storage_bin_recive" value="{% if shipment.storage_bin_recive %}{{shipment.storage_bin_recive}}{% else %}{% endif %}" class="textinput textInput form-control" list="suggestions1" autocomplete="off">
+                            <datalist id="suggestions1">
+                                {% for data in receiver_sku_id_list %}
+                                <option value="{{data}}">                                        
+                                {% endfor %}
+                            </datalist>
+                            <p id="alert_msg" style="color:red"></p>
+                        </div>
+                        <div class="col-md-4 mb-2 approved-fields">
                             <label for="received_weight">Received Weight<span class="asteriskField">*</span></label>
                             <input type="number" name="received_weight" value="{% if shipment.received_weight %}{{shipment.received_weight}}{% else %}{% endif %}" class="textinput textInput form-control" id="received_weight">
                             <p id="alert_msg" style="color:red"></p>
@@ -558,16 +568,7 @@
                             <input type="number" name="ticket_number" value="{% if shipment.ticket_number %}{{shipment.ticket_number}}{% else %}{% endif %}" class="textinput textInput form-control" id="ticket_number">
                             <p id="alert_msg" style="color:red"></p>
                         </div>
-                        <div class="col-md-4 mb-2 approved-fields">
-                            <label for="storage_bin_recive">Receiver SKU Id<span class="asteriskField">*</span></label>
-                            <input type="text" id="storage_bin_recive" name="storage_bin_recive" value="{% if shipment.storage_bin_recive %}{{shipment.storage_bin_recive}}{% else %}{% endif %}" class="textinput textInput form-control" list="suggestions1" autocomplete="off">
-                            <datalist id="suggestions1">
-                                {% for data in receiver_sku_id_list %}
-                                <option value="{{data}}">                                        
-                                {% endfor %}
-                            </datalist>
-                            <p id="alert_msg" style="color:red"></p>
-                        </div>
+                        
                         <div class="col-md-4 mb-2 disapproved-fields">
                             <label for="reason_for_disapproval">Reason for disapproval<span class="asteriskField">*</span></label>
                             <input type="text" name="reason_for_disapproval" value="{% if shipment.reason_for_disapproval %}{{shipment.reason_for_disapproval}}{% else %}{% endif %}" class="textinput textInput form-control" id="reason_for_disapproval">

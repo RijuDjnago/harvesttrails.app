@@ -80,7 +80,7 @@
                 <form method="post" class="farm-fields-form" enctype="multipart/form-data">
                     {% csrf_token %}
                     <div class="row" style="margin-bottom:10px">
-                        <div class="col-md-5 mb-2">
+                        <div class="col-md-6 mb-2">
                             <label for="id_bin_location_pull">Bin Location Pulled from<span class="asteriskField">*</span></label>
                             <select name="bin_pull" id="pull" class="textinput textInput form-control" onchange="this.form.submit()">
                                 {% if select_processor_name %}
@@ -125,7 +125,8 @@
                             {% endwith %} 
                             </select>
                         </div>
-                        <div class="col-md-4 mb-2">
+
+                        <div class="col-md-6 mb-2">
                             <label for="">Select Destination<span class="asteriskField">*</span></label>
                             <select id="processor2_id" name="processor2_id" class="textinput textInput form-control" onchange="this.form.submit()">
                                 {% if selected_destination %}
@@ -138,6 +139,7 @@
                                 {% endfor %}
                             </select>
                         </div>
+
                         <div class="col-md-6 mb-2 text-center" style="display:none;">
                             <label for="id_storage"><strong>Milled Volume</strong></label>
                             {% if milled_value == "None" %}
@@ -150,28 +152,11 @@
                         </div>
                         
                         <hr class="mt-2">
+                        
                         <div class="col-md-4 mb-2">
                             <div>
-                                <label for="equipment_type">Equipment Type<span class="asteriskField">*</span></label>
-                                <select name="equipment_type" id="equipment_type" class="textinput textInput form-control">
-                                    <option value="All" selected disabled>Select Equipment Type</option>
-                                    <option value="Truck" {% if equipment_type == "Truck" %}selected{% endif %}>Truck</option>
-                                    <option value="Hopper Car" {% if equipment_type == "Hopper Car" %}selected{% endif %}>Hopper Car</option>
-                                    <option value="Rail Car" {% if equipment_type == "Rail Car" %}selected{% endif %}>Rail Car</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-4 mb-2">
-                            <div>
-                                <label for="equipment_id">Equipment ID<span class="asteriskField">*</span></label>
-                                <input type="text" id="equipment_id" name="equipment_id" class="textinput textInput form-control" value="{{equipment_id}}">
-                                <p id="alert_msg1" style="color:red"></p>
-                            </div>
-                        </div>
-                        <div class="col-md-4 mb-2">
-                            <div>
-                                <label for="storage_bin_id">Storage Bin ID (SKU ID)<span class="asteriskField">*</span></label>
-                                <input type="text" id="storage_bin_id" name="storage_bin_id" class="textinput textInput form-control" list="suggestions1" autocomplete="off">
+                                <label for="storage_bin_id">Sender Storage Bin ID (SKU ID)<span class="asteriskField">*</span></label>
+                                <input type="text" id="storage_bin_id" name="storage_bin_id" class="textinput textInput form-control" list="suggestions1" autocomplete="off" value="{{storage_bin_id}}">
                                 <datalist id="suggestions1">
                                     {% for data in sender_sku_id_list %}
                                     <option value="{{data}}">                                        
@@ -184,6 +169,42 @@
                                     {% endif %}
                             </div>
                         </div>
+
+                        <div class="col-md-4 mb-2">  
+                            <label for="">Receiver Storage Bin Id (SKU ID)<span class="asteriskField">*</span></label>
+                            <input type="text" id="receiver_sku_id" name="receiver_sku_id" class="textinput textInput form-control" list="suggestions2" autocomplete="off" value="{{receiver_sku_id}}">
+                            <datalist id="suggestions2">
+                                {% for data in receiver_sku_id_list %}
+                                <option value="{{data}}">                                        
+                                {% endfor %}
+                            </datalist>
+                            {% if selected_destination %} 
+                            <p id="alert_msg3" style="color:red"></p>                               
+                            {% else %}
+                            <p id="warning" style="color:grey;"> <i>First select destination</i> </p> 
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-4 mb-2">
+                            <div>
+                                <label for="equipment_type">Equipment Type<span class="asteriskField">*</span></label>
+                                <select name="equipment_type" id="equipment_type" class="textinput textInput form-control">
+                                    <option value="All" selected disabled>Select Equipment Type</option>
+                                    <option value="Truck" {% if equipment_type == "Truck" %}selected{% endif %}>Truck</option>
+                                    <option value="Hopper Car" {% if equipment_type == "Hopper Car" %}selected{% endif %}>Hopper Car</option>
+                                    <option value="Rail Car" {% if equipment_type == "Rail Car" %}selected{% endif %}>Rail Car</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 mb-2">
+                            <div>
+                                <label for="equipment_id">Equipment ID<span class="asteriskField">*</span></label>
+                                <input type="text" id="equipment_id" name="equipment_id" class="textinput textInput form-control" value="{{equipment_id}}">
+                                <p id="alert_msg1" style="color:red"></p>
+                            </div>
+                        </div>
+
                         <div class="col-md-4 mb-2">
                             <label for="weight_prod">Weight Of Product<span class="asteriskField">*</span></label>
                             <div class="d-flex">
@@ -195,6 +216,7 @@
                             </div>
                             <p id="alert_msg4" style="color:red"></p>
                         </div>
+
                         <div class="col-md-4 mb-2">
                             <label for="exp_yield">Expected Yield<span class="asteriskField">*</span></label>
                             <div class="d-flex">
@@ -206,22 +228,26 @@
                             </div>
                             <p id="alert_msg5" style="color:red"></p>
                         </div>
+
                         <div class="col-md-4 mb-2">
                             <div>
                                 <label for="purchase_number">Purchase Order number</label>
                                 <input type="text" name="purchase_number" class="textinput textInput form-control" id="purchase_number" value="{{purchase_number}}">
                             </div>
                         </div>
+
                         <div class="col-md-4 mb-2">
                             <label for="lot_number">Lot Number<span class="asteriskField">*</span></label>
                             <input type="text" name="lot_number" class="textinput textInput form-control" id="lot_number" value="{{lot_number}}">
                             <p id="alert_msg2" style="color:red"></p>
                         </div>
+
                         <div class="col-md-4 mb-2">
                             <label for="volume_shipped">Volume Shipped<span class="asteriskField">*</span></label>
                             <input type="number" name="volume_shipped" value="{{volume_shipped}}" class="textinput textInput form-control" id="volume_shipped">
                             <p id="alert_msg" style="color:red"></p>
                         </div>
+
                         <div class="col-md-4 mb-2">
                             <div>
                                 <label for="status">Status<span class="asteriskField">*</span></label>
@@ -231,56 +257,35 @@
                                 </select>
                             </div>
                         </div>
-                    </div>
-                     <div class="col-md-12" >
-                            <div class="row">
-                                <div class="col-md-3 mb-2">  
-                                    <label for="">Receiver SKU ID<span class="asteriskField">*</span></label>
-                                    <input type="text" id="receiver_sku_id" name="receiver_sku_id" class="textinput textInput form-control" list="suggestions2" autocomplete="off">
-                                    <datalist id="suggestions2">
-                                        {% for data in receiver_sku_id_list %}
-                                        <option value="{{data}}">                                        
-                                        {% endfor %}
-                                    </datalist>
-                                    {% if selected_destination %} 
-                                    <p id="alert_msg3" style="color:red"></p>                               
-                                    {% else %}
-                                    <p id="warning" style="color:grey;"> <i>First select destination</i> </p> 
-                                    {% endif %}
-                                </div>
-                                <div class="col-md-3 mb-2">
-                                    <label for="">Recieved Weight<span class="asteriskField">*</span></label>
-                                    <input type="number" name="received_weight" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;">
-                                </div>
-                                <div class="col-md-3 mb-2">
-                                    <label for="">Ticket Number<span class="asteriskField">*</span></label>
-                                    <input type="text" name="ticket_number" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;">
-                                </div>
-                                
-                                <div class="col-md-3 mb-2">
-                                    <label for="">Approval Date<span class="asteriskField">*</span></label>
-                                    <input type="date"  name="approval_date" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;">
-                                </div>
 
-                            </div>
+                        <div class="col-md-3 mb-2">
+                            <label for="">Recieved Weight<span class="asteriskField">*</span></label>
+                            <input type="number" name="received_weight" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;">
                         </div>
-                        <div class="col-md-12">  
-                            <div class="row mt-4">                          
-                            <div class="col-md-4 mb-2">
-                                <label for="moist_percentage">Moisture Measurement (%)<span class="asteriskField">*</span></label>
-                                <input type="text" class="textinput textInput form-control" id="moist_percentage" name="moist_percentage" value="{{moist_percentage}}">
-                                <p id="alert_msg6" style="color:red"></p>
-                            </div>
+
+                        <div class="col-md-3 mb-2">
+                            <label for="">Ticket Number<span class="asteriskField">*</span></label>
+                            <input type="text" name="ticket_number" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;">
+                        </div>
                         
+                        <div class="col-md-3 mb-2">
+                            <label for="">Approval Date<span class="asteriskField">*</span></label>
+                            <input type="date"  name="approval_date" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;">
+                        </div>
+
+                        <div class="col-md-4 mb-2">
+                            <label for="moist_percentage">Moisture Measurement (%)<span class="asteriskField">*</span></label>
+                            <input type="number" class="textinput textInput form-control" id="moist_percentage" name="moist_percentage" value="{{moist_percentage}}">
+                            <p id="alert_msg6" style="color:red"></p>
+                        </div>
+                    
                         <div class="col-md-4 mb-2">
                             <label for="multi_file">Upload File <span class="asteriskField">*</span></label>
                             <input type="file" name="files" multiple accept=".jpg,.png,.xlsx,.csv,.pdf" id="multi_file" class="textinput textInput form-control" >
                             <p id="file_name_show" style="color:gray"></p>
                         </div>
+                    </div>                     
                         
-                    </div>
-
-                    </div>
                     <div class="row">
                         <div class="form-btn-row">
                             <a href="{% url 'inbound_shipment_list4' %}"
