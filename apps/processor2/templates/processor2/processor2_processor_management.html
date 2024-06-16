@@ -68,12 +68,11 @@
             <div class="main-simple-table-with-search">
                 <div class="row">
                 <div class="col-md-4 col-sm-6 col-12">
-                    <form action="" method="post" class="">
-                        {% csrf_token %}
+                    <form action="" method="get" class="">
                             <div class="three-fields-with-label">
                                 
                                 <select name="pro1_id" id="growerSelction" class="form-control selectpicker" data-live-search="true">
-                                    <option value='0' selected> Select All Processor</option>
+                                    <option value='All' selected> Select All Processor</option>
                                     {% for pro1 in Processor1 %}
                                     {% if pro1.id == selectedpro1 %}
                                     <option value="{{ pro1.id }}" selected>{{pro1.entity_name}} - {{ pro1.pk }}
@@ -159,6 +158,37 @@
                                 {% endfor %}
                             </tbody>
                         </table>
+                        <div class="col-md-12 col-sm-12 col-12 text-center mt-2" style="text-align:right">
+                            <span>Showing {{ link_processor_to_processor_all.start_index }} - {{ link_processor_to_processor_all.end_index }} of {{ link_processor_to_processor_all.paginator.count }} entries</span>
+                          </div>
+                          <!-- Pagination controls -->
+                          <div class="row d-flex justify-content-center align-items-center">
+                              <div class="col-sm-4"></div>
+                              <div class="col-sm-4">
+                                  {% if link_processor_to_processor_all.has_other_pages %}
+                                  <ul class="pagination" id="nav_1">
+                                      {% if link_processor_to_processor_all.has_previous %}
+                                      <li><a href="?pro1_id={{ selectedpro1 }}&page={{ link_processor_to_processor_all.previous_page_number }}">&laquo;</a></li>
+                                      {% else %}
+                                      <li class="disabled"><span>&laquo;</span></li>
+                                      {% endif %}
+                                      {% for i in link_processor_to_processor_all.paginator.page_range %}
+                                      {% if link_processor_to_processor_all.number == i %}
+                                      <li class="active pagi" id="getactive"><span>{{ i }} <span class="sr-only">(current)</span></span></li>
+                                      {% else %}
+                                      <li><a href="?pro1_id={{ selectedpro1 }}&page={{ i }}">{{ i }}</a></li>
+                                      {% endif %}
+                                      {% endfor %}
+                                      {% if link_processor_to_processor_all.has_next %}
+                                      <li><a href="?pro1_id={{ selectedpro1 }}&page={{ link_processor_to_processor_all.next_page_number }}">&raquo;</a></li>
+                                      {% else %}
+                                      <li class="disabled"><span>&raquo;</span></li>
+                                      {% endif %}
+                                  </ul>
+                                  {% endif %}
+                              </div>
+                              <div class="col-sm-4"></div>
+                          </div>
                     </div>
                 </div>
             

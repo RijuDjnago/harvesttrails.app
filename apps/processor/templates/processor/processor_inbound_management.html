@@ -373,20 +373,21 @@
             <div class="card card-padding">
                 <div class="main-simple-table-with-search col-12">
                     <div class="row d-flex">
-                        <div class="col-3">
-                            
+                        <div class="col-3">                            
                                 <select name="pro_id" id="mult_select"  class="form-control selectpicker" data-live-search="true" style="border-radius: 30px">
-                                    <option value='0'>Select Processor</option>
+                                    <option value='All'>Select Processor</option>
                                     {% for pro in processor2 %}
                     
-                                {% if select_processor == pro.pk %}
-                                    <option value="{{pro.pk}}" selected>{{pro.entity_name}}</option>
+                                {% if pro.id == select_processor %}
+                                    <option value="{{pro.id}}" selected>{{pro.entity_name}}</option>
                                 {% else %}
-                                    <option value="{{pro.pk}}">{{pro.entity_name}}</option>
+                                    <option value="{{pro.id}}">{{pro.entity_name}}</option>
                                 {% endif %}
                                 {% endfor %}
                             </select>
                         </div>
+                        <input style="display : none;" id="submitBtn" type="submit"
+                                            class="apply-filter-btn primary-btn" value="Apply Filter" />
                        <div class="col-5"></div>
 
                         <!-- Search section on the right side -->
@@ -395,7 +396,7 @@
                                 <div class="col-8">
                                     <input class="form-control" name="search_name" type="search" placeholder="Search" autocomplete="off" aria-label="Search" id="search_name" {% if search_name %}value="{{search_name}}"{% else %}{% endif %} >
                                 </div>
-                                <div class="col-3">
+                                <div class="col-4">
                                     <button class="btn btn-outline-success btn-block" type="submit">Search</button>
                                 </div>
                             </div>
@@ -495,33 +496,34 @@
                         </div>
 
                         <div class="row align-items-center">
+                            <div class="col-md-12 col-sm-12 col-12 text-center mt-2" style="text-align:right">
+                                <span>Showing  {{ shipments.start_index }} - {{ shipments.end_index }} of {{ shipments.paginator.count }} entries
+                                </span>
+                            </div>
                             <div class="col-md-12 col-sm-12 col-12 text-center">
-                                {% if grower_shipment.has_other_pages %}
+                                {% if shipments.has_other_pages %}
                                 <ul class="pagination" id="nav_1">
-                                {% if grower_shipment.has_previous %}
-                                    <li><a href="?selectgrower_id={% if selectedGrower.id  %}{{selectedGrower.id}}{% else %}{{selectedGrower}}{% endif %}&search_name={% if get_search_name  %}{{get_search_name}}{% endif %}&page={{ grower_shipment.previous_page_number }}">&laquo;</a></li>
+                                {% if shipments.has_previous %}
+                                    <li><a href="?pro_id={{ select_processor }}&search_name={% if get_search_name  %}{{get_search_name}}{% endif %}&page={{ shipments.previous_page_number }}">&laquo;</a></li>
                                     {% else %}
                                     <li class="disabled"><span>&laquo;</span></li>
                                     {% endif %}
-                                    {% for i in grower_shipment.paginator.page_range %}
-                                    {% if grower_shipment.number == i %}
+                                    {% for i in shipments.paginator.page_range %}
+                                    {% if shipments.number == i %}
                                     <li class="active pagi" id="getactive"><span>{{ i }} <span class="sr-only">(current)</span></span></li>
                                     {% else %}
-                                    <li><a href="?selectgrower_id={% if selectedGrower.id  %}{{selectedGrower.id}}{% else %}{{selectedGrower}}{% endif %}&search_name={% if get_search_name  %}{{get_search_name}}{% endif %}&page={{ i }}">{{ i }}</a></li>
+                                    <li><a href="?pro_id={{ select_processor }}&search_name={% if get_search_name  %}{{get_search_name}}{% endif %}&page={{ i }}">{{ i }}</a></li>
                                     {% endif %}
                                     {% endfor %}
-                                    {% if grower_shipment.has_next %}
-                                    <li><a href="?selectgrower_id={% if selectedGrower.id  %}{{selectedGrower.id}}{% else %}{{selectedGrower}}{% endif %}&search_name={% if get_search_name  %}{{get_search_name}}{% endif %}&page={{ grower_shipment.next_page_number }}">&raquo;</a></li>
+                                    {% if shipments.has_next %}
+                                    <li><a href="?pro_id={{ select_processor }}&search_name={% if get_search_name  %}{{get_search_name}}{% endif %}&page={{ shipments.next_page_number }}">&raquo;</a></li>
                                     {% else %}
                                     <li class="disabled"><span>&raquo;</span></li>
                                 {% endif %}
                                 </ul>
                             {% endif %}
                             </div>
-                            <div class="col-md-12 col-sm-12 col-12 text-center mt-2" style="text-align:right">
-                                <span>Showing  {{ grower_shipment.start_index }} - {{ grower_shipment.end_index }} of {{ grower_shipment.paginator.count }} entries
-                                </span>
-                            </div>
+                            
                         </div>
                     </div>
                 </div>
@@ -572,7 +574,7 @@
     {% endblock scripts %}
 
 {% block jquery %}
-<scripscrip src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.js">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.js">
 </script>
 <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.16/jquery-ui.js">
 </script>

@@ -40,7 +40,7 @@ from django.utils.formats import get_format
 from urllib.parse import urlparse
 import geojson
 import numpy as np
-# import geopandas as gpd
+import geopandas as gpd
 # import matplotlib.pyplot as plt
 # from descartes import PolygonPatch
 # import matplotlib.patches as mpatches

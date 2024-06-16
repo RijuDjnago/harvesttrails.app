@@ -61,38 +61,18 @@
                 {% if 'Processor2' in request.user.get_role and not request.user.is_superuser %}
                 {% else %}
                 <div class="form-inline justify-content-start">
-                    <form action="" method="post" class="">
-                        {% csrf_token %}
-                        {% comment %} <div class="inline-apply-filter">
-                          <div class="three-fields-with-label">
-                            <select id="growerSelction" name="processor_id" class="mb-0" style="border-radius:0px !important">
-                              <option value='all' selected> Select All Processor </option>
-                              {% for processor in processor %}
-                              {% if processor == selectedprocessor %}
-                              <option selected value="{{ processor.pk }}">{{processor.entity_name}} - {{processor.id}}
-                              </option>
-                              {% else %}
-                              <option value="{{ processor.pk }}">{{processor.entity_name}} - {{processor.id}}</option>
-                              {% endif %}
-                              {% endfor %}
-                            </select>
-                          </div>
-                          <input style="display : none;" id="submitBtn" type="submit" class="apply-filter-btn primary-btn"
-                            value="Apply Filter" />
-                        </div> {% endcomment %}
-
-
+                    <form action="" method="get" class="">                        
                         <div class="col-8">
                           <div class="inline-apply-filter">
                               <div class="three-fields-with-label">
                                   <select id="growerSelction" name="processor_id"  class="form-control selectpicker" data-live-search="true">
                                       <option value='all' selected> Select All Processor </option>
                                       {% for processor in processor %}
-                                      {% if processor == selectedprocessor %}
-                                      <option selected value="{{ processor.pk }}">{{processor.entity_name}} - {{processor.id}}
+                                      {% if processor.id == selectedprocessor %}
+                                      <option selected value="{{ processor.id }}">{{processor.entity_name}} - {{processor.id}}
                                       </option>
                                       {% else %}
-                                      <option value="{{ processor.pk }}">{{processor.entity_name}} - {{processor.id}}</option>
+                                      <option value="{{ processor.id }}">{{processor.entity_name}} - {{processor.id}}</option>
                                       {% endif %}
                                       {% endfor %}
                                   </select>
@@ -164,6 +144,37 @@
                                 {% endfor %}
                             </tbody>
                         </table>
+                        <div class="col-md-12 col-sm-12 col-12 text-center mt-2" style="text-align:right">
+                          <span>Showing {{ location.start_index }} - {{ location.end_index }} of {{ location.paginator.count }} entries</span>
+                        </div>
+                        <!-- Pagination controls -->
+                        <div class="row d-flex justify-content-center align-items-center">
+                            <div class="col-sm-4"></div>
+                            <div class="col-sm-4">
+                                {% if location.has_other_pages %}
+                                <ul class="pagination" id="nav_1">
+                                    {% if location.has_previous %}
+                                    <li><a href="?processor_id={{ selectedprocessor }}&page={{ location.previous_page_number }}">&laquo;</a></li>
+                                    {% else %}
+                                    <li class="disabled"><span>&laquo;</span></li>
+                                    {% endif %}
+                                    {% for i in location.paginator.page_range %}
+                                    {% if location.number == i %}
+                                    <li class="active pagi" id="getactive"><span>{{ i }} <span class="sr-only">(current)</span></span></li>
+                                    {% else %}
+                                    <li><a href="?processor_id={{ selectedprocessor }}&page={{ i }}">{{ i }}</a></li>
+                                    {% endif %}
+                                    {% endfor %}
+                                    {% if location.has_next %}
+                                    <li><a href="?processor_id={{ selectedprocessor }}&page={{ location.next_page_number }}">&raquo;</a></li>
+                                    {% else %}
+                                    <li class="disabled"><span>&raquo;</span></li>
+                                    {% endif %}
+                                </ul>
+                                {% endif %}
+                            </div>
+                            <div class="col-sm-4"></div>
+                        </div>
                         
                     </div>
                 </div>

@@ -37,9 +37,9 @@ from django.contrib.auth.decorators import login_required
 import geojson
 import numpy as np
 import geopandas as gpd
-import matplotlib.pyplot as plt
-from descartes import PolygonPatch
-import matplotlib.patches as mpatches
+# import matplotlib.pyplot as plt
+# from descartes import PolygonPatch
+# import matplotlib.patches as mpatches
 
 # code ..
 from apps.field.serializers import *
