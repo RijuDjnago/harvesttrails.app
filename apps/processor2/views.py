@@ -62,7 +62,16 @@ def list_processor2(request):
         # Superuser.................
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
             processor2 = ProcessorUser2.objects.filter(processor2__processor_type__type_name="T2")
-            context['processor'] = processor2
+            search_name = request.GET.get('search_name', '')
+            if search_name:
+                processor2 = processor2.filter(contact_name__icontains=search_name)
+
+            # Pagination
+            paginator = Paginator(processor2, 20) 
+            page_number = request.GET.get('page')
+            page_obj = paginator.get_page(page_number)
+            context['page_obj'] = page_obj
+            context['get_search_name'] = search_name
             return render(request, 'processor2/list_processor2.html',context)
         else:
             return redirect("dashboard")
@@ -937,25 +946,22 @@ def location_list_processor2(request):
             if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():            
                 location = Processor2Location.objects.filter(processor__processor_type__type_name="T2")
                 processor = Processor2.objects.filter(processor_type__type_name="T2")
-                context['location'] = location
                 context['processor'] = processor
-                if request.method == 'POST':
-                    value = request.POST.get('processor_id')                   
-                    if value == 'all' :
-                        location = Processor2Location.objects.filter(processor__processor_type__type_name="T2")
-                        processor = Processor2.objects.filter(processor_type__type_name="T2")
-                        context['location'] = location
-                        context['processor'] = processor
-                        return render(request, 'processor2/list_location.html',context)
-                    else:
-                        processor_id = request.POST.get('processor_id')
-                        processor = Processor2.objects.filter(processor_type__type_name="T2")
-                        location = Processor2Location.objects.filter(processor__processor_type__type_name="T2").filter(processor_id=processor_id)
-                        context['location'] = location
-                        context['processor'] = processor
-                        context['selectedprocessor'] = Processor2.objects.get(id=processor_id)
-                        return render(request, 'processor2/list_location.html',context)
-                    
+                
+                value = request.GET.get('processor_id','')                   
+                context['selectedprocessor'] = value
+                if value and value !="all":                    
+                    location =location.filter(processor_id=int(value))
+
+                paginator = Paginator(location, 100)
+                page = request.GET.get('page')
+                try:
+                    report = paginator.page(page)
+                except PageNotAnInteger:
+                    report = paginator.page(1)
+                except EmptyPage:
+                    report = paginator.page(paginator.num_pages)    
+                context['location'] = report    
                 return render(request, 'processor2/list_location.html',context)        
             else:
                 return redirect("dashboard")
@@ -1149,22 +1155,19 @@ def outbound_shipment_list(request):
             p_id = [i.processor_idd for i in output]
             processors = Processor2.objects.filter(id__in = p_id).order_by('entity_name')
             context['processors'] = processors
-            search_name = request.GET.get('search_name')
-            selectprocessor_id = request.GET.get('selectprocessor_id')
-
-            if search_name == None and selectprocessor_id == None :
-                output = output
-            else:
-                output = ShipmentManagement.objects.filter(sender_processor_type="T2")
-                if search_name and search_name != 'All':
-                    output = output.filter(Q(processor_e_name__icontains=search_name) | Q(date_pulled__icontains=search_name) |
-                    Q(bin_location__icontains=search_name) | Q(equipment_type__icontains=search_name) | Q(equipment_id__icontains=search_name) | 
-                    Q(purchase_order_number__icontains=search_name) | Q(lot_number__icontains=search_name))
-                    context['search_name'] = search_name
-                if selectprocessor_id and selectprocessor_id != 'All':
-                    output = output.filter(processor_idd=selectprocessor_id)
-                    selectedProcessors = Processor2.objects.get(id=selectprocessor_id)
-                    context['selectedProcessors'] = selectedProcessors
+            search_name = request.GET.get('search_name','')
+            selectprocessor_id = request.GET.get('selectprocessor_id','')
+            context['search_name'] = search_name
+            context['selectedProcessors'] = selectprocessor_id
+            
+            if search_name and search_name != '':
+                output = output.filter(Q(processor_e_name__icontains=search_name) | Q(date_pulled__icontains=search_name) |
+                Q(bin_location__icontains=search_name) | Q(equipment_type__icontains=search_name) | Q(equipment_id__icontains=search_name) | 
+                Q(purchase_order_number__icontains=search_name) | Q(lot_number__icontains=search_name))
+                
+            if selectprocessor_id and selectprocessor_id != 'All':
+                output = output.filter(processor_idd=selectprocessor_id)                                      
+                    
             output = output.order_by("-id")
             paginator = Paginator(output, 100)
             page = request.GET.get('page')
@@ -1243,35 +1246,42 @@ def outbound_shipment_delete(request,pk):
 
 
 @login_required()
-def inbound_shipment_list(request): 
-    context = {} 
+def inbound_shipment_list(request):
+    context = {}
     try:
-        # Superuser..................
-        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
-            context["table_data"] = list(ShipmentManagement.objects.filter(receiver_processor_type="T2").order_by("-id").values())
-            context["processor2"] = Processor2.objects.filter(processor_type__type_name="T2")
-            search_name = request.GET.get("search_name")
-            context["search_name"] = search_name           
-            if request.GET.get("select_processor"):
-                context["select_processor"] = int(request.GET.get("select_processor"))
-            else:
-                context["select_processor"] = None
-            if context["select_processor"] == '0' or not context["select_processor"]:
-                if search_name:
-                    queryset = list(ShipmentManagement.objects.filter(receiver_processor_type="T2").filter(Q(shipment_id__icontains = search_name)|Q(processor_e_name__icontains = search_name)).values())
-                return render (request, 'processor2/inbound_management_table.html', context)
-            else:
-                if search_name:
-                    queryset = list(ShipmentManagement.objects.filter(receiver_processor_type="T2", processor2_idd=context["select_processor"]).filter(Q(shipment_id__icontains = search_name)|Q(processor_e_name__icontains = search_name)).values())
-                else:   
-                    queryset = list(ShipmentManagement.objects.filter(receiver_processor_type="T2", processor2_idd=context["select_processor"]).values())
-            context["table_data"] = queryset.order_by("-id")
-            return render (request, 'processor2/inbound_management_table.html', context)        
+        # Superuser.............
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():           
+            context["processor2"] = Processor2.objects.filter(processor_type__type_name="T2")            
+            search_name = request.GET.get("search_name", "")
+            context["search_name"] = search_name  
+            select_processor = request.GET.get("select_processor", "")         
+            context["select_processor"] = select_processor
+            queryset = ShipmentManagement.objects.filter(receiver_processor_type="T2")
+            
+            if select_processor and select_processor != 'All':
+                queryset = queryset.filter(processor2_idd=int(select_processor))
+
+            if search_name and search_name != "":
+                queryset = queryset.filter(Q(shipment_id__icontains=search_name) | Q(processor_e_name__icontains=search_name))
+            
+            # Paginate the queryset
+            paginator = Paginator(queryset, 10) 
+            page = request.GET.get('page')
+
+            try:
+                table_data = paginator.page(page)
+            except PageNotAnInteger:
+                table_data = paginator.page(1)
+            except EmptyPage:
+                table_data = paginator.page(paginator.num_pages)
+
+            context["table_data"] = table_data
+            return render(request, 'processor2/inbound_management_table.html', context)
         else:
-            return redirect('dashboard')  
-    except Exception as e:
+            return redirect('dashboard') 
+    except Exception as e:        
         context["error_messages"] = str(e)
-        return render (request, 'processor2/inbound_management_table.html', context) 
+        return render(request, 'processor2/inbound_management_table.html', context)
 
 
 from io import BytesIO    
@@ -1620,13 +1630,21 @@ def processor2_processor_management(request):
                 processor2 = Processor2.objects.filter(processor_type__type_name="T2")  #24/04/2024
                 context['Processor1'] = processor2
                 link_processor_to_processor_all = LinkProcessorToProcessor.objects.filter(processor__processor_type__type_name="T2")
-                context['link_processor_to_processor_all'] = link_processor_to_processor_all                
-                if request.method == 'POST':
-                    pro1_id = request.POST.get('pro1_id')
-                    if pro1_id != '0':
-                        context['link_processor_to_processor_all'] = link_processor_to_processor_all.filter(processor_id=int(pro1_id))
-                        #then need to add T1/T2/T3
-                        context['selectedpro1'] = int(pro1_id)         
+                                        
+                pro1_id = request.GET.get('pro1_id','')
+                context['selectedpro1'] = pro1_id
+                if pro1_id and pro1_id != 'All':
+                    link_processor_to_processor_all  = link_processor_to_processor_all.filter(processor_id=int(pro1_id))
+                
+                paginator = Paginator(link_processor_to_processor_all, 100)
+                page = request.GET.get('page')
+                try:
+                    report = paginator.page(page)
+                except PageNotAnInteger:
+                    report = paginator.page(1)
+                except EmptyPage:
+                    report = paginator.page(paginator.num_pages)
+                context['link_processor_to_processor_all'] = report           
                             
                 return render(request, 'processor2/processor2_processor_management.html',context)
         else:

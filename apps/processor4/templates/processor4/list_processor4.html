@@ -48,6 +48,10 @@
             <div class="main-simple-table-with-search">
                 <div class="both-data-in" style="display: inherit;">
                     <div class="simple-responsive-table">
+                      <form method="get" class="form-inline" style="float: right; margin-bottom: 10px;">
+                        <input type="text" name="search_name" id="searchInput" value="{{ get_search_name }}" placeholder="Search..." class="form-control">
+                        <button type="submit" class="btn btn-outline-success ml-2">Search</button>
+                      </form>
                         <table id="processorList_tbl" class="table table-striped dt-responsive nowrap" style="width:100%">
                             <thead>
                                 <tr style="border-bottom: 2px solid #e0e0e0;">
@@ -61,7 +65,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for i in processor %}
+                                {% for i in page_obj %}
                                 <tr>
                                     <td>{{i.processor2.entity_name}}</td>
                                     <td>{{i.processor2.fein}}</td>
@@ -114,6 +118,34 @@
                                 {% endfor %}
                             </tbody>
                         </table>
+                        <div class="col-md-12 col-sm-12 col-12 text-center mt-2" style="text-align:right">
+                          <span>Showing {{ page_obj.start_index }} - {{ page_obj.end_index }} of {{ page_obj.paginator.count }} entries</span>
+                        </div>
+                        <!-- Pagination controls -->
+                        <div class="row d-flex justify-content-center align-items-center">
+                            <div class="col-sm-6 col-6">
+                                {% if page_obj.has_other_pages %}
+                                <ul class="pagination" id="nav_1">
+                                    {% if page_obj.has_previous %}
+                                    <li><a href="?search_name={{ get_search_name }}&page={{ page_obj.previous_page_number }}">&laquo;</a></li>
+                                    {% else %}
+                                    <li class="disabled"><span>&laquo;</span></li>
+                                    {% endif %}
+                                    {% for i in page_obj.paginator.page_range %}
+                                    {% if page_obj.number == i %}
+                                    <li class="active pagi" id="getactive"><span>{{ i }} <span class="sr-only">(current)</span></span></li>
+                                    {% else %}
+                                    <li><a href="?search_name={{ get_search_name }}&page={{ i }}">{{ i }}</a></li>
+                                    {% endif %}
+                                    {% endfor %}
+                                    {% if page_obj.has_next %}
+                                    <li><a href="?search_name={{ get_search_name }}&page={{ page_obj.next_page_number }}">&raquo;</a></li>
+                                    {% else %}
+                                    <li class="disabled"><span>&raquo;</span></li>
+                                    {% endif %}
+                                </ul>
+                                {% endif %}
+                            </div> 
                     </div>
                 </div>
             </div>
