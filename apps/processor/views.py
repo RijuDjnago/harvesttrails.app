@@ -491,7 +491,7 @@ def ListProcessorView(request):
                 processor = processor.filter(contact_name__icontains=search_name)
                 
             # Pagination
-            paginator = Paginator(processor, 10)  # Show 10 processors per page.
+            paginator = Paginator(processor, 20)  # Show 10 processors per page.
             page_number = request.GET.get('page')
             page_obj = paginator.get_page(page_number)
             context['page_obj'] = page_obj
