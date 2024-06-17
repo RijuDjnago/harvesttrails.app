@@ -337,47 +337,44 @@ def add_processor4_user(request,pk):
         context["error_messages"] = str(e)
         return render(request, 'processor4/add_processor4_user.html',context)
 
-
+    
 @login_required()
 def inbound_shipment_list(request):
     context = {}
     try:
-        # Superuser...............
-        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
-            context["table_data"] = list(ShipmentManagement.objects.filter(receiver_processor_type="T4").order_by("-id").values())
-            context["processor4"] = Processor2.objects.filter(processor_type__type_name="T4")
-            search_name = request.GET.get("search_name")
-            context["search_name"] = search_name
-            if request.GET.get("select_processor"):
-                context["select_processor"] = int(request.GET.get("select_processor"))
-            else:
-                context["select_processor"] = None
-            if context["select_processor"] == '0' or not context["select_processor"]:
-                if search_name:
-                    queryset = list(ShipmentManagement.objects.filter(receiver_processor_type="T4").filter(Q(shipment_id__icontains = search_name)|Q(processor_e_name__icontains = search_name)).values())
-                return render (request, 'processor4/inbound_management_table.html', context)
-            else:
-                if search_name:
-                    # print("hit", search, search_name)
-                    queryset = list(ShipmentManagement.objects.filter(receiver_processor_type="T4", processor2_idd=context["select_processor"]).filter(Q(shipment_id__icontains = search_name)|Q(processor_e_name__icontains = search_name)).values())
-                else:   
-                    queryset = list(ShipmentManagement.objects.filter(receiver_processor_type="T4", processor2_idd=context["select_processor"]).values())
-            queryset = queryset.order_by("-id")
-            paginator = Paginator(queryset, 100)
+        # Superuser.............
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():           
+            context["processor4"] = Processor2.objects.filter(processor_type__type_name="T4")            
+            search_name = request.GET.get("search_name", "")
+            context["search_name"] = search_name  
+            select_processor = request.GET.get("select_processor", "")         
+            context["select_processor"] = select_processor
+            queryset = ShipmentManagement.objects.filter(receiver_processor_type="T4")
+            
+            if select_processor and select_processor != 'All':
+                queryset = queryset.filter(processor2_idd=int(select_processor))
+
+            if search_name and search_name != "":
+                queryset = queryset.filter(Q(shipment_id__icontains=search_name) | Q(processor_e_name__icontains=search_name))
+            
+            # Paginate the queryset
+            paginator = Paginator(queryset, 10) 
             page = request.GET.get('page')
+
             try:
-                report = paginator.page(page)
+                table_data = paginator.page(page)
             except PageNotAnInteger:
-                report = paginator.page(1)
+                table_data = paginator.page(1)
             except EmptyPage:
-                report = paginator.page(paginator.num_pages)
-            context["table_data"] = report
-            return render (request, 'processor4/inbound_management_table.html', context)
+                table_data = paginator.page(paginator.num_pages)
+
+            context["table_data"] = table_data
+            return render(request, 'processor4/inbound_management_table.html', context)
         else:
-            return redirect('dashboard')  
-    except Exception as e:
+            return redirect('dashboard') 
+    except Exception as e:        
         context["error_messages"] = str(e)
-        return render (request, 'processor4/inbound_management_table.html', context) 
+        return render(request, 'processor4/inbound_management_table.html', context)
 
 
 @login_required()
@@ -942,8 +939,18 @@ def delete_volume_pulled_processor4(request,pk):
 def processor4_list(request):
     context={}
     if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
-        processor3 = ProcessorUser2.objects.filter(processor2__processor_type__type_name="T4")
-        context['processor'] = processor3
+        processor4 = ProcessorUser2.objects.filter(processor2__processor_type__type_name="T4")
+        search_name = request.GET.get('search_name', '')
+        if search_name:
+            processor4 = processor4.filter(contact_name__icontains=search_name)
+
+        # Pagination
+        paginator = Paginator(processor4, 20) 
+        page_number = request.GET.get('page')
+        page_obj = paginator.get_page(page_number)
+        context['page_obj'] = page_obj
+        context['get_search_name'] = search_name
+
         return render(request,'processor4/list_processor4.html',context)
     else:
         return redirect('login')   
@@ -1005,27 +1012,22 @@ def location_list_processor4(request):
             if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
                 location = Processor2Location.objects.filter(processor__processor_type__type_name="T4")
                 processor = Processor2.objects.filter(processor_type__type_name="T4")
-                context['location'] = location
+                
                 context['processor'] = processor
-                if request.method == 'POST':
-                    value = request.POST.get('processor_id')
-                    #print(value)
-                    if value == 'all' :
-                        location = Processor2Location.objects.filter(processor__processor_type__type_name="T4")
-                        processor = Processor2.objects.filter(processor_type__type_name="T4")
-                        context['location'] = location
-                        context['processor'] = processor
-                        return render(request, 'processor4/location_managment.html',context)
-
-                    else:
-                        processor_id = request.POST.get('processor_id')
-                        processor = Processor2.objects.filter(processor_type__type_name="T4")
-                        location = Processor2Location.objects.filter(processor__processor_type__type_name="T4").filter(processor_id=processor_id)
-                        context['location'] = location
-                        context['processor'] = processor
-                        context['selectedprocessor'] = Processor2.objects.get(id=processor_id)
-                        return render(request, 'processor4/location_managment.html',context)
-                    
+                
+                value = request.GET.get('processor_id','')
+                context['selectedprocessor'] = value
+                if value and value != "all":                    
+                    location = Processor2Location.objects.filter(processor__processor_type__type_name="T4").filter(processor_id=int(value))
+                paginator = Paginator(location, 100)
+                page = request.GET.get('page')
+                try:
+                    report = paginator.page(page)
+                except PageNotAnInteger:
+                    report = paginator.page(1)
+                except EmptyPage:
+                    report = paginator.page(paginator.num_pages)    
+                context['location'] = report                    
                 return render(request, 'processor4/location_managment.html',context)
             else:
                 return redirect("dashboard")

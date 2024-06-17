@@ -143,11 +143,11 @@
                                 <select name="selectprocessor_id" id="mult_select"  class="form-control selectpicker" data-live-search="true">
                                     <option value='All' selected> Select All Processors </option>
                                     {% for i in processors %}
-                                    {% if i == selectedProcessors %}
-                                    <option value="{{ i.pk }}" selected>{{i.entity_name}} - {{ i.pk }}
+                                    {% if i.id == selectedProcessors %}
+                                    <option value="{{ i.pk }}" selected>{{i.entity_name}} - {{ i.id }}
                                     </option>
                                     {% else %}
-                                    <option value="{{ i.pk }}">{{i.entity_name}} - {{ i.pk }}</option>
+                                    <option value="{{ i.pk }}">{{i.entity_name}} - {{ i.id }}</option>
                                     {% endif %}
                                     {% endfor %}
                                 </select>
@@ -269,7 +269,7 @@
                             {% if report.has_other_pages %}
                                 <ul class="pagination" id="nav_1">
                                 {% if report.has_previous %}
-                                    <li><a href="?selectprocessor_id={%if selectedProcessors.id %}{{selectedProcessors.id}}{% else %}All{% endif %}&search_name={%if search_name %}{{search_name}}{% else %}All{% endif %}&page={{ report.previous_page_number }}">&laquo;</a></li>
+                                    <li><a href="?selectprocessor_id={{selectedProcessors}}&search_name={{search_name}}&page={{ report.previous_page_number }}">&laquo;</a></li>
                                     {% else %}
                                     <li class="disabled"><span>&laquo;</span></li>
                                     {% endif %}
@@ -277,11 +277,11 @@
                                     {% if report.number == i %}
                                     <li class="active pagi" id="getactive"><span>{{ i }} <span class="sr-only">(current)</span></span></li>
                                     {% else %}
-                                    <li><a href="?selectprocessor_id={%if selectedProcessors.id %}{{selectedProcessors.id}}{% else %}All{% endif %}&search_name={%if search_name %}{{search_name}}{% else %}All{% endif %}&page={{ i }}">{{ i }}</a></li>
+                                    <li><a href="?selectprocessor_id={{selectedProcessors}}&search_name={{search_name}}&page={{ i }}">{{ i }}</a></li>
                                     {% endif %}
                                     {% endfor %}
                                     {% if report.has_next %}
-                                    <li><a href="?selectprocessor_id={%if selectedProcessors.id %}{{selectedProcessors.id}}{% else %}All{% endif %}&search_name={%if search_name %}{{search_name}}{% else %}All{% endif %}&page={{ report.next_page_number }}">&raquo;</a></li>
+                                    <li><a href="?selectprocessor_id={{selectedProcessors}}&search_name={{search_name}}&page={{ report.next_page_number }}">&raquo;</a></li>
                                     {% else %}
                                     <li class="disabled"><span>&raquo;</span></li>
                                 {% endif %}

@@ -181,9 +181,9 @@
                 <div class="main-simple-table-with-search col-12">
                     <div class="row d-flex align-items-center">
                         <!-- Select tag on the left side -->
-                        <div class="col-3">
+                        <div class="col-4">
                             <select name="select_processor" id="mult_select"  class="form-control selectpicker" data-live-search="true">
-                                <option value='0'>Select Processor</option>
+                                <option value='All'>Select Processor</option>
                                 {% for pro in processor4 %}
                                 {% if select_processor == pro.pk %}
                                     <option value="{{pro.pk}}" selected>{{pro.entity_name}}</option>
@@ -193,6 +193,8 @@
                                 {% endfor %}
                             </select>
                         </div>
+                        <input style="display : none;" id="submitBtn" type="submit"
+                                    class="apply-filter-btn primary-btn" value="Apply Filter" />
                         <div class="col-4">
                         </div>
                         <!-- Search section on the right side -->
@@ -355,33 +357,33 @@
                             </table>
                         </div>
 
-                        <div class="row align-items-center mt-2">
+                        <div class="row align-items-center">
                             <div class="col-md-12 col-sm-12 col-12 text-center">
                                 {% if table_data.has_other_pages %}
                                     <ul class="pagination" id="nav_1">
-                                    {% if table_data.has_previous %}
-                                        <li><a href="?selectprocessor_id={%if selectedProcessors.id %}{{selectedProcessors.id}}{% else %}All{% endif %}&search_name={%if search_name %}{{search_name}}{% else %}All{% endif %}&page={{ table_data.previous_page_number }}">&laquo;</a></li>
+                                        {% if table_data.has_previous %}
+                                            <li><a href="?select_processor={{ select_processor }}&search_name={{ search_name }}&page={{ table_data.previous_page_number }}">&laquo;</a></li>
                                         {% else %}
-                                        <li class="disabled"><span>&laquo;</span></li>
+                                            <li class="disabled"><span>&laquo;</span></li>
                                         {% endif %}
                                         {% for i in table_data.paginator.page_range %}
-                                        {% if table_data.number == i %}
-                                        <li class="active pagi" id="getactive"><span>{{ i }} <span class="sr-only">(current)</span></span></li>
-                                        {% else %}
-                                        <li><a href="?selectprocessor_id={%if selectedProcessors.id %}{{selectedProcessors.id}}{% else %}All{% endif %}&search_name={%if search_name %}{{search_name}}{% else %}All{% endif %}&page={{ i }}">{{ i }}</a></li>
-                                        {% endif %}
+                                            {% if table_data.number == i %}
+                                                <li class="active"><span>{{ i }} <span class="sr-only">(current)</span></span></li>
+                                            {% else %}
+                                                <li><a href="?select_processor={{ select_processor }}&search_name={{ search_name }}&page={{ i }}">{{ i }}</a></li>
+                                            {% endif %}
                                         {% endfor %}
                                         {% if table_data.has_next %}
-                                        <li><a href="?selectprocessor_id={%if selectedProcessors.id %}{{selectedProcessors.id}}{% else %}All{% endif %}&search_name={%if search_name %}{{search_name}}{% else %}All{% endif %}&page={{ table_data.next_page_number }}">&raquo;</a></li>
+                                            <li><a href="?select_processor={{ select_processor }}&search_name={{ search_name }}&page={{ table_data.next_page_number }}">&raquo;</a></li>
                                         {% else %}
-                                        <li class="disabled"><span>&raquo;</span></li>
-                                    {% endif %}
+                                            <li class="disabled"><span>&raquo;</span></li>
+                                        {% endif %}
                                     </ul>
                                 {% endif %}
                             </div>
                             <div class="col-md-12 col-sm-12 col-12 text-center mt-2" style="text-align:right">
-                                <span>Showing  {{ table_data.start_index }} - {{ table_data.end_index }} of {{ table_data.paginator.count }} entries</span>
-                            </div>
+                            <span>Showing  {{ table_data.start_index }} - {{ table_data.end_index }} of {{ table_data.paginator.count }} entries
+                            </span>
                         </div>
                     </div>
                 </div>

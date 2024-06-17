@@ -35,21 +35,17 @@
             </div>
             {% endif %}
             {% endif %}
-        </div>
-        
-        
-        
-        
+        </div>      
+               
         <div class="card card-padding">
             <div class="main-simple-table-with-search">
                 <div class="row">
                     <div class="col-6">
-                        <form action="" method="post" class="">
-                            {% csrf_token %}
+                        <form action="" method="get" class="">
                             <div class="inline-apply-filter">
                                 <div class="three-fields-with-label">
-                                    <select id="growerSelction" name="grower_id">
-                                        <option value='0' selected> Select All Growers</option>
+                                    <select id="growerSelction" class="form-control selectpicker" name="grower_id" data-live-search="true">
+                                        <option value='all' selected> Select All Growers</option>
                                         {% for i in grower %}
                                         {% if i == selectedGrower %}
                                         <option value="{{ i.pk }}" selected>{{i.name}} - {{ i.pk }}
@@ -84,18 +80,6 @@
                                     </li>
                                 </ul>
                             </div>
-                            <!-- <form class="form-inline " method="post" action="">
-                                {% csrf_token %}
-                                <input class="form-control mr-sm-2" name="processor_search" type="search" placeholder="Search"
-                                    aria-label="Search">
-                                <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Search</button> &nbsp;
-                            </form>
-        
-                            <form class="form-inline" method="get" action="">
-                                <input type="hidden" class="form-control mr-sm-2" name="farm_name_all" type="search"
-                                    placeholder="Search" aria-label="Search">
-                                <button class="btn btn-outline-success my-2 my-sm-0" type="submit">All</button>
-                            </form> -->
                             
                         </div>
                     </div>
@@ -141,6 +125,37 @@
                                 {% endfor %}
                             </tbody>
                         </table>
+                        <div class="col-md-12 col-sm-12 col-12 text-center mt-2" style="text-align:right">
+                            <span>Showing {{ grower_processor.start_index }} - {{ grower_processor.end_index }} of {{ grower_processor.paginator.count }} entries</span>
+                          </div>
+                          <!-- Pagination controls -->
+                          <div class="row d-flex justify-content-center align-items-center">
+                              <div class="col-sm-4"></div>
+                              <div class="col-sm-4">
+                                  {% if grower_processor.has_other_pages %}
+                                  <ul class="pagination" id="nav_1">
+                                      {% if grower_processor.has_previous %}
+                                      <li><a href="?grower_id={{ selectedGrower }}&page={{ grower_processor.previous_page_number }}">&laquo;</a></li>
+                                      {% else %}
+                                      <li class="disabled"><span>&laquo;</span></li>
+                                      {% endif %}
+                                      {% for i in grower_processor.paginator.page_range %}
+                                      {% if grower_processor.number == i %}
+                                      <li class="active pagi" id="getactive"><span>{{ i }} <span class="sr-only">(current)</span></span></li>
+                                      {% else %}
+                                      <li><a href="?grower_id={{ selectedGrower }}&page={{ i }}">{{ i }}</a></li>
+                                      {% endif %}
+                                      {% endfor %}
+                                      {% if grower_processor.has_next %}
+                                      <li><a href="?grower_id={{ selectedGrower }}&page={{ grower_processor.next_page_number }}">&raquo;</a></li>
+                                      {% else %}
+                                      <li class="disabled"><span>&raquo;</span></li>
+                                      {% endif %}
+                                  </ul>
+                                  {% endif %}
+                              </div>
+                              <div class="col-sm-4"></div>
+                          </div>
                     </div>
                 </div>
             

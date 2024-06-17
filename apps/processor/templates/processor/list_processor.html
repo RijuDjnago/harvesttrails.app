@@ -44,7 +44,7 @@
             <div class="both-data-in" style="display: inherit;">
                 <div class="simple-responsive-table">
                     <form method="get" class="form-inline" style="float: right; margin-bottom: 10px;">
-                        <input type="text" name="search_name" id="searchInput" value="{{ get_search_name }}" placeholder="Search..." class="form-control">
+                        <input type="text" name="search_name" id="searchInput" value="{{ get_search_name }}" placeholder="Search" class="form-control">
                         <button type="submit" class="btn btn-outline-success ml-2">Search</button>
                     </form>
                     <table id="processorList_tbl" class="table table-striped dt-responsive nowrap" style="width:100%">
@@ -118,11 +118,9 @@
                       <span>Showing {{ page_obj.start_index }} - {{ page_obj.end_index }} of {{ page_obj.paginator.count }} entries</span>
                     </div>
                     <!-- Pagination controls -->
-                    <div class="row">
-                        <div class="col-4">
-
-                        </div>
-                        <div class="col-4 text-center">
+                    <div class="row d-flex justify-content-center align-items-center">
+                        <div class="col-sm-4"></div>
+                        <div class="col-sm-4">
                             {% if page_obj.has_other_pages %}
                             <ul class="pagination" id="nav_1">
                                 {% if page_obj.has_previous %}
@@ -144,11 +142,8 @@
                                 {% endif %}
                             </ul>
                             {% endif %}
-                        
                         </div>
-                        <div class="col-4">
-
-                        </div>
+                        <div class="col-sm-4"></div>
                     </div>
                 </div>
             </div>
