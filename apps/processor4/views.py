@@ -358,6 +358,7 @@ def inbound_shipment_list(request):
                 queryset = queryset.filter(Q(shipment_id__icontains=search_name) | Q(processor_e_name__icontains=search_name))
             
             # Paginate the queryset
+            queryset = queryset.order_by("-id")
             paginator = Paginator(queryset, 10) 
             page = request.GET.get('page')
 
@@ -622,7 +623,7 @@ def receive_shipment(request):
             if request.method == "POST":
                 data = request.POST
                 get_bin_pull = data.get("bin_pull")          
-                
+                sku = data.get("storage_bin_id")
                 bin_pull, bin_pull_type = get_bin_pull.split("_")[0], get_bin_pull.split("_")[1]
                 print(bin_pull, bin_pull_type)
                 if bin_pull_type == "T1":
@@ -661,8 +662,11 @@ def receive_shipment(request):
                 })
 
                 if bin_pull and not data.get("save"):                
-                    
-                    context["milled_value"] =  calculate_milled_volume(int(bin_pull), bin_pull_type)
+                    if sku:
+                        context["milled_value"] =  calculate_milled_volume(int(bin_pull), bin_pull_type, sku)
+                        context["selected_sku"] = sku
+                    else:
+                        context["milled_value"] =  calculate_milled_volume(int(bin_pull), bin_pull_type, sku)
                     if bin_pull_type == "T1":
                         processor = list(LinkProcessor1ToProcessor.objects.filter(processor1_id=bin_pull, processor2__processor_type__type_name="T4").values("processor2__id", "processor2__entity_name"))
                         processor4 = []

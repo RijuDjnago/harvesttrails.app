@@ -101,13 +101,17 @@
                         <div class="col-md-4 mb-2">
                             <div>
                                 <label for="storage_bin_id">Sender Storage Bin ID (SKU ID)<span class="asteriskField">*</span></label>
-                                <input type="text" id="storage_bin_id" name="storage_bin_id" class="textinput textInput form-control" list="suggestions" autocomplete="off">
+                                <input type="text" id="storage_bin_id" name="storage_bin_id" class="textinput textInput form-control" value="{{selected_sku}}" list="suggestions" autocomplete="off" onchange="this.form.submit()">
                                 <datalist id="suggestions">
                                     {% for data in sender_sku_id_list %}
                                     <option value="{{data}}">                                        
                                     {% endfor %}
                                 </datalist>
-                                <p id="alert_msg" style="color:red"></p>
+                                {% if select_processor_name %} 
+                                    <p id="alert_msg3" style="color:red"></p>                               
+                                    {% else %}
+                                    <p id="warning" style="color:grey;"> <i>First select bin pull</i> </p> 
+                                    {% endif %}
                             </div>
                         </div>
                         <div class="col-md-4 mb-2">

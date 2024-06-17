@@ -142,7 +142,7 @@
                         <div class="col-md-4 mb-2">
                             <div>
                                 <label for="storage_bin_id">Sender Storage Bin ID (SKU ID)<span class="asteriskField">*</span></label>
-                                <input type="text" id="storage_bin_id" name="storage_bin_id" class="textinput textInput form-control" list="suggestions1" autocomplete="off" value="{{storage_bin_id}}">
+                                <input type="text" id="storage_bin_id" name="storage_bin_id" class="textinput textInput form-control" list="suggestions1" autocomplete="off" value="{{selected_sku}}" onchange="this.form.submit()">
                                 <datalist id="suggestions1">
                                     {% for data in sender_sku_id_list %}
                                     <option value="{{data}}">                                        
@@ -156,7 +156,7 @@
                             </div>
                         </div>
                         <div class="col-md-4 mb-2">  
-                            <label for="">Receiver Storage Bin Id (SKU ID)<span class="asteriskField">*</span></label>
+                            <label for="receiver_sku_id">Receiver Storage Bin Id (SKU ID)<span class="asteriskField">*</span></label>
                             <input type="text" name="receiver_sku_id" class="textinput textInput form-control" list="suggestions2" autocomplete="off" value="{{receiver_sku_id}}">
                             <datalist id="suggestions2">
                                 {% for data in receiver_sku_id_list %}
