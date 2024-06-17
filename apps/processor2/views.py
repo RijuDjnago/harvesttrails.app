@@ -953,7 +953,7 @@ def location_list_processor2(request):
                 if value and value !="all":                    
                     location =location.filter(processor_id=int(value))
 
-                paginator = Paginator(location, 100)
+                paginator = Paginator(location, 20)
                 page = request.GET.get('page')
                 try:
                     report = paginator.page(page)
@@ -1069,6 +1069,7 @@ def add_outbound_shipment_processor2(request):
             if request.method == "POST":
                 data = request.POST
                 bin_pull = data.get("bin_pull")
+                sku = data.get("storage_bin_id")
                 milled_value = data.get("milled_value")
                 context.update({
                     "select_processor_name": Processor2.objects.filter(id=int(bin_pull)).first().entity_name,
@@ -1090,8 +1091,12 @@ def add_outbound_shipment_processor2(request):
                     "milled_value":data.get('milled_value')
                 })
 
-                if bin_pull and not data.get("save"):                    
-                    context["milled_value"] =  calculate_milled_volume(int(bin_pull), "T2")                    
+                if bin_pull and not data.get("save"): 
+                    if sku:                   
+                        context["milled_value"] =  calculate_milled_volume(int(bin_pull), "T2", sku) 
+                        context["selected_sku"] = sku 
+                    else:
+                        context["milled_value"] =  calculate_milled_volume(int(bin_pull), "T2", sku)                   
                     processor3 = LinkProcessorToProcessor.objects.filter(processor_id=bin_pull, linked_processor__processor_type__type_name = "T3").values("linked_processor__id", "linked_processor__entity_name")
                     processor4 = LinkProcessorToProcessor.objects.filter(processor_id=bin_pull, linked_processor__processor_type__type_name = "T4").values("linked_processor__id", "linked_processor__entity_name")
                     context["processor3"] = processor3
@@ -1264,7 +1269,8 @@ def inbound_shipment_list(request):
             if search_name and search_name != "":
                 queryset = queryset.filter(Q(shipment_id__icontains=search_name) | Q(processor_e_name__icontains=search_name))
             
-            # Paginate the queryset
+            # Paginate the 
+            queryset = queryset.order_by("-id")
             paginator = Paginator(queryset, 10) 
             page = request.GET.get('page')
 
@@ -1428,6 +1434,7 @@ def recive_shipment(request):
             if request.method == "POST":
                 data = request.POST
                 bin_pull = data.get("bin_pull")
+                sku =data.get("storage_bin_id")
                 milled_value = data.get("milled_value")                
                 processor2_id = data.get("processor2_id")
                 context.update({
@@ -1454,10 +1461,13 @@ def recive_shipment(request):
                     "milled_value":data.get('milled_value')
                 })
 
-                if bin_pull and not data.get("save"):                
+                if bin_pull and not data.get("save"): 
                     sender_processor_type = "T1"
-                    context["milled_value"] =  calculate_milled_volume(int(bin_pull),sender_processor_type)
-                
+                    if sku:
+                        context["milled_value"] =  calculate_milled_volume(int(bin_pull),sender_processor_type, sku)
+                        context["selected_sku"] = sku
+                    else:
+                        context["milled_value"] =  calculate_milled_volume(int(bin_pull),sender_processor_type, sku)
                     processor2 = LinkProcessor1ToProcessor.objects.filter(processor1_id=bin_pull, processor2__processor_type__type_name = "T2").values("processor2__id", "processor2__entity_name")
                     context["processor2"] = processor2
 
@@ -1636,7 +1646,7 @@ def processor2_processor_management(request):
                 if pro1_id and pro1_id != 'All':
                     link_processor_to_processor_all  = link_processor_to_processor_all.filter(processor_id=int(pro1_id))
                 
-                paginator = Paginator(link_processor_to_processor_all, 100)
+                paginator = Paginator(link_processor_to_processor_all, 20)
                 page = request.GET.get('page')
                 try:
                     report = paginator.page(page)

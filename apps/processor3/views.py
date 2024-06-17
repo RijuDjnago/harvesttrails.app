@@ -384,7 +384,8 @@ def inbound_shipment_list(request):
             if search_name and search_name != "":
                 queryset = queryset.filter(Q(shipment_id__icontains=search_name) | Q(processor_e_name__icontains=search_name))
             
-            # Paginate the queryset
+            # Paginate the 
+            queryset = queryset.order_by("-id")
             paginator = Paginator(queryset, 10) 
             page = request.GET.get('page')
 
@@ -666,6 +667,7 @@ def receive_shipment(request):
             if request.method == "POST":
                 data = request.POST
                 get_bin_pull = data.get("bin_pull")
+                sku = data.get("storage_bin_id")
                 bin_pull, bin_pull_type = get_bin_pull.split("_")[0], get_bin_pull.split("_")[1]
                 if bin_pull_type == "T1":
                     select_pro_id = Processor.objects.filter(id=int(bin_pull)).first().id
@@ -703,8 +705,11 @@ def receive_shipment(request):
                 })
 
                 if bin_pull and not data.get("save"):               
-                    
-                    context["milled_value"] =  calculate_milled_volume(int(bin_pull), bin_pull_type)              
+                    if sku:
+                        context["milled_value"] =  calculate_milled_volume(int(bin_pull), bin_pull_type, sku) 
+                        context["selected_sku"] = sku
+                    else:
+                        context["milled_value"] =  calculate_milled_volume(int(bin_pull), bin_pull_type, sku)             
                     if bin_pull_type == "T1":
                         processor = list(LinkProcessor1ToProcessor.objects.filter(processor1_id=bin_pull, processor2__processor_type__type_name="T3").values("processor2__id", "processor2__entity_name"))
                         processor3 = []
@@ -799,6 +804,7 @@ def add_outbound_shipment_processor3(request):
             if request.method == "POST":
                 data = request.POST
                 bin_pull = data.get("bin_pull")
+                sku = data.get("storage_bin_id")
                 milled_value = data.get("milled_value")
                 context.update({
                     "select_processor_name": Processor2.objects.filter(id=int(bin_pull)).first().entity_name,
@@ -820,9 +826,11 @@ def add_outbound_shipment_processor3(request):
                 })
 
                 if bin_pull and not data.get("save"):
-                    
-                    context["milled_value"] =  calculate_milled_volume(int(bin_pull), "T3")
-                    
+                    if sku:
+                        context["milled_value"] =  calculate_milled_volume(int(bin_pull), "T3", sku)
+                        context["selected_sku"] = sku
+                    else:
+                        context["milled_value"] =  calculate_milled_volume(int(bin_pull), "T3", sku)
                     processor3 = LinkProcessorToProcessor.objects.filter(processor_id=bin_pull, linked_processor__processor_type__type_name = "T3").values("linked_processor__id", "linked_processor__entity_name")
                     processor4 = LinkProcessorToProcessor.objects.filter(processor_id=bin_pull, linked_processor__processor_type__type_name = "T4").values("linked_processor__id", "linked_processor__entity_name")
                     context["processor3"] = processor3
@@ -984,15 +992,20 @@ def processor3_processor_management(request):
                 processor3 = Processor2.objects.filter(processor_type__type_name="T3")  #24/04/2024
                 context['Processor1'] = processor3
                 link_processor_to_processor_all = LinkProcessorToProcessor.objects.filter(processor__processor_type__type_name="T3")
-                context['link_processor_to_processor_all'] = link_processor_to_processor_all
                 
-                if request.method == 'POST':
-                    pro1_id = request.POST.get('pro1_id')
-                    if pro1_id != '0':
-                        context['link_processor_to_processor_all'] = link_processor_to_processor_all.filter(processor1_id=int(pro1_id))
-                        #then need to add T1/T2/T3
-                        context['selectedpro1'] = int(pro1_id)             
-                print(context)             
+                pro1_id = request.GET.get('pro1_id','')
+                context['selectedpro1'] = pro1_id
+                if pro1_id and pro1_id != 'all':
+                    link_processor_to_processor_all = link_processor_to_processor_all.filter(processor1_id=int(pro1_id))
+                paginator = Paginator(link_processor_to_processor_all, 100)
+                page = request.GET.get('page')
+                try:
+                    report = paginator.page(page)
+                except PageNotAnInteger:
+                    report = paginator.page(1)
+                except EmptyPage:
+                    report = paginator.page(paginator.num_pages)
+                context['link_processor_to_processor_all'] = report               
                 return render(request, 'processor3/processor3_processor_management.html',context)
             else:
                 return redirect("dashboard")
