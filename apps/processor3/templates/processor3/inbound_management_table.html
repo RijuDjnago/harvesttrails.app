@@ -233,7 +233,7 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    
+                                    {% if table_data %}
                                     {% for shipment in table_data %}
                                     <div class="modal fade" id="shipmentModal{{shipment.id}}" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true" >
                                         <div class="modal-dialog">
@@ -330,6 +330,9 @@
                                     </tr>
                                     
                                     {% endfor %}
+                                    <tr>
+                                        <td colspan="4" style="text-align:center;">No Result Found</td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </div>

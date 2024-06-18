@@ -185,10 +185,10 @@
                             <select name="select_processor" id="mult_select"  class="form-control selectpicker" data-live-search="true">
                                 <option value='All'>Select Processor</option>
                                 {% for pro in processor4 %}
-                                {% if select_processor == pro.pk %}
-                                    <option value="{{pro.pk}}" selected>{{pro.entity_name}}</option>
+                                {% if pro.id == select_processor %}
+                                    <option value="{{pro.id}}" selected>{{pro.entity_name}}</option>
                                 {% else %}
-                                    <option value="{{pro.pk}}">{{pro.entity_name}}</option>
+                                    <option value="{{pro.id}}">{{pro.entity_name}}</option>
                                 {% endif %}
                                 {% endfor %}
                             </select>
@@ -231,7 +231,7 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    
+                                    {% if table_data %}
                                     {% for shipment in table_data %}
                                     <div class="modal fade" id="shipmentModal{{shipment.id}}" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true" >
                                         <div class="modal-dialog">
@@ -353,6 +353,11 @@
                                         </div>
                                     </div>
                                     {% endfor %}
+                                    {% else %}
+                                    <tr>
+                                        <td colspan="4" style="text-align:center;">No Result Found</td>
+                                    </tr>
+                                    {% endif %}
                                 </tbody>
                             </table>
                         </div>
