@@ -355,6 +355,14 @@
 {% endblock %}
 
 {% block jquery %}
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.js">
+</script>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.16/jquery-ui.js">
+</script>
+
+<link href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.16/themes/ui-lightness/jquery-ui.css" rel="stylesheet"
+    type="text/css" />
 <script>
     $('#Traceability-Report').addClass('activeLink');
 </script>
@@ -650,5 +658,36 @@
 
 
     
+</script>
+
+
+<script>
+
+
+function getText(){
+    // alert("okay")
+    getTextid = $("#getTextid").val();
+    select_crop_id = $("#select_crop_id").val();
+    // console.log("svdhsg", getTextid, select_crop_id)
+    if (getTextid != '' && select_crop_id != ''){
+        $.ajax({
+            type: "GET",
+                url: `/tracemodule/autocomplete_suggestions/${getTextid}/${select_crop_id}/`,
+                data: {},
+                contentType: false,
+                cache: false,
+                processData: false,
+                success: function (response){
+                    var availableTags  = response.select_search;
+                    $("#tags").autocomplete({
+                        source: availableTags
+                    });
+                }
+        })
+    }
+}
+
+
+
 </script>
 {% endblock jquery %}

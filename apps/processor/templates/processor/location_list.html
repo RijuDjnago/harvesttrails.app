@@ -58,10 +58,10 @@
           <div class="main-simple-table-with-search">
             {% if 'Processor' in request.user.get_role and not request.user.is_superuser %}
             {% else %}
-            <div class="form-inline">
-                <form method="get" class="form-inline" style="float: right; margin-bottom: 10px;">
-                    <div class="row d-flex">                        
-                        <div class="col-3">                            
+            <div class="">
+                <form method="get" class="">
+                    <div class="row justify-content-between">                        
+                        <div class="col-2">                            
                             <select name="processor_id" id="processorSelection" class="form-control selectpicker"
                             data-live-search="true">
                             <option value='all' {% if not selectedprocessor %}selected{% endif %}>Select All
@@ -71,19 +71,18 @@
                                 {{ pro.entity_name }} - {{ pro.id }}</option>
                             {% endfor %}
                             </select>
+                            <input style="display : none;" id="submitBtn" type="submit"
+                                        class="apply-filter-btn primary-btn" value="Apply Filter" />
                         </div>
-                        <input style="display : none;" id="submitBtn" type="submit"
-                                    class="apply-filter-btn primary-btn" value="Apply Filter" />
-                        <div class="col-3"></div>
-                        <div class="col-6">
+                        <div class="col-3">
                             <div class="row ">
                                 <div class="col-8">
                                     <input class="form-control" name="search_name" type="search"
                                             placeholder="Search" autocomplete="off" aria-label="Search" id="search_name"
                                             {% if search_name %}value="{{ search_name }}"{% endif %}>
                                 </div>
-                                <div class="col-4">
-                                    <button type="submit" class="btn btn-outline-success ml-2">Search</button>
+                                <div class="col-4 ps-0">
+                                    <button type="submit" class="btn btn-outline-success" style="font-size: 0.9rem;">Search</button>
                                 </div>
                             </div>
                         </div>                    
@@ -196,9 +195,9 @@
 <script src="{% static 'js/farm/farm_list.js' %}"></script>
 
 <script>
-    {% comment %} $(document).ready(function () {
-        $('#processorList_tbl').DataTable();
-    }); {% endcomment %}
+    //$(document).ready(function () {
+       // $('#processorList_tbl').DataTable();
+    //});
     $(document).ready(function () {
       $('#processorList_tbl').DataTable({
           "ordering": false  // Disable initial ordering

@@ -174,13 +174,13 @@
                         <div class="inline-apply-filter">
                             <div class="three-fields-with-label">
                                 <select name="selectprocessor_id" id="mult_select"  class="form-control selectpicker" data-live-search="true">
-                                    <option value='All' selected> Select All Processors </option>
+                                    <option value='All' {% if selectedProcessors == 'all' %}selected{% endif %}> Select All Processors </option>
                                     {% for i in processors %}
-                                    {% if i.id == selectedProcessors %}
-                                    <option value="{{ i.id }}" selected>{{i.entity_name}} - {{ i.id }}
+                                    {% if i.pk == selectedProcessors %}
+                                    <option value="{{ i.pk }}" selected>{{i.entity_name}} - {{ i.pk }}
                                     </option>
                                     {% else %}
-                                    <option value="{{ i.id }}">{{i.entity_name}} - {{ i.id }}</option>
+                                    <option value="{{ i.pk }}">{{i.entity_name}} - {{ i.pk }}</option>
                                     {% endif %}
                                     {% endfor %}
                                 </select>
@@ -222,78 +222,83 @@
                             </thead>
                             <tbody>
                                 
-                                {% for shipment in table_data %}
-                                <tr>
-                                    <td>{{shipment.shipment_id}}</td>
-                                    <td>{{shipment.date_pulled|date:"M d, Y"}}</td>
-                                    <td>{{shipment.bin_location}}</td>
-                                    <td>{{shipment.storage_bin_send}}</td>
-                                    <td>{% if shipment.storage_bin_recive %}
-                                        {{shipment.storage_bin_recive}}
-                                    {% else %}
-                                    -
-                                    {% endif %}</td>
-                                    <td>{{shipment.weight_of_product}}</td>
-                                    <td>{% if shipment.processor_e_name %} {{shipment.processor_e_name}}-{{shipment.sender_processor_type}} {% endif %}</td>
-                                    <td>{{shipment.processor2_name}} - {{shipment.receiver_processor_type}}</td>
-                                    <td>{% if shipment.recive_delivery_date %}
-                                        {{shipment.recive_delivery_date.date}}
-                                    {% else %}
-                                    -
-                                    {% endif %}</td>
-                                    <td>{% if shipment.status %}
-                                        {{shipment.status}}
-                                    {% else %}
-                                    -
-                                    {% endif %}</td>
-                                    <td class="backk action-td rmv-bd">
-                                    <ul>
-                                        <li>
-                                            <a href="{% url 'outbound_shipment_view' shipment.id %}"
-                                                class="update-btn-link" alt="view inbound management" title="view inbound management"> <span class="fas fa-eye"></span> </a>
-                                        </li>
-                                        
-                                        {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role or 'Processor2' in request.user.get_role %}
-                                        
-                                        
-                                        {% comment %} <li>
-                                            <a href="{% url 'inbound_shipment_edit' shipment.id %}" class="update-btn-link" alt="edit inbound management" title="edit inbound management"> <span class="fas fa-edit"></span></a>
-                                        </li> {% endcomment %}
-                                        {% endif %}
-                                        {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
-                                        <li>
-                                            <a type="button"
-                                        data-mdb-toggle="modal" data-mdb-target="#deleteModal{{shipment.id}}" alt="delete outbound shipment" title="delete outbound shipment">
-                                        <span class="fas fa-trash"></span></a>
-                                        </li>
-  
-                                        <div class="modal fade" id="deleteModal{{shipment.id}}" aria-hidden="true" aria-labelledby="exampleModalToggleLabel22" tabindex="-1">
-                                            <div class="modal-dialog">
-                                              <div class="modal-content">
-                                          
-                                                <div class="modal-body">
-                                                  <button type="button" class="btn-close cust-close-ds-btn" data-mdb-dismiss="modal" aria-label="Close"></button>
-                                                  <div class="center-content-status">
-                                                    <img src="{% static 'img/trash.png' %}" alt="right" id="rightImg" class="warning-icon">
-                                                    <p id="message" class="modal-title titlepad">Are you sure you want to delete?</p>
-                                                  </div>
-                                                  <div class="modal-center-btn-footer">
-                                                    <button onclick="reloadwindow()" id="closeBtnpopup" type="button" class="btn-close-cancel btn-space"
-                                                      data-mdb-dismiss="modal">
-                                                      Close
-                                                    </button>
-                                                    <a href="{% url 'outbound_shipment_delete' shipment.id %}" id="storageDelete" class="btn-save-submit">Delete</a>                                                 
-                                                  </div>
-                                                </div>                                        
-                                              </div>
+                                {% if table_data %}
+                                    {% for shipment in table_data %}
+                                    <tr>
+                                        <td>{{shipment.shipment_id}}</td>
+                                        <td>{{shipment.date_pulled|date:"M d, Y"}}</td>
+                                        <td>{{shipment.bin_location}}</td>
+                                        <td>{{shipment.storage_bin_send}}</td>
+                                        <td>{% if shipment.storage_bin_recive %}
+                                            {{shipment.storage_bin_recive}}
+                                        {% else %}
+                                        -
+                                        {% endif %}</td>
+                                        <td>{{shipment.weight_of_product}}</td>
+                                        <td>{% if shipment.processor_e_name %} {{shipment.processor_e_name}}-{{shipment.sender_processor_type}} {% endif %}</td>
+                                        <td>{{shipment.processor2_name}} - {{shipment.receiver_processor_type}}</td>
+                                        <td>{% if shipment.recive_delivery_date %}
+                                            {{shipment.recive_delivery_date.date}}
+                                        {% else %}
+                                        -
+                                        {% endif %}</td>
+                                        <td>{% if shipment.status %}
+                                            {{shipment.status}}
+                                        {% else %}
+                                        -
+                                        {% endif %}</td>
+                                        <td class="backk action-td rmv-bd">
+                                        <ul>
+                                            <li>
+                                                <a href="{% url 'outbound_shipment_view' shipment.id %}"
+                                                    class="update-btn-link" alt="view inbound management" title="view inbound management"> <span class="fas fa-eye"></span> </a>
+                                            </li>
+                                            
+                                            {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role or 'Processor2' in request.user.get_role %}
+                                            
+                                            
+                                            {% comment %} <li>
+                                                <a href="{% url 'inbound_shipment_edit' shipment.id %}" class="update-btn-link" alt="edit inbound management" title="edit inbound management"> <span class="fas fa-edit"></span></a>
+                                            </li> {% endcomment %}
+                                            {% endif %}
+                                            {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
+                                            <li>
+                                                <a type="button"
+                                            data-mdb-toggle="modal" data-mdb-target="#deleteModal{{shipment.id}}" alt="delete outbound shipment" title="delete outbound shipment">
+                                            <span class="fas fa-trash"></span></a>
+                                            </li>
+    
+                                            <div class="modal fade" id="deleteModal{{shipment.id}}" aria-hidden="true" aria-labelledby="exampleModalToggleLabel22" tabindex="-1">
+                                                <div class="modal-dialog">
+                                                <div class="modal-content">
+                                            
+                                                    <div class="modal-body">
+                                                    <button type="button" class="btn-close cust-close-ds-btn" data-mdb-dismiss="modal" aria-label="Close"></button>
+                                                    <div class="center-content-status">
+                                                        <img src="{% static 'img/trash.png' %}" alt="right" id="rightImg" class="warning-icon">
+                                                        <p id="message" class="modal-title titlepad">Are you sure you want to delete?</p>
+                                                    </div>
+                                                    <div class="modal-center-btn-footer">
+                                                        <button onclick="reloadwindow()" id="closeBtnpopup" type="button" class="btn-close-cancel btn-space"
+                                                        data-mdb-dismiss="modal">
+                                                        Close
+                                                        </button>
+                                                        <a href="{% url 'outbound_shipment_delete' shipment.id %}" id="storageDelete" class="btn-save-submit">Delete</a>                                                 
+                                                    </div>
+                                                    </div>                                        
+                                                </div>
+                                                </div>
                                             </div>
-                                          </div>
-                                        {% endif %}
-                                    </ul>
-                                    </td>
-                                </tr>
-                                
-                                {% endfor %}
+                                            {% endif %}
+                                        </ul>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td colspan="12" style="text-align:center;">No Result Found</td>
+                                    </tr>
+                                {% endif %}
                             </tbody>
                         </table>
                     </div>

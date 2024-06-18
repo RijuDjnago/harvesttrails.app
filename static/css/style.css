@@ -436,6 +436,7 @@ a#fdb .rightimg {
 .sidebar-menu a span:first-child {
     font-size: 1rem;
     padding-right: 6px;
+    float: left;
 }
 
 .fa-chevron-right {
@@ -5756,7 +5757,7 @@ table.dataTable.dtr-inline.collapsed>tbody>tr>td.dtr-control, table.dataTable.dt
     }
     .sidebar .sidebar-brand h1 span:last-child,
     .sidebar li a span:last-child {
-        display: initial !important;
+        display: block !important;
     }
 
     #nav-toggle:checked+.sidebar .sidebar-brand h1 span:last-child, 
@@ -5764,7 +5765,12 @@ table.dataTable.dtr-inline.collapsed>tbody>tr>td.dtr-control, table.dataTable.dt
     #nav-toggle:checked+.sidebar li ul li {
         display: none !important;
     }
-
+    .pull-right{
+        transition: 0.3s;
+    }
+    .pull-right.down , .pull_right_new1.down , .pull_right_new2.down , .pull_right_new3.down{
+        transform: rotate(90deg) !important;
+    }
     .main-content {
         margin-left: 247px;
     }

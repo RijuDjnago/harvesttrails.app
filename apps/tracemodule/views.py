@@ -2707,8 +2707,7 @@ def traceability_report_list(request):
                             # #print(context)
                         else:
                             context['no_rec_found_msg'] = "No Records Found"
-
-                        
+   
                     elif get_search_by and get_search_by == 'sku_id':
                         context_ = skuid_traceability_response(search_text)                        
                         context["get_search_by"] = "sku_id" 
@@ -2752,6 +2751,7 @@ def traceability_report_list(request):
                     
                     else:
                         context['no_rec_found_msg'] = "No Records Found"
+                
                 map_show = request.POST.get("map_view")
                 table_show = request.POST.get("table_view")
                 context = grower_location(context)
