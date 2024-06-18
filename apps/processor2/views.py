@@ -1456,11 +1456,11 @@ def recive_shipment(request):
 
                 if bin_pull and not data.get("save"):                
                     sender_processor_type = "T1"
-                    context["milled_value"] =  calculate_milled_volume(int(bin_pull),sender_processor_type)
+                    context["milled_value"] =  0
                 
                     processor2 = LinkProcessor1ToProcessor.objects.filter(processor1_id=bin_pull, processor2__processor_type__type_name = "T2").values("processor2__id", "processor2__entity_name")
                     context["processor2"] = processor2
-
+                    print(processor2)
                     context["selected_processor_sku_id_list"] = get_sku_list(int(bin_pull),sender_processor_type)["data"]
                     if processor2_id:                        
                         context["selected_destination"] = processor2_id.split()[0]

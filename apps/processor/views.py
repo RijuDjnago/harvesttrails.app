@@ -13,6 +13,8 @@ from django.db.utils import IntegrityError
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from django.http import JsonResponse
+import qrcode 
+from django.core.files.base import ContentFile
 from apps.processor.models import *
 from apps.processor2.models import *
 from apps.processor.forms import ProcessorForm, LocationForm, GrowerShipmentForm
@@ -2029,11 +2031,8 @@ def qr_code_view(request,pk):
         return HttpResponse (img_name)
     else:
         return redirect('login')
-    
 
-###update
-import qrcode 
-from django.core.files.base import ContentFile
+
 @login_required()
 def grower_shipment_view(request,pk):
     if request.user.is_authenticated:
@@ -7890,8 +7889,9 @@ def add_outbound_shipment_processor1(request):
                 bin_pull = data.get("bin_pull")
                 milled_value = data.get("milled_value")
                 context.update({
+                    "processor": list(Processor.objects.all().values("id", "entity_name")),
                     "select_processor_name": Processor.objects.filter(id=int(bin_pull)).first().entity_name,
-                    "select_processor_id": bin_pull,
+                    "select_processor_id": int(bin_pull),
                     "processor2_id": data.get("processor2_id"),
                     "exp_yield": data.get("exp_yield"),
                     "exp_yield_unit_id": data.get("exp_yield_unit_id"),

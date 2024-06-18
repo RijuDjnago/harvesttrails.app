@@ -55,15 +55,15 @@
                             <label for="id_bin_location_pull">Bin Location Pulled from<span class="asteriskField">*</span></label>
                             <div class='extra_border_select'>
                                 <select name="bin_pull" id="mult_select"  class="form-control selectpicker" data-live-search="true" onchange="this.form.submit()">
-                                    {% if select_processor_name %}
-                                    <option id="pro_id" value="{{select_processor_id}}" selected>{{select_processor_name}}</option>
-                                    {% else %}
                                     <option value="all" disabled selected>Select Bin Location Pulled from</option>                              
-                                    
                                     {% for pro in processor %}
+                                    {% if select_processor_id == pro.id %}
+                                    <option value="{{pro.id}}" selected>{{pro.entity_name}}</option>
+                                    {% else %}
                                     <option value="{{pro.id}}">{{pro.entity_name}}</option>
-                                    {% endfor %}  
                                     {% endif %}
+                                    {% endfor %}  
+                                    
                                 </select>
                             </div>
                             <input type="hidden" name="pro_type" id="pro_type" value="{{processor_type}}">
@@ -79,7 +79,6 @@
                         
                             <input type="hidden" name="milled_value" id="sum_total_bin_location_milled_volume_java" value="{{milled_value}}">
                         </div>
-                        
                         <hr class="mt-2">
                         <div class="col-md-4 mb-2">
                             <label for="id_date">Date Pulled<span class="asteriskField">*</span></label>
