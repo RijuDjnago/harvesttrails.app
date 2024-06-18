@@ -13,6 +13,8 @@ from django.db.utils import IntegrityError
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from django.http import JsonResponse
+import qrcode 
+from django.core.files.base import ContentFile
 from apps.processor.models import *
 from apps.processor2.models import *
 from apps.processor.forms import ProcessorForm, LocationForm, GrowerShipmentForm
@@ -2036,11 +2038,8 @@ def qr_code_view(request,pk):
         return HttpResponse (img_name)
     else:
         return redirect('login')
-    
 
-###update
-import qrcode 
-from django.core.files.base import ContentFile
+
 @login_required()
 def grower_shipment_view(request,pk):
     if request.user.is_authenticated:
@@ -7922,8 +7921,9 @@ def add_outbound_shipment_processor1(request):
                 bin_pull = data.get("bin_pull")
                 milled_value = data.get("milled_value")
                 context.update({
+                    "processor": list(Processor.objects.all().values("id", "entity_name")),
                     "select_processor_name": Processor.objects.filter(id=int(bin_pull)).first().entity_name,
-                    "select_processor_id": bin_pull,
+                    "select_processor_id": int(bin_pull),
                     "processor2_id": data.get("processor2_id"),
                     "exp_yield": data.get("exp_yield"),
                     "exp_yield_unit_id": data.get("exp_yield_unit_id"),
@@ -8275,45 +8275,45 @@ def Processor1ToProcessorManagement(request):
                 Processor1 = Processor.objects.all()  #24/04/2024
                 context['Processor1'] = Processor1
                 link_processor_to_processor_all = LinkProcessor1ToProcessor.objects.all()               
-                
-                pro1_id = request.GET.get('pro1_id','')
+                        
+                pro1_id = request.GET.get('pro1_id', 'all')
                 context['selectedpro1'] = pro1_id
                 if pro1_id and pro1_id != 'all':
                     link_processor_to_processor_all = link_processor_to_processor_all.filter(processor1_id=int(pro1_id))
-                    
+                            
             # Processor...................           
             elif request.user.is_processor:
                 print(request.user.email)
                 processor = ProcessorUser.objects.filter(contact_email=request.user.email).first()
-                
+                        
                 Processor1 = [processor.processor]
-                
+                        
                 context['Processor1'] = Processor1
                 link_processor_to_processor_all = LinkProcessor1ToProcessor.objects.filter(processor1_id=Processor1[0].id)             
-                
-                pro1_id = request.GET.get('pro1_id','')
+                        
+                pro1_id = request.GET.get('pro1_id', 'all')
                 context['selectedpro1'] = pro1_id
                 if pro1_id != 'all':
                     link_processor_to_processor_all = link_processor_to_processor_all.filter(processor1_id=int(pro1_id))
-                    
+                            
             # Processor2................
             elif request.user.is_processor2:
                 p = ProcessorUser2.objects.filter(contact_email=request.user.email).first()
                 processor2 = Processor2.objects.filter(id=p.processor2_id)
                 context['Processor1'] = processor2
                 link_processor = LinkProcessor1ToProcessor.objects.filter(processor2_id=processor2.first().id)
-                link_processor_ = LinkProcessorToProcessor.objects.filter(Q(processor_id=processor2.first().id)| Q(linked_processor_id=processor2.first().id))
-                
+                link_processor_ = LinkProcessorToProcessor.objects.filter(Q(processor_id=processor2.first().id) | Q(linked_processor_id=processor2.first().id))
+                        
                 link_processor_to_processor_all = []
                 for i in link_processor:
-                    my_dict = {"processor":"", "linked_processor":"", "processor_type":""}
+                    my_dict = {"processor": "", "linked_processor": "", "processor_type": ""}
                     my_dict["processor"] = i.processor2
                     my_dict["linked_processor"] = i.processor1
                     my_dict["processor_type"] = "T1"
                     link_processor_to_processor_all.append(my_dict)
                 for j in link_processor_:
-                    my_dict = {"processor":"", "linked_processor":"", "processor_type":""}
-                    if request.user ==j.processor:
+                    my_dict = {"processor": "", "linked_processor": "", "processor_type": ""}
+                    if request.user == j.processor:
                         my_dict["processor"] = j.processor
                         my_dict["linked_processor"] = j.linked_processor
                         my_dict["processor_type"] = j.linked_processor.processor_type.all().first().type_name
@@ -8332,8 +8332,8 @@ def Processor1ToProcessorManagement(request):
                 report = paginator.page(paginator.num_pages)
             
             context['link_processor_to_processor_all'] = report          
-                
-            return render(request, 'processor/processor_processor_management.html',context)
+                    
+            return render(request, 'processor/processor_processor_management.html', context)
         else:
             return redirect('login')
     except Exception as e:
