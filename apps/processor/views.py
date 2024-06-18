@@ -126,6 +126,7 @@ def get_sku_list(processor_id, processor_type):
     except Exception as e:
         return {"status":True, "error":str(e), "data":[]}
 
+
 def create_sku_list(processor_id, processor_type, sku_id):
         # print("create function called")
     try:
@@ -474,29 +475,33 @@ def ListProcessorView(request):
     try:
         if request.user.is_authenticated:
             processor = []
+            search_name = request.GET.get('search_name', '')
             if 'Grower' in request.user.get_role() and not request.user.is_superuser:
                 pass
             elif request.user.is_consultant:
                 pass
             elif request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
                 processor = ProcessorUser.objects.all()
+                if search_name:
+                    processor = processor.filter(Q(contact_name__icontains=search_name) | Q(processor__entity_name__icontains=search_name)| Q(processor__fein__icontains=search_name)| Q(contact_email__icontains=search_name))
             elif request.user.is_processor:
                 pro = ProcessorUser.objects.filter(contact_email=request.user.email).first()
                 entity_name = pro.processor
                 processor = ProcessorUser.objects.filter(processor=entity_name)
+                if search_name:
+                    processor = processor.filter(Q(contact_name__icontains=search_name) | Q(processor__entity_name__icontains=search_name)| Q(processor__fein__icontains=search_name)| Q(contact_email__icontains=search_name))
             elif request.user.is_processor2:
                 pro = ProcessorUser2.objects.filter(contact_email=request.user.email).first()
                 entity_name = pro.processor2
                 processor = ProcessorUser2.objects.filter(processor2=entity_name)
+                if search_name:
+                    processor = processor.filter(Q(contact_name__icontains=search_name) | Q(processor2__entity_name__icontains=search_name)| Q(processor2__fein__icontains=search_name)| Q(contact_email__icontains=search_name))
             else:
                 messages.error(request, "Not a valid request")
                 return redirect("dashboard")
 
-            search_name = request.GET.get('search_name', '')
-            if search_name:
-                processor = processor.filter(contact_name__icontains=search_name)
-                
             # Pagination
+            processor = processor.order_by("-id")
             paginator = Paginator(processor, 20) 
             page_number = request.GET.get('page')
             page_obj = paginator.get_page(page_number)
@@ -509,7 +514,6 @@ def ListProcessorView(request):
     except Exception as e:
         context["error_messages"] = str(e)
         return render(request, 'processor/list_processor.html', context)
-
 
 
 @login_required()
@@ -1256,7 +1260,7 @@ def GrowerProcessorManagementDelete(request,pk):
                             log_device=log_device)
         logtable.save()
         grower_processor.delete()
-        return HttpResponse (1)
+        return redirect('grower_processor_management')
     else:
         return redirect("dashboard")
 
@@ -3006,6 +3010,24 @@ def processor_inbound_management_edit(request,pk):
                         new_file = File.objects.create(file=file)
                         shipment.files.add(new_file)
                     shipment.save()
+                    # logtable.........
+                    log_type, log_status, log_device = "ProcessorShipment", "Edited", "Web"
+                    log_idd, log_name = shipment.id, shipment.shipment_id
+                    log_details = f"status = {status} | total_amount = {shipment.volume_shipped} | shipment_id = {shipment.shipment_id} | receiver_processor_id = {shipment.processor2_idd} | sender_processor_id = {shipment.processor_idd} |"
+                    action_by_userid = request.user.id
+                    user = User.objects.get(pk=action_by_userid)
+                    user_role = user.role.all()
+                    action_by_username = f'{user.first_name} {user.last_name}'
+                    action_by_email = user.username
+                    if request.user.id == 1 :
+                        action_by_role = "superuser"
+                    else:
+                        action_by_role = str(','.join([str(i.role) for i in user_role]))
+                    logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+                                        action_by_userid=action_by_userid,action_by_username=action_by_username,
+                                        action_by_email=action_by_email,action_by_role=action_by_role,log_details=log_details,
+                                        log_device=log_device)
+                    logtable.save()
                     return redirect('processor_inbound_management')
                 return render(request, 'processor/processor_inbound_management_edit.html',context)
         else:
@@ -3636,7 +3658,7 @@ def processor_receive_delivery(request):
                                 new_file = File.objects.create(file=file)
                                 save_shipment_management.files.add(new_file)
                             save_shipment_management.save()
-
+                            #logtable
                             log_type, log_status, log_device = "ShipmentManagement", "Added", "Web"
                             log_idd, log_name = save_shipment_management.id, save_shipment_management.bin_location
                             log_details = f"processor2 = {save_shipment_management.processor_e_name} | processor2_id = {save_shipment_management.processor_idd} | date_pulled = {save_shipment_management.date_pulled} | bin_location = {save_shipment_management.bin_location} | milled_volume = {save_shipment_management.milled_volume} | equipment_type = {save_shipment_management.equipment_type} | equipment_id = {save_shipment_management.equipment_id} | purchase_order_number = {save_shipment_management.purchase_order_number} | lot_number = {save_shipment_management.lot_number} | volume_shipped = {save_shipment_management.volume_shipped} | volume_left = {save_shipment_management.volume_left} | editable_obj = {save_shipment_management.editable_obj} "
@@ -8352,9 +8374,26 @@ def link_processor_one(request):
                         pro_id , pro_type = i.split(" ")
                         link_pro = LinkProcessor1ToProcessor(processor1_id = selected_processor, processor2_id = pro_id)
                         link_pro.save()
+                        # logtable.......
+                        log_type, log_status, log_device = "LinkProcessor1ToProcessor", "Added", "Web"
+                        log_idd, log_name = link_pro.id, f"{link_pro.processor1.entity_name} - {link_pro.processor2.entity_name}"
+                        log_details = f"tier1 processor id = {link_pro.processor1.id} | linked processor id = {link_pro.processor2.id} | tier1 processor name= {link_pro.processor1.entity_name} | linked processor name = {link_pro.processor2.entity_name} | "
+                        action_by_userid = request.user.id
+                        user = User.objects.get(pk=action_by_userid)
+                        user_role = user.role.all()
+                        action_by_username = f'{user.first_name} {user.last_name}'
+                        action_by_email = user.username
+                        if request.user.id == 1 :
+                            action_by_role = "superuser"
+                        else:
+                            action_by_role = str(','.join([str(i.role) for i in user_role]))
+                        logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+                                            action_by_userid=action_by_userid,action_by_username=action_by_username,
+                                            action_by_email=action_by_email,action_by_role=action_by_role,log_details=log_details,
+                                            log_device=log_device)
+                        logtable.save()
                     return redirect('Processor1ToProcessorManagement')
-                    # return render(request, 'processor2/link_processor.html', context)
-
+                    
             return render(request, 'processor/link_processor.html', context)
         else:
             return redirect('login')
@@ -8367,7 +8406,26 @@ def link_processor_one(request):
 def delete_link_processor_one(request, pk):
     try:
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+            link = LinkProcessor1ToProcessor.objects.get(id=pk)
             LinkProcessor1ToProcessor.objects.filter(id=pk).delete()
+            # logtable......
+            log_type, log_status, log_device = "ProcessorToProcessorManagement", "Deleted", "Web"
+            log_idd, log_name = link.id, f"{link.processor1.entity_name} - {link.processor2.entity_name}"
+            log_details = f"tier1_processor_name = {link.processor1.entity_name} | tier1_processor_id = {link.processor1.id} | Linked_processor_name = {link.processor2.entity_name} | Linked_processor_id = {link.processor2.id} | "
+            action_by_userid = request.user.id
+            user = User.objects.get(pk=action_by_userid)
+            user_role = user.role.all()
+            action_by_username = f'{user.first_name} {user.last_name}'
+            action_by_email = user.username
+            if request.user.id == 1 :
+                action_by_role = "superuser"
+            else:
+                action_by_role = str(','.join([str(i.role) for i in user_role]))
+            logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+                                action_by_userid=action_by_userid,action_by_username=action_by_username,
+                                action_by_email=action_by_email,action_by_role=action_by_role,log_details=log_details,
+                                log_device=log_device)
+            logtable.save()
             return redirect("Processor1ToProcessorManagement")
         else:
             return redirect('login')

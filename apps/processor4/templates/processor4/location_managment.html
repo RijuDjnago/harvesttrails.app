@@ -98,6 +98,7 @@
                                 </tr>
                             </thead>
                             <tbody>
+                                {% if location %}
                                 {% for location in location %}
                                 <tr>
                                     <td>{{location.processor.entity_name}}</td>
@@ -142,6 +143,11 @@
                                     </td>
                                 </tr>
                                 {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td colspan="4" style="text-align:center;">No Result Found</td>
+                                    </tr>
+                                    {% endif %}
                             </tbody>
                         </table>
                         <div class="col-md-12 col-sm-12 col-12 text-center mt-2" style="text-align:right">

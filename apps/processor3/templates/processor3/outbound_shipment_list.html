@@ -221,7 +221,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                
+                                {% if table_data %}
                                 {% for shipment in table_data %}
                                 <tr>
                                     <td>{{shipment.shipment_id}}</td>
@@ -287,6 +287,9 @@
                                 </tr>
                                 
                                 {% endfor %}
+                                <tr>
+                                    <td colspan="4" style="text-align:center;">No Result Found</td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>

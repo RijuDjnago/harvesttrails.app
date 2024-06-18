@@ -346,20 +346,20 @@ def inbound_shipment_list(request):
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():           
             context["processor4"] = Processor2.objects.filter(processor_type__type_name="T4")            
             search_name = request.GET.get("search_name", "")
-            context["search_name"] = search_name  
-            select_processor = request.GET.get("select_processor", "")         
-            context["select_processor"] = select_processor
+              
+            select_processor = request.GET.get("select_processor", "")        
+            
             queryset = ShipmentManagement.objects.filter(receiver_processor_type="T4")
             
             if select_processor and select_processor != 'All':
                 queryset = queryset.filter(processor2_idd=int(select_processor))
-
+                context["select_processor"] = int(select_processor)
             if search_name and search_name != "":
                 queryset = queryset.filter(Q(shipment_id__icontains=search_name) | Q(processor_e_name__icontains=search_name))
-            
+                context["search_name"] = search_name
             # Paginate the queryset
             queryset = queryset.order_by("-id")
-            paginator = Paginator(queryset, 10) 
+            paginator = Paginator(queryset, 20) 
             page = request.GET.get('page')
 
             try:
@@ -552,7 +552,24 @@ def inbound_shipment_edit(request, pk):
                     new_file = File.objects.create(file=file)
                     shipment.files.add(new_file)
                 shipment.save()
-               
+                # logtable.........
+                log_type, log_status, log_device = "ProcessorShipment", "Edited", "Web"
+                log_idd, log_name = shipment.id, shipment.shipment_id
+                log_details = f"status = {status} | total_amount = {shipment.volume_shipped} | shipment_id = {shipment.shipment_id} | receiver_processor_id = {shipment.processor2_idd} | sender_processor_id = {shipment.processor_idd} |"
+                action_by_userid = request.user.id
+                user = User.objects.get(pk=action_by_userid)
+                user_role = user.role.all()
+                action_by_username = f'{user.first_name} {user.last_name}'
+                action_by_email = user.username
+                if request.user.id == 1 :
+                    action_by_role = "superuser"
+                else:
+                    action_by_role = str(','.join([str(i.role) for i in user_role]))
+                logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+                                    action_by_userid=action_by_userid,action_by_username=action_by_username,
+                                    action_by_email=action_by_email,action_by_role=action_by_role,log_details=log_details,
+                                    log_device=log_device)
+                logtable.save()
                 return redirect('inbound_shipment_list4')
             return render(request, 'processor4/inbound_management_edit.html', context)
         else:
@@ -568,6 +585,24 @@ def inbound_shipment_delete_processor4(request,pk):
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
             print("hit------------------------------", pk)
             shipment = ShipmentManagement.objects.filter(id=pk).first()
+            # logtable..
+            log_type, log_status, log_device = "ProcessorShipment", "Deleted", "Web"
+            log_idd, log_name = shipment.id, shipment.shipment_id
+            log_details = f"status = {shipment.status} | shipment_id = {shipment.shipment_id} | sender_processor_id = {shipment.processor_idd} | receiver_processor_id = {shipment.processor2_idd} |"
+            action_by_userid = request.user.id
+            user = User.objects.get(pk=action_by_userid)
+            user_role = user.role.all()
+            action_by_username = f'{user.first_name} {user.last_name}'
+            action_by_email = user.username
+            if request.user.id == 1 :
+                action_by_role = "superuser"
+            else:
+                action_by_role = str(','.join([str(i.role) for i in user_role]))
+            logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+                                action_by_userid=action_by_userid,action_by_username=action_by_username,
+                                action_by_email=action_by_email,action_by_role=action_by_role,log_details=log_details,
+                                log_device=log_device)
+            logtable.save()
             shipment.delete()            
             return redirect('inbound_shipment_list4')
         else:
@@ -732,7 +767,33 @@ def receive_shipment(request):
                             new_file = File.objects.create(file=file)
                             save_shipment_management.files.add(new_file)
                         save_shipment_management.save()
+                        #logtable..........
+                        log_type, log_status, log_device = "ShipmentManagement", "Added", "Web"
+                        log_idd, log_name = save_shipment_management.id, save_shipment_management.bin_location
+                        log_details = f"processor2 = {save_shipment_management.processor_e_name} | processor2_id = {save_shipment_management.processor_idd} | date_pulled = {save_shipment_management.date_pulled} | bin_location = {save_shipment_management.bin_location} | milled_volume = {save_shipment_management.milled_volume} | equipment_type = {save_shipment_management.equipment_type} | equipment_id = {save_shipment_management.equipment_id} | purchase_order_number = {save_shipment_management.purchase_order_number} | lot_number = {save_shipment_management.lot_number} | volume_shipped = {save_shipment_management.volume_shipped} | volume_left = {save_shipment_management.volume_left} | editable_obj = {save_shipment_management.editable_obj} "
+                        action_by_userid = request.user.id
+                        user = User.objects.get(pk=action_by_userid)
+                        user_role = user.role.all()
+                        action_by_username = f'{user.first_name} {user.last_name}'
+                        action_by_email = user.username
+                        if request.user.id == 1 :
+                            action_by_role = "superuser"
+                        else:
+                            action_by_role = str(','.join([str(i.role) for i in user_role]))
+                        logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+                                            action_by_userid=action_by_userid,action_by_username=action_by_username,
+                                            action_by_email=action_by_email,action_by_role=action_by_role,log_details=log_details,
+                                            log_device=log_device)
+                        logtable.save()
+                        update_obj = ShipmentManagement.objects.filter(processor_idd=int(bin_pull)).exclude(id=save_shipment_management.id).values('id','editable_obj')
                         
+                        if update_obj.exists():
+                            for i in update_obj :
+                                get_obj = ShipmentManagement.objects.get(id=i['id'])
+                                get_obj.editable_obj = False
+                                get_obj.save()
+                        else:
+                            pass
                         return redirect('inbound_shipment_list4')
             return render(request, 'processor4/receive_delivery.html', context)
         else:
@@ -756,20 +817,17 @@ def inbound_production_management_processor4(request):
             
             search_name = request.GET.get('search_name')
             selectprocessor_id = request.GET.get('selectprocessor_id')
+            
+            if search_name and search_name != '':
+                output = ProductionManagementProcessor2.objects.filter(Q(processor_e_name__icontains=search_name) | Q(date_pulled__icontains=search_name) |
+                Q(bin_location__icontains=search_name) | Q(milled_storage_bin__icontains=search_name) )
+                context['search_name'] = search_name
+            if selectprocessor_id and selectprocessor_id != 'All':
+                output = output.filter(processor_id=selectprocessor_id)
+                context['selectedProcessors'] = int(selectprocessor_id)
 
-            if search_name == None and selectprocessor_id == None :
-                output = output
-            else:
-                output = ProductionManagementProcessor2.objects.filter(processor__processor_type__type_name="T4").order_by('processor_e_name','-id')
-                if search_name and search_name != 'All':
-                    output = ProductionManagementProcessor2.objects.filter(Q(processor_e_name__icontains=search_name) | Q(date_pulled__icontains=search_name) |
-                    Q(bin_location__icontains=search_name) | Q(milled_storage_bin__icontains=search_name) )
-                    context['search_name'] = search_name
-                if selectprocessor_id and selectprocessor_id != 'All':
-                    output = output.filter(processor_id=selectprocessor_id)
-                    selectedProcessors = Processor2.objects.get(id=selectprocessor_id)
-                    context['selectedProcessors'] = selectedProcessors
-            paginator = Paginator(output, 100)
+            output = output.order_by("-id")
+            paginator = Paginator(output, 2)
             page = request.GET.get('page')
             try:
                 report = paginator.page(page)
@@ -946,9 +1004,10 @@ def processor4_list(request):
         processor4 = ProcessorUser2.objects.filter(processor2__processor_type__type_name="T4")
         search_name = request.GET.get('search_name', '')
         if search_name:
-            processor4 = processor4.filter(contact_name__icontains=search_name)
+            processor4 = processor4.filter(Q(contact_name__icontains=search_name) | Q(processor2__entity_name__icontains=search_name)| Q(processor2__fein__icontains=search_name)| Q(contact_email__icontains=search_name))
 
         # Pagination
+        processor4 = processor4.order_by("-id")
         paginator = Paginator(processor4, 20) 
         page_number = request.GET.get('page')
         page_obj = paginator.get_page(page_number)
@@ -1020,9 +1079,12 @@ def location_list_processor4(request):
                 context['processor'] = processor
                 
                 value = request.GET.get('processor_id','')
-                context['selectedprocessor'] = value
+                
                 if value and value != "all":                    
                     location = Processor2Location.objects.filter(processor__processor_type__type_name="T4").filter(processor_id=int(value))
+                    context['selectedprocessor'] = int(value)
+
+                location = location.order_by("-id")    
                 paginator = Paginator(location, 100)
                 page = request.GET.get('page')
                 try:

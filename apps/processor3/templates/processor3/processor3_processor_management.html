@@ -35,11 +35,8 @@
             </div>
             {% endif %}
             {% endif %}
-        </div>
-        
-        
-        
-        
+        </div>      
+                
         <div class="card card-padding">
             <div class="main-simple-table-with-search">
                 <div class="row">
@@ -86,6 +83,7 @@
                                 </tr>
                             </thead>
                             <tbody>
+                                {% if link_processor_to_processor_all %}
                                 {% for pro in link_processor_to_processor_all %}
                                 <tr>
                                     <td>{{pro.processor.entity_name}}</td>   
@@ -134,6 +132,11 @@
                                     </td>
                                 </tr>
                                 {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td colspan="4" style="text-align:center;">No Result Found</td>
+                                    </tr>
+                                    {% endif %}
                             </tbody>
                         </table>
                         <div class="col-md-12 col-sm-12 col-12 text-center mt-2" style="text-align:right">
