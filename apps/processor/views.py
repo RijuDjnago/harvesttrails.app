@@ -8253,45 +8253,45 @@ def Processor1ToProcessorManagement(request):
                 Processor1 = Processor.objects.all()  #24/04/2024
                 context['Processor1'] = Processor1
                 link_processor_to_processor_all = LinkProcessor1ToProcessor.objects.all()               
-                
-                pro1_id = request.GET.get('pro1_id','')
+                        
+                pro1_id = request.GET.get('pro1_id', 'all')
                 context['selectedpro1'] = pro1_id
                 if pro1_id and pro1_id != 'all':
                     link_processor_to_processor_all = link_processor_to_processor_all.filter(processor1_id=int(pro1_id))
-                    
+                            
             # Processor...................           
             elif request.user.is_processor:
                 print(request.user.email)
                 processor = ProcessorUser.objects.filter(contact_email=request.user.email).first()
-                
+                        
                 Processor1 = [processor.processor]
-                
+                        
                 context['Processor1'] = Processor1
                 link_processor_to_processor_all = LinkProcessor1ToProcessor.objects.filter(processor1_id=Processor1[0].id)             
-                
-                pro1_id = request.GET.get('pro1_id','')
+                        
+                pro1_id = request.GET.get('pro1_id', 'all')
                 context['selectedpro1'] = pro1_id
                 if pro1_id != 'all':
                     link_processor_to_processor_all = link_processor_to_processor_all.filter(processor1_id=int(pro1_id))
-                    
+                            
             # Processor2................
             elif request.user.is_processor2:
                 p = ProcessorUser2.objects.filter(contact_email=request.user.email).first()
                 processor2 = Processor2.objects.filter(id=p.processor2_id)
                 context['Processor1'] = processor2
                 link_processor = LinkProcessor1ToProcessor.objects.filter(processor2_id=processor2.first().id)
-                link_processor_ = LinkProcessorToProcessor.objects.filter(Q(processor_id=processor2.first().id)| Q(linked_processor_id=processor2.first().id))
-                
+                link_processor_ = LinkProcessorToProcessor.objects.filter(Q(processor_id=processor2.first().id) | Q(linked_processor_id=processor2.first().id))
+                        
                 link_processor_to_processor_all = []
                 for i in link_processor:
-                    my_dict = {"processor":"", "linked_processor":"", "processor_type":""}
+                    my_dict = {"processor": "", "linked_processor": "", "processor_type": ""}
                     my_dict["processor"] = i.processor2
                     my_dict["linked_processor"] = i.processor1
                     my_dict["processor_type"] = "T1"
                     link_processor_to_processor_all.append(my_dict)
                 for j in link_processor_:
-                    my_dict = {"processor":"", "linked_processor":"", "processor_type":""}
-                    if request.user ==j.processor:
+                    my_dict = {"processor": "", "linked_processor": "", "processor_type": ""}
+                    if request.user == j.processor:
                         my_dict["processor"] = j.processor
                         my_dict["linked_processor"] = j.linked_processor
                         my_dict["processor_type"] = j.linked_processor.processor_type.all().first().type_name
@@ -8310,8 +8310,8 @@ def Processor1ToProcessorManagement(request):
                 report = paginator.page(paginator.num_pages)
             
             context['link_processor_to_processor_all'] = report          
-                
-            return render(request, 'processor/processor_processor_management.html',context)
+                    
+            return render(request, 'processor/processor_processor_management.html', context)
         else:
             return redirect('login')
     except Exception as e:

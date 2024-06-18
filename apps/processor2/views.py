@@ -941,18 +941,21 @@ def addlocation_processor2(request):
 def location_list_processor2(request):
     context ={}
     try:
-        if request.user.is_authenticated: 
-            # superuser ......
-            if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():            
+        if request.user.is_authenticated:
+            # Check if user is superuser, SubAdmin, or SuperUser
+            if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
                 location = Processor2Location.objects.filter(processor__processor_type__type_name="T2")
                 processor = Processor2.objects.filter(processor_type__type_name="T2")
+                context = {}
                 context['processor'] = processor
                 
-                value = request.GET.get('processor_id','')                   
-                context['selectedprocessor'] = value
-                if value and value !="all":                    
-                    location =location.filter(processor_id=int(value))
-
+                value = request.GET.get('processor_id', '')                   
+                
+                if value and value != "all":  
+                    context['selectedprocessor'] = int(value)                  
+                    location = location.filter(processor_id=int(value))
+                else:
+                    context['selectedprocessor'] = 'all'
                 paginator = Paginator(location, 20)
                 page = request.GET.get('page')
                 try:
@@ -962,7 +965,7 @@ def location_list_processor2(request):
                 except EmptyPage:
                     report = paginator.page(paginator.num_pages)    
                 context['location'] = report    
-                return render(request, 'processor2/list_location.html',context)        
+                return render(request, 'processor2/list_location.html', context)
             else:
                 return redirect("dashboard")
         else:
@@ -1157,9 +1160,9 @@ def outbound_shipment_list(request):
         # Superuser.................     
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
             output = ShipmentManagement.objects.filter(sender_processor_type="T2")
-            p_id = [i.processor_idd for i in output]
-            processors = Processor2.objects.filter(id__in = p_id).order_by('entity_name')
-            context['processors'] = processors
+            processor = Processor2.objects.filter(processor_type__type_name="T2")
+            context['processors'] = processor
+
             search_name = request.GET.get('search_name','')
             selectprocessor_id = request.GET.get('selectprocessor_id','')
             context['search_name'] = search_name
@@ -1171,8 +1174,11 @@ def outbound_shipment_list(request):
                 Q(purchase_order_number__icontains=search_name) | Q(lot_number__icontains=search_name))
                 
             if selectprocessor_id and selectprocessor_id != 'All':
+                context['selectedProcessors'] = int(selectprocessor_id)
                 output = output.filter(processor_idd=selectprocessor_id)                                      
-                    
+            else:
+                context['selectedProcessors'] = 'all'
+
             output = output.order_by("-id")
             paginator = Paginator(output, 100)
             page = request.GET.get('page')
@@ -1260,12 +1266,14 @@ def inbound_shipment_list(request):
             search_name = request.GET.get("search_name", "")
             context["search_name"] = search_name  
             select_processor = request.GET.get("select_processor", "")         
-            context["select_processor"] = select_processor
+            
             queryset = ShipmentManagement.objects.filter(receiver_processor_type="T2")
             
             if select_processor and select_processor != 'All':
+                context["select_processor"] = int(select_processor)
                 queryset = queryset.filter(processor2_idd=int(select_processor))
-
+            else:
+                context["select_processor"] = 'all'
             if search_name and search_name != "":
                 queryset = queryset.filter(Q(shipment_id__icontains=search_name) | Q(processor_e_name__icontains=search_name))
             
@@ -1611,22 +1619,26 @@ def all_shipments_csv_download_for_t2(request):
 
 @login_required() 
 def outbound_shipment_processor2_csv_download(request):  
-    if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
-        filename = 'SHIPMENT MANAGEMENT TIER2.csv'
-        response = HttpResponse(
-            content_type='text/csv',
-            headers={'Content-Disposition': 'attachment; filename="{}"'.format(filename)},
-        )
-        writer = csv.writer(response)
-        # writer.writerow(['PROCESSOR', 'DATE PULLED', 'BIN LOCATION', 'MILLED VOLUME (LBS)', 'VOLUME SHIPPED (LBS)', 'BALANCE (LBS)', 'EQUIPMENT TYPE', 'EQUIPMENT ID', 'PURCHASE ORDER NUMBER', 'LOT NUMBER'])
-        writer.writerow(['PROCESSOR', 'DATE PULLED', 'BIN LOCATION','SENDER SKU ID','RECEIVER SKU ID','WEIGHT OF PRODUCT','EXPECTED YIELD','MOISTURE PERCENTAGE','MILLED VOLUME (LBS)', 'VOLUME SHIPPED (LBS)', 'BALANCE (LBS)', 'EQUIPMENT TYPE', 'EQUIPMENT ID', 'PURCHASE ORDER NUMBER', 'LOT NUMBER','T2 PROCESSOR'])
-        output = ShipmentManagement.objects.filter(sender_processor_type="T2").order_by('bin_location')
-        for i in output:            
-           
-            writer.writerow([i.processor_e_name, i.date_pulled, i.bin_location,i.storage_bin_send,i.storage_bin_recive, i.weight_of_product ,i.excepted_yield,i.moisture_percent, i.milled_volume, i.volume_shipped, i.volume_left, 
-            i.equipment_type, i.equipment_id, i.purchase_order_number, i.lot_number,i.processor2_name])
-        return response   
-    else:
+    try:
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+            filename = 'SHIPMENT MANAGEMENT TIER2.csv'
+            response = HttpResponse(
+                content_type='text/csv',
+                headers={'Content-Disposition': 'attachment; filename="{}"'.format(filename)},
+            )
+            writer = csv.writer(response)
+            # writer.writerow(['PROCESSOR', 'DATE PULLED', 'BIN LOCATION', 'MILLED VOLUME (LBS)', 'VOLUME SHIPPED (LBS)', 'BALANCE (LBS)', 'EQUIPMENT TYPE', 'EQUIPMENT ID', 'PURCHASE ORDER NUMBER', 'LOT NUMBER'])
+            writer.writerow(['PROCESSOR', 'DATE PULLED', 'BIN LOCATION','SENDER SKU ID','RECEIVER SKU ID','WEIGHT OF PRODUCT','EXPECTED YIELD','MOISTURE PERCENTAGE','MILLED VOLUME (LBS)', 'VOLUME SHIPPED (LBS)', 'BALANCE (LBS)', 'EQUIPMENT TYPE', 'EQUIPMENT ID', 'PURCHASE ORDER NUMBER', 'LOT NUMBER','T2 PROCESSOR'])
+            output = ShipmentManagement.objects.filter(sender_processor_type="T2").order_by('bin_location')
+            for i in output:            
+            
+                writer.writerow([i.processor_e_name, i.date_pulled, i.bin_location,i.storage_bin_send,i.storage_bin_recive, i.weight_of_product ,i.excepted_yield,i.moisture_percent, i.milled_volume, i.volume_shipped, i.volume_left, 
+                i.equipment_type, i.equipment_id, i.purchase_order_number, i.lot_number,i.processor2_name])
+            return response   
+        else:
+            return redirect("dashboard")
+
+    except Exception as e:
         return redirect("dashboard")
 
 
@@ -1639,13 +1651,15 @@ def processor2_processor_management(request):
             if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
                 processor2 = Processor2.objects.filter(processor_type__type_name="T2")  #24/04/2024
                 context['Processor1'] = processor2
-                link_processor_to_processor_all = LinkProcessorToProcessor.objects.filter(processor__processor_type__type_name="T2")
-                                        
-                pro1_id = request.GET.get('pro1_id','')
-                context['selectedpro1'] = pro1_id
-                if pro1_id and pro1_id != 'All':
-                    link_processor_to_processor_all  = link_processor_to_processor_all.filter(processor_id=int(pro1_id))
+                link_processor_to_processor_all = LinkProcessorToProcessor.objects.filter(processor__processor_type__type_name="T2")                     
+                pro1_id = request.GET.get('pro1_id', '0')
                 
+                if pro1_id and pro1_id != '0':
+                    link_processor_to_processor_all = link_processor_to_processor_all.filter(processor_id=int(pro1_id))
+                    context['selectedpro1'] = int(pro1_id)
+                else:
+                    context['selectedpro1'] = 0
+
                 paginator = Paginator(link_processor_to_processor_all, 20)
                 page = request.GET.get('page')
                 try:
@@ -1654,11 +1668,14 @@ def processor2_processor_management(request):
                     report = paginator.page(1)
                 except EmptyPage:
                     report = paginator.page(paginator.num_pages)
+
                 context['link_processor_to_processor_all'] = report           
-                            
-                return render(request, 'processor2/processor2_processor_management.html',context)
+
+                return render(request, 'processor2/processor2_processor_management.html', context)
+            else:
+                return redirect('dashboard')
         else:
-            return redirect('dashboard')
+            return redirect('login')
     except Exception as e:
         context["error_messages"] = str(e)
         return render(request, 'processor2/processor2_processor_management.html',context)

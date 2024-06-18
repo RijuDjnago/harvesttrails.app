@@ -136,11 +136,12 @@
                 <div class="row">
                     {% if request.user.is_processor %}
                     {% else %}
-                    <div class="col-4">
+                    <div class="col-2">
                         <div class="inline-apply-filter">
                             <div class="three-fields-with-label">
                                 <select id="processorSelction" name="selectprocessor_id">
-                                    <option value='All' selected> Select All Processors </option>
+                                    <option value='All' 
+                                    {% if select_processor == 'all' %}selected{% endif %}> Select All Processors </option>
                                     {% for i in processors %}
                                     {% if i == selectedProcessors %}
                                     <option value="{{ i.pk }}" selected>{{i.entity_name}} - {{ i.pk }}
@@ -193,38 +194,44 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for i in report %}
                                 
-                                <tr>
-                                    <td>{{i.processor_e_name}}</td>
-                                    <td>{{i.date_pulled}}</td>
-                                    <td>{{i.bin_location}}</td>                                   
-                                    <td>{{i.total_volume}} Lbs</td>
-                                    <!-- <td></td> -->
-                                    <td>{{i.volume_pulled}} Lbs</td>
-                                    <td>{{i.milled_volume}} Lbs</td>
-                                    <td>{{i.volume_left}} Lbs</td>
-                                    <td>{{i.milled_storage_bin}}</td>
-                                    {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
-                                    <td class="backk action-td rmv-bd">
-                                        {% if i.editable_obj %}
-                                        <ul>
-                                            <li>
-                                                <a href="{% url 'edit_volume_pulled_processor2' i.pk %}" class="update-btn-link" alt="edit production management" title="edit production management"> <span class="fas fa-edit"></span></a>
-                                            </li>
-                         
-                                            <li>
-                                                <a onclick="delShipment('{% url 'delete_volume_pulled' i.pk %}')"
-                                                    href="{% url 'delete_volume_pulled' i.pk %}"
-                                                    data-mdb-toggle="modal" data-mdb-target="#deleteModal" alt="delete production management" title="delete production management">
-                                                    <span class="fas fa-trash"></span></a>
-                                            </li>
-                                        </ul>
+                                {% if report %}
+                                    {% for i in report %}
+                                    <tr>
+                                        <td>{{i.processor_e_name}}</td>
+                                        <td>{{i.date_pulled}}</td>
+                                        <td>{{i.bin_location}}</td>                                   
+                                        <td>{{i.total_volume}} Lbs</td>
+                                        <!-- <td></td> -->
+                                        <td>{{i.volume_pulled}} Lbs</td>
+                                        <td>{{i.milled_volume}} Lbs</td>
+                                        <td>{{i.volume_left}} Lbs</td>
+                                        <td>{{i.milled_storage_bin}}</td>
+                                        {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
+                                        <td class="backk action-td rmv-bd">
+                                            {% if i.editable_obj %}
+                                            <ul>
+                                                <li>
+                                                    <a href="{% url 'edit_volume_pulled_processor2' i.pk %}" class="update-btn-link" alt="edit production management" title="edit production management"> <span class="fas fa-edit"></span></a>
+                                                </li>
+                            
+                                                <li>
+                                                    <a onclick="delShipment('{% url 'delete_volume_pulled' i.pk %}')"
+                                                        href="{% url 'delete_volume_pulled' i.pk %}"
+                                                        data-mdb-toggle="modal" data-mdb-target="#deleteModal" alt="delete production management" title="delete production management">
+                                                        <span class="fas fa-trash"></span></a>
+                                                </li>
+                                            </ul>
+                                            {% endif %}
+                                        </td>
                                         {% endif %}
-                                    </td>
-                                    {% endif %}
-                                </tr>
-                                {% endfor %}
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td colspan="12" style="text-align:center;">No Result Found</td>
+                                    </tr>
+                                {% endif %}
                             </tbody>
                         </table>
                     </div>
