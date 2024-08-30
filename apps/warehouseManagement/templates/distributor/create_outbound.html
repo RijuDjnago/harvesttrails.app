@@ -1,0 +1,402 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %} Add Shipment {% endblock title %}
+
+{% block extrahead %}
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-Y3EWVPF7PQ"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-Y3EWVPF7PQ');
+</script>
+{% endblock extrahead %}
+
+{% block content %}
+{% include 'navbar.html' %}
+
+<style>
+    .shipment-custom-btn {
+        height: 100%;
+        display: flex;
+        align-items: flex-end;
+    }
+
+    .shipment-custom-btn .btn-save-submit {
+        padding-top: 11px;
+        padding-bottom: 11px;
+        border-radius: 4px;
+    }
+    .extra_border_select{
+        border: 1px solid #ccc
+    }
+
+.ui-menu{height: 20vh;overflow-y: auto;padding: 0px 10px;margin: 0px 15px;}
+.ui-menu::-webkit-scrollbar{width:6px;max-height:20px;padding-right: 10px;}
+.ui-menu::-webkit-scrollbar-track{background:#ccc}
+.ui-menu:-webkit-scrollbar-thumb{background-color:#000;border-radius:20px;min-height:20px}
+
+</style>
+<div class="main-content">
+    {% include 'header.html' %} {% load crispy_forms_tags %}
+    <main>
+        <span class="farm headingtop">Send Shipment</span>
+        <div class="card farm-fields-container">
+            {% include '_alerts.html' %}
+            <div class="container-fluid">
+                <form method="post" class="farm-fields-form" enctype="multipart/form-data">
+                    {% csrf_token %}                   
+                    <div class="row mb-2">  
+                        <h2 style="background-color: #d7d5d5;color: #0b6c39;font-size: 22px;font-weight: 600;margin: 20px 0;padding: 12px 0;text-align: center">Contract Details</h2>                                            
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="selected_contract">Select Contract<span class="asteriskField">*</span></label>
+                                <select name="selected_contract" id="selected_contract" class="form-control" required onchange="this.form.submit()">
+                                    <option value="All" selected disabled>Select Contract</option>                                 
+                                    {% for contract in contracts %}
+                                    <option value="{{contract.id}}"{% if selected_contract == contract.id %} selected {% endif %}>{{contract.secret_key}}- {{contract.processor_entity_name}} - {{contract.crop}}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="processor_id">Processor</label>
+                                <input type="text" name="processor_id" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{contract.processor_entity_name}}" readonly>
+                            </div>
+                        </div>
+                        <div class="col-md-2 mb-2 text-center">
+                            <label for="id_storage"><strong>Milled Volume</strong></label>
+                            {% if milled_value == "None" %}
+                            <div style="padding: 10px 5px;font-size: 18px;">Contract Not Selected</div>
+                            {% else %}
+                            <div style="padding: 10px 5px;font-size: 18px;">{{milled_value}}</div>
+                            {% endif %}
+                        
+                            <input type="hidden" name="milled_value" id="sum_total_bin_location_milled_volume_java" value="{{milled_value}}">
+                        </div>
+                    </div>                    
+                    <div class= "row">                  
+                        <div class="col-md-12 mb-2">
+                            <h2 style="background-color: #d7d5d5;color: #0b6c39;font-size: 22px;font-weight: 600;margin: 20px 0;padding: 12px 0;text-align: center">SKU Details</h2>
+                            <div id="sender_sku_container" class='row'>
+                                <!-- Initial sender_sku_id field -->
+                                <div class="col-md-4 mb-2 sender_sku_item">
+                                    <div>                                
+                                        <div class='d-flex align-items-end'>
+                                            <div class='w-100'>
+                                                <label for="sender_sku_id_1">Sender Storage Bin ID (SKU ID)<span class="asteriskField">*</span></label>
+                                                <input type="text" id="sender_sku_id_1" name="sender_sku_id" class="textinput textInput form-control" value="{{ sender_sku_id }}" list="suggestions_1" autocomplete="off" placeholder="Sender SKU ID" onchange="this.form.submit()"> 
+                                            </div>
+                                            <div>
+                                                <!-- Button to add more sender_sku_id fields -->
+                                                <button type="button" id="add_sku_button" class="btn btn-primary mb-2 ms-2">+</button>
+                                            </div>
+                                        </div>
+                                        <datalist id="suggestions_1">
+                                            {% for data in sender_sku_id_list %}
+                                            <option value="{{ data }}">
+                                            {% endfor %}
+                                        </datalist>
+                                        {% if selected_processor_id %} 
+                                        <p id="alert_msg3" style="color:red"></p>
+                                        {% else %}
+                                        <p id="warning" style="color:grey;"> <i>First select Processor</i> </p> 
+                                        {% endif %}
+                                        <!-- Add - button for removing this field -->
+                                        <button type="button" class="btn btn-danger remove_sku_button" style="display: none;">-</button>
+                                    </div>
+                                </div>
+                            </div>  
+                        </div> 
+                    </div> 
+                    <div class="row">
+                        <h2 style="background-color: #d7d5d5;color: #0b6c39;font-size: 22px;font-weight: 600;margin: 20px 0;padding: 12px 0;text-align: center">Destination</h2>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="selected_destination">Destination Type</label>
+                                <select name="selected_destination" id="selected_destination" class="form-control" required onchange="this.form.submit()">                                 
+                                    <option value="warehouse"{% if selected_destination == 'warehouse'%} selected {% endif %}>Warehouse</option>
+                                    <option value="customer"{% if selected_destination == 'customer'%} selected {% endif %}>Customer</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="destination_id">Destination</label>
+                                <select name="destination_id" id="destination_id" class="form-control" required>  
+                                    <option value="All" selected disabled>Select {{selected_destination}}</option>                               
+                                    {% for destination in destination_list %}
+                                    <option value="{{destination.id}}"{% if destination.id == destination_id %}selected{% endif %}>{{destination.name}}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>              
+                    <div class="row">  
+                        <h2 style="background-color: #d7d5d5;color: #0b6c39;font-size: 22px;font-weight: 600;margin: 20px 0;padding: 12px 0;text-align: center">Delivery details</h2>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="carrier_type">Carrier type</label>
+                                <select name="carrier_type" id="carrier_type" class="form-control" required onchange="this.form.submit()">                                 
+                                    <option value="Rail Car"{% if carrier_type == 'Rail Car'%} selected {% endif %}>Rail Car</option>
+                                    <option value="Truck/Trailer"{% if carrier_type == 'Truck/Trailer'%} selected {% endif %}>Truck/Trailer</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="carrier_id">Carrier ID </label>
+                                <input type="text" name="carrier_id" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{carrier_id}}">
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="outbound_type">Outbound Type</label>
+                                <select name="outbound_type" id="outbound_type" class="form-control" required onchange="this.form.submit()">                                 
+                                    <option value="Domestic"{% if outbound_type == 'Domestic'%} selected {% endif %}>Domestic</option>
+                                    <option value="International"{% if outbound_type == 'International'%} selected {% endif %}>International</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="purchase_order_name">Purchase Order Name </label>
+                                <input type="text" name="purchase_order_name" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{purchase_order_name}}">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="purchase_order_number">Purchase Order Number </label>
+                                <input type="number" name="purchase_order_number" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{purchase_order_number}}">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="lot_number">Lot Number </label>
+                                <input type="text" name="lot_number" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{lot_number}}">
+                            </div>
+                        </div>
+                    
+                        <div class="col-md-4 rail">
+                            <div class="form-group">
+                                <label for="weight">Weight</label>
+                                <div class="d-flex">
+                                <input type="number" name="weight" class="textinput textInput form-control" style="margin-top:0; border-top-right-radius:0 !important; border-bottom-right-radius:0 !important" value="{{weight}}">
+                                <select name="amount_unit" id="unitSelction" class="form-select" style="border-top-left-radius:0 !important; border-bottom-left-radius:0 !important; border-left:0; width:90px;" required>                                   
+                                    <option value="LBS">LBS</option>
+                                    <option value="MT">MT</option>
+                                </select>
+                            </div>
+                            </div>
+                        </div>
+                                           
+                        <div class="col-md-4 truck">
+                            <div class="form-group">
+                                <label for="gross_weight">Gross Weight</label>
+                                <div class="d-flex">
+                                <input type="number" name="gross_weight" class="textinput textInput form-control" style="margin-top:0; border-top-right-radius:0 !important; border-bottom-right-radius:0 !important">
+                                <select name="amount_unit" id="unitSelction" class="form-select" style="border-top-left-radius:0 !important; border-bottom-left-radius:0 !important; border-left:0; width:90px;" required>                                   
+                                    <option value="LBS">LBS</option>
+                                    <option value="MT">MT</option>
+                                </select>
+                            </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 truck">
+                            <div class="form-group">
+                                <label for="net_weight">Net Weight</label>
+                                <div class="d-flex">
+                                <input type="number" name="net_weight" class="textinput textInput form-control" style="margin-top:0; border-top-right-radius:0 !important; border-bottom-right-radius:0 !important">
+                                <select name="amount_unit" id="unitSelction" class="form-select" style="border-top-left-radius:0 !important; border-bottom-left-radius:0 !important; border-left:0; width:90px;" required>                                   
+                                    <option value="LBS">LBS</option>
+                                    <option value="MT">MT</option>
+                                </select>
+                            </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 truck">
+                            <div class="form-group">
+                                <label for="ship_quantity">Ship Quantity</label>
+                                <input type="number" name="ship_quantity" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;">
+                            </div>
+                        </div>                       
+                                               
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="status">Status</label>
+                                <input type="text" name="status" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;">
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <div class="form-group">
+                                <label for="multi_file">Upload File <span class="asteriskField">*</span></label>
+                                <input type="file" name="files" multiple accept=".jpg,.png,.xlsx,.csv,.pdf" id="multi_file" class="textinput textInput form-control" >
+                                <p id="file_name_show" style="color:gray"></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="form-btn-row">
+                            <a href="#" class="btn-close-cancel btn-space">Cancel</a>
+                            <input style="display: none;" id="hide_btn1" type="submit" class="btn-save-submit"
+                                value="Save" name="save">
+                            <!-- <input type="button" id="hide_btn2" class="btn-save-submit" value="Save" onclick="btnClick()"> -->
+                            <input type="submit" name="save" class="btn-save-submit" value="Save" onclick="activityButton1()">
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+    {% include 'footer.html' %}
+</div>
+{% endblock %}
+
+{% block jquery %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<script>
+    $(document).ready(function() {
+        let skuCount = 1;
+
+        // Event listener for the + button
+        $('#add_sku_button').on('click', function() {
+            skuCount++;
+
+            // Create a new sender_sku_id input field
+            let newSkuField = `
+                <div class="col-md-4 mb-2 sender_sku_item">
+                    <div class='d-flex align-items-end'>
+                        <div class='w-100'>
+                            <label for="sender_sku_id_${skuCount}">Sender Storage Bin ID (SKU ID) <span class="asteriskField">*</span></label>
+                            <input type="text" id="sender_sku_id_${skuCount}" name="sender_sku_id" class="textinput textInput form-control" list="suggestions_${skuCount}" autocomplete="off" placeholder="Sender SKU ID">
+                            <datalist id="suggestions_${skuCount}">
+                                {% for data in sender_sku_id_list %}
+                                <option value="{{ data }}">
+                                {% endfor %}
+                            </datalist>
+                        </div>
+                        <div>
+                            <!-- Add - button for removing this field -->
+                            <button type="button" class="btn btn-danger remove_sku_button ms-2 mb-2">-</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Append the new field to the container
+            $('#sender_sku_container').append(newSkuField);
+        });
+
+        // Event listener for the - button to remove the sender_sku_id field
+        $('#sender_sku_container').on('click', '.remove_sku_button', function() {
+            $(this).closest('.sender_sku_item').remove();
+        });
+
+        // Show the remove button for the first input if more than one exists
+        $('#sender_sku_container').on('DOMNodeInserted', function() {
+            if ($('.sender_sku_item').length > 1) {
+                $('.remove_sku_button').show();
+            } else {
+                $('.remove_sku_button').hide();
+            }
+        });
+
+        // Hide the remove button if only one input exists
+        $('#sender_sku_container').on('DOMNodeRemoved', function() {
+            if ($('.sender_sku_item').length === 1) {
+                $('.remove_sku_button').hide();
+            }
+        });
+    });
+</script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var statusSelect = document.getElementById('outbound_type');
+        var approvedFields = document.querySelectorAll('.domestic');
+        var disapprovedFields = document.querySelectorAll('.international');
+    
+        function toggleFields() {
+            var status = statusSelect.value;
+            if (status === 'Domestic') {
+                approvedFields.forEach(function(field) {
+                    field.style.display = 'block';
+                });
+                disapprovedFields.forEach(function(field) {
+                    field.style.display = 'none';
+                });
+            } else if (status === 'International') {
+                approvedFields.forEach(function(field) {
+                    field.style.display = 'none';
+                });
+                disapprovedFields.forEach(function(field) {
+                    field.style.display = 'block';
+                });
+            } else {
+                approvedFields.forEach(function(field) {
+                    field.style.display = 'none';
+                });
+                disapprovedFields.forEach(function(field) {
+                    field.style.display = 'none';
+                });
+            }
+        }
+    
+        statusSelect.addEventListener('change', toggleFields);
+    
+        // Initial call to set the correct fields based on the current value
+        toggleFields();
+    });
+</script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var statusSelect = document.getElementById('carrier_type');
+        var approvedFields = document.querySelectorAll('.rail');
+        var disapprovedFields = document.querySelectorAll('.truck');
+    
+        function toggleFields() {
+            var status = statusSelect.value;
+            if (status === 'Rail Car') {
+                approvedFields.forEach(function(field) {
+                    field.style.display = 'block';
+                });
+                disapprovedFields.forEach(function(field) {
+                    field.style.display = 'none';
+                });
+            } else if (status === 'Truck/Trailer') {
+                approvedFields.forEach(function(field) {
+                    field.style.display = 'none';
+                });
+                disapprovedFields.forEach(function(field) {
+                    field.style.display = 'block';
+                });
+            } else {
+                approvedFields.forEach(function(field) {
+                    field.style.display = 'none';
+                });
+                disapprovedFields.forEach(function(field) {
+                    field.style.display = 'none';
+                });
+            }
+        }
+    
+        statusSelect.addEventListener('change', toggleFields);
+    
+        // Initial call to set the correct fields based on the current value
+        toggleFields();
+    });
+</script>
+<script>
+    $('#Warehouse-active').addClass('activeLink');
+  
+    $('#Warehouse-down').addClass('down');
+    $('#Warehouse-sub_unic').show();
+  
+    $('#Processor-Shipment-Add').addClass('activeLink active-nav');
+  
+</script>
+{% endblock jquery %}

@@ -3,8 +3,6 @@ from django.urls import path
 from apps.accounts import views
 
 
-
-
 urlpatterns = [
     path('', views.dashboard, name='dashboard'),
     path('user_create/', views.UserCreateView.as_view(), name='user-create'),
@@ -35,5 +33,8 @@ urlpatterns = [
     # 16-06-23 
     path('grower_sign_up/', views.grower_sign_up, name='grower_sign_up'),
     path('userstate_change/', views.userstate_change, name='userstate_change'),
+
+    path('version_update/', views.version_update, name='version_update'),
+    path('version_update_list/', views.version_update_list, name='version_update_list'),
     
 ]

@@ -957,6 +957,7 @@ def location_list_processor2(request):
                     location = location.filter(processor_id=int(value))
                 else:
                     context['selectedprocessor'] = 'all'
+                location = location.order_by("-id")
                 paginator = Paginator(location, 20)
                 page = request.GET.get('page')
                 try:
@@ -1768,6 +1769,7 @@ def processor2_processor_management(request):
                 else:
                     context['selectedpro1'] = 0
 
+                link_processor_to_processor_all = link_processor_to_processor_all.order_by("-id")
                 paginator = Paginator(link_processor_to_processor_all, 20)
                 page = request.GET.get('page')
                 try:
@@ -1836,18 +1838,7 @@ def link_processor_two(request):
                                             action_by_userid=action_by_userid,action_by_username=action_by_username,
                                             action_by_email=action_by_email,action_by_role=action_by_role,log_details=log_details,
                                             log_device=log_device)
-                        logtable.save()
-                        # 20-02-23
-                        # puser_id_all = ProcessorUser2.objects.filter(processor_id=pro_id)
-                        # if int(counter) == 1 :
-                        #     for j in puser_id_all :                                
-                        #         msg = f"A new tier2 processor with name: {link_pro.processor.entity_name} is assigned to you"
-                        #         p_user_id = User.objects.get(username=j.contact_email)
-                        #         notification_reason = 'Processor Assigned'
-                        #         redirect_url = "/processor2/processor2_processor_management"
-                        #         save_notification = ShowNotification(user_id_to_show=p_user_id.id,msg=msg,status="UNREAD",redirect_url=redirect_url,
-                        #         notification_reason=notification_reason)
-                        #         save_notification.save()                           
+                        logtable.save()                       
 
                     return redirect('processor2_processor_management')                   
 

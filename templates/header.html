@@ -1,4 +1,5 @@
 {% load static %}
+
 <style>
   .btn-transparent {
     margin-left: auto;
@@ -42,6 +43,7 @@
 
 
 </style>
+
 <header>
   <h2>
     <label for="nav-toggle">
@@ -82,7 +84,7 @@
     <ul class="dropdown-menu" aria-labelledby="dropdownMenuLink">
       
       <li><a class="dropdown-item" href="javascript:void(0)"><i class="fas fa-user"></i> 
-        {{request.user.first_name}} {{request.user.last_name}}</a>      <!-- show user name in header section -->
+        {{request.user.first_name}} {{request.user.last_name}}</a>      
       </li>
       
       {% if request.user.is_superuser %}
@@ -134,70 +136,68 @@
     {% endif %}
 
     {% block scripts %}
-    <script src = "https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
     {% if request.user.is_authenticated %}
     {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
     {% else %}
     <script>
-       $(document).ready(function() {
-        new show_notification_counter(); 
-        // new shownotification(); 
-        });
-        setInterval(function(){ show_notification_counter()},3000);
-        
-        function show_notification_counter(){
-          // alert('show_notification_counter');
+      jQuery(document).ready(function($) {
+        // Function to fetch notification count
+        function show_notification_counter() {
           $.ajax({
-                  type: "GET",
-                  url: `/show_notification_counter/`,
-                  data: {},
-                  contentType: false,
-                  cache: false,
-                  processData: false,
-                  success: function (response) {
-                    // console.log('show_notification_counter',response)
-                    if (response.msg_count != 0){                      
-                      document.getElementById('id_notification_count').innerHTML = response.msg_count;
-                    }
-                    else{
-                      document.getElementById('id_notification_count').innerHTML = "";
-                    }
-                    
-                  }})
+            type: "GET",
+            url: "/accounts/show_notification_counter/",
+            contentType: false,
+            cache: false,
+            processData: false,
+            success: function(response) {
+              console.log('show_notification_counter', response);
+              if (response.msg_count !== undefined && response.msg_count !== 0) {
+                $('#id_notification_count').text(response.msg_count);
+              } else {
+                $('#id_notification_count').empty();
               }
+            },
+            error: function(xhr, status, error) {
+              console.error("Error fetching notification count:", error);
+            }
+          });
+        }
+    
+        // Initial call and periodic updates for notification count
+        setInterval(show_notification_counter, 3000);
         
         
         // setInterval(function(){ shownotification()},3000);
-        function shownotification(){
-          // alert('shownotification');
+        function shownotification() {
           document.getElementById('id_notification').innerHTML = "";
           $.ajax({
-                type: "GET",
-                url: `/show_notification/`,
-                data: {},
-                contentType: false,
-                cache: false,
-                processData: false,
-                success: function (response) {
-                  // console.log('response',response.length)
-                  
-                  response.msg?.forEach(element => {
-                    // console.log(length.element)
-                    // console.log(element.myhref)
-                                      
-                    if (element.status == 'UNREAD'){
-                      document.getElementById('id_notification').innerHTML += `<a href="${element.myhref}" style="color: #333 !important;" class="lastbor bgclass"><div class="notification_reason_class">${element.notification_reason}</div><div style="font-size:11px; padding: 0px 8px">${element.msg}</div><div id="lastdiv">${element.added_data_time}</div></a>` ;
-                    }
-                    else{
-                      document.getElementById('id_notification').innerHTML += `<a href="${element.myhref}" style="color: #333 !important;" class="lastbor"><div class="notification_reason_class">${element.notification_reason}</div><div style="font-size:11px; padding: 0px 8px">${element.msg}</div><div id="lastdiv">${element.added_data_time}</div></a>` ;
-                      
-                    }
-                    
-                  });
-                  
-                }});
+            type: "GET",
+            url: "/accounts/show_notification/",
+            data: {},
+            contentType: false,
+            cache: false,
+            processData: false,
+            success: function(response) {
+              response.msg?.forEach(element => {
+                if (element.status == 'UNREAD') {
+                  document.getElementById('id_notification').innerHTML += `<a href="${element.myhref}" style="color: #333 !important;" class="lastbor bgclass"><div class="notification_reason_class">${element.notification_reason}</div><div style="font-size:11px; padding: 0px 8px">${element.msg}</div><div id="lastdiv">${element.added_data_time}</div></a>`;
+                } else {
+                  document.getElementById('id_notification').innerHTML += `<a href="${element.myhref}" style="color: #333 !important;" class="lastbor"><div class="notification_reason_class">${element.notification_reason}</div><div style="font-size:11px; padding: 0px 8px">${element.msg}</div><div id="lastdiv">${element.added_data_time}</div></a>`;
+                }
+              });
+            },
+            error: function(xhr, status, error) {
+              console.error("Error fetching notifications:", error);
+            }
+          });
         }
-
+    
+        // Bind shownotification() function to dropdown click event
+        $('.dropdown.ms-auto').on('click', function() {
+          shownotification();
+        });
+      });
         
     </script>
     {% endif %}

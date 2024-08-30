@@ -76,7 +76,7 @@ urlpatterns = [
     path('processor4/', include('apps.processor4.urls')),
     path('assistantapp/', include('apps.assistantapp.urls')),
     path('tracemodule/', include('apps.tracemodule.urls')),
-    # path('buyer/', include('apps.buyer.urls')),
+    path('warehouse/', include('apps.warehouseManagement.urls')),
 ]
 
 

@@ -29,6 +29,7 @@ from apps.grower.models import Consultant, Grower, GrowerChecklist
 from apps.contracts.models import GrowerContracts, SignedContracts
 from apps.field.models import Field, ShapeFileDataCo
 from apps.farms.models import Farm
+from apps.accounts.models import VersionUpdate
 from apps.processor.models import *
 from apps.processor2.models import *
 from apps.growerpayments.models import *
@@ -45,6 +46,7 @@ import json
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import api_view
 import ast
+from apps.warehouseManagement.models import *
 
 def main_page(request):
     return render (request,'index.html')
@@ -797,6 +799,12 @@ def dashboard(request):
     processor2 = ''
     p_user = ''
     p2_user = ''
+    distributor = ''
+    distributor_user = ''
+    warehouse = ''
+    warehouse_user = ''
+    customer = ''
+    customer_user = ''
     pp_grower_payment_paid_rice = ''
     pp_grower_payment_paid_cotton = ''
     pp_premium_paid_rice = ''
@@ -855,6 +863,22 @@ def dashboard(request):
         user_email = request.user.email
         p2_user = ProcessorUser2.objects.get(contact_email=user_email)
         processor2 = Processor2.objects.get(id=p2_user.processor2_id)
+
+    if request.user.is_distributor :
+        user_email = request.user.email
+        distributor_user = DistributorUser.objects.get(contact_email=user_email)
+        distributor = Distributor.objects.get(id=distributor_user.distributor_id)
+
+    if request.user.is_warehouse_manager :
+        user_email = request.user.email
+        warehouse_user = WarehouseUser.objects.get(contact_email=user_email)
+        warehouse = Warehouse.objects.get(id=warehouse_user.warehouse_id)
+
+    if request.user.is_customer :
+        user_email = request.user.email
+        customer_user = CustomerUser.objects.get(contact_email=user_email)
+        customer = Customer.objects.get(id=customer_user.customer_id)
+
     if request.user.is_consultant:
         consultant_id = Consultant.objects.get(
             email= request.user.email).id
@@ -1273,6 +1297,12 @@ def dashboard(request):
         'pop':pop,
         'processor':processor,
         'processor2':processor2,
+        'distributor': distributor,
+        'distributor_user':distributor_user,
+        'warhouse_user':warehouse_user,
+        'warehouse':warehouse,
+        'customer_user':customer_user,
+        'customer':customer,
         'p_user':p_user,
         'p2_user':p2_user,
         'pp_grower_payment_paid_rice':pp_grower_payment_paid_rice,
@@ -1699,5 +1729,28 @@ def grower_sign_up(request):
                     pass
                 
     return render (request,'update-step-form/step.html',context)
+
+@login_required()
+def version_update(request):
+    context = {}
+    if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role() or 'Version Update' in request.user.get_role_perm():
+        
+        if request.method == "POST":
+            version = request.POST.get("version")
+            release_date = request.POST.get("release_date")
+            print(release_date)
+            description = request.POST.get("description")            
+            updated_version = VersionUpdate.objects.create(version=version,release_date=release_date, description=description, created_by=request.user.username)
+           
+            return redirect('version_update_list')
+        return render(request, "accounts/version_update.html", context)
+
+
+@login_required()
+def version_update_list(request):
+    context = {}
+    version_updates = VersionUpdate.objects.all().values("version", "release_date", "description", "created_by", "updated_users")
+    context["version_updates"] = version_updates
+    return render(request, "accounts/version_updates_list.html", context)
 
 

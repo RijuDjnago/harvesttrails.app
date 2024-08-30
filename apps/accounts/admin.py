@@ -9,6 +9,7 @@ from . import models
 
 admin.site.register(models.User)
 admin.site.register(models.Role)
+admin.site.register(models.ShowNotification)
 admin.site.register(models.Permission, ImportExportModelAdmin)
 admin.site.register(models.SubSuperUser)
 
@@ -19,3 +20,5 @@ class PermissionResource(resources.ModelResource):
 		model = models.Permission
 		import_id_fields = ('id',)
 		fields = ('id', 'name', 'display', )
+
+admin.site.register(models.VersionUpdate)
