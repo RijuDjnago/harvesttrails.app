@@ -129,4 +129,5 @@ urlpatterns = [
     path('autocomplete_suggestions_sku/<int:pro_id>/<str:pro_type>/', views.autocomplete_suggestions_sku, name='autocomplete_suggestions_sku'),
 
     path('change_passowrd_admin/', views.change_passowrd_admin, name="change_passowrd_admin"),
+    
 ]

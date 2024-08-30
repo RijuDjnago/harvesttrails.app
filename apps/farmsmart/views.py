@@ -5,12 +5,12 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from apps.processor.models import *
-from apps.processor2.models import *
-from apps.processor.serializer import GrowerShipmentSerializer
+from apps.processor.serializer import *
 from apps.storage.models import ShapeFileDataCo as StorageShapeFileDataCo, Storage
 from apps.field.models import Field, FieldUpdated, ShapeFileDataCo, FieldActivity
 from apps.field.serializers import FieldListSerializer
 from apps.farms.models import Farm
+from apps.accounts.models import VersionUpdate
 from apps.farms.serializers import FarmSerializer
 from apps.growersurvey.models import SustainabilitySurvey,TypeSurvey,NameSurvey
 # from apps.growersurvey.serializer import SustainabilitySurveySerializer
@@ -43,22 +43,25 @@ from timezonefinder import TimezoneFinder
 from pytz import timezone
 from geopy.geocoders import Nominatim
 from apps.growerpayments.models import NasdaqApiData
-from apps.farmsmart.serializers import GrowerShipmentSerializer, BaleReportFarmFieldSerializer
+from apps.farmsmart.serializers import *
 from django.urls import reverse
+import qrcode
+from django.core.files.base import ContentFile
+from io import BytesIO
+import base64
+import shapefile
+from mimetypes import guess_type
+from django.contrib.auth.hashers import make_password
+from apps.processor.views import get_sku_list, create_sku_list, calculate_milled_volume, generate_random_password
 # Create your views here.
 
+
 def qr_code_view(pk):
-    grower_shipment1 = GrowerShipment.objects.get(id =pk)
+    grower_shipment1 = GrowerShipment.objects.get(id=pk)
     processor_name = grower_shipment1.processor.entity_name
     grower_name = grower_shipment1.grower.name
-    if grower_shipment1.storage_id == None:
-        storage_name = 'N/A'
-    else:
-        storage_name = grower_shipment1.storage.storage_name
-    if grower_shipment1.field.eschlon_id == None:
-        echelon_number = "N/A"
-    else:
-        echelon_number = grower_shipment1.field.eschlon_id
+    storage_name = 'N/A' if grower_shipment1.storage_id is None else grower_shipment1.storage.storage_name
+    echelon_number = 'N/A' if grower_shipment1.field.eschlon_id is None else grower_shipment1.field.eschlon_id
     field_name = grower_shipment1.field.name
     crop_name = grower_shipment1.crop
     variety_name = grower_shipment1.variety
@@ -66,39 +69,79 @@ def qr_code_view(pk):
     shipment_id = grower_shipment1.shipment_id
     module_tag_no = grower_shipment1.module_number
 
-    if grower_shipment1.amount2 == None:
+    if grower_shipment1.amount2 is None:
         a1 = grower_shipment1.amount
         unit_type1 = grower_shipment1.unit_type
-        amount1 = a1 + ' ' + unit_type1
+        amount1 = f"{a1} {unit_type1}"
         amount2 = 'Null'
-        # total = amount1 + ' LBS'
-        total = str(grower_shipment1.total_amount) + ' LBS'
     else:
         a1 = grower_shipment1.amount
         a2 = grower_shipment1.amount2
-        
         unit_type1 = grower_shipment1.unit_type
         unit_type2 = grower_shipment1.unit_type2
+        amount1 = f"{a1} {unit_type1}"
+        amount2 = f"{a2} {unit_type2}"
 
-        amount1 = a1 + ' ' + unit_type1
-        amount2 = a2 + ' ' + unit_type2
-        total = str(grower_shipment1.total_amount) + ' LBS'
-
+    total = f"{grower_shipment1.total_amount} LBS"
     shipment_date = grower_shipment1.date_time.strftime("%m-%d-%Y %H:%M:%S")
-    datapy = {"amount1": amount1,"amount2": amount2,"total_amount": total,"shipment_id": shipment_id,"module_tag_no": module_tag_no,
-    "processor_name": processor_name,"grower_name": grower_name,"storage_name": storage_name,"field_name": field_name,
-    "crop_name": crop_name,"variety_name": variety_name,"echelon_number": echelon_number,"sustainability": sustainability,
-    "shipment_date": shipment_date}
-    data=json.dumps(datapy)
-    # data = f"amount1: {amount1} \namount2: {amount2} \ntotal: {total} \nshipment_id: {shipment_id} \nmodule_tag_no: {module_tag_no} \nprocessor_name: {processor_name} \ngrower_name: {grower_name} \nstorage_name: {storage_name} \nfield_name: {field_name} \ncrop_name: {crop_name} \nvariety_name: {variety_name} \nechelon_number: {echelon_number} \nsustainability: {sustainability} \nshipment_date: {shipment_date}"
-    img = make(data)
-    img_name = 'qr' + str(time.time()) + '.png'
-    img.save(settings.MEDIA_ROOT + '/' + img_name)
-    
-    img = open('media/{}'.format(img_name), 'rb')
-    # response = FileResponse(img)
-    return img_name
 
+    datapy = {
+        "amount1": amount1, "amount2": amount2, "total_amount": total, "shipment_id": shipment_id,
+        "module_tag_no": module_tag_no, "processor_name": processor_name, "grower_name": grower_name,
+        "storage_name": storage_name, "field_name": field_name, "crop_name": crop_name, "variety_name": variety_name,
+        "echelon_number": echelon_number, "sustainability": sustainability, "shipment_date": shipment_date
+    }
+    data = json.dumps(datapy)           
+    img = qrcode.make(data)
+    img_name = 'qr1_' + str(int(time.time())) + '.png'         
+    
+    buffer = BytesIO()
+    img.save(buffer, format='PNG')
+    buffer.seek(0)            
+    file = ContentFile(buffer.read(), name=img_name)
+
+    grower_shipment1.qr_code.save(img_name, file, save=True)
+    img_name = grower_shipment1.qr_code
+    print(img_name)
+    return True
+
+def qr_code_processor(pk):
+    shipment = ShipmentManagement.objects.filter(id=pk).first()
+        
+    # Convert the datetime to a string
+    shipment_date_str = shipment.date_pulled.strftime('%Y-%m-%dT%H:%M:%S') if shipment.date_pulled else None
+
+    datapy = {
+        "shipment_id": shipment.shipment_id,
+        "send_processor_name": shipment.processor_e_name,
+        "sustainability": "under development",
+        "shipment_date": shipment_date_str,
+    }
+    # data = json.dumps(datapy)
+
+    # # Generate QR code
+    # img = make(data)
+    # buffer = BytesIO()
+    # img.save(buffer, format='PNG')
+    # buffer.seek(0)
+
+    # # Encode the image as Base64
+    # img_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
+
+    # return img_base64
+    data = json.dumps(datapy)           
+    img = qrcode.make(data)
+    img_name = 'qr1_' + str(int(time.time())) + '.png'         
+    
+    buffer = BytesIO()
+    img.save(buffer, format='PNG')
+    buffer.seek(0)            
+    file = ContentFile(buffer.read(), name=img_name)
+
+    shipment.qr_code_processor.save(img_name, file, save=True)
+    img_name = shipment.qr_code_processor
+    print(img_name)
+    return True
 
 
 characters2 = list(string.ascii_letters + string.digits)
@@ -156,7 +199,7 @@ def login_user_api(request):
         }
         return Response(data)
     # 23-05-23 Login For Tier2 Procesor
-    elif user is not None and 'Processor2' in user.get_role() and user.is_processor2 and not user.is_superuser:
+    elif user is not None and 'Processor' in user.get_role() and user.is_processor2 and not user.is_superuser:
         payload = {
             'id': user.id
         }
@@ -346,11 +389,22 @@ def grower_shipment_list_search_api(request):
     serializer = GrowerShipmentSerializer(grower_shipment, many=True)
     return Response({"data":serializer.data})
 
-@api_view(('POST',))
+@api_view(('GET',))
 def grower_shipment_qrcode_api(request):
-    shipment_id = request.data['shipment_id']
-    qr = qr_code_view(shipment_id)
-    return Response({'data':qr})
+    shipment_id = request.GET.get('shipment_id')
+    userid = request.GET.get("userid")
+    user = User.objects.get(id=userid)
+    if user.is_processor:
+        qr = qr_code_view(shipment_id)
+        shipment = GrowerShipment.objects.get(id=shipment_id)
+        qr_code = shipment.qr_code.url
+    elif user.is_processor2:
+        qr = qr_code_processor(shipment_id)
+        shipment = ShipmentManagement.objects.get(id=shipment_id)
+        qr_code = shipment.qr_code_processor.url
+    else:
+        qr_code = None
+    return Response({'data':qr_code})
 
     
 @api_view(('POST',))
@@ -553,213 +607,380 @@ def grower_shipment_delete_api(request):
     shipment.delete()
     return Response({"message":"shipment is deleted"})
 
-@api_view(('POST',))
+
+@api_view(('GET',))
 def processor_inbound_list_api(request):
-    userid = request.data['userid']
+    data = {"status":"","previous":None,"next":None,"data":[]}
+    userid = request.GET.get('userid')
     user = User.objects.get(id=userid)
-    user_email = user.email
-    p = ProcessorUser.objects.get(contact_email=user_email)
-    processor_id = Processor.objects.get(id=p.processor_id).id
-    processor_shipment = GrowerShipment.objects.filter(processor_id=processor_id)
-    var_id = []
-    for i in range(len(processor_shipment)):
-        location = processor_shipment[i].location
-        if location == None:
-            var = processor_shipment[i].id
-            var_id.append(var)
+    if user.is_processor:
+        p = ProcessorUser.objects.get(contact_email=user.email)
+        processor_id = Processor.objects.get(id=p.processor_id).id
+        processor_shipment = GrowerShipment.objects.filter(processor_id=processor_id)
+        var_id = []
+        for i in range(len(processor_shipment)):
+            location = processor_shipment[i].location
+            if location == None:
+                var = processor_shipment[i].id
+                var_id.append(var)
 
-    inbound_shipment = GrowerShipment.objects.filter(id__in = var_id).filter(status="APPROVED")
-
-    if processor_shipment.count() == 0:
-        data = []
-        return Response({"status":"No recordes for You","data":data})
-    else:
         inbound_shipment = GrowerShipment.objects.filter(id__in = var_id).filter(status="APPROVED")
-        serializer = GrowerShipmentSerializer(inbound_shipment, many=True)
-        return Response({"data":serializer.data})
 
-        # paginator = PageNumberPagination()
-        # paginator.page_size = 10
-        # result_page = paginator.paginate_queryset(inbound_shipment, request)
-        # serializer = GrowerShipmentSerializer(result_page, many=True)
-        # return paginator.get_paginated_response({"data":serializer.data})
-        # lst = []
-        # for i in range(len(inbound_shipment)):
-        #     processor_shipment[i].id
-        #     img = qr_code_view(inbound_shipment[i].id)
+        if processor_shipment.count() == 0:
+            data = []
+            return Response({"status":"No recordes for You","data":data})
+        else:
+            inbound_shipment = GrowerShipment.objects.filter(id__in = var_id).filter(status="APPROVED")
+            serializer = GrowerShipmentSerializer(inbound_shipment, many=True)
+            result = serializer.data
+            paginator = PageNumberPagination()
+            paginator.page_size = 10  # Set the page size to 20
+            result_data = paginator.paginate_queryset(result, request)
+            paginated_response = paginator.get_paginated_response(result_data)
+            data["status"] = "200"
+            data["count"] = paginated_response.data["count"]
+            data["previous"] = paginated_response.data["previous"]
+            data["next"] = paginated_response.data["next"]
+            data["data"] = paginated_response.data["results"]
 
-
-        #     if inbound_shipment[i].storage != None :
-        #         storage_name = inbound_shipment[i].storage.storage_name
-        #     else:
-        #         storage_name = "N/A"
-
-        #     if inbound_shipment[i].field != None :
-        #         field_name = inbound_shipment[i].field.name
-        #     else:
-        #         field_name = "N/A"
-
-        #     if inbound_shipment[i].echelon_id != None :
-        #         echelon_id = inbound_shipment[i].echelon_id
-        #     else:
-        #         echelon_id = "N/A"
-
-        #     data = {
-        #         "message":"processor_inbound , with recordes",
-        #         "type": "processor",
-        #         "GrowerShipment_Id":inbound_shipment[i].id,
-        #         "grower_name":inbound_shipment[i].grower.name,
-        #         "date_time":inbound_shipment[i].date_time,
-        #         "shipment_id":inbound_shipment[i].shipment_id,
-        #         "status":inbound_shipment[i].status,
-        #         "module_number":inbound_shipment[i].module_number,
-        #         "storage_name":storage_name,
-        #         "field_name":field_name,
-        #         "amount":inbound_shipment[i].amount,
-        #         "amount2":inbound_shipment[i].amount2,
-        #         "unit_type":inbound_shipment[i].unit_type,
-        #         "unit_type2":inbound_shipment[i].unit_type2,
-        #         "total_amount":inbound_shipment[i].total_amount,
-        #         "crop":inbound_shipment[i].crop,
-        #         "variety":inbound_shipment[i].variety,
-        #         "echelon_id":echelon_id,
-        #         "sustainability_score":inbound_shipment[i].sustainability_score,
-        #         # "qr url":'/processor/qr_code_view/{}'.format(grower_shipment[i].id),
-        #         "qr_code":img,
-        #     }
-        #     lst.append(data)
-        # return Response({'data':lst})
-@api_view(('POST',))
-def processor_inbound_list_search_api(request):
-    userid = request.data['userid']
-    search_keyword = request.data['search_keyword']
-    user = User.objects.get(id=userid)
-    user_email = user.email
-    p = ProcessorUser.objects.get(contact_email=user_email)
-    processor_id = Processor.objects.get(id=p.processor_id).id
-    processor_shipment = GrowerShipment.objects.filter(processor_id=processor_id)
-    var_id = []
-    for i in range(len(processor_shipment)):
-        location = processor_shipment[i].location
-        if location == None:
-            var = processor_shipment[i].id
-            var_id.append(var)
-
-    inbound_shipment = GrowerShipment.objects.filter(id__in = var_id).filter(status="APPROVED").filter(shipment_id__icontains=search_keyword)
-    serializer = GrowerShipmentSerializer(inbound_shipment, many=True)
-    return Response({"data":serializer.data})
-
-
-@api_view(('POST',))
-def processor_upcomming_inbound_list_api(request):
-    userid = request.data['userid']
-    user = User.objects.get(id=userid)
-    user_email = user.email
-    p = ProcessorUser.objects.get(contact_email=user_email)
-    processor_id = Processor.objects.get(id=p.processor_id).id
-    processor_shipment = GrowerShipment.objects.filter(processor_id=processor_id)
-    var_id = []
-    for i in range(len(processor_shipment)):
-        location = processor_shipment[i].location
-        if location == None:
-            var = processor_shipment[i].id
-            var_id.append(var)
-
-    inbound_shipment = GrowerShipment.objects.filter(id__in = var_id).filter(status="")
-
-    if processor_shipment.count() == 0:
+    elif user.is_processor2:
+        p = ProcessorUser2.objects.get(contact_email=user.email)
+        processor_id = Processor2.objects.get(id=p.processor2_id).id
+        processor_shipment = ShipmentManagement.objects.filter(processor2_idd=processor_id, status="APPROVED")
+        if processor_shipment.count() == 0:
+            data = []
+            return Response({"status":"No recordes for You","data":data})
+        else:
+            inbound_shipment = processor_shipment
+            serializer = ShipmentManagementSerializer(inbound_shipment, many=True)
+            result = serializer.data
+            paginator = PageNumberPagination()
+            paginator.page_size = 10  # Set the page size to 20
+            result_data = paginator.paginate_queryset(result, request)
+            paginated_response = paginator.get_paginated_response(result_data)
+            data["status"] = "200"
+            data["count"] = paginated_response.data["count"]
+            data["previous"] = paginated_response.data["previous"]
+            data["next"] = paginated_response.data["next"]
+            data["data"] = paginated_response.data["results"]
+    else:
         data = []
-        return Response({"status":"No recordes for You","data":data})
-    else:
-        
-        inbound_shipment = GrowerShipment.objects.filter(id__in = var_id).filter(status="")
-        serializer = GrowerShipmentSerializer(inbound_shipment, many=True)
-        return Response({"data":serializer.data})
-
-        # paginator = PageNumberPagination()
-        # paginator.page_size = 10
-        # result_page = paginator.paginate_queryset(inbound_shipment, request)
-        # serializer = GrowerShipmentSerializer(result_page, many=True)
-        # return paginator.get_paginated_response({"data":serializer.data})
+    return Response({"data":data})
 
 
-@api_view(('POST',))
-def processor_upcomming_inbound_list_search_api(request):
-    userid = request.data['userid']
-    search_keyword = request.data['search_keyword']
+@api_view(('GET',))
+def processor_inbound_list_search_api(request):
+    data = {"status":"","previous":None,"next":None,"data":[]}
+    userid = request.GET.get('userid')
+    search_keyword = request.GET.get('search_keyword')
     user = User.objects.get(id=userid)
-    user_email = user.email
-    p = ProcessorUser.objects.get(contact_email=user_email)
-    processor_id = Processor.objects.get(id=p.processor_id).id
-    processor_shipment = GrowerShipment.objects.filter(processor_id=processor_id)
-    var_id = []
-    for i in range(len(processor_shipment)):
-        location = processor_shipment[i].location
-        if location == None:
-            var = processor_shipment[i].id
-            var_id.append(var)
-   
-    inbound_shipment = GrowerShipment.objects.filter(id__in = var_id).filter(status="").filter(shipment_id__icontains=search_keyword)
-    serializer = GrowerShipmentSerializer(inbound_shipment, many=True)
-    return Response({"data":serializer.data})
+    if user.is_processor:
+        p = ProcessorUser.objects.get(contact_email=user.email)
+        processor_id = Processor.objects.get(id=p.processor_id).id
+        processor_shipment = GrowerShipment.objects.filter(processor_id=processor_id)
+        var_id = []
+        for i in range(len(processor_shipment)):
+            location = processor_shipment[i].location
+            if location == None:
+                var = processor_shipment[i].id
+                var_id.append(var)
+        if search_keyword:
+            inbound_shipment = GrowerShipment.objects.filter(id__in = var_id).filter(status="APPROVED").filter(shipment_id__icontains=search_keyword)
+        else:
+            inbound_shipment = GrowerShipment.objects.filter(id__in = var_id).filter(status="APPROVED")
+        serializer = GrowerShipmentSerializer(inbound_shipment, many=True)
+        result = serializer.data
+        paginator = PageNumberPagination()
+        paginator.page_size = 10  # Set the page size to 20
+        result_data = paginator.paginate_queryset(result, request)
+        paginated_response = paginator.get_paginated_response(result_data)
+        data["status"] = "200"
+        data["count"] = paginated_response.data["count"]
+        data["previous"] = paginated_response.data["previous"]
+        data["next"] = paginated_response.data["next"]
+        data["data"] = paginated_response.data["results"]
+        
+    elif user.is_processor2:
+        p = ProcessorUser2.objects.get(contact_email=user.email)
+        processor_id = Processor2.objects.get(id=p.processor2_id).id
+        processor_shipment = ShipmentManagement.objects.filter(processor2_idd=processor_id, status="APPROVED")
+        if search_keyword:
+            inbound_shipment = processor_shipment.filter(shipment_id__icontains=search_keyword)
+        else:
+            inbound_shipment = processor_shipment
+        serializer = ShipmentManagementSerializer(inbound_shipment, many=True)
+        result = serializer.data
+        paginator = PageNumberPagination()
+        paginator.page_size = 10  # Set the page size to 20
+        result_data = paginator.paginate_queryset(result, request)
+        paginated_response = paginator.get_paginated_response(result_data)
+        data["status"] = "200"
+        data["count"] = paginated_response.data["count"]
+        data["previous"] = paginated_response.data["previous"]
+        data["next"] = paginated_response.data["next"]
+        data["data"] = paginated_response.data["results"]
+    else:
+        data = []
+    return Response({"data":data})
 
 
+@api_view(('GET',))
+def processor_upcomming_inbound_list_api(request):
+    data = {"status":"","previous":None,"next":None,"data":[]}
+    userid = request.GET.get('userid')
+    user = User.objects.get(id=userid)
+    if user.is_processor:   
+        p = ProcessorUser.objects.get(contact_email=user.email)
+        processor_id = Processor.objects.get(id=p.processor_id).id
+        processor_shipment = GrowerShipment.objects.filter(processor_id=processor_id)
+        var_id = []
+        for i in range(len(processor_shipment)):
+            location = processor_shipment[i].location
+            if location == None:
+                var = processor_shipment[i].id
+                var_id.append(var)
+
+        inbound_shipment = GrowerShipment.objects.filter(id__in = var_id).filter(status="")
+
+        if processor_shipment.count() == 0:
+            data = []
+            return Response({"status":"No recordes for You","data":data})
+        else:
+            
+            inbound_shipment = GrowerShipment.objects.filter(id__in = var_id).filter(status="")
+            serializer = GrowerShipmentSerializer(inbound_shipment, many=True)
+            result = serializer.data
+            paginator = PageNumberPagination()
+            paginator.page_size = 10  # Set the page size to 20
+            result_data = paginator.paginate_queryset(result, request)
+            paginated_response = paginator.get_paginated_response(result_data)
+            data["status"] = "200"
+            data["count"] = paginated_response.data["count"]
+            data["previous"] = paginated_response.data["previous"]
+            data["next"] = paginated_response.data["next"]
+            data["data"] = paginated_response.data["results"]
+
+    elif user.is_processor2:   
+        p = ProcessorUser2.objects.get(contact_email=user.email)
+        processor_id = Processor2.objects.get(id=p.processor2_id).id
+        processor_shipment = ShipmentManagement.objects.filter(processor2_idd=processor_id, status=None)
+        if processor_shipment.count() == 0:
+            data = []
+            return Response({"status":"No recordes for You","data":data})
+        else:
+            
+            inbound_shipment = processor_shipment
+            serializer = ShipmentManagementSerializer(inbound_shipment, many=True)
+            result = serializer.data
+            paginator = PageNumberPagination()
+            paginator.page_size = 10  # Set the page size to 20
+            result_data = paginator.paginate_queryset(result, request)
+            paginated_response = paginator.get_paginated_response(result_data)
+            data["status"] = "200"
+            data["count"] = paginated_response.data["count"]
+            data["previous"] = paginated_response.data["previous"]
+            data["next"] = paginated_response.data["next"]
+            data["data"] = paginated_response.data["results"]
+    else:
+        data= []
+    return Response({"data":data})
 
 
-@api_view(('POST',))
+@api_view(('GET',))
+def processor_upcomming_inbound_list_search_api(request):
+    data = {"status":"","previous":None,"next":None,"data":[]}
+    userid = request.GET.get('userid')
+    search_keyword = request.GET.get('search_keyword')
+    user = User.objects.get(id=userid)
+    if user.is_processor:
+        p = ProcessorUser.objects.get(contact_email=user.email)
+        processor_id = Processor.objects.get(id=p.processor_id).id
+        processor_shipment = GrowerShipment.objects.filter(processor_id=processor_id)
+        var_id = []
+        for i in range(len(processor_shipment)):
+            location = processor_shipment[i].location
+            if location == None:
+                var = processor_shipment[i].id
+                var_id.append(var)
+        if search_keyword:
+            inbound_shipment = GrowerShipment.objects.filter(id__in = var_id).filter(status="").filter(shipment_id__icontains=search_keyword)
+        else:
+            inbound_shipment = GrowerShipment.objects.filter(id__in = var_id).filter(status="")
+        serializer = GrowerShipmentSerializer(inbound_shipment, many=True)
+        result = serializer.data
+        paginator = PageNumberPagination()
+        paginator.page_size = 10  # Set the page size to 20
+        result_data = paginator.paginate_queryset(result, request)
+        paginated_response = paginator.get_paginated_response(result_data)
+        data["status"] = "200"
+        data["count"] = paginated_response.data["count"]
+        data["previous"] = paginated_response.data["previous"]
+        data["next"] = paginated_response.data["next"]
+        data["data"] = paginated_response.data["results"]
+
+    elif user.is_processor2:
+        p = ProcessorUser2.objects.get(contact_email=user.email)
+        processor_id = Processor2.objects.get(id=p.processor2_id).id
+        processor_shipment = ShipmentManagement.objects.filter(processor2_idd=processor_id, status="")
+        if search_keyword:
+            inbound_shipment = processor_shipment.filter(shipment_id__icontains=search_keyword)
+        else:
+            inbound_shipment = processor_shipment
+        serializer = ShipmentManagementSerializer(inbound_shipment, many=True)
+        result = serializer.data
+        paginator = PageNumberPagination()
+        paginator.page_size = 10  # Set the page size to 20
+        result_data = paginator.paginate_queryset(result, request)
+        paginated_response = paginator.get_paginated_response(result_data)
+        data["status"] = "200"
+        data["count"] = paginated_response.data["count"]
+        data["previous"] = paginated_response.data["previous"]
+        data["next"] = paginated_response.data["next"]
+        data["data"] = paginated_response.data["results"]
+    else:
+        data = []
+    return Response({"data":data})
+
+
+@api_view(('GET',))
 def processor_inbound_view_api(request):
-    shipment_id = request.data['shipment_id']
-    grower_shipment = GrowerShipment.objects.get(id=shipment_id)
-    if grower_shipment.storage == None :
-        storage_name = "N/A"
-    else:
-        storage_name = grower_shipment.storage.storage_name
+    shipment_id = request.GET.get('shipment_id')
+    userid = request.GET.get('userid')
+    user = User.objects.get(id=userid)
+    if user.is_processor:
+        check_grower_shipment = GrowerShipment.objects.filter(id=shipment_id)
+        if check_grower_shipment.exists():
+            grower_shipment = check_grower_shipment.first()
+            if grower_shipment.storage == None :
+                storage_name = "N/A"
+            else:
+                storage_name = grower_shipment.storage.storage_name
 
-    if grower_shipment.variety == None :
-        variety = "N/A"
+            if grower_shipment.variety == None :
+                variety = "N/A"
+            else:
+                variety = grower_shipment.variety
+            if grower_shipment.echelon_id == None :
+                echelon_id = "N/A"
+            else:
+                echelon_id = grower_shipment.echelon_id
+            if grower_shipment.sustainability_score == None :
+                sustainability_score = "N/A"
+            else:
+                sustainability_score = grower_shipment.sustainability_score
+            if grower_shipment.received_amount == None :
+                received_amount = "N/A"
+            else:
+                received_amount = grower_shipment.received_amount
+            if grower_shipment.token_id == None :
+                token_id = "N/A"
+            else:
+                token_id = grower_shipment.token_id
+            if grower_shipment.moisture_level == None:
+                moisture_percentage = "N/A"
+            else:
+                moisture_percentage = grower_shipment.moisture_level
+            if grower_shipment.head_count:
+                head_count = "N/A"
+            else:
+                head_count = grower_shipment.head_count
+            if grower_shipment.fancy_count:
+                fancy_count = "N/A"
+            else:
+                fancy_count = grower_shipment.fancy_count
+            files = grower_shipment.files.all()
+            file_data = [
+                {
+                    "url": file.file.url,
+                    "name": file.file.name.split('/')[-1],  # Extract file name from the path
+                    "type": guess_type(file.file.url)[0].split('/')[1] if guess_type(file.file.url)[0] else "unknown"
+                } 
+                for file in files
+            ]
+            
+            img = qr_code_view(shipment_id)
+            data = {
+                "GrowerShipment_Id":grower_shipment.id,
+                "shipment_id":grower_shipment.shipment_id,
+                "sku": grower_shipment.sku if grower_shipment.sku else None,
+                "status":grower_shipment.status,
+                "processor_name":grower_shipment.processor.entity_name,
+                "date_time":grower_shipment.date_time,
+                "grower_name":grower_shipment.grower.name,
+                "module_number":grower_shipment.module_number,
+                "storage_name":storage_name,
+                "field_name":grower_shipment.field.name,
+                "amount":grower_shipment.amount,
+                "amount2":grower_shipment.amount2,
+                "type":grower_shipment.unit_type,
+                "type2":grower_shipment.unit_type2,
+                "total_amount":grower_shipment.total_amount,
+                "crop":grower_shipment.crop,
+                "variety":variety,
+                "echelon_id":echelon_id,
+                "sustainability_score":sustainability_score,
+                "received_amount":received_amount,
+                "approval_date":grower_shipment.approval_date,
+                "token_id":token_id,
+                "moisture_percentage":moisture_percentage,
+                "head_count": head_count,
+                "fancy_count": fancy_count,
+                "qr_code":grower_shipment.qr_code.url,
+                "files":file_data
+            }
+        else:
+            data = []
+    elif user.is_processor2:
+        check_shipment = ShipmentManagement.objects.filter(id=shipment_id)
+        if check_shipment.exists():
+            shipment = check_shipment.first()
+            files = shipment.files.all()
+            file_data = [
+                {
+                    "url": file.file.url,
+                    "name": file.file.name.split('/')[-1],  # Extract file name from the path
+                    "type": guess_type(file.file.url)[0].split('/')[1] if guess_type(file.file.url)[0] else "unknown"
+                } 
+                for file in files
+            ]
+            qr_code = qr_code_processor(shipment_id)
+            print(qr_code)
+            data = {
+                "shipment_id":shipment.shipment_id,
+                "sender_processor_id":shipment.processor2_idd,
+                "sender_processor_name":shipment.processor_e_name,
+                "sender_processor_type":shipment.sender_processor_type,
+                "receiver_processor_id":shipment.processor2_idd,
+                "receiver_processor_name":shipment.processor2_name,
+                "receiver_processor_type":shipment.receiver_processor_type,
+                "milled_volume":shipment.milled_volume,
+                "volume_shipped":shipment.volume_shipped,
+                "volume_left":shipment.volume_left,
+                "weight_of_product":shipment.weight_of_product,
+                "weight_of_product_unit":shipment.weight_of_product_unit,
+                "expected_yield":shipment.excepted_yield,
+                "expected_yield_unit":shipment.excepted_yield_unit,
+                "moisture_percentage":shipment.moisture_percent,
+                "equipment_type":shipment.equipment_type,
+                "equipment_id":shipment.equipment_id,
+                "purchase_order_number":shipment.purchase_order_number,
+                "lot_number":shipment.lot_number,
+                "date_pulled":shipment.date_pulled,
+                "status":shipment.status,
+                "sender_sku_id":shipment.storage_bin_send,
+                "receiving_date":shipment.recive_delivery_date,
+                "receiver_sku_id":shipment.storage_bin_recive,
+                "received_weight":shipment.received_weight,
+                "ticket_number":shipment.ticket_number,
+                "qr_code":shipment.qr_code_processor.url,
+                "files":file_data
+            }
+        else:
+            data = []
     else:
-        variety = grower_shipment.variety
-    if grower_shipment.echelon_id == None :
-        echelon_id = "N/A"
-    else:
-        echelon_id = grower_shipment.echelon_id
-    if grower_shipment.sustainability_score == None :
-        sustainability_score = "N/A"
-    else:
-        sustainability_score = grower_shipment.sustainability_score
-    if grower_shipment.received_amount == None :
-        received_amount = "N/A"
-    else:
-        received_amount = grower_shipment.received_amount
-    if grower_shipment.token_id == None :
-        token_id = "N/A"
-    else:
-        token_id = grower_shipment.token_id
-    img = qr_code_view(shipment_id)
-    data = {
-        "GrowerShipment_Id":grower_shipment.id,
-        "shipment_id":grower_shipment.shipment_id,
-        "status":grower_shipment.status,
-        "processor_name":grower_shipment.processor.entity_name,
-        "date_time":grower_shipment.date_time,
-        "grower_name":grower_shipment.grower.name,
-        "module_number":grower_shipment.module_number,
-        "storage_name":storage_name,
-        "field_name":grower_shipment.field.name,
-        "amount":grower_shipment.amount,
-        "amount2":grower_shipment.amount2,
-        "type":grower_shipment.unit_type,
-        "type2":grower_shipment.unit_type2,
-        "total_amount":grower_shipment.total_amount,
-        "crop":grower_shipment.crop,
-        "variety":variety,
-        "echelon_id":echelon_id,
-        "sustainability_score":sustainability_score,
-        "received_amount":received_amount,
-        "token_id":token_id,
-        "qr_code":img,
-    }
+        data = []
     return Response({'data':data})
+
 
 @api_view(('POST',))
 def processor_outbound_view_api(request):
@@ -812,34 +1033,64 @@ def processor_outbound_view_api(request):
 
 @api_view(('POST',))
 def processor_inbound_delete_api(request):
-    shipment_id = request.data['shipment_id']
-    # 17-04-23
-    userid = request.data['userid']
-    shipment = GrowerShipment.objects.get(id=shipment_id)
-    user = User.objects.get(id=userid)
-    # 07-04-23 Log Table
-    log_type, log_status, log_device = "GrowerShipment", "Deleted", "App"
-    log_idd, log_name = shipment.id, shipment.shipment_id
-    echelon_id = shipment.echelon_id if shipment.echelon_id else None
-    storage_id = shipment.storage.id if shipment.storage else None
-    log_details = f"status = {shipment.status} | total_amount = {shipment.total_amount} | unit_type2 = {shipment.unit_type2} | amount2 = {shipment.amount2} | echelon_id = {echelon_id} | sustainability_score = {shipment.sustainability_score} | amount = {shipment.amount} | variety = {shipment.variety} | crop = {shipment.crop} | shipment_id = {shipment.shipment_id} | processor_id = {shipment.processor.id} | grower_id = {shipment.grower.id} | storage_id = {storage_id} | field_id = {shipment.field.id} | module_number = {shipment.module_number} | unit_type = {shipment.unit_type} | "
-    
-    action_by_userid = user.id
-    user_role = user.role.all()
-    action_by_username = f'{user.first_name} {user.last_name}'
-    action_by_email = user.username
-    if user.id == 1 :
-        action_by_role = "superuser"
+    shipment_id = request.data.get('shipment_id')
+    userid = request.data.get('userid') 
+    user = User.objects.get(id=userid) 
+    if user.is_processor: 
+        check_shipment = GrowerShipment.objects.filter(id=shipment_id)
+        if check_shipment.exists():
+            shipment = check_shipment.first()
+
+            log_type, log_status, log_device = "GrowerShipment", "Deleted", "App"
+            log_idd, log_name = shipment.id, shipment.shipment_id
+            echelon_id = shipment.echelon_id if shipment.echelon_id else None
+            storage_id = shipment.storage.id if shipment.storage else None
+            log_details = f"status = {shipment.status} | total_amount = {shipment.total_amount} | unit_type2 = {shipment.unit_type2} | amount2 = {shipment.amount2} | echelon_id = {echelon_id} | sustainability_score = {shipment.sustainability_score} | amount = {shipment.amount} | variety = {shipment.variety} | crop = {shipment.crop} | shipment_id = {shipment.shipment_id} | processor_id = {shipment.processor.id} | grower_id = {shipment.grower.id} | storage_id = {storage_id} | field_id = {shipment.field.id} | module_number = {shipment.module_number} | unit_type = {shipment.unit_type} | "
+            
+            action_by_userid = user.id
+            user_role = user.role.all()
+            action_by_username = f'{user.first_name} {user.last_name}'
+            action_by_email = user.username
+            if user.id == 1 :
+                action_by_role = "superuser"
+            else:
+                action_by_role = str(','.join([str(i.role) for i in user_role]))
+            logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+                                action_by_userid=action_by_userid,action_by_username=action_by_username,
+                                action_by_email=action_by_email,action_by_role=action_by_role,log_details=log_details,
+                                log_device=log_device)
+            logtable.save()
+            shipment.delete()
+        else:
+            return Response({"message":"Shipment does not exist"})
+    elif user.is_processor2:
+        check_shipment = ShipmentManagement.objects.filter(id=shipment_id)
+        if check_shipment.exists():
+            shipment = check_shipment.first()
+            log_type, log_status, log_device = "ProcessorShipment", "Deleted", "App"
+            log_idd, log_name = shipment.id, shipment.shipment_id
+            log_details = f"shipment_id = {shipment.shipment_id} | status = {shipment.status} | sender_processor_id = {shipment.processor_idd} | receiver_processor_id = {shipment.processor2_idd}"
+            
+            action_by_userid = user.id
+            user_role = user.role.all()
+            action_by_username = f'{user.first_name} {user.last_name}'
+            action_by_email = user.username
+            if user.id == 1 :
+                action_by_role = "superuser"
+            else:
+                action_by_role = str(','.join([str(i.role) for i in user_role]))
+            logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+                                action_by_userid=action_by_userid,action_by_username=action_by_username,
+                                action_by_email=action_by_email,action_by_role=action_by_role,log_details=log_details,
+                                log_device=log_device)
+            logtable.save()
+            shipment.delete()
+        else:
+            return Response({"message":"Shipment does not exist"})
     else:
-        action_by_role = str(','.join([str(i.role) for i in user_role]))
-    logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
-                        action_by_userid=action_by_userid,action_by_username=action_by_username,
-                        action_by_email=action_by_email,action_by_role=action_by_role,log_details=log_details,
-                        log_device=log_device)
-    logtable.save()
-    shipment.delete()
-    return Response({"message":"shipment is deleted"})
-    
+        return Response({"message":"Shipment does not exist"})
+    return Response({"status":"200","message":"Shipment is deleted"})
+      
 
 @api_view(('POST',))
 def processor_linked_grower_api(request):
@@ -897,123 +1148,268 @@ def processor_linked_grower_storage_api(request):
             lst.append(stt)
     return Response({'data':lst})
 
+@api_view(("GET",))
+def receive_delivery_source_list_api(request):
+    response = {"status":"", "message":"","data":[]}
+    userid = request.GET.get('userid')
+    user = User.objects.get(id=userid)
+    if user.is_processor:
+        p = ProcessorUser.objects.get(contact_email=user.email)
+        linked_grower = LinkGrowerToProcessor.objects.filter(processor_id=p.processor.id)
+        data = []
+        for i in linked_grower:
+            grower_email = i.grower.email
+            user = User.objects.get(email=grower_email)
+            lst = {
+                "grower_name":i.grower.name,
+                "grower_id":i.grower.id,
+                "user_id":user.id
+                
+            }
+            data.append(lst)
+    elif user.is_processor2:
+        p = ProcessorUser2.objects.get(contact_email=user.email)
+        linked_processor1 = LinkProcessor1ToProcessor.objects.filter(processor2_id=p.processor2.id)
+        other_linked_pro = LinkProcessorToProcessor.objects.filter(linked_processor_id=p.processor2.id)
+        data = []
+        if linked_processor1:
+            for i in linked_processor1:
+               
+                user = User.objects.filter(email=i.processor1)
+                lst = {
+                    "processor_name":i.processor1.entity_name,
+                    "processor_id":i.processor1.id,
+                    "processor_type":"T1"
+                }
+                data.append(lst)
+        if other_linked_pro:
+            for i in other_linked_pro:
+                lst = {
+                    "processor_name":i.processor.entity_name,
+                    "processor_id":i.processor.id,
+                    "processor_type":i.processor.processor_type.all().first().type_name
+                }
+                data.append(lst)
+    else:
+        data = []
+    response["status"] = "200"
+    response["message"] = "Source list fetched successfully"
+    response["data"] = data
+    return Response(response)
+
+
 @api_view(('POST',))
 def processor_receive_delivery_api(request):
-    userid = request.data['userid']
+    response = {"status":"", "message":"", "data":[]}
+    userid = request.data.get('userid')
     user = User.objects.get(id=userid)
-    p = ProcessorUser.objects.get(contact_email=user.email)
-    processor_id = Processor.objects.get(id=p.processor_id).id
-    grower_id = request.data['grower_id']
-    id_storage = request.data['storage_id']
-    field_id = request.data['field_id']
-    module_number = request.data['module_number']
-    amount1 = request.data['amount1']
-    amount2 = request.data['amount2']
-    id_unit1 = request.data['type1']
-    id_unit2 = request.data['type2']
-    get_toatal = request.data['get_toatal']
+    if user.is_processor:
+        p = ProcessorUser.objects.get(contact_email=user.email)
+        processor_id = p.processor.id
+        grower_id = request.data.get('grower_id')
+        id_storage = request.data.get('storage_id')
+        field_id = request.data.get('field_id')
+        module_number = request.data['module_number']
+        amount1 = request.data.get('amount1')
+        amount2 = request.data.get('amount2')
+        id_unit1 = request.data.get('type1')
+        id_unit2 = request.data.get('type2')
+        get_total = request.data.get('get_total')
+        files = request.FILES.getlist('files')                        
+        received_weight= request.data.get('received_weight')
+        sku_id = request.data.get('sku_id')
+        ticket_number= request.data.get('ticket_number')
+        approval_date= request.data.get('approval_date')
 
-    status = ""
-    sustainabilitySurvey = SustainabilitySurvey.objects.filter(grower_id=grower_id)
-    if len(sustainabilitySurvey) == 0:
-        surveyscore = 0
-    else:
-        surveyscore = [i.surveyscore for i in sustainabilitySurvey][0]
-    if len(amount1) > 0 and len(amount2) == 0:
-        if id_unit1 == '1':
-            id_unit1 = 'LBS'
-            id_unit2 = ''
-        if id_unit1 == '38000':
-            id_unit1 = 'MODULES (8 ROLLS)'
-            id_unit2 = ''
-        if id_unit1 == '19000':
-            id_unit1 = 'SETS (4 ROLLS)'
-            id_unit2 = ''
-        if id_unit1 == '4750':
-            id_unit1 = 'ROLLS'
-            id_unit2 = ''
-    if len(amount1) > 0 and len(amount2) > 0:
-        if id_unit1 == '1':
-            id_unit1 = 'LBS'
-        if id_unit1 == '38000':
-            id_unit1 = 'MODULES (8 ROLLS)'
-        if id_unit1 == '19000':
-            id_unit1 = 'SETS (4 ROLLS)'
-        if id_unit1 == '4750':
-            id_unit1 = 'ROLLS'
-        if id_unit2 == '1':
-            id_unit2 = 'LBS'
-        if id_unit2 == '38000':
-            id_unit2 = 'MODULES (8 ROLLS)'
-        if id_unit2 == '19000':
-            id_unit2 = 'SETS (4 ROLLS)'
-        if id_unit2 == '4750':
-            id_unit2 = 'ROLLS'
+        moisture_level= request.data.get('moist_percentage')
+        fancy_count= request.data.get('fancy_count')
+        head_count= request.data.get('head_count')
+        bin_location_processor= request.data.get('bin_location_processor')
+        approval_date = datetime.strptime(approval_date, '%m/%d/%Y').strftime('%Y-%m-%d')
 
-    get_output = get_toatal
-
-    if field_id:
-        field = Field.objects.get(id=field_id)
-        field_eschlon_id = field.eschlon_id
-        crop = field.crop
-        if crop == "RICE":
-            status = ""
-        if crop == "WHEAT":
-            status = ""
-        if crop == "COTTON":
-            status = "APPROVED"
-        variety = field.variety 
-        shipment_id = generate_shipment_id()
-        if id_storage == None :
-            id_storage = None
-            # storage_name = ''
+        status = ""
+        sustainabilitySurvey = SustainabilitySurvey.objects.filter(grower_id=grower_id)
+        if len(sustainabilitySurvey) == 0:
+            surveyscore = 0
         else:
-            id_storage = id_storage
-            # s = Storage.objects.get(id=id_storage)
-            # storage_name = s.storage_name
-        shipment = GrowerShipment(status=status,total_amount=get_output,unit_type2=id_unit2,amount2=amount2,shipment_id=shipment_id,processor_id=processor_id,grower_id=grower_id,storage_id=id_storage,field_id=field_id,crop=crop,variety=variety,amount=amount1,sustainability_score=surveyscore,echelon_id=field_eschlon_id,module_number=module_number,unit_type=id_unit1)
-        shipment.save()
-        # 17-04-23 Log Table
-        log_type, log_status, log_device = "GrowerShipment", "Added", "App"
-        log_idd, log_name = shipment.id, shipment.shipment_id
-        log_details = f"status = {status} | total_amount = {get_output} | unit_type2 = {id_unit2} | amount2 = {amount2} | echelon_id = {shipment.echelon_id} | sustainability_score = {shipment.sustainability_score} | amount = {shipment.amount} | variety = {shipment.variety} | crop = {shipment.crop} | shipment_id = {shipment.shipment_id} | processor_id = {shipment.processor.id} | grower_id = {shipment.grower.id} | storage_id = {id_storage} | field_id = {shipment.field.id} | module_number = {shipment.module_number} | unit_type = {shipment.unit_type} | "
-        
-        action_by_userid = user.id
-        user_role = user.role.all()
-        action_by_username = f'{user.first_name} {user.last_name}'
-        action_by_email = user.username
-        if user.id == 1 :
-            action_by_role = "superuser"
+            surveyscore = [i.surveyscore for i in sustainabilitySurvey][0]
+        if len(amount1) > 0 and len(amount2) == 0:
+            if id_unit1 == '1':
+                id_unit1 = 'LBS'
+                id_unit2 = ''
+            if id_unit1 == '38000':
+                id_unit1 = 'MODULES (8 ROLLS)'
+                id_unit2 = ''
+            if id_unit1 == '19000':
+                id_unit1 = 'SETS (4 ROLLS)'
+                id_unit2 = ''
+            if id_unit1 == '4750':
+                id_unit1 = 'ROLLS'
+                id_unit2 = ''
+        if len(amount1) > 0 and len(amount2) > 0:
+            if id_unit1 == '1':
+                id_unit1 = 'LBS'
+            if id_unit1 == '38000':
+                id_unit1 = 'MODULES (8 ROLLS)'
+            if id_unit1 == '19000':
+                id_unit1 = 'SETS (4 ROLLS)'
+            if id_unit1 == '4750':
+                id_unit1 = 'ROLLS'
+            if id_unit2 == '1':
+                id_unit2 = 'LBS'
+            if id_unit2 == '38000':
+                id_unit2 = 'MODULES (8 ROLLS)'
+            if id_unit2 == '19000':
+                id_unit2 = 'SETS (4 ROLLS)'
+            if id_unit2 == '4750':
+                id_unit2 = 'ROLLS'
+
+        get_output = get_total
+
+        if field_id:
+            field = Field.objects.get(id=field_id)
+            field_eschlon_id = field.eschlon_id
+            crop = field.crop
+            if crop == "RICE":
+                status = "APPROVED"
+            if crop == "WHEAT":
+                status = ""
+            if crop == "COTTON":
+                status = "APPROVED"
+            variety = field.variety 
+            shipment_id = generate_shipment_id()
+            if id_storage == None :
+                id_storage = None
+               
+            else:
+                id_storage = id_storage
+            
+            shipment = GrowerShipment(status=status,total_amount=get_output,unit_type2=id_unit2,amount2=amount2,echelon_id=field.eschlon_id,
+                                                            sustainability_score=surveyscore,amount=amount1,variety=field.variety,crop=field.crop,shipment_id=shipment_id,processor_id=processor_id,grower_id=grower_id,
+                                                            storage_id=id_storage,field_id=field_id,module_number=module_number,unit_type=id_unit1,received_amount =received_weight,sku = sku_id,token_id=ticket_number,
+                                                            approval_date = approval_date,moisture_level=moisture_level,fancy_count=fancy_count,head_count=head_count,bin_location_processor=bin_location_processor)
+            shipment.save()
+            for file in files:
+                new_file = GrowerShipmentFile.objects.create(file=file)
+                shipment.files.add(new_file)
+            shipment.save()
+            log_type, log_status, log_device = "GrowerShipment", "Added", "App"
+            log_idd, log_name = shipment.id, shipment.shipment_id
+            log_details = f"status = {status} | total_amount = {get_output} | unit_type2 = {id_unit2} | amount2 = {amount2} | echelon_id = {shipment.echelon_id} | sustainability_score = {shipment.sustainability_score} | amount = {shipment.amount} | variety = {shipment.variety} | crop = {shipment.crop} | shipment_id = {shipment.shipment_id} | processor_id = {shipment.processor.id} | grower_id = {shipment.grower.id} | storage_id = {id_storage} | field_id = {shipment.field.id} | module_number = {shipment.module_number} | unit_type = {shipment.unit_type} | "
+            
+            action_by_userid = user.id
+            user_role = user.role.all()
+            action_by_username = f'{user.first_name} {user.last_name}'
+            action_by_email = user.username
+            if user.id == 1 :
+                action_by_role = "superuser"
+            else:
+                action_by_role = str(','.join([str(i.role) for i in user_role]))
+            logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+                                action_by_userid=action_by_userid,action_by_username=action_by_username,
+                                action_by_email=action_by_email,action_by_role=action_by_role,log_details=log_details,
+                                log_device=log_device)
+            logtable.save()
+        response["status"], response["message"] = "200", "Delivery received successfully."
+    elif user.is_processor2:
+        p = ProcessorUser2.objects.get(contact_email=user.email)
+        processor_id = p.processor2.id
+        processor_type = p.processor2.processor_type.all().first().type_name
+        selected_processor_id = request.data.get("selected_processor_id")
+        selected_processor_type = request.data.get("selected_processor_type")
+        selected_processor_name = request.data.get("selected_processor_name")
+        milled_volume = request.data.get("milled_volume")
+        sender_sku_id = request.data.get("sender_sku_id")
+        receiver_sku_id = request.data.get("receiver_sku_id")
+        volume_shipped = request.data.get("volume_shipped")
+        lot_number = request.data.get("lot_number")
+        purchase_number = request.data.get("purchase_number")
+        equipment_type = request.data.get("equipment_type")
+        equipment_id = request.data.get("equipment_id")
+        weight_product = request.data.get("weight_product")
+        weight_prod_unit = request.data.get("weight_prod_unit")
+        exp_yield = request.data.get("exp_yield")
+        exp_yield_unit = request.data.get("exp_yield_unit")
+        status = "APPROVED"
+        received_weight = request.data.get("received_weight")
+        ticket_number = request.data.get("ticket_number")
+        approval_date = request.data.get("approval_date")
+        moist_percentage = request.data.get("moist_percentage")
+        files = request.FILES.getlist("files")
+        approval_date = datetime.strptime(approval_date, '%m/%d/%Y').strftime('%Y-%m-%d')
+        try:
+            milled_value = float(milled_volume)
+        except ValueError as e:
+            response["status"], response["message"] = "500", f"500, {e}"
+        try:
+            volume_shipped = float(volume_shipped)
+        except ValueError as e:
+            response["status"], response["message"] = "500", f"500, {e}"
+        if milled_value < volume_shipped:
+            response["status"], response["message"] = "500", f"Volume shipped cannot be greater than milled volume."
+
         else:
-            action_by_role = str(','.join([str(i.role) for i in user_role]))
-        logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
-                            action_by_userid=action_by_userid,action_by_username=action_by_username,
-                            action_by_email=action_by_email,action_by_role=action_by_role,log_details=log_details,
-                            log_device=log_device)
-        logtable.save()
-    return Response({"message":"recive delivery is added"})
-    
-@api_view(('POST',))
-def processor_location_list_api(request):
-    userid = request.data['userid']
-    user = User.objects.get(id=userid)
-    p = ProcessorUser.objects.get(contact_email=user.email)
-    processor_id = Processor.objects.get(id=p.processor_id).id
-    location = Location.objects.filter(processor_id=processor_id)
-    lst=[]
-    for i in location:
-        data = {
-            "location_name":i.name,
-            "location_id":i.id
-        }
-        lst.append(data)
-    return Response(lst)
+            if weight_prod_unit == "LBS" :
+                cal_weight = round(float(weight_product),2)
+            if weight_prod_unit == "BU" :
+                cal_weight = round(float(weight_product) * 45,2)
+            if exp_yield_unit == "LBS" :
+                cal_exp_yield = round(float(exp_yield),2)
+            if exp_yield_unit == "BU" :
+                cal_exp_yield = round(float(exp_yield) * 45,2)
+            
+            volume_left = float(milled_volume) - float(volume_shipped)
+            shipment_id = generate_shipment_id()
+            
+            save_shipment_management = ShipmentManagement(shipment_id=shipment_id,processor_idd=selected_processor_id,processor_e_name=selected_processor_name, sender_processor_type=selected_processor_type, bin_location=selected_processor_id,
+                    equipment_type=equipment_type,equipment_id=equipment_id,storage_bin_send=sender_sku_id,moisture_percent = moist_percentage,weight_of_product_raw = weight_product,
+                    weight_of_product=cal_weight,weight_of_product_unit=weight_prod_unit, excepted_yield_raw =exp_yield,excepted_yield=cal_exp_yield,excepted_yield_unit=exp_yield_unit,recive_delivery_date=approval_date,
+                    purchase_order_number=purchase_number,lot_number=lot_number,volume_shipped=volume_shipped,milled_volume=milled_volume,volume_left=volume_left,editable_obj=True,status=status,
+                    storage_bin_recive=receiver_sku_id,ticket_number=ticket_number,received_weight=received_weight,processor2_idd=processor_id,processor2_name=p.processor2.entity_name, receiver_processor_type=processor_type)
+            save_shipment_management.save()
+            create_sku_list(selected_processor_id, selected_processor_type, sender_sku_id)
+            create_sku_list(processor_id, processor_type, receiver_sku_id)
+            
+            for file in files:
+                new_file = File.objects.create(file=file)
+                save_shipment_management.files.add(new_file)
+            save_shipment_management.save()
+            #logtable
+            log_type, log_status, log_device = "ShipmentManagement", "Added", "Web"
+            log_idd, log_name = save_shipment_management.id, save_shipment_management.bin_location
+            log_details = f"processor2 = {save_shipment_management.processor_e_name} | processor2_id = {save_shipment_management.processor_idd} | date_pulled = {save_shipment_management.date_pulled} | bin_location = {save_shipment_management.bin_location} | milled_volume = {save_shipment_management.milled_volume} | equipment_type = {save_shipment_management.equipment_type} | equipment_id = {save_shipment_management.equipment_id} | purchase_order_number = {save_shipment_management.purchase_order_number} | lot_number = {save_shipment_management.lot_number} | volume_shipped = {save_shipment_management.volume_shipped} | volume_left = {save_shipment_management.volume_left} | editable_obj = {save_shipment_management.editable_obj} "
+            action_by_userid = user.id
+            user = User.objects.get(pk=action_by_userid)
+            user_role = user.role.all()
+            action_by_username = f'{user.first_name} {user.last_name}'
+            action_by_email = user.username
+            if request.user.id == 1 :
+                action_by_role = "superuser"
+            else:
+                action_by_role = str(','.join([str(i.role) for i in user_role]))
+            logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+                                action_by_userid=action_by_userid,action_by_username=action_by_username,
+                                action_by_email=action_by_email,action_by_role=action_by_role,log_details=log_details,
+                                log_device=log_device)
+            logtable.save()
+            update_obj = ShipmentManagement.objects.filter(processor_idd=int(selected_processor_id)).exclude(id=save_shipment_management.id).values('id','editable_obj')
+            
+            if update_obj.exists():
+                for i in update_obj :
+                    get_obj = ShipmentManagement.objects.get(id=i['id'])
+                    get_obj.editable_obj = False
+                    get_obj.save()
+            else:
+                pass
+        response["status"], response["message"] = "200", "Delivery received successfully."
+    return Response(response)
+  
 
 @api_view(('POST',))
 def processor_inbound_management_location_add_api(request):
-    userid = request.data['userid']
-    shipment_id = request.data['shipment_id']
-    location_id = request.data['location_id']
+    userid = request.data.get('userid')
+    shipment_id = request.data.get('shipment_id')
+    location_id = request.data.get('location_id')
 
     user = User.objects.get(id=userid)
     p = ProcessorUser.objects.get(contact_email=user.email)
@@ -3500,3 +3896,1265 @@ def growerbale_details_api(request):
     except Exception as e:
         response["status"], response["message"] = "500", f"500, {e}"
     return Response(response)
+
+    
+
+@api_view(["GET",])
+def processor_outbound_shipment_list_api(request):
+    data = {"status":"","message":"","previous":None,"next":None,"data":[]}
+    userid = request.GET.get("userid")
+    try:
+        user = User.objects.get(id=userid)
+        if user.is_processor:
+            processor = ProcessorUser.objects.filter(contact_email=user.email).first()
+            processor_id = Processor.objects.get(id=processor.processor_id).id
+            shipments = ShipmentManagement.objects.filter(processor_idd=processor_id)
+            serializer = ShipmentManagementSerializer(shipments, many=True)
+            result = serializer.data
+            paginator = PageNumberPagination()
+            paginator.page_size = 10  # Set the page size to 20
+            result_data = paginator.paginate_queryset(result, request)
+            paginated_response = paginator.get_paginated_response(result_data)
+            data["status"] = "200"
+            data["count"] = paginated_response.data["count"]
+            data["previous"] = paginated_response.data["previous"]
+            data["next"] = paginated_response.data["next"]
+            data["data"] = paginated_response.data["results"]
+
+        elif user.is_processor2:
+            processor = ProcessorUser2.objects.filter(contact_email=user.email).first()
+            processor_id = Processor2.objects.get(id=processor.processor2_id).id
+            shipments = ShipmentManagement.objects.filter(processor_idd=processor_id)
+            serializer = ShipmentManagementSerializer(shipments, many=True)
+            result = serializer.data
+            paginator = PageNumberPagination()
+            paginator.page_size = 10  # Set the page size to 20
+            result_data = paginator.paginate_queryset(result, request)
+            paginated_response = paginator.get_paginated_response(result_data)
+            data["status"] = "200"
+            data["count"] = paginated_response.data["count"]
+            data["previous"] = paginated_response.data["previous"]
+            data["next"] = paginated_response.data["next"]
+            data["data"] = paginated_response.data["results"]
+        else:
+            data = []
+        
+    except Exception as e:
+        data["status"], data["message"], data["data"] = "500", f"500, {e}", []
+    return Response(data)
+
+
+@api_view(["GET",])
+def processor_outbound_shipment_list_search_api(request):
+    data = {"status":"","message":"","previous":None,"next":None,"data":[]}
+    userid = request.GET.get("userid")
+    search_keyword = request.GET.get('search_keyword')
+    try:
+        user = User.objects.get(id=userid)
+        if user.is_processor:
+            processor = ProcessorUser.objects.filter(contact_email=user.email).first()
+            processor_id = Processor.objects.get(id=processor.processor_id).id
+            shipments = ShipmentManagement.objects.filter(processor_idd=processor_id)
+            if search_keyword:
+                shipment_list = shipments.filter(shipment_id__icontains=search_keyword)
+            else:
+                shipment_list = shipments
+            serializer = ShipmentManagementSerializer(shipment_list, many=True)
+            result = serializer.data
+            paginator = PageNumberPagination()
+            paginator.page_size = 10  # Set the page size to 20
+            result_data = paginator.paginate_queryset(result, request)
+            paginated_response = paginator.get_paginated_response(result_data)
+            data["status"] = "200"
+            data["count"] = paginated_response.data["count"]
+            data["previous"] = paginated_response.data["previous"]
+            data["next"] = paginated_response.data["next"]
+            data["data"] = paginated_response.data["results"]
+
+        elif user.is_processor2:
+            processor = ProcessorUser2.objects.filter(contact_email=user.email).first()
+            processor_id = Processor2.objects.get(id=processor.processor2_id).id
+            shipments = ShipmentManagement.objects.filter(processor_idd=processor_id)
+            if search_keyword:
+                shipment_list = shipments.filter(shipment_id__icontains=search_keyword)
+            else:
+                shipment_list = shipments
+            serializer = ShipmentManagementSerializer(shipment_list, many=True)
+            result = serializer.data
+            paginator = PageNumberPagination()
+            paginator.page_size = 10  # Set the page size to 20
+            result_data = paginator.paginate_queryset(result, request)
+            paginated_response = paginator.get_paginated_response(result_data)
+            data["status"] = "200"
+            data["count"] = paginated_response.data["count"]
+            data["previous"] = paginated_response.data["previous"]
+            data["next"] = paginated_response.data["next"]
+            data["data"] = paginated_response.data["results"]
+        else:
+            data = []        
+        
+    except Exception as e:
+        data["status"], data["message"], data["data"] = "500", f"500, {e}", []
+    return Response(data)
+
+
+@api_view(["GET",])
+def processor_outbound_shipment_view_api(request):
+    response = {"status": "", "message": "", "data": []}
+    shipment_id = request.GET.get('shipment_id') 
+    try:
+        shipment = ShipmentManagement.objects.filter(id=shipment_id).first()
+        qr_code = qr_code_processor(shipment.id)        
+        if shipment.recive_delivery_date:
+            approval_date = shipment.recive_delivery_date
+        else:
+            approval_date = "N/A"
+        if shipment.status == "APPROVED":
+            receiver_sku_id = shipment.storage_bin_recive
+            ticket_number = shipment.ticket_number
+            received_weight = shipment.received_weight
+        else:
+            receiver_sku_id = "N/A"
+            ticket_number = "N/A"
+            received_weight = "N/A"
+        if shipment.status == "DISAPPROVED":
+            reason_for_disapproval = shipment.reason_for_disapproval
+        else:
+            reason_for_disapproval = "N/A"
+        data = {
+            "shipment_id":shipment.shipment_id,
+            "sender_processor_id":shipment.processor2_idd,
+            "sender_processor_name":shipment.processor_e_name,
+            "sender_processor_type":shipment.sender_processor_type,
+            "receiver_processor_id":shipment.processor2_idd,
+            "receiver_processor_name":shipment.processor2_name,
+            "receiver_processor_type":shipment.receiver_processor_type,
+            "milled_volume":shipment.milled_volume,
+            "volume_shipped":shipment.volume_shipped,
+            "volume_left":shipment.volume_left,
+            "weight_of_product":shipment.weight_of_product,
+            "weight_of_product_unit":shipment.weight_of_product_unit,
+            "expected_yield":shipment.excepted_yield,
+            "expected_yield_unit":shipment.excepted_yield_unit,
+            "moisture_percentage":shipment.moisture_percent,
+            "equipment_type":shipment.equipment_type,
+            "equipment_id":shipment.equipment_id,
+            "purchase_order_number":shipment.purchase_order_number,
+            "lot_number":shipment.lot_number,
+            "date_pulled":shipment.date_pulled,
+            "status":shipment.status,
+            "sender_sku_id":shipment.storage_bin_send,
+            "receiving_date":approval_date,
+            "receiver_sku_id":receiver_sku_id,
+            "received_weight":received_weight,
+            "ticket_number":ticket_number,
+            "reason_for_disapproval":reason_for_disapproval,
+            "qr_code":qr_code,
+        }
+        response["status"] = "200"
+        response["message"] = "Data fetched successfully"
+        response["data"] = data
+    except Exception as e:
+        response["status"], response["message"] = "500", f"500, {e}"
+    return Response(response)
+
+
+@api_view(["GET"])
+def add_outbound_shipment_processor_destination_api(request):
+    response = {"status": "", "message": "", "data": {"processor2": [], "processor3": [], "processor4": []}}
+    userid = request.GET.get("userid")
+    
+    try:
+        user = User.objects.get(id=userid)
+        
+        if user.is_processor:
+            p = ProcessorUser.objects.get(contact_email=user.email)
+            processor2 = LinkProcessor1ToProcessor.objects.filter(
+                processor1_id=p.processor.id, processor2__processor_type__type_name="T2"
+            ).values("processor2__id", "processor2__entity_name")
+            processor3 = LinkProcessor1ToProcessor.objects.filter(
+                processor1_id=p.processor.id, processor2__processor_type__type_name="T3"
+            ).values("processor2__id", "processor2__entity_name")
+            processor4 = LinkProcessor1ToProcessor.objects.filter(
+                processor1_id=p.processor.id, processor2__processor_type__type_name="T4"
+            ).values("processor2__id", "processor2__entity_name")
+
+            response['data']['processor2'] = list(processor2) if processor2 else []
+            response['data']['processor3'] = list(processor3) if processor3 else []
+            response['data']['processor4'] = list(processor4) if processor4 else []
+
+        elif user.is_processor2:
+            p = ProcessorUser2.objects.get(contact_email=user.email)
+            processor_3 = LinkProcessorToProcessor.objects.filter(
+                processor_id=p.processor2.id, linked_processor__processor_type__type_name="T3"
+            ).values("linked_processor__id", "linked_processor__entity_name")
+            processor3 = []
+            for i in processor_3:
+                data = {
+                    "processor2__id":i["linked_processor__id"],
+                    "processor2__entity_name": i["linked_processor__entity_name"]
+                }
+                processor3.append(data)
+            processor_4 = LinkProcessorToProcessor.objects.filter(
+                processor_id=p.processor2.id, linked_processor__processor_type__type_name="T4"
+            ).values("linked_processor__id", "linked_processor__entity_name")
+            processor4 = []
+            for i in processor_4:
+                data = {
+                    "processor2__id":i["linked_processor__id"],
+                    "processor2__entity_name": i["linked_processor__entity_name"]
+                }
+                processor3.append(data)
+            response['data']['processor3'] = list(processor3) if processor3 else []
+            response['data']['processor4'] = list(processor4) if processor4 else []
+
+        else:
+            response['message'] = "User is neither a processor nor processor2"
+
+        response['status'] = "200"
+        response['message'] = "Linked processors fetched successfully"
+
+    except User.DoesNotExist:
+        response["status"], response["message"] = "404", "User not found"
+    except Exception as e:
+        response["status"], response["message"] = "500", f"500, {e}"
+
+    return Response(response)
+
+@api_view(("GET",))
+def processor_details_api(request):
+    response = {"status": "", "message": "", "data": []}
+    userid = request.GET.get("userid")
+    user = User.objects.get(id=userid)
+    if user.is_processor:
+        p = ProcessorUser.objects.get(contact_email=user.email)
+        data = {
+            "processor_entity_name":p.processor.entity_name,
+            "processor_id":p.processor.id,
+            "processor_type":"T1"
+        }
+        response["status"], response["message"], response["data"] = "200", f"Processor details fetched successfully.", data
+    elif user.is_processor2:
+        p = ProcessorUser2.objects.get(contact_email=user.email)
+        data = {
+            "processor_entity_name":p.processor2.entity_name,
+            "processor_id":p.processor2.id,
+            "processor_type":p.processor2.processor_type.all().first().type_name
+        }
+        response["status"], response["message"], response["data"] = "200", f"Processor details fetched successfully.", data
+    else:
+        data = []
+        response["status"], response["message"], response["data"] = "400", f"Processor not found.", data
+    return Response(response)
+
+@api_view(["GET",])
+def add_outbound_shipment_processor_squ_list_api(request):
+    response = {"status": "", "message": "", "data": []}
+    processor_id = request.GET.get("processor_id")
+    processor_type = request.GET.get("processor_type")
+    try:     
+        
+        data = get_sku_list(int(processor_id), processor_type)["data"]
+
+        response["status"] = "200"
+        response["message"] = "SKU Id list fetched successfully."
+        response["data"] = data
+    except Exception as e:
+        response["status"], response["message"] = "500", f"500, {e}"
+    return Response(response)       
+
+
+@api_view(["GET",])
+def add_outbound_shipment_processor_milled_volume(request):
+    response = {"status": "", "message": "", "data": []}
+    processor_id = request.GET.get("processor_id")
+    processor_type = request.GET.get("processor_type")
+    sku_id = request.GET.get("sku_id")
+    try:                 
+        data = calculate_milled_volume(int(processor_id), processor_type, sku_id)
+        response["status"] = "200"
+        response["message"] = "Milled volume fetched successfully."
+        response["data"] = data
+    except Exception as e:
+        response["status"], response["message"] = "500", f"500, {e}"
+    return Response(response)
+
+
+@api_view(["POST",])
+def add_outbound_shipment_processor_api(request):
+    response = {"status": "", "message": ""}
+    userid = request.data.get("userid")
+    processor2_id = request.data.get("processor2_id") 
+    sender_sku_id = request.data.get("sender_sku_id") 
+    milled_volume = request.data.get("milled_volume")
+    volume_shipped = request.data.get("volume_shipped")
+    weight_product = request.data.get("weight_product")  
+    weight_prod_unit_id = request.data.get("weight_prod_unit_id")
+    exp_yield = request.data.get("exp_yield")
+    exp_yield_unit_id = request.data.get("exp_yield_unit_id")
+    purchase_number = request.data.get("purchase_number")
+    lot_number = request.data.get("lot_number")
+    equipment_type = request.data.get("equipment_type")
+    equipment_id = request.data.get("equipment_id")
+    moist_percentage = request.data.get("moist_percentage")
+    files = request.FILES.getlist("files")
+    try:
+        user = User.objects.get(id=userid)
+        if user.is_processor:
+            p = ProcessorUser.objects.get(contact_email=user.email) 
+            processor_id = p.processor.id
+            processor_name = p.processor.entity_name
+            sender_processor_type = "T1"
+            processor2_name = Processor2.objects.filter(id=processor2_id).first().entity_name
+            processor2_type = Processor2.objects.filter(id=processor2_id).first().processor_type.all().first().type_name
+            try:
+                milled_value = float(milled_volume)
+            except ValueError as e:
+                response["status"], response["message"] = "500", f"500, {e}"
+            try:
+                volume_shipped = float(volume_shipped)
+            except ValueError as e:
+                response["status"], response["message"] = "500", f"500, {e}"
+            if milled_value < volume_shipped:
+                response["status"], response["message"] = "500", f"Volume shipped cannot be greater than milled volume."
+            if weight_prod_unit_id == "LBS" :
+                cal_weight = round(float(weight_product),2)
+            if weight_prod_unit_id == "BU" :
+                cal_weight = round(float(weight_product) * 45,2)
+            if exp_yield_unit_id == "LBS" :
+                cal_exp_yield = round(float(exp_yield),2)
+            if exp_yield_unit_id == "BU" :
+                cal_exp_yield = round(float(exp_yield) * 45,2)
+            volume_left = float(milled_value) - float(volume_shipped)
+            shipment_id = generate_shipment_id()
+
+            save_shipment_management = ShipmentManagement(shipment_id=shipment_id,processor_idd=processor_id,processor_e_name=processor_name, sender_processor_type=sender_processor_type, bin_location=processor_id,
+                            equipment_type=equipment_type,equipment_id=equipment_id,storage_bin_send=sender_sku_id,moisture_percent = moist_percentage,
+                            weight_of_product_raw = weight_product,weight_of_product=cal_weight,weight_of_product_unit=weight_prod_unit_id, excepted_yield_raw =exp_yield,excepted_yield=cal_exp_yield,
+                            excepted_yield_unit=exp_yield_unit_id,purchase_order_number=purchase_number,lot_number=lot_number,volume_shipped=volume_shipped,milled_volume=milled_volume,
+                            volume_left=volume_left,editable_obj=True,processor2_idd=processor2_id,processor2_name=processor2_name, receiver_processor_type=processor2_type)
+            save_shipment_management.save()
+            create_sku_list(processor_id, sender_processor_type, sender_sku_id)
+            for file in files:
+                new_file = File.objects.create(file=file)
+                save_shipment_management.files.add(new_file)
+            save_shipment_management.save()
+
+            log_type, log_status, log_device = "ShipmentManagement", "Added", "App"
+            log_idd, log_name = save_shipment_management.id, save_shipment_management.bin_location
+            log_details = f"processor = {save_shipment_management.processor_e_name} | processor_id = {save_shipment_management.processor_idd} | date_pulled = {save_shipment_management.date_pulled} | bin_location = {save_shipment_management.bin_location} | milled_volume = {save_shipment_management.milled_volume} | equipment_type = {save_shipment_management.equipment_type} | equipment_id = {save_shipment_management.equipment_id} | purchase_order_number = {save_shipment_management.purchase_order_number} | lot_number = {save_shipment_management.lot_number} | volume_shipped = {save_shipment_management.volume_shipped} | volume_left = {save_shipment_management.volume_left} | editable_obj = {save_shipment_management.editable_obj} "
+            action_by_userid = user.id
+            user = User.objects.get(pk=action_by_userid)
+            user_role = user.role.all()
+            action_by_username = f'{user.first_name} {user.last_name}'
+            action_by_email = user.username
+            if user.id == 1 :
+                action_by_role = "superuser"
+            else:
+                action_by_role = str(','.join([str(i.role) for i in user_role]))
+            logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+                                action_by_userid=action_by_userid,action_by_username=action_by_username,
+                                action_by_email=action_by_email,action_by_role=action_by_role,log_details=log_details,
+                                log_device=log_device)
+            logtable.save()
+            update_obj = ShipmentManagement.objects.filter(processor_idd=int(processor_id)).exclude(id=save_shipment_management.id).values('id','editable_obj')
+            
+            if update_obj.exists():
+                for i in update_obj :
+                    get_obj = ShipmentManagement.objects.get(id=i['id'])
+                    get_obj.editable_obj = False
+                    get_obj.save()
+            else:
+                pass
+            response["status"] = "200"
+            response["message"] = f"Outbound shipment created successfully."
+        elif user.is_processor2:
+            p = ProcessorUser2.objects.get(contact_email=user.email) 
+            processor_id = p.processor2.id
+            processor_name = p.processor2.entity_name
+            sender_processor_type = Processor2.objects.filter(id=processor_id).first().processor_type.all().first().type_name
+            processor2_name = Processor2.objects.filter(id=processor2_id).first().entity_name
+            processor2_type = Processor2.objects.filter(id=processor2_id).first().processor_type.all().first().type_name
+            try:
+                milled_value = float(milled_volume)
+            except ValueError as e:
+                response["status"], response["message"] = "500", f"500, {e}"
+            try:
+                volume_shipped = float(volume_shipped)
+            except ValueError as e:
+                response["status"], response["message"] = "500", f"500, {e}"
+            if milled_value < volume_shipped:
+                response["status"], response["message"] = "500", f"Volume shipped cannot be greater than milled volume."
+            if weight_prod_unit_id == "LBS" :
+                cal_weight = round(float(weight_product),2)
+            if weight_prod_unit_id == "BU" :
+                cal_weight = round(float(weight_product) * 45,2)
+            if exp_yield_unit_id == "LBS" :
+                cal_exp_yield = round(float(exp_yield),2)
+            if exp_yield_unit_id == "BU" :
+                cal_exp_yield = round(float(exp_yield) * 45,2)
+            volume_left = float(milled_value) - float(volume_shipped)
+            shipment_id = generate_shipment_id()
+
+            save_shipment_management = ShipmentManagement(shipment_id=shipment_id,processor_idd=processor_id,processor_e_name=processor_name, sender_processor_type=sender_processor_type, bin_location=processor_id,
+                            equipment_type=equipment_type,equipment_id=equipment_id,storage_bin_send=sender_sku_id,moisture_percent = moist_percentage,
+                            weight_of_product_raw = weight_product,weight_of_product=cal_weight,weight_of_product_unit=weight_prod_unit_id, excepted_yield_raw =exp_yield,excepted_yield=cal_exp_yield,
+                            excepted_yield_unit=exp_yield_unit_id,purchase_order_number=purchase_number,lot_number=lot_number,volume_shipped=volume_shipped,milled_volume=milled_volume,
+                            volume_left=volume_left,editable_obj=True,processor2_idd=processor2_id,processor2_name=processor2_name, receiver_processor_type=processor2_type)
+            save_shipment_management.save()
+            create_sku_list(processor_id, sender_processor_type, sender_sku_id)
+            for file in files:
+                new_file = File.objects.create(file=file)
+                save_shipment_management.files.add(new_file)
+            save_shipment_management.save()
+
+            log_type, log_status, log_device = "ShipmentManagement", "Added", "App"
+            log_idd, log_name = save_shipment_management.id, save_shipment_management.bin_location
+            log_details = f"processor = {save_shipment_management.processor_e_name} | processor_id = {save_shipment_management.processor_idd} | date_pulled = {save_shipment_management.date_pulled} | bin_location = {save_shipment_management.bin_location} | milled_volume = {save_shipment_management.milled_volume} | equipment_type = {save_shipment_management.equipment_type} | equipment_id = {save_shipment_management.equipment_id} | purchase_order_number = {save_shipment_management.purchase_order_number} | lot_number = {save_shipment_management.lot_number} | volume_shipped = {save_shipment_management.volume_shipped} | volume_left = {save_shipment_management.volume_left} | editable_obj = {save_shipment_management.editable_obj} "
+            action_by_userid = user.id
+            user = User.objects.get(pk=action_by_userid)
+            user_role = user.role.all()
+            action_by_username = f'{user.first_name} {user.last_name}'
+            action_by_email = user.username
+            if user.id == 1 :
+                action_by_role = "superuser"
+            else:
+                action_by_role = str(','.join([str(i.role) for i in user_role]))
+            logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+                                action_by_userid=action_by_userid,action_by_username=action_by_username,
+                                action_by_email=action_by_email,action_by_role=action_by_role,log_details=log_details,
+                                log_device=log_device)
+            logtable.save()
+            update_obj = ShipmentManagement.objects.filter(processor_idd=int(processor_id)).exclude(id=save_shipment_management.id).values('id','editable_obj')
+            
+            if update_obj.exists():
+                for i in update_obj :
+                    get_obj = ShipmentManagement.objects.get(id=i['id'])
+                    get_obj.editable_obj = False
+                    get_obj.save()
+            else:
+                pass
+            response["status"] = "200"
+            response["message"] = f"Outbound shipment created successfully."
+        else:
+            response["status"], response["message"] = "500", f"500, {e}"   
+    except Exception as e:
+        response["status"], response["message"] = "500", f"500, {e}"
+    return Response(response)
+
+
+@api_view(["GET",])
+def processor_management_list_api(request):
+    data = {"status":"","message":"","previous":None,"next":None,"data":[]}
+    userid = request.GET.get("userid")
+    try:
+        user = User.objects.get(id=userid)
+        if user.is_processor:
+            pro = ProcessorUser.objects.filter(contact_email=user.email).first()
+            entity_name = pro.processor
+            processor = ProcessorUser.objects.filter(processor=entity_name)
+            serializer = ProcessorUserSerializer(processor, many=True)
+            result = serializer.data
+            paginator = PageNumberPagination()
+            paginator.page_size = 10  # Set the page size to 20
+            result_data = paginator.paginate_queryset(result, request)
+            paginated_response = paginator.get_paginated_response(result_data)
+            data["status"] = "200"
+            data["count"] = paginated_response.data["count"]
+            data["previous"] = paginated_response.data["previous"]
+            data["next"] = paginated_response.data["next"]
+            data["data"] = paginated_response.data["results"]
+
+        elif user.is_processor2:
+            pro = ProcessorUser2.objects.filter(contact_email=user.email).first()
+            entity_name = pro.processor2
+            processor = ProcessorUser2.objects.filter(processor2=entity_name)
+            serializer = ProcessorUser2Serializer(processor, many=True)
+            result = serializer.data
+            paginator = PageNumberPagination()
+            paginator.page_size = 10  # Set the page size to 20
+            result_data = paginator.paginate_queryset(result, request)
+            paginated_response = paginator.get_paginated_response(result_data)
+            data["status"] = "200"
+            data["count"] = paginated_response.data["count"]
+            data["previous"] = paginated_response.data["previous"]
+            data["next"] = paginated_response.data["next"]
+            data["data"] = paginated_response.data["results"]
+        else:
+            data = []
+        
+    except Exception as e:
+        data["status"], data["message"], data["data"]= "500", f"500, {e}", []
+    return Response(data)
+
+
+@api_view(["GET",])
+def processor_management_list_search_api(request):
+    data = {"status":"","message":"","previous":None,"next":None,"data":[]}
+    userid = request.GET.get("userid")
+    search_keyword = request.GET.get('search_keyword')
+    try:
+        user = User.objects.get(id=userid)
+        if user.is_processor:
+            pro = ProcessorUser.objects.filter(contact_email=user.email).first()
+            entity_name = pro.processor
+            processor = ProcessorUser.objects.filter(processor=entity_name)
+            if search_keyword:
+                processor = processor.filter(Q(contact_name__icontains=search_keyword) | Q(processor__entity_name__icontains=search_keyword)| Q(processor__fein__icontains=search_keyword)| Q(contact_email__icontains=search_keyword))
+            else:
+                processor = processor
+            serializer = ProcessorUserSerializer(processor, many=True)
+            result = serializer.data
+            paginator = PageNumberPagination()
+            paginator.page_size = 10  # Set the page size to 20
+            result_data = paginator.paginate_queryset(result, request)
+            paginated_response = paginator.get_paginated_response(result_data)
+            data["status"] = "200"
+            data["count"] = paginated_response.data["count"]
+            data["previous"] = paginated_response.data["previous"]
+            data["next"] = paginated_response.data["next"]
+            data["data"] = paginated_response.data["results"]
+
+        elif user.is_processor2:
+            pro = ProcessorUser2.objects.filter(contact_email=user.email).first()
+            entity_name = pro.processor2
+            processor = ProcessorUser2.objects.filter(processor2=entity_name)
+            if search_keyword:
+                processor = processor.filter(Q(contact_name__icontains=search_keyword) | Q(processor2__entity_name__icontains=search_keyword)| Q(processor2__fein__icontains=search_keyword)| Q(contact_email__icontains=search_keyword))
+            else:
+                processor = processor
+            serializer = ProcessorUser2Serializer(processor, many=True)
+            result = serializer.data
+            paginator = PageNumberPagination()
+            paginator.page_size = 10  # Set the page size to 20
+            result_data = paginator.paginate_queryset(result, request)
+            paginated_response = paginator.get_paginated_response(result_data)
+            data["status"] = "200"
+            data["count"] = paginated_response.data["count"]
+            data["previous"] = paginated_response.data["previous"]
+            data["next"] = paginated_response.data["next"]
+            data["data"] = paginated_response.data["results"]
+        else:
+            data = []
+    
+    except Exception as e:
+        data["status"], data["message"], data["data"] = "500", f"500, {e}", []
+    return Response(data)
+
+
+@api_view(["POST",])
+def add_processor_user_api(request):
+    response = {"status": "", "message": "", "data": []}
+    userid = request.data.get("userid")
+    contact_name = request.data.get("contact_name")
+    contact_email = request.data.get("contact_email")
+    contact_phone = request.data.get("contact_phone")
+    contact_fax = request.data.get("contact_fax")
+    try:
+        user = User.objects.get(id=userid)
+        if user.is_processor:
+            p = ProcessorUser.objects.filter(contact_email=user.email).first()
+            processor_id = p.processor.id
+            if User.objects.filter(email=contact_email).exists():
+                response["status"], response["message"] = "400", f"User with this email already exists."
+
+            password = generate_random_password()                            
+            puser = ProcessorUser(processor_id = processor_id,contact_name=contact_name,contact_email=contact_email,contact_phone=contact_phone,contact_fax=contact_fax,p_password_raw=password)
+            puser.save()
+            user = User.objects.create(email=contact_email, username=contact_email,first_name=contact_name)
+            user.role.add(Role.objects.get(role='Processor'))
+            user.is_processor=True
+            user.is_active=True
+            user.set_password(password)
+            user.password_raw = password
+            user.save()
+
+            # 07-04-23 Log Table
+            log_type, log_status, log_device = "ProcessorUser", "Added", "App"
+            log_idd, log_name = puser.id, contact_name
+            log_email = contact_email
+            log_details = f"processor_id = {processor_id} | processor = {p.processor.entity_name}  | contact_name= {contact_name} | contact_email = {contact_email} | contact_phone = {contact_phone} | contact_fax = {contact_fax}"
+            
+            action_by_userid = user.id
+            userr = User.objects.get(pk=action_by_userid)
+            user_role = userr.role.all()
+            action_by_username = f'{userr.first_name} {userr.last_name}'
+            action_by_email = userr.username
+            if user.id == 1 :
+                action_by_role = "superuser"
+            else:
+                action_by_role = str(','.join([str(i.role) for i in user_role]))
+            logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+                                action_by_userid=action_by_userid,action_by_username=action_by_username,
+                                action_by_email=action_by_email,action_by_role=action_by_role,log_email=log_email,
+                                log_details=log_details,log_device=log_device)
+            logtable.save()
+            response["status"], response["message"] = "200", f"Processor User added successfully."
+        elif user.is_processor2:
+            p = ProcessorUser2.objects.filter(contact_email=user.email).first()
+            processor_id = p.processor2.id
+            if User.objects.filter(email=contact_email).exists():
+                response["status"], response["message"] = "400", f"User with this email already exists."
+
+            password = generate_random_password()                            
+            puser = ProcessorUser2(processor2_id = processor_id,contact_name=contact_name,contact_email=contact_email,contact_phone=contact_phone,contact_fax=contact_fax,p_password_raw=password)
+            puser.save()
+            user = User.objects.create(email=contact_email, username=contact_email,first_name=contact_name)
+            user.role.add(Role.objects.get(role='Processor'))
+            user.is_processor2=True
+            user.is_active=True
+            user.set_password(password)
+            user.password_raw = password
+            user.save()
+
+            # 07-04-23 Log Table
+            log_type, log_status, log_device = "ProcessorUser", "Added", "App"
+            log_idd, log_name = puser.id, contact_name
+            log_email = contact_email
+            log_details = f"processor_id = {processor_id} | processor = {p.processor2.entity_name}  | contact_name= {contact_name} | contact_email = {contact_email} | contact_phone = {contact_phone} | contact_fax = {contact_fax}"
+            
+            action_by_userid = user.id
+            userr = User.objects.get(pk=action_by_userid)
+            user_role = userr.role.all()
+            action_by_username = f'{userr.first_name} {userr.last_name}'
+            action_by_email = userr.username
+            if user.id == 1 :
+                action_by_role = "superuser"
+            else:
+                action_by_role = str(','.join([str(i.role) for i in user_role]))
+            logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+                                action_by_userid=action_by_userid,action_by_username=action_by_username,
+                                action_by_email=action_by_email,action_by_role=action_by_role,log_email=log_email,
+                                log_details=log_details,log_device=log_device)
+            logtable.save()
+            response["status"], response["message"] = "200", f"Processor User added successfully."
+        else:
+            response["status"], response["message"] = "400", "Processor does not exists."
+    except Exception as e:
+        response["status"], response["message"] = "500", f"500, {e}"
+    return Response(response)
+
+
+@api_view(["POST",])
+def processor_edit_api(request):
+    response = {"status": "", "message": "", "data": []}
+    userid = request.data.get("userid")
+    entity_name = request.data.get("entity_name")
+    fein = request.data.get("fein")
+    billing_add = request.data.get("billing_add")
+    shipping_add = request.data.get("shipping_add")
+    main_phn_number = request.data.get("main_phn_number")
+    main_fax = request.data.get("main_fax")
+    website = request.data.get("website")
+    contact_email = request.data.get("contact_email")
+    contact_name = request.data.get("contact_name")
+    contact_phone = request.data.get("contact_phone")
+    contact_fax = request.data.get("contact_fax")
+    try:
+        user = User.objects.get(id=userid)
+        if user.is_processor:
+            p = ProcessorUser.objects.filter(contact_email=user.email).first()
+            p.contact_email = contact_email
+            p.contact_name = contact_name
+            p.contact_phone = contact_phone
+            p.contact_fax = contact_fax
+            p.processor.entity_name = entity_name
+            p.processor.fein = fein
+            p.processor.billing_address = billing_add
+            p.processor.shipping_address = shipping_add
+            p.processor.main_number = main_phn_number
+            p.processor.main_fax = main_fax
+            p.processor.website = website
+            p.processor.save()
+            p.save()
+            if contact_email != user.email:
+                f_name = contact_name
+                user.email = contact_email
+                user.username = contact_email
+                user.first_name = f_name
+                user.save()
+            
+            else :
+                f_name = contact_name
+                user.first_name = f_name
+                user.save()
+            log_type, log_status, log_device = "ProcessorUser", "Edited", "Web"
+            log_idd, log_name, log_email = p.id, contact_name, contact_email
+            log_details = f"processor_id = {p.processor.id} | processor = {p.processor.entity_name} | contact_name= {contact_name} | contact_email = {contact_email} | contact_phone = {contact_phone} | contact_fax = {contact_fax}"
+            action_by_userid = user.id
+            userr = User.objects.get(pk=action_by_userid)
+            user_role = userr.role.all()
+            action_by_username = f'{userr.first_name} {userr.last_name}'
+            action_by_email = userr.username
+            if user.id == 1 :
+                action_by_role = "superuser"
+            else:
+                action_by_role = str(','.join([str(i.role) for i in user_role]))
+            logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+                                action_by_userid=action_by_userid,action_by_username=action_by_username,
+                                action_by_email=action_by_email,action_by_role=action_by_role,log_email=log_email,
+                                log_details=log_details,log_device=log_device)
+            logtable.save()
+            response["status"], response["message"] = "200", f"Processor Updated successfully."
+        elif user.is_processor2:
+            p = ProcessorUser2.objects.filter(contact_email=user.email).first()
+            p.contact_email = contact_email
+            p.contact_name = contact_name
+            p.contact_phone = contact_phone
+            p.contact_fax = contact_fax
+            p.processor2.entity_name = entity_name
+            p.processor2.fein = fein
+            p.processor2.billing_address = billing_add
+            p.processor2.shipping_address = shipping_add
+            p.processor2.main_number = main_phn_number
+            p.processor2.main_fax = main_fax
+            p.processor2.website = website
+            p.processor2.save()
+            p.save()
+            if contact_email != user.email:
+                f_name = contact_name
+                user.email = contact_email
+                user.username = contact_email
+                user.first_name = f_name
+                user.save()
+            
+            else :
+                f_name = contact_name
+                user.first_name = f_name
+                user.save()
+            log_type, log_status, log_device = "ProcessorUser2", "Edited", "Web"
+            log_idd, log_name, log_email = p.id, contact_name, contact_email
+            log_details = f"processor_id = {p.processor2.id} | processor = {p.processor2.entity_name} | contact_name= {contact_name} | contact_email = {contact_email} | contact_phone = {contact_phone} | contact_fax = {contact_fax}"
+            action_by_userid = user.id
+            userr = User.objects.get(pk=action_by_userid)
+            user_role = userr.role.all()
+            action_by_username = f'{userr.first_name} {userr.last_name}'
+            action_by_email = userr.username
+            if user.id == 1 :
+                action_by_role = "superuser"
+            else:
+                action_by_role = str(','.join([str(i.role) for i in user_role]))
+            logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+                                action_by_userid=action_by_userid,action_by_username=action_by_username,
+                                action_by_email=action_by_email,action_by_role=action_by_role,log_email=log_email,
+                                log_details=log_details,log_device=log_device)
+            logtable.save()
+            response["status"], response["message"] = "200", f"Processor Updated successfully."
+        else:
+            response["status"], response["message"] = "400", "Processor does not exists."
+    except Exception as e:
+        response["status"], response["message"] = "500", f"500, {e}"
+    return Response(response)
+
+
+@api_view(('POST',))
+def processor_password_change_api(request):
+    response = {"status": "", "message": "", "data": []}
+    userid = request.data.get('userid')
+    password = request.data.get('passowrd')
+    confirm_password = request.data.get('confirm_password')
+    user = User.objects.get(id=userid)
+    if user.is_processor:
+        p = ProcessorUser.objects.get(contact_email=user.email)
+        if password == confirm_password:
+            password = make_password(password)
+            user.password = password
+            user.password_raw = password
+            user.save()
+            p.p_password_raw = password
+            p.save()
+            log_type, log_status, log_device = "ProcessorUser", "Password changed", "Web"
+            log_idd, log_name = p.id, p.contact_name
+            log_email = p.contact_email
+            log_details = f"processor_id = {p.processor.id} | processor = {p.processor.entity_name} | contact_name= {p.contact_name} | contact_email = {p.contact_email} | contact_phone = {p.contact_phone} | contact_fax = {p.contact_fax}"
+            action_by_userid = user.id
+            user = User.objects.get(pk=action_by_userid)
+            user_role = user.role.all()
+            action_by_username = f'{user.first_name} {user.last_name}'
+            action_by_email = user.username
+            if user.id == 1 :
+                action_by_role = "superuser"
+            else:
+                action_by_role = str(','.join([str(i.role) for i in user_role]))
+            logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+                                action_by_userid=action_by_userid,action_by_username=action_by_username,
+                                action_by_email=action_by_email,action_by_role=action_by_role,log_email=log_email,
+                                log_details=log_details, log_device=log_device)
+            logtable.save()
+            response["status"], response["message"] = "200", f"Processor Updated successfully."
+        else:
+            response["status"], response["message"] = "400", f"Password and confirm password does not match."
+    elif user.is_processor2:
+        p = ProcessorUser2.objects.get(contact_email=user.email)
+        if password == confirm_password:
+            password = make_password(password)
+            user.password = password
+            user.password_raw = password
+            user.save()
+            p.p_password_raw = password
+            p.save()
+            log_type, log_status, log_device = "ProcessorUser2", "Password changed", "Web"
+            log_idd, log_name = p.id, p.contact_name
+            log_email = p.contact_email
+            log_details = f"processor_id = {p.processor2.id} | processor = {p.processor2.entity_name} | contact_name= {p.contact_name} | contact_email = {p.contact_email} | contact_phone = {p.contact_phone} | contact_fax = {p.contact_fax}"
+            action_by_userid = user.id
+            user = User.objects.get(pk=action_by_userid)
+            user_role = user.role.all()
+            action_by_username = f'{user.first_name} {user.last_name}'
+            action_by_email = user.username
+            if user.id == 1 :
+                action_by_role = "superuser"
+            else:
+                action_by_role = str(','.join([str(i.role) for i in user_role]))
+            logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+                                action_by_userid=action_by_userid,action_by_username=action_by_username,
+                                action_by_email=action_by_email,action_by_role=action_by_role,log_email=log_email,
+                                log_details=log_details, log_device=log_device)
+            logtable.save()
+            response["status"], response["message"] = "200", f"Processor Updated successfully."
+        else:
+            response["status"], response["message"] = "400", f"Password and confirm password does not match."
+    else:
+        response["status"], response["message"] = "400", f"Processor does not exist."
+    return Response(response)
+
+
+@api_view(('GET',))
+def processor_location_list_api(request):
+    response = {"status": "", "message": "", "data": []}
+    userid = request.GET.get('userid')
+    user = User.objects.get(id=userid)
+    if user.is_processor:
+        p = ProcessorUser.objects.get(contact_email=user.email)
+        processor_id = Processor.objects.get(id=p.processor_id).id
+        location = Location.objects.filter(processor_id=processor_id)
+        lst=[]
+        for i in location:
+            data = {
+                "location_name":i.name,
+                "location_id":i.id,
+                "upload_type":i.upload_type,
+                "latitude":i.latitude,
+                "longitude":i.longitude,
+                "shapefile":i.shapefile_id if i.shapefile_id else None
+            }
+            lst.append(data)
+        response["status"], response["message"], response["data"] = "200","Location fetched successfully.", lst
+    elif user.is_processor2:
+        p = ProcessorUser2.objects.get(contact_email=user.email)
+        processor_id = Processor2.objects.get(id=p.processor2_id).id
+        location = Processor2Location.objects.filter(processor_id=processor_id)
+        lst=[]
+        for i in location:
+            data = {
+                "location_name":i.name,
+                "location_id":i.id,
+                "upload_type":i.upload_type,
+                "latitude":i.latitude,
+                "longitude":i.longitude,
+                "shapefile":i.shapefile_id if i.shapefile_id else None
+            }
+            lst.append(data)
+        response["status"], response["message"], response["data"] = "200","Location fetched successfully.", lst
+    else:
+        response["status"], response["message"], response["data"] = "400","Processor not found.", []
+    return Response(response)
+
+
+@api_view(('GET',))
+def processor_location_view_api(request):
+    response = {"status": "", "message": "", "data": []}
+    userid = request.GET.get('userid')
+    location_id = request.GET.get('location_id')
+    user = User.objects.get(id=userid)
+    if user.is_processor:
+        p = ProcessorUser.objects.get(contact_email=user.email)
+        check_location = Location.objects.filter(processor_id=p.processor.id, id=location_id)
+        if check_location:
+            location = check_location.first()
+            data = {
+                "location_name":location.name,
+                "location_id": location.id,
+                "upload_type":location.upload_type,
+                "latitude":location.latitude,
+                "longitude":location.longitude,
+                "shapefile":location.shapefile_id if location.shapefile_id else None
+            }
+            response["status"], response["message"], response["data"] = "200","Location fetched successfully.", data
+        else:
+            response["status"], response["message"], response["data"] = "400","Location not found.", []
+    elif user.is_processor2:
+        p = ProcessorUser2.objects.get(contact_email=user.email)
+        check_location = Processor2Location.objects.filter(processor_id=p.processor2.id, id=location_id)
+        if check_location:
+            location = check_location.first()
+            data = {
+                "location_name":location.name,
+                "location_id": location.id,
+                "upload_type":location.upload_type,
+                "latitude":location.latitude,
+                "longitude":location.longitude,
+                "shapefile":location.shapefile_id if location.shapefile_id else None
+            }
+            response["status"], response["message"], response["data"] = "200","Location fetched successfully.", data
+        else:
+            response["status"], response["message"], response["data"] = "400","Location not found.", []
+    else:
+        response["status"], response["message"], response["data"] = "400","Processor not found.", []
+    return Response(response)
+
+
+@api_view(("POST",))
+def processor_location_add_api(request):
+    response = {"status": "", "message": "", "data": []}
+    userid = request.data.get("userid")
+    name = request.data.get("name")
+    upload_type = request.data.get("upload_type")
+    zip_file = request.FILES.get("zip_file")
+    latitude = request.data.get("latitude")
+    longitude = request.data.get("longitude")
+    user = User.objects.get(id=userid)
+    if user.is_processor:
+        p = ProcessorUser.objects.get(contact_email=user.email)
+        if upload_type == 'shapefile':
+            if request.FILES.get('zip_file'):
+                location = Location(processor= p.processor, name=name,upload_type=upload_type,shapefile_id=zip_file)
+                location.save()
+                sf = shapefile.Reader(location.shapefile_id.path)
+                features = sf.shapeRecords()
+                for feat in features:
+                    eschlon_id = feat.record["id"]
+                    location.eschlon_id = eschlon_id
+                    location.save()
+            else:
+                response["status"], response["message"] = "400", "Zip file is necessary."
+        else:
+            location = Location(processor=p.processor, name=name,upload_type=upload_type,latitude=latitude,longitude=longitude)
+            location.save()
+        response["status"], response["message"] = "200", "Location added successfully."
+    elif user.is_processor2:
+        p = ProcessorUser2.objects.get(contact_email=user.email)
+        if upload_type == 'shapefile':
+            if request.FILES.get('zip_file'):
+                location = Processor2Location(processor= p.processor2, name=name,upload_type=upload_type,shapefile_id=zip_file)
+                location.save()
+                sf = shapefile.Reader(location.shapefile_id.path)
+                features = sf.shapeRecords()
+                for feat in features:
+                    eschlon_id = feat.record["id"]
+                    location.eschlon_id = eschlon_id
+                    location.save()
+            else:
+                response["status"], response["message"] = "400", "Zip file is necessary."
+        else:
+            location = Processor2Location(processor=p.processor2, name=name,upload_type=upload_type,latitude=latitude,longitude=longitude)
+            location.save()
+        response["status"], response["message"] = "200", "Location added successfully."
+    else:
+        response["status"], response["message"] = "400", "Processor not found.."
+    return Response(response)
+
+
+@api_view(('POST',))
+def processor_location_edit_api(request):
+    response = {"status": "", "message": "", "data": []}
+    userid = request.data.get("userid")
+    location_id = request.data.get("location_id")
+    name = request.data.get("name")
+    upload_type = request.data.get("upload_type")
+    zip_file = request.FILES.get("zip_file")
+    latitude = request.data.get("latitude")
+    longitude = request.data.get("longitude")
+    try:
+        user = User.objects.get(id=userid)
+        if user.is_processor:
+            check_location = Location.objects.filter(id=location_id)
+            if check_location:
+                location = check_location.first()
+                if upload_type == 'shapefile':
+                    if request.FILES.get('zip_file'):
+                        location.name = name
+                        location.upload_type = 'shapefile'
+                        location.shapefile_id = zip_file
+                        location.latitude = None
+                        location.longitude = None
+                        location.save()
+                        
+                        sf = shapefile.Reader(location.shapefile_id.path)
+                        features = sf.shapeRecords()
+                        for feat in features:
+                            eschlon_id = feat.record["id"]
+                            location.eschlon_id = eschlon_id
+                            location.save()
+                    else:
+                        response["status"], response["message"] = "400", "Zip file is necessary."
+                else:
+                    location.name = name
+                    location.upload_type = 'coordinates'
+                    location.shapefile_id = None
+                    location.eschlon_id = None
+                    location.latitude = latitude
+                    location.longitude = longitude
+                    location.save()
+                response["status"], response["message"] = "200", "Location updated successfully."
+            else:
+                response["status"], response["message"] = "400", "Location not found."
+        elif user.is_processor2:
+            check_location = Processor2Location.objects.filter(id=location_id)
+            if check_location:
+                location = check_location.first()
+                if upload_type == 'shapefile':
+                    if request.FILES.get('zip_file'):
+                        location.name = name
+                        location.upload_type = 'shapefile'
+                        location.shapefile_id = zip_file
+                        location.latitude = None
+                        location.longitude = None
+                        location.save()
+                        
+                        sf = shapefile.Reader(location.shapefile_id.path)
+                        features = sf.shapeRecords()
+                        for feat in features:
+                            eschlon_id = feat.record["id"]
+                            location.eschlon_id = eschlon_id
+                            location.save()
+                    else:
+                        response["status"], response["message"] = "400", "Zip file is necessary."
+                else:
+                    location.name = name
+                    location.upload_type = 'coordinates'
+                    location.shapefile_id = None
+                    location.eschlon_id = None
+                    location.latitude = latitude
+                    location.longitude = longitude
+                    location.save()
+                response["status"], response["message"] = "200", "Location updated successfully."
+            else:
+                response["status"], response["message"] = "400", "Location not found"
+        
+    except Exception as e:
+        response["status"], response["message"] = "500", f"500, {e}"
+    return Response(response)  
+
+
+@api_view(("POST",))
+def processor_location_delete_api(request):
+    response = {"status": "", "message": "", "data": []}
+    location_id = request.data.get("location_id")
+    userid = request.data.get("userid")
+    try:
+        user = User.objects.get(id=userid)
+        if user.is_processor:
+            check_location = Location.objects.filter(id=location_id)
+            if check_location:
+                location = check_location.first()
+                location.delete()
+                response["status"], response["message"] = "200", "Location deleted successfully."
+            else:
+                response["status"], response["message"] = "400", "Location not found."
+        elif user.is_processor2:
+            check_location = Processor2Location.objects.filter(id=location_id)
+            if check_location:
+                location = check_location.first()
+                location.delete()
+                response["status"], response["message"] = "200", "Location deleted successfully."
+            else:
+                response["status"], response["message"] = "400", "Location not found."
+        else:
+            response["status"], response["message"] = "400", "Processor not found."
+    except Exception as e:
+        response["status"], response["message"] = "500", f"500, {e}"
+    return Response(response) 
+
+
+@api_view(("GET",))
+def processor_to_processor_management_api(request):
+    response = {"status": "", "message": "", "data": []}
+    userid = request.GET.get("userid")
+    try:
+        user = User.objects.get(id=userid)
+        if user.is_processor:
+            p = ProcessorUser.objects.get(contact_email=user.email)
+            linked_processors = LinkProcessor1ToProcessor.objects.filter(processor1_id=p.processor.id)
+            data = []
+            if linked_processors:
+                for i in linked_processors:
+                    lst = {
+                        "processor_id":i.processor1.id,
+                        "processor_entity_name":i.processor1.entity_name,
+                        "linked_processor_id":i.processor2.id,
+                        "linked_processor_entity_name":i.processor2.entity_name,
+                        "linked_processor_type":i.processor2.processor_type.all().first().type_name
+                    }
+                    data.append(lst)
+                response["status"], response["message"], response["data"] = "200", "Linked processors fetched successfully.", data
+            else:
+                response["status"], response["message"], response["data"] = "400", "Linked processor not found.",[]
+        elif user.is_processor2:
+            p = ProcessorUser2.objects.get(contact_email=user.email)
+            linked_processor1 = LinkProcessor1ToProcessor.objects.filter(processor2_id=p.processor2.id)
+            other_linked_pro = LinkProcessorToProcessor.objects.filter(Q(processor_id=p.processor2.id) | Q(linked_processor_id=p.processor2.id))
+            data = []
+            if linked_processor1:
+                for i in linked_processor1:
+                    lst = {
+                        "processor_id":i.processor2.id,
+                        "processor_entity_name":i.processor2.entity_name,
+                        "linked_processor_id":i.processor1.id,
+                        "linked_processor_entity_name":i.processor1.entity_name,
+                        "linked_processor_type":"T1"
+                    }
+                    data.append(lst)
+            if other_linked_pro:
+                for i in other_linked_pro:
+                    if i.processor.id == p.processor2.id:
+                        lst = {
+                            "processor_id":i.processor.id,
+                            "processor_entity_name":i.processor.entity_name,
+                            "linked_processor_id":i.linked_processor.id,
+                            "linked_processor_entity_name":i.linked_processor.entity_name,
+                            "linked_processor_type":i.linked_processor.processor_type.all().first().type_name
+                        }
+                        data.append(lst)
+                    else:
+                        lst = {
+                            "processor_id":i.linked_processor.id,
+                            "processor_entity_name":i.linked_processor.entity_name,
+                            "linked_processor_id":i.processor.id,
+                            "linked_processor_entity_name":i.processor.entity_name,
+                            "linked_processor_type":i.processor.processor_type.all().first().type_name
+                        }
+                        data.append(lst)
+            response["status"], response["message"], response["data"] = "200", "Linked processors fetched successfully.", data
+    except Exception as e:
+        response["status"], response["message"] = "500", f"500, {e}"
+    return Response(response)
+
+
+@api_view(("POST",))
+def processor_inbound_shipment_edit_api(request):
+    response = {"status": "", "message": "", "data": []}
+    userid = request.data.get("userid")
+    shipment_id = request.data.get("shipment_id")
+    try:
+        user = User.objects.get(id=userid)
+        if user.is_processor:
+            p = ProcessorUser.objects.get(contact_email=user.email)
+            check_shipment = GrowerShipment.objects.filter(id=shipment_id)
+            status= request.data.get('status')
+            received_weight= request.data.get('received_weight')
+            sku_id = request.data.get('sku_id')       
+            ticket_number= request.data.get('ticket_number')
+            approval_date= request.data.get('approval_date')
+            reason_for_disapproval= request.data.get('reason_for_disapproval')
+            moisture_level= request.data.get('moisture_percent')
+            fancy_count= request.data.get('fancy_count')
+            head_count= request.data.get('head_count')
+            bin_location_processor= request.data.get('bin_location_processor')
+            files = request.FILES.getlist("files")
+            print(files)
+            approval_date = datetime.strptime(approval_date, '%m/%d/%Y').strftime('%Y-%m-%d')
+            if check_shipment:
+                shipment = check_shipment.first()
+                if status == 'APPROVED' and received_weight :
+                    shipment.status=status
+                    shipment.received_amount=received_weight
+                    shipment.sku=sku_id  #add sku
+                    shipment.token_id=ticket_number
+
+                    if approval_date :
+                        shipment.approval_date = approval_date
+                    else:
+                        shipment.approval_date= date.today()
+
+                    shipment.moisture_level=moisture_level
+                    shipment.fancy_count=fancy_count
+                    shipment.head_count=head_count
+                    shipment.bin_location_processor=bin_location_processor 
+                    for file in files:
+                        new_file = GrowerShipmentFile.objects.create(file=file)
+                        shipment.files.add(new_file)                   
+                    shipment.save()
+                    create_sku_list(shipment.processor.id, "T1", sku_id)
+                elif status == 'DISAPPROVED' and reason_for_disapproval :
+                    shipment.status=status
+                    shipment.reason_for_disapproval=reason_for_disapproval
+                    shipment.moisture_level=moisture_level
+                    shipment.fancy_count=fancy_count
+                    shipment.head_count=head_count
+                    shipment.bin_location_processor=bin_location_processor
+                    shipment.approval_date= date.today()
+                    shipment.save()
+                response["status"], response["message"] = "200", f"Shipment updated successfully."
+            else:
+                response["status"], response["message"] = "400", f"Shipment not found."
+        elif user.is_processor2:
+            p = ProcessorUser2.objects.get(contact_email=user.email)
+            check_shipment = ShipmentManagement.objects.filter(id=shipment_id)
+            if check_shipment:
+                shipment = check_shipment.first()
+                status = request.data.get('status')
+                approval_date = request.data.get('approval_date')
+                received_weight = request.data.get('received_weight')
+                ticket_number = request.data.get('ticket_number')
+                receiver_sku_id = request.data.get('receiver_sku_id')
+                reason_for_disapproval = request.data.get('reason_for_disapproval')
+                moisture_percent = request.data.get('moisture_percent')
+                files = request.FILES.getlist("files")
+                approval_date = datetime.strptime(approval_date, '%m/%d/%Y').strftime('%Y-%m-%d')
+                if status == "APPROVED":
+                    shipment.status = status
+                    shipment.moisture_percent = moisture_percent
+                    shipment.received_weight = received_weight
+                    shipment.ticket_number = ticket_number
+                    shipment.storage_bin_recive = receiver_sku_id
+                    shipment.recive_delivery_date = approval_date
+                    shipment.save()
+                    for file in files:
+                        new_file = File.objects.create(file=file)
+                        shipment.files.add(new_file) 
+                    shipment.save()
+                    create_sku_list(p.processor2.id, p.processor2.processor_type.all().first().type_name, receiver_sku_id)
+                elif status == "DISAPPROVED":
+                    shipment.status = status
+                    shipment.reason_for_disapproval = reason_for_disapproval
+                    shipment.recive_delivery_date = approval_date
+                    shipment.moisture_percent = moisture_percent
+                    shipment.save()
+                response["status"], response["message"] = "200", f"Shipment updated successfully."
+            else:
+                response["status"], response["message"] = "400", f"Shipment not found."
+    except Exception as e:
+        response["status"], response["message"] = "500", f"500, {e}"
+    return Response(response)
+
+
+@api_view(("GET",))
+def check_update_status(request):
+    response = {"status":"","message":"", "update":True}
+    userid = request.GET.get("userid")
+    latest_app_version = VersionUpdate.objects.latest('release_date')
+    latest_version_user_list = list(latest_app_version.updated_users.all().values_list("id", flat=True))
+    if int(userid) in latest_version_user_list:
+        response["update"] = False
+    else:
+        response["update"] = True
+    response["status"] = "200"
+    response["message"] = "Update status fetched successfully."
+    return Response(response)
+
+
+@api_view(('POST',))
+def update_version(request):
+    response = {"status":"","message":""}
+    userid = request.data.get("userid")
+    status = request.data.get("status")
+    user = User.objects.get(id=userid)
+    if status == "True":
+        latest_app_version = VersionUpdate.objects.latest('release_date')
+        latest_app_version.updated_users.add(user)
+    response["status"] = "200"
+    response["message"] = "Version updated succesfully."
+    return Response(response)
+
+    

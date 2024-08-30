@@ -1,8 +1,13 @@
-from datetime import datetime
+import secrets
+import string
+from datetime import datetime, timedelta
 from django.db import models
 from django.urls import reverse
 from django.utils import timezone
-import uuid
+from apps.accounts.models import User
+from decimal import Decimal
+from django.core.validators import MinValueValidator
+
 
 class Contracts(models.Model):
     """Database model for field"""
@@ -98,3 +103,190 @@ class VerifiedSignedContracts(models.Model):
         """Returns string representation of farm"""
         # return f'{self.id}:{self.name}'
         return f'{self.name}'
+
+
+unit_choice = (
+    ("LBS","LBS"),
+    ("MT","MT"),
+)
+crop_choices = (
+    ('RICE', 'Rice'),
+    ('WHEAT', 'Wheat'),
+    ('PEANUT', 'Peanut'),
+    ('BEANS', 'Beans'),
+)
+processor_type = (
+    ("T1","T1"),
+    ("T2","T2"),
+    ("T3","T3"),
+    ("T4","T4"),
+)
+contract_period_choices = (
+    ("Days","Days"),
+    ("Months","Months"),
+    ("Year","Year"),
+)
+contract_status = (
+    ('Contract Initiated', 'Contract Initiated'),
+    ('Under Review', 'Under Review'),
+    ('Active With Documentation Processing','Active With Documentation Processing'),
+    ('Active With Documentation Completed','Active With Documentation Completed'),
+    ('Completed', 'Completed'),
+    ('Terminated', 'Terminated'),
+) 
+
+def generate_secret_key( length=32):
+    """Generate a unique secret key with the format HT+date+random_number."""
+    # Generate the random part
+    random_part = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(length))
+
+    # Today's date in YYYYMMDD format
+    date_part = datetime.now().strftime("%Y%m%d")
+
+    # Random three-digit number
+    random_number = secrets.randbelow(900) + 100  # Generates a number between 100 and 999
+
+    # Combine all parts
+    secret_key = f"HT{date_part}{random_number}"
+
+    return secret_key
+       
+class AdminProcessorContract(models.Model):
+    secret_key = models.CharField(max_length=255, unique=True)
+    processor_id = models.CharField(max_length=255)
+    processor_type = models.CharField(max_length=5, choices=processor_type)
+    processor_entity_name = models.CharField(max_length=255, null=True, blank=True)
+    crop = models.CharField(max_length=10, choices=crop_choices)
+    crop_type = models.CharField(max_length=255, null=True, blank=True)
+    contract_amount = models.PositiveBigIntegerField()
+    amount_unit = models.CharField(max_length=10, choices=unit_choice)
+    per_unit_rate = models.CharField(max_length=255, null=True, blank=True)
+    total_price = models.DecimalField( max_digits=20,decimal_places=2,validators=[MinValueValidator(Decimal('0.01'))],null=True, blank=True)
+    contract_start_date = models.DateField()
+    contract_period = models.PositiveIntegerField(help_text="Warranty period")
+    contract_period_choice = models.CharField(max_length=10, choices=contract_period_choices, default="Days" )
+    end_date = models.DateField(null=True, blank=True)
+    status = models.CharField(max_length=255, choices=contract_status)
+    reason_for_rejection = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='contractingUser')  
+    is_signed = models.BooleanField(default=False)
+    left_amount = models.IntegerField(null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        if not self.secret_key:  # Generate a new key only if it does not already exist
+            while True:
+                self.secret_key = generate_secret_key()
+                if not AdminProcessorContract.objects.filter(secret_key=self.secret_key).exists():
+                    break
+
+        if isinstance(self.contract_period, str):
+            self.contract_period = int(self.contract_period)
+
+        if isinstance(self.contract_start_date, str):
+            self.contract_start_date = datetime.strptime(self.contract_start_date, "%Y-%m-%d").date()
+        
+        if self.contract_period:
+            if self.contract_period_choice == "Days":
+                self.end_date = self.contract_start_date + timedelta(days=self.contract_period)
+            elif self.contract_period_choice == "Months":
+                self.end_date = self.contract_start_date + timedelta(days=self.contract_period * 30)  # Approximate to 30 days per month
+            elif self.contract_period_choice == "Year":
+                self.end_date = self.contract_start_date + timedelta(days=self.contract_period * 365)  # Approximate to 365 days per year
+        
+        if self._state.adding and self.left_amount is None:
+            self.left_amount = self.contract_amount
+        
+        super().save(*args, **kwargs)   
+
+    def __str__(self):
+        return f'Contract of {self.crop} || Amount - {self.contract_amount} {self.amount_unit}'
+
+
+class AdminProcessorContractSignature(models.Model):
+    contract = models.ForeignKey(AdminProcessorContract, related_name='contractSignatures', on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='signingUser')
+    signed_at = models.DateTimeField(auto_now_add=True)
+    signature = models.TextField(help_text="A textual or digital representation of the signature")
+
+    def __str__(self):
+        return f'Signature of Contract id - {self.contract.id}'
+
+    
+class AdminProcessorContractDocuments(models.Model):
+    contract = models.ForeignKey(AdminProcessorContract, on_delete=models.CASCADE, related_name='contractDocuments')
+    name = models.CharField(max_length=255, null=True, blank=True)
+    document = models.FileField(upload_to='contracts/documents/', null=True, blank=True)
+    document_status = models.TextField(null=True, blank=True)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f'Documents for {self.contract.id}'
+    
+class AdminCustomerContract(models.Model):
+    secret_key = models.CharField(max_length=255, unique=True)
+    customer_id = models.CharField(max_length=255) 
+    
+    crop = models.CharField(max_length=10, choices=crop_choices)
+    crop_type = models.CharField(max_length=255, null=True, blank=True)
+    contract_amount = models.PositiveBigIntegerField()
+    amount_unit = models.CharField(max_length=10, choices=unit_choice)
+    per_unit_rate = models.CharField(max_length=255, null=True, blank=True)
+    total_price = models.DecimalField( max_digits=20,decimal_places=2,validators=[MinValueValidator(Decimal('0.01'))],null=True, blank=True)
+    contract_start_date = models.DateField()
+    contract_period = models.PositiveIntegerField(help_text="Warranty period")
+    contract_period_choice = models.CharField(max_length=10, choices=contract_period_choices, default="Days" )
+    end_date = models.DateField(null=True, blank=True)
+    status = models.CharField(max_length=255, choices=contract_status)
+    reason_for_rejection = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='contractUSer')  
+    is_signed = models.BooleanField(default=False)
+
+    def save(self, *args, **kwargs):
+        if not self.secret_key:  # Generate a new key only if it does not already exist
+            while True:
+                self.secret_key = generate_secret_key()
+                if not AdminCustomerContract.objects.filter(secret_key=self.secret_key).exists():
+                    break
+
+        if isinstance(self.contract_period, str):
+            self.contract_period = int(self.contract_period)
+
+        if isinstance(self.contract_start_date, str):
+            self.contract_start_date = datetime.strptime(self.contract_start_date, "%Y-%m-%d").date()
+        
+        if self.contract_period:
+            if self.contract_period_choice == "Days":
+                self.end_date = self.contract_start_date + timedelta(days=self.contract_period)
+            elif self.contract_period_choice == "Months":
+                self.end_date = self.contract_start_date + timedelta(days=self.contract_period * 30)  # Approximate to 30 days per month
+            elif self.contract_period_choice == "Year":
+                self.end_date = self.contract_start_date + timedelta(days=self.contract_period * 365)  # Approximate to 365 days per year
+        super().save(*args, **kwargs)   
+
+    def __str__(self):
+        return f'Contract of {self.crop} || Amount - {self.contract_amount} {self.amount_unit}'
+
+
+class AdminCustomerContractSignature(models.Model):
+    contract = models.ForeignKey(AdminCustomerContract, related_name='customerContractSignatures', on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='customerContractingUser')
+    signed_at = models.DateTimeField(auto_now_add=True)
+    signature = models.TextField(help_text="A textual or digital representation of the signature")
+
+    def __str__(self):
+        return f'Signature of Contract id - {self.contract.id}'
+    
+class AdminCustomerContractDocuments(models.Model):
+    contract = models.ForeignKey(AdminCustomerContract, on_delete=models.CASCADE, related_name='customerContractDocuments')
+    name = models.CharField(max_length=255, null=True, blank=True)
+    document = models.FileField(upload_to='contracts/documents/', null=True, blank=True)
+    document_status = models.TextField(null=True, blank=True)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f'Documents for {self.contract.id}'
+    

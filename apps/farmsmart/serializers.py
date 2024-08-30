@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from apps.processor.models import GrowerShipment ,BaleReportFarmField
+from apps.processor.models import *
+from apps.processor2.models import *
 from apps.growerpayments.models import EntryFeeds , GrowerPayments
 from apps.growerpayments.models import NasdaqApiData
 from datetime import timedelta ,datetime ,date 
@@ -204,7 +205,7 @@ class GrowerShipmentSerializer(serializers.ModelSerializer):
    
     class Meta:
         model = GrowerShipment
-        fields = ['delivery_date','delivery_id', 'grower_name','crop', 'variety','field_name','level','delivery_lbs','total_price','delivery_value','payment_due_date','grower_pmt']
+        fields = ['id','delivery_date','delivery_id', 'grower_name','crop', 'variety','field_name','level','delivery_lbs','total_price','delivery_value','payment_due_date','grower_pmt']
         
     def get_grower_pmt(self, obj):
         grower_payments = GrowerPayments.objects.filter(delivery_id=obj.shipment_id)
@@ -341,11 +342,58 @@ class GrowerShipmentSerializer(serializers.ModelSerializer):
     level = serializers.SerializerMethodField(method_name='get_class')
     total_price = serializers.SerializerMethodField(method_name='get_total_price')
     delivery_value = serializers.SerializerMethodField(method_name='get_delivery_value')
-    
 
+class ShipmentManagementFileSerializer(serializers.ModelSerializer):
+    url = serializers.SerializerMethodField()
+    name = serializers.SerializerMethodField()
+    type = serializers.SerializerMethodField()
 
+    class Meta:
+        model = File
+        fields = ['url', 'name', 'type']
 
+    def get_url(self, obj):
+        request = self.context.get('request')
+        if request is not None:
+            return request.build_absolute_uri(obj.file.url)
+        return obj.file.url
 
+    def get_name(self, obj):
+        return obj.file.name
+
+    def get_type(self, obj):
+        return obj.file.name.split('.')[-1]
+
+class ShipmentManagementSerializer(serializers.ModelSerializer):
+    files = ShipmentManagementFileSerializer(many=True)
+
+    class Meta:
+        model = ShipmentManagement
+        fields = "__all__"
+        
+class ProcessorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Processor
+        fields = '__all__'  # This will include all the fields of the Processor model
+
+class ProcessorUserSerializer(serializers.ModelSerializer):
+    processor = ProcessorSerializer()
+
+    class Meta:
+        model = ProcessorUser
+        fields = '__all__' 
+
+class Processor2Serializer(serializers.ModelSerializer):
+    class Meta:
+        model = Processor2
+        fields = '__all__'  # This will include all the fields of the Processor model
+
+class ProcessorUser2Serializer(serializers.ModelSerializer):
+    processor2 = Processor2Serializer()
+
+    class Meta:
+        model = ProcessorUser2
+        fields = '__all__' 
 
 
 

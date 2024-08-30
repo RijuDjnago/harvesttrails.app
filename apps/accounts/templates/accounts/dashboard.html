@@ -291,7 +291,7 @@ border-radius: 0;
     {% endif %}
     <div class="container-fluid dashboard-container">
       <div class="row">
-        {% if request.user.is_processor or request.user.is_processor2 %}
+        {% if request.user.is_processor or request.user.is_processor2 or request.user.is_distributor %}
         {% if request.user.is_processor %}
         <div class="col-md-9 col-12">
           <div class="card card-padding">
@@ -382,6 +382,43 @@ border-radius: 0;
                 </div>
                 <div class="col-3"><strong>Contact Fax : </strong>
                   <div>{{p2_user.contact_fax}}</div>
+                </div>
+              </div>
+          </div>
+        </div>
+        {% elif request.user.is_distributor %}
+        <div class="col-md-9 col-12">
+          <div class="card card-padding">
+            <h2 class="user-detls">Your Details</h2>
+              <div class="row">
+                
+                <div class="col-3"><strong>Entity Name : </strong>
+                  <div>{{distributor.entity_name}}</div>
+                </div>
+                <div class="col-3"><strong>Location : </strong>
+                  <div>{{distributor.location}}</div>
+                </div>
+              </div>              
+                <div class="col-3"><strong>Latitude : </strong>
+                  <div>{{distributor.latitude}}</div>
+                </div>
+                <div class="col-3"><strong>Longitude : </strong>
+                  <div>{{distributor.longitude}}</div>
+                </div>
+              </div>
+              
+              <div class="row">
+                <div class="col-3"><strong>Contact Name : </strong>
+                  <div>{{distributor_user.contact_name}}</div>
+                </div>
+                <div class="col-3"><strong>Contact Email : </strong>
+                  <div>{{distributor_user.contact_email}}</div>
+                </div>
+                <div class="col-3"><strong>Contact Phone : </strong>
+                  <div>{{distributor_user.contact_phone}}</div>
+                </div>
+                <div class="col-3"><strong>Contact Fax : </strong>
+                  <div>{{distributor_user.contact_fax}}</div>
                 </div>
               </div>
           </div>

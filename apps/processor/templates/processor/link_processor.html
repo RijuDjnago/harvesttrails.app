@@ -115,8 +115,8 @@
                         </div>
                         <div class="row">
                           <div class="form-btn-row">
-                              <a href="" class="btn-close-cancel btn-space">Cancel</a>
-                              <input type="submit" class="btn-save-submit" value="Save" name="save">
+                              <a href="{% url "Processor1ToProcessorManagement" %}" class="btn-close-cancel btn-space">Cancel</a>
+                              <input type="submit" class="btn-save-submit" id="saveButton" value="Save" name="save">
                           </div>
                         </div>
                     </form>
@@ -133,7 +133,7 @@
     <script>
         $(document).ready(function() {
             // Initialize Select2 on the select element
-            $('#mySelect').select2({
+           $('#mySelect').select2({
                 placeholder: 'Select Processor',
                 allowClear: true
             });
@@ -163,6 +163,41 @@
             }
         }
     </script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    {% comment %} <script>
+        $(document).ready(function() {
+            $('#mySelect').select2({
+                placeholder: 'Select Processor',
+                allowClear: true
+            });
+
+            $('#saveButton').click(function() {
+                const formData = {
+                    'selected_processor': $('#processorSelction').val(),
+                    'select_processor2': $('#mySelect').val(),
+                    'csrfmiddlewaretoken': $('input[name="csrfmiddlewaretoken"]').val()
+                };
+
+                $.ajax({
+                    type: 'POST',
+                    url: '{% url "link_processor_one_ajax" %}',  // Make sure you create a URL pattern for the new view
+                    data: formData,
+                    success: function(response) {
+                        if (response.status === 'success') {
+                            alert(response.message);
+                            window.location.href = "/processor/ProcessorToProcessorManagement/";  // Redirect to the desired page after success
+                        } else {
+                            alert(response.message);
+                        }
+                    },
+                    error: function(xhr, errmsg, err) {
+                        alert('There was an error: ' + errmsg);
+                    }
+                });
+            });
+        });
+    </script> {% endcomment %}
     <script>
         $('#Processor-active').addClass('activeLink');
         $('#Processor-down').addClass('down');

@@ -9,6 +9,7 @@ admin.site.register(ProcessorType)
 admin.site.register(LinkProcessor1ToProcessor)
 admin.site.register(ProductionManagementProcessor2)
 admin.site.register(LinkProcessorToProcessor)
+admin.site.register(AssignedBaleProcessor2)
 
 
 

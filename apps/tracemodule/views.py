@@ -2361,133 +2361,141 @@ def grower_location(context):
     return context
 
 
-def location_response(context):   
-    for i in context["outbound2_wip"]:
-        processor1 = i["processor_idd"]
-        processor2 = i["processor2_idd"]
-        check_processor1_location = Location.objects.filter(processor_id=processor1)
+def location_response(context): 
+    if context.get("outbound2_wip"): 
+        for i in context["outbound2_wip"]:
+            processor1 = i["processor_idd"]
+            processor2 = i["processor2_idd"]
+            check_processor1_location = Location.objects.filter(processor_id=processor1)
 
-        if check_processor1_location:
-            out2_processor1_lat = check_processor1_location.first().latitude
-            out2_processor1_long = check_processor1_location.first().longitude
-            try:
-                org_lat = float(out2_processor1_lat)
-                org_lng = float(out2_processor1_long)
-            except:
+            if check_processor1_location:
+                out2_processor1_lat = check_processor1_location.first().latitude
+                out2_processor1_long = check_processor1_location.first().longitude
+                try:
+                    org_lat = float(out2_processor1_lat)
+                    org_lng = float(out2_processor1_long)
+                except:
+                    org_lat = 0
+                    org_lng = 0
+            else:
                 org_lat = 0
                 org_lng = 0
-        else:
-            org_lat = 0
-            org_lng = 0
-        
-        check_processor2_location = Processor2Location.objects.filter(processor_id=processor2, processor__processor_type__type_name="T2")
-
-        if check_processor2_location:
-            out2_processor2_lat = check_processor2_location.first().latitude
-            out2_processor2_long = check_processor2_location.first().longitude
-            try:
-                des_lat = float(out2_processor2_lat)
-                des_lng = float(out2_processor2_long)
-            except:
-                des_lat = 0
-                des_lng = 0
-        else:
-            des_lat = 0
-            des_lng = 0
-        
-        i["origin_lat"] = org_lat
-        i["origin_lng"] = org_lng
-        i["destination_lat"] = des_lat
-        i["destination_lng"] = des_lng
-
-        origin = f"{org_lat},{org_lng}"
-        destination = f"{des_lat},{des_lng}"
-        
-        i["map_url"] = generate_static_map_url(origin, destination)       
-        
             
-    for j in context["outbound3_wip"]:
-        processor1 = j["processor_idd"]
-        processor2 = j["processor2_idd"]
-        check_processor1_location = Processor2Location.objects.filter(processor_id=processor1, processor__processor_type__type_name="T2")
+            check_processor2_location = Processor2Location.objects.filter(processor_id=processor2, processor__processor_type__type_name="T2")
 
-        if check_processor1_location:
-            out3_processor1_lat = check_processor1_location.first().latitude
-            out3_processor1_long = check_processor1_location.first().longitude
-            try:
-                org_lat = float(out3_processor1_lat)
-                org_lng = float(out3_processor1_long)
-            except:
-                org_lat = 0
-                org_lng = 0
-        else:
-            org_lat = 0
-            org_lng = 0
-        check_processor2_location = Processor2Location.objects.filter(processor_id=processor2, processor__processor_type__type_name="T3")
-
-        if check_processor2_location:
-            out3_processor2_lat = check_processor2_location.first().latitude
-            out3_processor2_long = check_processor2_location.first().longitude
-            try:
-                des_lat = float(out3_processor2_lat)
-                des_lng = float(out3_processor2_long)
-            except:
+            if check_processor2_location:
+                out2_processor2_lat = check_processor2_location.first().latitude
+                out2_processor2_long = check_processor2_location.first().longitude
+                try:
+                    des_lat = float(out2_processor2_lat)
+                    des_lng = float(out2_processor2_long)
+                except:
+                    des_lat = 0
+                    des_lng = 0
+            else:
                 des_lat = 0
                 des_lng = 0
-        else:
-            des_lat = 0
-            des_lng = 0
+            
+            i["origin_lat"] = org_lat
+            i["origin_lng"] = org_lng
+            i["destination_lat"] = des_lat
+            i["destination_lng"] = des_lng
 
+            origin = f"{org_lat},{org_lng}"
+            destination = f"{des_lat},{des_lng}"
+            
+            i["map_url"] = generate_static_map_url(origin, destination)       
+    else:
+        pass
 
-        j["origin_lat"] = org_lat
-        j["origin_lng"] = org_lng
-        j["destination_lat"] = des_lat
-        j["destination_lng"] = des_lng
-        origin = f"{org_lat},{org_lng}"
-        destination = f"{des_lat},{des_lng}"
-        
-        j["map_url"] = generate_static_map_url(origin, destination)
-    
-    for k in context["outbound4_wip"]:
-        processor1 = k["processor_idd"]
-        processor2 = k["processor2_idd"]
-        check_processor1_location = Processor2Location.objects.filter(processor_id=processor1, processor__processor_type__type_name="T3")
+    if context.get("outbound3_wip"):       
+        for j in context["outbound3_wip"]:
+            processor1 = j["processor_idd"]
+            processor2 = j["processor2_idd"]
+            check_processor1_location = Processor2Location.objects.filter(processor_id=processor1, processor__processor_type__type_name="T2")
 
-        if check_processor1_location:
-            out4_processor1_lat = check_processor1_location.first().latitude
-            out4_processor1_long = check_processor1_location.first().longitude
-            try:
-                org_lat = float(out4_processor1_lat)
-                org_lng = float(out4_processor1_long)
-            except:
+            if check_processor1_location:
+                out3_processor1_lat = check_processor1_location.first().latitude
+                out3_processor1_long = check_processor1_location.first().longitude
+                try:
+                    org_lat = float(out3_processor1_lat)
+                    org_lng = float(out3_processor1_long)
+                except:
+                    org_lat = 0
+                    org_lng = 0
+            else:
                 org_lat = 0
                 org_lng = 0
-        else:
-            org_lat = 0
-            org_lng = 0
-        check_processor2_location = Processor2Location.objects.filter(processor_id=processor2, processor__processor_type__type_name="T4")
+            check_processor2_location = Processor2Location.objects.filter(processor_id=processor2, processor__processor_type__type_name="T3")
 
-        if check_processor2_location:
-            out4_processor2_lat = check_processor2_location.first().latitude
-            out4_processor2_long = check_processor2_location.first().longitude
-            try:
-                des_lat = float(out4_processor2_lat)
-                des_lng = float(out4_processor2_long)
-            except:
+            if check_processor2_location:
+                out3_processor2_lat = check_processor2_location.first().latitude
+                out3_processor2_long = check_processor2_location.first().longitude
+                try:
+                    des_lat = float(out3_processor2_lat)
+                    des_lng = float(out3_processor2_long)
+                except:
+                    des_lat = 0
+                    des_lng = 0
+            else:
                 des_lat = 0
                 des_lng = 0
-        else:
-            des_lat = 0
-            des_lng = 0
 
-        k["origin_lat"] = org_lat
-        k["origin_lng"] = org_lng
-        k["destination_lat"] = des_lat
-        k["destination_lng"] = des_lng
 
-        origin = f"{org_lat},{org_lng}"
-        destination = f"{des_lat},{des_lng}"
-        k["map_url"] = generate_static_map_url(origin, destination)
+            j["origin_lat"] = org_lat
+            j["origin_lng"] = org_lng
+            j["destination_lat"] = des_lat
+            j["destination_lng"] = des_lng
+            origin = f"{org_lat},{org_lng}"
+            destination = f"{des_lat},{des_lng}"
+            
+            j["map_url"] = generate_static_map_url(origin, destination)
+    else:
+        pass
+
+    if context.get("outbound4_wip"):    
+        for k in context["outbound4_wip"]:
+            processor1 = k["processor_idd"]
+            processor2 = k["processor2_idd"]
+            check_processor1_location = Processor2Location.objects.filter(processor_id=processor1, processor__processor_type__type_name="T3")
+
+            if check_processor1_location:
+                out4_processor1_lat = check_processor1_location.first().latitude
+                out4_processor1_long = check_processor1_location.first().longitude
+                try:
+                    org_lat = float(out4_processor1_lat)
+                    org_lng = float(out4_processor1_long)
+                except:
+                    org_lat = 0
+                    org_lng = 0
+            else:
+                org_lat = 0
+                org_lng = 0
+            check_processor2_location = Processor2Location.objects.filter(processor_id=processor2, processor__processor_type__type_name="T4")
+
+            if check_processor2_location:
+                out4_processor2_lat = check_processor2_location.first().latitude
+                out4_processor2_long = check_processor2_location.first().longitude
+                try:
+                    des_lat = float(out4_processor2_lat)
+                    des_lng = float(out4_processor2_long)
+                except:
+                    des_lat = 0
+                    des_lng = 0
+            else:
+                des_lat = 0
+                des_lng = 0
+
+            k["origin_lat"] = org_lat
+            k["origin_lng"] = org_lng
+            k["destination_lat"] = des_lat
+            k["destination_lng"] = des_lng
+
+            origin = f"{org_lat},{org_lng}"
+            destination = f"{des_lat},{des_lng}"
+            k["map_url"] = generate_static_map_url(origin, destination)
+    else:
+        pass
 
     return context
 
@@ -4055,39 +4063,79 @@ def traceability_report_all_csv_download(request,select_crop,get_search_by,searc
                             writer.writerow([i["get_select_crop"], i["variety"], i["field_name"], i["grower_name"], i["farm_name"], i["harvest_date"], 
                             i["projected_yeild"], i["reported_yeild"], i["yield_delta"],i["pf_sus"],i["water_savings"],i["land_use"],i["premiums_to_growers"],
                             i["co2_eQ_footprint"],i["water_per_pound_savings"]])
+                        processor_id = LinkGrowerToProcessor.objects.filter(grower_id=check_grower_id).first().processor.id
+                        entity_name = LinkGrowerToProcessor.objects.filter(grower_id=check_grower_id).first().processor.entity_name
+                        processor_type = "T1"
+                        context_ = processor_traceability_report_response(processor_id, processor_type, from_date, to_date, entity_name)
+                       
                         writer.writerow([""])
                         writer.writerow(["Outbound 1 WIP"])
                         writer.writerow(['DELIVERY ID OUTBOUND', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
-                        outbound1_wip = outbound1_Wip_Grower('RICE',search_text,from_date,to_date,*grower_field_ids)    
+                        outbound1_wip = context_.get("outbound1_wip")    
                         for i in outbound1_wip:
                             writer.writerow([i["deliveryid"], i["date"], i["quantity"], i["transportation"], i["destination"]])
+                        
                         writer.writerow([""])
                         writer.writerow(["T1 Processor"])
-                        writer.writerow(['PROCESSOR NAME', 'PROCESSOR ID #', 'DELIVERY ID', 'Grower', 'Farm', 'Field', 'DATE', 'QUANTITY POUNDS SHIPPED', 
+                        writer.writerow(['PROCESSOR NAME', 'DELIVERY ID', 'Grower', 'Farm', 'Field', 'DATE', 'QUANTITY POUNDS SHIPPED', 
                         'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
-                        t1_processor = t1_Processor_grower('RICE',check_grower_id,from_date,to_date)
+                        t1_processor = t1_processor = list(GrowerShipment.objects.filter(processor_id=processor_id, grower_id=check_grower_id, status="APPROVED").values("processor__entity_name","processor_id","shipment_id","sku","approval_date","grower__name","field__farm__name","field__name","total_amount","received_amount"))
                         for i in t1_processor:
-                            writer.writerow([i["processor_name"] , i["processor_id"], i["deliveryid"], i["grower"], i["farm"], i["field"], i["date"], i["pounds_shipped"], 
-                                            i["pounds_received"], i["pounds_delta"]])
-                        # 20-03-23
+                            writer.writerow([i["processor__entity_name"], i["shipment_id"], i["grower__name"], i["field__farm__name"], i["field__name"], i["approval_date"], i["total_amount"], 
+                                            i["received_amount"], float(i["total_amount"]) - float(i["received_amount"])])
+                       
                         writer.writerow([""])
                         writer.writerow(["Outbound 2 WIP"])
-                        writer.writerow(['DELIVERY ID OUTBOUND', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
-                        outbound2_wip = outbound2_Wip_Grower('RICE',check_grower_id,from_date,to_date,*grower_field_ids)         
+                        writer.writerow(['DELIVERY ID OUTBOUND', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
+                        outbound2_wip = context_.get("outbound2_wip")        
                         for i in outbound2_wip:
-                            writer.writerow([i["deliveryid"] , i["date"], i["quantity"], i["transportation"], i["destination"]])
+                            writer.writerow([i["shipment_id"] , i["storage_bin_send"], i["date_pulled"], i["volume_shipped"], i["equipment_type"], i["processor2_name"]])
+                       
                         writer.writerow([""])
                         writer.writerow(["T2 Processor"])
-                        writer.writerow(['PROCESSOR NAME', 'PROCESSOR ID #', 'DELIVERY ID', 'Grower', 'Farm', 'Field', 'DATE', 'QUANTITY POUNDS SHIPPED', 
+                        writer.writerow(['PROCESSOR NAME', 'PROCESSOR ID #', 'DELIVERY ID', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS SHIPPED', 'RECEIVER PROCESSOR', 'RECEIVER SKU ID', 
                         'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
-                        t2_processor = t2_Processor_grower('RICE',check_grower_id,from_date,to_date)
+                        t2_processor = context_.get("inbound2_wip")
                         for i in t2_processor:
-                            writer.writerow([i["processor_name"] , i["processor_id"], i["deliveryid"], i["grower"], i["farm"], i["field"], i["date"], i["pounds_shipped"], 
-                                 i["pounds_received"], i["pounds_delta"]])
+                            writer.writerow([i["processor_e_name"] , i["processor_idd"], i["shipment_id"], i["storage_bin_send"],  i["recive_delivery_date"], i["volume_shipped"], i["processor2_name"], i["storage_bin_recive"],
+                                 i["received_weight"], float(i["volume_shipped"]) - float(i["received_weight"])])
+                        
+                        writer.writerow([""])
+                        writer.writerow(["Outbound 3 WIP"])
+                        writer.writerow(['DELIVERY ID OUTBOUND', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
+                        outbound3_wip = context_.get("outbound3_wip")        
+                        for i in outbound3_wip:
+                            writer.writerow([i["shipment_id"] , i["storage_bin_send"], i["date_pulled"], i["volume_shipped"], i["equipment_type"], i["processor2_name"]])
+                        
+                        writer.writerow([""])
+                        writer.writerow(["T3 Processor"])
+                        writer.writerow(['PROCESSOR NAME', 'PROCESSOR ID #', 'DELIVERY ID', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS SHIPPED', 'RECEIVER PROCESSOR', 'RECEIVER SKU ID', 
+                        'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
+                        t3_processor = context_.get("inbound3_wip")
+                        for i in t3_processor:
+                            writer.writerow([i["processor_e_name"] , i["processor_idd"], i["shipment_id"], i["storage_bin_send"],  i["recive_delivery_date"], i["volume_shipped"], i["processor2_name"], i["storage_bin_recive"],
+                                 i["received_weight"], float(i["volume_shipped"]) - float(i["received_weight"])])
+                        
+                        writer.writerow([""])
+                        writer.writerow(["Outbound 4 WIP"])
+                        writer.writerow(['DELIVERY ID OUTBOUND', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
+                        outbound4_wip = context_.get("outbound4_wip")        
+                        for i in outbound4_wip:
+                            writer.writerow([i["shipment_id"] , i["storage_bin_send"], i["date_pulled"], i["volume_shipped"], i["equipment_type"], i["processor2_name"]])
+
+                        writer.writerow([""])
+                        writer.writerow(["T4 Processor"])
+                        writer.writerow(['PROCESSOR NAME', 'PROCESSOR ID #', 'DELIVERY ID', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS SHIPPED', 'RECEIVER PROCESSOR', 'RECEIVER SKU ID', 
+                        'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
+                        t4_processor = context_.get("inbound4_wip")
+                        for i in t4_processor:
+                            writer.writerow([i["processor_e_name"] , i["processor_idd"], i["shipment_id"], i["storage_bin_send"],  i["recive_delivery_date"], i["volume_shipped"], i["processor2_name"], i["storage_bin_recive"],
+                                 i["received_weight"], float(i["volume_shipped"]) - float(i["received_weight"])])
                     else:
                         pass
                 else:
                     pass
+                
             # search by Field ....
             elif get_search_by and get_search_by == 'field' :
                 check_field = Field.objects.filter(name__icontains=search_text,crop='RICE')
@@ -4104,138 +4152,326 @@ def traceability_report_all_csv_download(request,select_crop,get_search_by,searc
                         writer.writerow([i["get_select_crop"], i["variety"], i["field_name"], i["grower_name"], i["farm_name"], i["harvest_date"], 
                         i["projected_yeild"], i["reported_yeild"], i["yield_delta"],i["pf_sus"],i["water_savings"],i["land_use"],i["premiums_to_growers"],
                         i["co2_eQ_footprint"],i["water_per_pound_savings"]])
+                    
                     writer.writerow([""])
                     writer.writerow(["Outbound 1 WIP"])
+                    writer.writerow(['DELIVERY ID OUTBOUND', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
                     outbound1_wip = outbound1_Wip_field('RICE',search_text,from_date,to_date,field_id)
-                    writer.writerow(['DELIVERY ID OUTBOUND', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
-                    for i in outbound1_wip:
-                        writer.writerow([i["deliveryid"], i["date"], i["quantity"], i["transportation"], i["destination"]])
-                    writer.writerow([""])
-                    writer.writerow(["T1 Processor"])
-                    writer.writerow(['PROCESSOR NAME', 'PROCESSOR ID #', 'DELIVERY ID', 'Grower', 'Farm', 'Field', 'DATE', 'QUANTITY POUNDS SHIPPED', 
-                    'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
-                    t1_processor = t1_Processor_field('RICE',search_text,field_id,from_date,to_date)
-                    for i in t1_processor:
-                        writer.writerow([i["processor_name"] , i["processor_id"], i["deliveryid"], i["grower"], i["farm"], i["field"], i["date"], i["pounds_shipped"], 
-                                        i["pounds_received"], i["pounds_delta"]])
-
-                    # 20-03-23
-                    writer.writerow([""])
-                    writer.writerow(["Outbound 2 WIP"])
-                    writer.writerow(['DELIVERY ID OUTBOUND', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
-                    outbound2_wip = outbound2_Wip_Field('RICE',field_name,field_id,from_date,to_date)         
-                    for i in outbound2_wip:
-                        writer.writerow([i["deliveryid"] , i["date"], i["quantity"], i["transportation"], i["destination"]])
-                    writer.writerow([""])
-                    writer.writerow(["T2 Processor"])
-                    writer.writerow(['PROCESSOR NAME', 'PROCESSOR ID #', 'DELIVERY ID', 'Grower', 'Farm', 'Field', 'DATE', 'QUANTITY POUNDS SHIPPED', 
-                    'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
-                    t2_processor = t2_Processor_field('RICE',field_name,field_id,from_date,to_date)
-                    for i in t2_processor:
-                        writer.writerow([i["processor_name"] , i["processor_id"], i["deliveryid"], i["grower"], i["farm"], i["field"], i["date"], i["pounds_shipped"], 
-                                i["pounds_received"], i["pounds_delta"]])
-                else:
-                    pass
-            # search by Processor ....
-            elif get_search_by and get_search_by == 'processor' :
-                check_processor = Processor.objects.filter(entity_name__icontains=search_text)
-                if check_processor.exists() :
-                    processor_id = [i.id for i in check_processor][0]
-                    get_shipment = GrowerShipment.objects.filter(processor_id=processor_id,crop='RICE').values("id")
-                    if get_shipment.exists() :
-                        bale_id = [i["id"] for i in get_shipment]
-                        writer.writerow(["Origin"])
-                        writer.writerow(['CROP', 'VARIETY', 'FIELD', 'GROWER', 'FARM', 'HARVEST DATE', 
-                        'PROJECTED YIELD', 'ACTUAL YIELD', 'YIELD  DELTA', 'Pass / Fail Sustainability','Water Savings %',
-                        'Land Use Efficiency %', 'Less GHG % ', 'Premiums to Growers %', 'CO2 EQ footprint #','Pounds of Water Per Pound Savings %'])
-                        get_Origin_Processor = Origin_searchby_Processor('RICE',search_text,*bale_id)         
-                        for i in get_Origin_Processor:
-                            writer.writerow([i["get_select_crop"], i["variety"], i["field_name"], i["grower_name"], i["farm_name"], i["harvest_date"], 
-                            i["projected_yeild"], i["reported_yeild"], i["yield_delta"],i["pf_sus"],i["water_savings"],i["land_use"],i["premiums_to_growers"],
-                            i["co2_eQ_footprint"],i["water_per_pound_savings"]])
-                        writer.writerow([""])
-                        writer.writerow(["Outbound 1 WIP"])
-                        writer.writerow(['DELIVERY ID OUTBOUND', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
-                        outbound1_wip = outbound1_Wip_Processor('RICE',from_date,to_date,processor_id)
-                        for i in outbound1_wip:
-                            writer.writerow([i["deliveryid"], i["date"], i["quantity"], i["transportation"], i["destination"]])
-                        writer.writerow([""])
-                        writer.writerow(["T1 Processor"])
-                        writer.writerow(['PROCESSOR NAME', 'PROCESSOR ID #', 'DELIVERY ID', 'Grower', 'Farm', 'Field', 'DATE', 'QUANTITY POUNDS SHIPPED', 
-                        'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
-                        t1_processor = t1_Processor_Processor('RICE',processor_id,from_date,to_date,*bale_id)
-                        for i in t1_processor:
-                            writer.writerow([i["processor_name"] , i["processor_id"], i["deliveryid"], i["grower"], i["farm"], i["field"], i["date"], i["pounds_shipped"], 
-                                        i["pounds_received"], i["pounds_delta"]])
-                        # 20-03-23
-                        writer.writerow([""])
-                        writer.writerow(["Outbound 2 WIP"])
-                        writer.writerow(['DELIVERY ID OUTBOUND', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
-                        outbound2_wip = outbound_Wip_Processor('RICE',search_text,processor_id,from_date,to_date)         
-                        for i in outbound2_wip:
-                            writer.writerow([i["deliveryid"] , i["date"], i["quantity"], i["transportation"], i["destination"]])
-                        writer.writerow([""])
-                        writer.writerow(["T2 Processor"])
-                        writer.writerow(['PROCESSOR NAME', 'PROCESSOR ID #', 'DELIVERY ID', 'Grower', 'Farm', 'Field', 'DATE', 'QUANTITY POUNDS SHIPPED', 
-                        'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
-                        t2_processor =  t2_Processor_Processor('RICE',processor_id,from_date,to_date,*bale_id) 
-                        for i in t2_processor:
-                            writer.writerow([i["processor_name"] , i["processor_id"], i["deliveryid"], i["grower"], i["farm"], i["field"], i["date"], i["pounds_shipped"], 
-                                i["pounds_received"], i["pounds_delta"]])
-                    else:
-                        pass
-                else:
-                    pass
-            
-            # search by Delivery ID ....
-            elif get_search_by and get_search_by == 'deliveryid' :
-                get_delivery_id3 = GrowerShipment.objects.filter(shipment_id__icontains=search_text)
-                if get_delivery_id3.exists() :
-                    rice_shipment_id = [i.shipment_id for i in get_delivery_id3][0]
-                    field_id = [i.field.id for i in get_delivery_id3][0]
-                    field_name = [i.field.name for i in get_delivery_id3][0]
-                    warehouse_wh_id = ''
-                    writer.writerow(["Origin"])
-                    writer.writerow(['CROP', 'VARIETY', 'FIELD', 'GROWER', 'FARM', 'HARVEST DATE', 
-                    'PROJECTED YIELD', 'ACTUAL YIELD', 'YIELD  DELTA', 'Pass / Fail Sustainability','Water Savings %',
-                    'Land Use Efficiency %', 'Less GHG % ', 'Premiums to Growers %', 'CO2 EQ footprint #','Pounds of Water Per Pound Savings %'])
-                    get_origin_details = get_Origin_deliveryid('RICE',field_id,field_name,search_text,warehouse_wh_id)
-                    for i in get_Origin_Processor:
-                        writer.writerow([i["get_select_crop"], i["variety"], i["field_name"], i["grower_name"], i["farm_name"], i["harvest_date"], 
-                        i["projected_yeild"], i["reported_yeild"], i["yield_delta"],i["pf_sus"],i["water_savings"],i["land_use"],i["premiums_to_growers"],
-                        i["co2_eQ_footprint"],i["water_per_pound_savings"]])
-                    writer.writerow([""])
-                    writer.writerow(["Outbound 1 WIP"])
-                    writer.writerow(['DELIVERY ID OUTBOUND', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
-                    outbound1_wip = outbound1_Wip_deliveryid('RICE',rice_shipment_id,warehouse_wh_id,from_date,to_date)
                     for i in outbound1_wip:
                         writer.writerow([i["deliveryid"], i["date"], i["quantity"], i["transportation"], i["destination"]])
                     
                     writer.writerow([""])
                     writer.writerow(["T1 Processor"])
-                    writer.writerow(['PROCESSOR NAME', 'PROCESSOR ID #', 'DELIVERY ID', 'Grower', 'Farm', 'Field', 'DATE', 'QUANTITY POUNDS SHIPPED', 
+                    writer.writerow(['PROCESSOR NAME', 'DELIVERY ID', 'Grower', 'Farm', 'Field', 'DATE', 'QUANTITY POUNDS SHIPPED', 
                     'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
-                    t1_processor = t1_Processor_deliveryid('RICE',rice_shipment_id,warehouse_wh_id,from_date,to_date)
+                    t1_processor = t1_Processor_field('RICE',search_text,field_id,from_date,to_date)
                     for i in t1_processor:
-                        writer.writerow([i["processor_name"] , i["processor_id"], i["deliveryid"], i["grower"], i["farm"], i["field"], i["date"], i["pounds_shipped"], 
-                                    i["pounds_received"], i["pounds_delta"]])
-                    # 20-03-23        
+                        writer.writerow([i["processor_name"], i["deliveryid"], i["grower"], i["farm"], i["field"], i["date"], i["pounds_shipped"], 
+                                        i["pounds_received"], i["pounds_delta"]])
+
+                    grower_id =  check_field.first().grower.id
+                    processor_id = LinkGrowerToProcessor.objects.filter(grower_id=grower_id).first().processor.id
+                    entity_name = LinkGrowerToProcessor.objects.filter(grower_id=grower_id).first().processor.entity_name
+                    processor_type = "T1"
+                    context_ = processor_traceability_report_response(processor_id, processor_type, from_date, to_date, entity_name)
+                   
                     writer.writerow([""])
                     writer.writerow(["Outbound 2 WIP"])
-                    writer.writerow(['DELIVERY ID OUTBOUND', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
-                    outbound2_wip = outbound2_Wip_deliveryid('RICE',search_text,rice_shipment_id,from_date,to_date) 
+                    writer.writerow(['DELIVERY ID OUTBOUND', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
+                    outbound2_wip = context_.get("outbound2_wip")        
                     for i in outbound2_wip:
-                        writer.writerow([i["deliveryid"] , i["date"], i["quantity"], i["transportation"], i["destination"]])
+                        writer.writerow([i["shipment_id"] , i["storage_bin_send"], i["date_pulled"], i["volume_shipped"], i["equipment_type"], i["processor2_name"]])
+                    
                     writer.writerow([""])
                     writer.writerow(["T2 Processor"])
-                    writer.writerow(['PROCESSOR NAME', 'PROCESSOR ID #', 'DELIVERY ID', 'Grower', 'Farm', 'Field', 'DATE', 'QUANTITY POUNDS SHIPPED', 
+                    writer.writerow(['PROCESSOR NAME', 'PROCESSOR ID #', 'DELIVERY ID', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS SHIPPED', 'RECEIVER PROCESSOR', 'RECEIVER SKU ID', 
                     'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
-                    t2_processor =  t2_Processor_deliveryid('RICE',search_text,warehouse_wh_id,from_date,to_date)
+                    t2_processor = context_.get("inbound2_wip")
                     for i in t2_processor:
-                        writer.writerow([i["processor_name"] , i["processor_id"], i["deliveryid"], i["grower"], i["farm"], i["field"], i["date"], i["pounds_shipped"], 
-                            i["pounds_received"], i["pounds_delta"]])
+                        writer.writerow([i["processor_e_name"] , i["processor_idd"], i["shipment_id"], i["storage_bin_send"],  i["recive_delivery_date"], i["volume_shipped"], i["processor2_name"], i["storage_bin_recive"],
+                                i["received_weight"], float(i["volume_shipped"]) - float(i["received_weight"])])
+                    
+                    writer.writerow([""])
+                    writer.writerow(["Outbound 3 WIP"])
+                    writer.writerow(['DELIVERY ID OUTBOUND', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
+                    outbound3_wip = context_.get("outbound3_wip")        
+                    for i in outbound3_wip:
+                        writer.writerow([i["shipment_id"] , i["storage_bin_send"], i["date_pulled"], i["volume_shipped"], i["equipment_type"], i["processor2_name"]])
+                    
+                    writer.writerow([""])
+                    writer.writerow(["T3 Processor"])
+                    writer.writerow(['PROCESSOR NAME', 'PROCESSOR ID #', 'DELIVERY ID', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS SHIPPED', 'RECEIVER PROCESSOR', 'RECEIVER SKU ID', 
+                    'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
+                    t3_processor = context_.get("inbound3_wip")
+                    for i in t3_processor:
+                        writer.writerow([i["processor_e_name"] , i["processor_idd"], i["shipment_id"], i["storage_bin_send"],  i["recive_delivery_date"], i["volume_shipped"], i["processor2_name"], i["storage_bin_recive"],
+                                i["received_weight"], float(i["volume_shipped"]) - float(i["received_weight"])])
+                    
+                    writer.writerow([""])
+                    writer.writerow(["Outbound 4 WIP"])
+                    writer.writerow(['DELIVERY ID OUTBOUND', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
+                    outbound4_wip = context_.get("outbound4_wip")        
+                    for i in outbound4_wip:
+                        writer.writerow([i["shipment_id"] , i["storage_bin_send"], i["date_pulled"], i["volume_shipped"], i["equipment_type"], i["processor2_name"]])
+
+                    writer.writerow([""])
+                    writer.writerow(["T4 Processor"])
+                    writer.writerow(['PROCESSOR NAME', 'PROCESSOR ID #', 'DELIVERY ID', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS SHIPPED', 'RECEIVER PROCESSOR', 'RECEIVER SKU ID', 
+                    'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
+                    t4_processor = context_.get("inbound4_wip")
+                    for i in t4_processor:
+                        writer.writerow([i["processor_e_name"] , i["processor_idd"], i["shipment_id"], i["storage_bin_send"],  i["recive_delivery_date"], i["volume_shipped"], i["processor2_name"], i["storage_bin_recive"],
+                                i["received_weight"], float(i["volume_shipped"]) - float(i["received_weight"])])
+                else:
+                    pass
+
+            # search by Processor ....
+            elif get_search_by and get_search_by == 'processor' :
+                check_processor = get_processor_type(search_text)
+                if check_processor:
+                    processor_type = check_processor["type"]
+                    processor_id = check_processor["id"]
+                    context_ = processor_traceability_report_response(processor_id,processor_type, from_date, to_date, search_text)
+                    
+                    writer.writerow(["Origin"])
+                    writer.writerow(['CROP', 'VARIETY', 'FIELD', 'GROWER', 'FARM', 'HARVEST DATE', 
+                    'PROJECTED YIELD', 'ACTUAL YIELD', 'YIELD  DELTA', 'Pass / Fail Sustainability','Water Savings %',
+                    'Land Use Efficiency %', 'Less GHG % ', 'Premiums to Growers %', 'CO2 EQ footprint #','Pounds of Water Per Pound Savings %'])
+                    get_Origin_Processor = context_.get("origin_context")         
+                    for i in get_Origin_Processor:
+                        writer.writerow([i["get_select_crop"], i["variety"], i["field_name"], i["grower_name"], i["farm_name"], i["harvest_date"], 
+                        i["projected_yeild"], i["reported_yeild"], i["yield_delta"],i["pf_sus"],i["water_savings"],i["land_use"],i["premiums_to_growers"],
+                        i["co2_eQ_footprint"],i["water_per_pound_savings"]])
+                    
+                    writer.writerow([""])
+                    writer.writerow(["Outbound 1 WIP"])
+                    writer.writerow(['DELIVERY ID OUTBOUND', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
+                    outbound1_wip = context_.get("outbound1_wip")
+                    for i in outbound1_wip:
+                        writer.writerow([i["deliveryid"], i["date"], i["quantity"], i["transportation"], i["destination"]])
+                    
+                    writer.writerow([""])
+                    writer.writerow(["T1 Processor"])
+                    writer.writerow(['PROCESSOR NAME', 'DELIVERY ID', 'Grower', 'Farm', 'Field', 'DATE', 'QUANTITY POUNDS SHIPPED', 
+                    'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
+                    t1_processor = context_.get("t1_processor")
+                    for i in t1_processor:
+                        writer.writerow([i["processor_name"], i["deliveryid"], i["grower"], i["farm"], i["field"], i["date"], i["pounds_shipped"], 
+                                    i["pounds_received"], i["pounds_delta"]])
+                    
+                    writer.writerow([""])
+                    writer.writerow(["Outbound 2 WIP"])
+                    writer.writerow(['DELIVERY ID OUTBOUND', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
+                    outbound2_wip = context_.get("outbound2_wip")        
+                    for i in outbound2_wip:
+                        writer.writerow([i["shipment_id"] , i["storage_bin_send"], i["date_pulled"], i["volume_shipped"], i["equipment_type"], i["processor2_name"]])
+                    
+                    writer.writerow([""])
+                    writer.writerow(["T2 Processor"])
+                    writer.writerow(['PROCESSOR NAME', 'PROCESSOR ID #', 'DELIVERY ID', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS SHIPPED', 'RECEIVER PROCESSOR', 'RECEIVER SKU ID', 
+                    'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
+                    t2_processor = context_.get("inbound2_wip")
+                    for i in t2_processor:
+                        writer.writerow([i["processor_e_name"] , i["processor_idd"], i["shipment_id"], i["storage_bin_send"],  i["recive_delivery_date"], i["volume_shipped"], i["processor2_name"], i["storage_bin_recive"],
+                                i["received_weight"], float(i["volume_shipped"]) - float(i["received_weight"])])
+                    
+                    writer.writerow([""])
+                    writer.writerow(["Outbound 3 WIP"])
+                    writer.writerow(['DELIVERY ID OUTBOUND', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
+                    outbound3_wip = context_.get("outbound3_wip")        
+                    for i in outbound3_wip:
+                        writer.writerow([i["shipment_id"] , i["storage_bin_send"], i["date_pulled"], i["volume_shipped"], i["equipment_type"], i["processor2_name"]])
+                    
+                    writer.writerow([""])
+                    writer.writerow(["T3 Processor"])
+                    writer.writerow(['PROCESSOR NAME', 'PROCESSOR ID #', 'DELIVERY ID', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS SHIPPED', 'RECEIVER PROCESSOR', 'RECEIVER SKU ID', 
+                    'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
+                    t3_processor = context_.get("inbound3_wip")
+                    for i in t3_processor:
+                        writer.writerow([i["processor_e_name"] , i["processor_idd"], i["shipment_id"], i["storage_bin_send"],  i["recive_delivery_date"], i["volume_shipped"], i["processor2_name"], i["storage_bin_recive"],
+                                i["received_weight"], float(i["volume_shipped"]) - float(i["received_weight"])])
+                    
+                    writer.writerow([""])
+                    writer.writerow(["Outbound 4 WIP"])
+                    writer.writerow(['DELIVERY ID OUTBOUND', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
+                    outbound4_wip = context_.get("outbound4_wip")        
+                    for i in outbound4_wip:
+                        writer.writerow([i["shipment_id"] , i["storage_bin_send"], i["date_pulled"], i["volume_shipped"], i["equipment_type"], i["processor2_name"]])
+
+                    writer.writerow([""])
+                    writer.writerow(["T4 Processor"])
+                    writer.writerow(['PROCESSOR NAME', 'PROCESSOR ID #', 'DELIVERY ID', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS SHIPPED', 'RECEIVER PROCESSOR', 'RECEIVER SKU ID', 
+                    'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
+                    t4_processor = context_.get("inbound4_wip")
+                    for i in t4_processor:
+                        writer.writerow([i["processor_e_name"] , i["processor_idd"], i["shipment_id"], i["storage_bin_send"],  i["recive_delivery_date"], i["volume_shipped"], i["processor2_name"], i["storage_bin_recive"],
+                                i["received_weight"], float(i["volume_shipped"]) - float(i["received_weight"])])                
+                else:
+                    pass
+            
+            # search by SKU ID......
+            elif get_search_by and get_search_by == 'sku_id':
+                context_ = skuid_traceability_response(search_text)
+                writer.writerow(["Origin"])
+                writer.writerow(['CROP', 'VARIETY', 'FIELD', 'GROWER', 'FARM', 'HARVEST DATE', 
+                'PROJECTED YIELD', 'ACTUAL YIELD', 'YIELD  DELTA', 'Pass / Fail Sustainability','Water Savings %',
+                'Land Use Efficiency %', 'Less GHG % ', 'Premiums to Growers %', 'CO2 EQ footprint #','Pounds of Water Per Pound Savings %'])
+                get_origin_details = context_.get("origin_context")
+                for i in get_origin_details:
+                    writer.writerow([i["get_select_crop"], i["variety"], i["field_name"], i["grower_name"], i["farm_name"], i["harvest_date"], 
+                    i["projected_yeild"], i["reported_yeild"], i["yield_delta"],i["pf_sus"],i["water_savings"],i["land_use"],i["premiums_to_growers"],
+                    i["co2_eQ_footprint"],i["water_per_pound_savings"]])
+
+                writer.writerow([""])
+                writer.writerow(["Outbound 1 WIP"])
+                writer.writerow(['DELIVERY ID OUTBOUND', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
+                outbound1_wip = context_.get("outbound1_wip")
+                for i in outbound1_wip:
+                    writer.writerow([i["deliveryid"], i["date"], i["quantity"], i["transportation"], i["destination"]])
+
+                writer.writerow([""])
+                writer.writerow(["T1 Processor"])
+                writer.writerow(['PROCESSOR NAME', 'DELIVERY ID', 'Grower', 'Farm', 'Field', 'DATE', 'QUANTITY POUNDS SHIPPED', 
+                'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
+                t1_processor = context_.get("t1_processor")
+                for i in t1_processor:
+                    writer.writerow([i["processor_name"], i["deliveryid"], i["grower"], i["farm"], i["field"], i["date"], i["pounds_shipped"], 
+                                i["pounds_received"], i["pounds_delta"]])
+                
+                writer.writerow([""])
+                writer.writerow(["Outbound 2 WIP"])
+                writer.writerow(['DELIVERY ID OUTBOUND', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
+                outbound2_wip = context_.get("outbound2_wip")        
+                for i in outbound2_wip:
+                    writer.writerow([i["shipment_id"] , i["storage_bin_send"], i["date_pulled"], i["volume_shipped"], i["equipment_type"], i["processor2_name"]])
+                
+                writer.writerow([""])
+                writer.writerow(["T2 Processor"])
+                writer.writerow(['PROCESSOR NAME', 'PROCESSOR ID #', 'DELIVERY ID', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS SHIPPED', 'RECEIVER PROCESSOR', 'RECEIVER SKU ID', 
+                'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
+                t2_processor = context_.get("inbound2_wip")
+                for i in t2_processor:
+                    writer.writerow([i["processor_e_name"] , i["processor_idd"], i["shipment_id"], i["storage_bin_send"],  i["recive_delivery_date"], i["volume_shipped"], i["processor2_name"], i["storage_bin_recive"],
+                            i["received_weight"], float(i["volume_shipped"]) - float(i["received_weight"])])
+                
+                writer.writerow([""])
+                writer.writerow(["Outbound 3 WIP"])
+                writer.writerow(['DELIVERY ID OUTBOUND', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
+                outbound3_wip = context_.get("outbound3_wip")        
+                for i in outbound3_wip:
+                    writer.writerow([i["shipment_id"] , i["storage_bin_send"], i["date_pulled"], i["volume_shipped"], i["equipment_type"], i["processor2_name"]])
+                
+                writer.writerow([""])
+                writer.writerow(["T3 Processor"])
+                writer.writerow(['PROCESSOR NAME', 'PROCESSOR ID #', 'DELIVERY ID', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS SHIPPED', 'RECEIVER PROCESSOR', 'RECEIVER SKU ID', 
+                'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
+                t3_processor = context_.get("inbound3_wip")
+                for i in t3_processor:
+                    writer.writerow([i["processor_e_name"] , i["processor_idd"], i["shipment_id"], i["storage_bin_send"],  i["recive_delivery_date"], i["volume_shipped"], i["processor2_name"], i["storage_bin_recive"],
+                            i["received_weight"], float(i["volume_shipped"]) - float(i["received_weight"])])
+                
+                writer.writerow([""])
+                writer.writerow(["Outbound 4 WIP"])
+                writer.writerow(['DELIVERY ID OUTBOUND', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
+                outbound4_wip = context_.get("outbound4_wip")        
+                for i in outbound4_wip:
+                    writer.writerow([i["shipment_id"] , i["storage_bin_send"], i["date_pulled"], i["volume_shipped"], i["equipment_type"], i["processor2_name"]])
+
+                writer.writerow([""])
+                writer.writerow(["T4 Processor"])
+                writer.writerow(['PROCESSOR NAME', 'PROCESSOR ID #', 'DELIVERY ID', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS SHIPPED', 'RECEIVER PROCESSOR', 'RECEIVER SKU ID', 
+                'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
+                t4_processor = context_.get("inbound4_wip")
+                for i in t4_processor:
+                    writer.writerow([i["processor_e_name"] , i["processor_idd"], i["shipment_id"], i["storage_bin_send"],  i["recive_delivery_date"], i["volume_shipped"], i["processor2_name"], i["storage_bin_recive"],
+                            i["received_weight"], float(i["volume_shipped"]) - float(i["received_weight"])])
+
+            # search by Delivery ID ....
+            elif get_search_by and get_search_by == 'deliveryid' :
+                get_delivery_id3 = GrowerShipment.objects.filter(shipment_id__icontains=search_text)
+                if get_delivery_id3.exists() :
+                    sku_id = get_delivery_id3.first().sku
+                    context_ = skuid_traceability_response(sku_id)
+                elif not get_delivery_id3 and ShipmentManagement.objects.filter(shipment_id__icontains=search_text).exists():
+                    get_sku_id = ShipmentManagement.objects.filter(shipment_id__icontains=search_text)                    
+                    sku_id = get_sku_id.first().storage_bin_send
+                    context_ = skuid_traceability_response(sku_id)                    
                 else:
                     pass 
+
+                writer.writerow(["Origin"])
+                writer.writerow(['CROP', 'VARIETY', 'FIELD', 'GROWER', 'FARM', 'HARVEST DATE', 
+                'PROJECTED YIELD', 'ACTUAL YIELD', 'YIELD  DELTA', 'Pass / Fail Sustainability','Water Savings %',
+                'Land Use Efficiency %', 'Less GHG % ', 'Premiums to Growers %', 'CO2 EQ footprint #','Pounds of Water Per Pound Savings %'])
+                get_origin_details = context_.get("origin_context")
+                for i in get_origin_details:
+                    writer.writerow([i["get_select_crop"], i["variety"], i["field_name"], i["grower_name"], i["farm_name"], i["harvest_date"], 
+                    i["projected_yeild"], i["reported_yeild"], i["yield_delta"],i["pf_sus"],i["water_savings"],i["land_use"],i["premiums_to_growers"],
+                    i["co2_eQ_footprint"],i["water_per_pound_savings"]])
+
+                writer.writerow([""])
+                writer.writerow(["Outbound 1 WIP"])
+                writer.writerow(['DELIVERY ID OUTBOUND', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
+                outbound1_wip = context_.get("outbound1_wip")
+                for i in outbound1_wip:
+                    writer.writerow([i["deliveryid"], i["date"], i["quantity"], i["transportation"], i["destination"]])
+
+                writer.writerow([""])
+                writer.writerow(["T1 Processor"])
+                writer.writerow(['PROCESSOR NAME', 'DELIVERY ID', 'Grower', 'Farm', 'Field', 'DATE', 'QUANTITY POUNDS SHIPPED', 
+                'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
+                t1_processor = context_.get("t1_processor")
+                for i in t1_processor:
+                    writer.writerow([i["processor_name"], i["deliveryid"], i["grower"], i["farm"], i["field"], i["date"], i["pounds_shipped"], 
+                                i["pounds_received"], i["pounds_delta"]])
+                
+                writer.writerow([""])
+                writer.writerow(["Outbound 2 WIP"])
+                writer.writerow(['DELIVERY ID OUTBOUND', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
+                outbound2_wip = context_.get("outbound2_wip")        
+                for i in outbound2_wip:
+                    writer.writerow([i["shipment_id"] , i["storage_bin_send"], i["date_pulled"], i["volume_shipped"], i["equipment_type"], i["processor2_name"]])
+                
+                writer.writerow([""])
+                writer.writerow(["T2 Processor"])
+                writer.writerow(['PROCESSOR NAME', 'PROCESSOR ID #', 'DELIVERY ID', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS SHIPPED', 'RECEIVER PROCESSOR', 'RECEIVER SKU ID', 
+                'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
+                t2_processor = context_.get("inbound2_wip")
+                for i in t2_processor:
+                    writer.writerow([i["processor_e_name"] , i["processor_idd"], i["shipment_id"], i["storage_bin_send"],  i["recive_delivery_date"], i["volume_shipped"], i["processor2_name"], i["storage_bin_recive"],
+                            i["received_weight"], float(i["volume_shipped"]) - float(i["received_weight"])])
+                
+                writer.writerow([""])
+                writer.writerow(["Outbound 3 WIP"])
+                writer.writerow(['DELIVERY ID OUTBOUND', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
+                outbound3_wip = context_.get("outbound3_wip")        
+                for i in outbound3_wip:
+                    writer.writerow([i["shipment_id"] , i["storage_bin_send"], i["date_pulled"], i["volume_shipped"], i["equipment_type"], i["processor2_name"]])
+                
+                writer.writerow([""])
+                writer.writerow(["T3 Processor"])
+                writer.writerow(['PROCESSOR NAME', 'PROCESSOR ID #', 'DELIVERY ID', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS SHIPPED', 'RECEIVER PROCESSOR', 'RECEIVER SKU ID', 
+                'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
+                t3_processor = context_.get("inbound3_wip")
+                for i in t3_processor:
+                    writer.writerow([i["processor_e_name"] , i["processor_idd"], i["shipment_id"], i["storage_bin_send"],  i["recive_delivery_date"], i["volume_shipped"], i["processor2_name"], i["storage_bin_recive"],
+                            i["received_weight"], float(i["volume_shipped"]) - float(i["received_weight"])])
+                
+                writer.writerow([""])
+                writer.writerow(["Outbound 4 WIP"])
+                writer.writerow(['DELIVERY ID OUTBOUND', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
+                outbound4_wip = context_.get("outbound4_wip")        
+                for i in outbound4_wip:
+                    writer.writerow([i["shipment_id"] , i["storage_bin_send"], i["date_pulled"], i["volume_shipped"], i["equipment_type"], i["processor2_name"]])
+
+                writer.writerow([""])
+                writer.writerow(["T4 Processor"])
+                writer.writerow(['PROCESSOR NAME', 'PROCESSOR ID #', 'DELIVERY ID', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS SHIPPED', 'RECEIVER PROCESSOR', 'RECEIVER SKU ID', 
+                'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
+                t4_processor = context_.get("inbound4_wip")
+                for i in t4_processor:
+                    writer.writerow([i["processor_e_name"] , i["processor_idd"], i["shipment_id"], i["storage_bin_send"],  i["recive_delivery_date"], i["volume_shipped"], i["processor2_name"], i["storage_bin_recive"],
+                            i["received_weight"], float(i["volume_shipped"]) - float(i["received_weight"])])
             else:
                 pass
         return response
@@ -4269,5 +4505,5 @@ def transport_list(request):
         'outbound4_wip': outbound4_wip,
     }
     return render(request, 'tracemodule/traceability_map_show.html', context)
-    # return render(request, 'tracemodule/test_map.html', context)
+    
     

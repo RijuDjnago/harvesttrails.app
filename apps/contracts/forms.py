@@ -44,3 +44,16 @@ class SignedContractsCreateForm(forms.ModelForm):
 
         }
 
+
+
+class DocumentNameForm(forms.ModelForm):
+    class Meta:
+        model = models.AdminProcessorContractDocuments
+        fields = ['name']  # Only include document name for the admin
+
+class DocumentUploadForm(forms.ModelForm):
+    document = forms.FileField(required=False)  # Optional field for processors to upload files
+    
+    class Meta:
+        model = models.AdminProcessorContractDocuments
+        fields = ['name', 'document']

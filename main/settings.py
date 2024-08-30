@@ -77,6 +77,8 @@ INSTALLED_APPS = [
     'apps.chat',
     'apps.assistantapp',
     'apps.tracemodule',
+    'apps.warehouseManagement'
+
 ]
 
 # MIDDLEWARE = [
@@ -224,9 +226,8 @@ STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
 
-MEDIA_ROOT = BASE_DIR / 'media'
-
 MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Email Conf
 # EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'

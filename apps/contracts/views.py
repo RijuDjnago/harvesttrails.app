@@ -8,7 +8,7 @@ import warnings
 from django import forms
 import pandas as pd
 from apps.field.field_column import FieldColoumChoices
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.views import View
 from django.views.generic.detail import DetailView
 from django.views.generic.list import ListView
@@ -20,7 +20,6 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.db.utils import IntegrityError
 from django.db.models import Q, Count
 import re
-
 from apps.field.models import CsvToField, ShapeFileDataCo
 # from apps.grower.models import Grower
 from apps.farms.models import Farm
@@ -41,9 +40,6 @@ from urllib.parse import urlparse
 import geojson
 import numpy as np
 import geopandas as gpd
-# import matplotlib.pyplot as plt
-# from descartes import PolygonPatch
-# import matplotlib.patches as mpatches
 from apps.grower.signals import send_contract_verification_email
 from apps.growersurvey.views import render_to_pdf
 from docusign_esign import EnvelopesApi
@@ -57,12 +53,19 @@ from docusign_esign import EnvelopesApi, RecipientViewRequest, Document, Signer,
     Recipients
 from apps.docusign.utils import create_api_client
 from apps.docusign.consts import authentication_method, demo_docs_path, pattern, signer_client_id
-from apps.accounts.models import User, Role, SubSuperUser
+from apps.accounts.models import User, Role, SubSuperUser, ShowNotification
 from apps.contracts.DocusignEmbedded import DocusignEmbeddedSigningController
 import requests
 import threading
 from asgiref.sync import sync_to_async, async_to_sync
 from apps.contracts.tasks import create_envelope_and_store
+from django.contrib.auth.decorators import login_required
+from apps.processor.models import Processor, ProcessorUser
+from apps.processor2.models import Processor2, ProcessorUser2
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from apps.contracts.models import *
+from apps.warehouseManagement.models import Customer, CustomerUser
+
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
@@ -476,7 +479,7 @@ class UpdateDocumentSignedView(LoginRequiredMixin, RedirectView):
     url = None
 
     def get_redirect_url(self, *args, **kwargs):
-        url_parameters = re.findall('\d+', self.request.get_full_path())
+        url_parameters = re.findall(r'\d+', self.request.get_full_path())
         grower_contract = GrowerContracts.objects.get(contract_id=url_parameters[0], grower_id=url_parameters[1])
 
         if "ttl_expired" == self.request.GET.get("event"):
@@ -825,3 +828,654 @@ class ContractPdfView(LoginRequiredMixin, ListView):
                 "contract_signers": contract_signers,
             }
         )
+  
+
+@login_required()
+def admin_processor_contract_create(request):
+    context = {}
+    try:
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+            # Get processors and add to context
+            processors = []
+            processor1 = Processor.objects.all().values('id', 'entity_name')
+            processor2 = Processor2.objects.all().values('id', 'entity_name', 'processor_type__type_name')
+            
+            for pro1 in processor1:
+                processors.append({
+                    "id": pro1["id"],
+                    "entity_name": pro1["entity_name"],
+                    "type": "T1"
+                })
+                
+            for pro2 in processor2:
+                processors.append({
+                    "id": pro2["id"],
+                    "entity_name": pro2["entity_name"],
+                    "type": pro2["processor_type__type_name"]  # Reduced query redundancy
+                })
+            
+            context["processor"] = processors
+            
+            if request.method == "POST":
+                print("post method is hit")
+                # Extract data from the POST request
+                selected_processor = request.POST.get('selected_processor')
+                selected_crop = request.POST.get('crop')
+                crop_type = request.POST.get('crop_type')
+                contract_amount = request.POST.get('contract_amount')
+                amount_unit = request.POST.get('amount_unit')
+                contract_start_date = request.POST.get('contract_start_date')
+                contract_period = request.POST.get('contract_period')
+                status = request.POST.get('status')                
+                print(selected_processor)
+                # Ensure selected_processor is not empty and correctly formatted
+                if selected_processor:
+                    try:
+                        processor_id, processor_type = selected_processor.split("_")
+                    except ValueError:
+                        context["error_messages"] = "Invalid processor selection."
+                        return render(request, 'contracts/create_admin_processor_contract.html', context)
+                    
+                    # Retrieve the processor object
+                    if processor_type == "T1":
+                        processor = Processor.objects.filter(id=processor_id).first()
+                    else:
+                        processor = Processor2.objects.filter(id=processor_id).first()
+                    
+                    # Check if the processor exists
+                    if not processor:
+                        context["error_messages"] = "Selected processor does not exist."
+                        return render(request, 'contracts/create_admin_processor_contract.html', context)
+                    
+                    contract = AdminProcessorContract.objects.create(                        
+                        processor_id=processor_id, 
+                        processor_type=processor_type,
+                        processor_entity_name=processor.entity_name, 
+                        crop=selected_crop,
+                        crop_type = crop_type,
+                        contract_amount=contract_amount, 
+                        amount_unit=amount_unit,
+                        contract_start_date=contract_start_date, 
+                        contract_period=contract_period,
+                        status=status, 
+                        created_by_id=request.user.id
+                    )
+
+                    ## Send notification to the processor.
+                    if processor_type == "T1":
+                        all_processor_user = ProcessorUser.objects.filter(processor_id=processor_id)
+                    else:
+                        all_processor_user = ProcessorUser2.objects.filter(processor2_id=processor_id)
+                    for user in all_processor_user :
+                        msg = 'A new Contract has been initiated between Admin and you.'
+                        get_user = User.objects.get(username=user.contact_email)
+                        notification_reason = 'New Contract Assigned.'
+                        redirect_url = "/contracts/admin-processor-contract-list/"
+                        save_notification = ShowNotification(user_id_to_show=get_user.id,msg=msg,status="UNREAD",redirect_url=redirect_url,
+                            notification_reason=notification_reason)
+                        save_notification.save()
+
+                    document_names = request.POST.getlist('document_name[]')                   
+                    
+                    for name in document_names:
+                        AdminProcessorContractDocuments.objects.create(
+                            contract=contract,
+                            name=name                            
+                        )
+                    
+                    return redirect('list-contract')
+                else:
+                    context["error_messages"] = "Processor must be selected."
+            
+            return render(request, 'contracts/create_admin_processor_contract.html', context)
+        else:
+            messages.error(request, "Not a valid request.")
+            return redirect("dashboard")                                  
+    except (ValueError, AttributeError, AdminProcessorContract.DoesNotExist) as e:
+        context["error_messages"] = str(e)
+    return render(request, 'contracts/create_admin_processor_contract.html', context)
+
+
+@login_required()
+def admin_processor_contract_list(request):
+    context = {}
+    try:
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+            processors = []
+            processor1 = Processor.objects.all().values('id', 'entity_name')
+            processor2 = Processor2.objects.all().values('id', 'entity_name', 'processor_type__type_name')
+            
+            for pro1 in processor1:
+                processors.append({
+                    "id": pro1["id"],
+                    "entity_name": pro1["entity_name"],
+                    "type": "T1"
+                })
+                
+            for pro2 in processor2:
+                processors.append({
+                    "id": pro2["id"],
+                    "entity_name": pro2["entity_name"],
+                    "type": pro2["processor_type__type_name"]  # Reduced query redundancy
+                })
+            
+            context["processor"] = processors
+            
+            contracts = AdminProcessorContract.objects.all()
+            selected_processor = request.GET.get('selected_processor','All')
+            
+            if selected_processor != 'All':
+                processor_id, processor_type = selected_processor.split('_')
+                context['selected_processor_id'] = int(processor_id)
+                context['selected_processor_type'] = processor_type
+            else:
+                processor_id, processor_type = None, None
+                context['selected_processor_id'] = None
+                context['selected_processor_type'] = None
+            if selected_processor and selected_processor != 'All':                
+                contracts = contracts.filter(processor_id=int(processor_id))
+            search_name = request.GET.get('search_name', '')   
+            if search_name and search_name is not None:
+                contracts = contracts.filter(Q(secret_key__icontains=search_name)| Q(crop__icontains=search_name))
+                context['search_name'] = search_name
+            else:
+                context['search_name'] = None            
+            
+            contracts = contracts.order_by('-id')
+            paginator = Paginator(contracts, 100)
+            page = request.GET.get('page')
+            try:
+                report = paginator.page(page)
+            except PageNotAnInteger:
+                report = paginator.page(1)
+            except EmptyPage:
+                report = paginator.page(paginator.num_pages)             
+            context['contracts'] = report
+            return render(request, 'contracts/admin_processor_contract_list.html', context)
+        
+        elif request.user.is_processor:
+            user_email = request.user.email
+            p = ProcessorUser.objects.get(contact_email=user_email)
+            processor_id = Processor.objects.get(id=p.processor.id).id
+            processor_type = "T1"
+            contracts = AdminProcessorContract.objects.filter(processor_id=processor_id, processor_type=processor_type)
+            contracts = contracts.order_by('-id')
+            paginator = Paginator(contracts, 100)
+            page = request.GET.get('page')
+            try:
+                report = paginator.page(page)
+            except PageNotAnInteger:
+                report = paginator.page(1)
+            except EmptyPage:
+                report = paginator.page(paginator.num_pages)             
+            context['contracts'] = report
+            return render(request, 'contracts/admin_processor_contract_list.html', context)
+        
+        elif request.user.is_processor2:
+            user_email = request.user.email
+            p = ProcessorUser2.objects.get(contact_email=user_email)
+            processor_id = Processor2.objects.get(id=p.processor2.id).id
+            processor_type = Processor2.objects.get(id=p.processor2.id).processor_type.all().first().type_name
+
+            contracts = AdminProcessorContract.objects.filter(processor_id=processor_id, processor_type=processor_type)
+            contracts = contracts.order_by('-id')
+            paginator = Paginator(contracts, 100)
+            page = request.GET.get('page')
+            try:
+                report = paginator.page(page)
+            except PageNotAnInteger:
+                report = paginator.page(1)
+            except EmptyPage:
+                report = paginator.page(paginator.num_pages)             
+            context['contracts'] = report
+            return render(request, 'contracts/admin_processor_contract_list.html', context)
+    
+        else:
+            messages.error(request, "Not a valid request.")
+            return redirect("dashboard")   
+    except (ValueError, AttributeError, AdminProcessorContract.DoesNotExist) as e:
+        context["error_messages"] = str(e)
+    return render(request, 'contracts/admin_processor_contract_list.html', context)
+
+
+@login_required()
+def admin_processor_contract_view(request, pk):
+    context ={}
+    try:
+        # Superuser................
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role() or request.user.is_processor or request.user.is_processor2:
+            contract = AdminProcessorContract.objects.filter(id=pk).first()
+            documents = AdminProcessorContractDocuments.objects.filter(contract=contract)
+            context["contract"] = contract
+            
+            context["documents"] = documents
+            return render (request, 'contracts/admin_processor_contract_view.html', context)
+        else:
+            return redirect('login') 
+    except Exception as e:
+        context["error_messages"] = str(e)
+        return render (request, 'contracts/admin_processor_contract_view.html', context)
+
+
+@login_required()
+def edit_admin_processor_contract(request, pk):
+    context = {}
+    try:
+        contract = get_object_or_404(AdminProcessorContract, id=pk)       
+
+        # Retrieve processors
+        processors = []
+        processor1 = Processor.objects.all().values('id', 'entity_name')
+        processor2 = Processor2.objects.all().values('id', 'entity_name', 'processor_type__type_name')
+        
+
+        for pro1 in processor1:
+            processors.append({
+                "id": pro1["id"],
+                "entity_name": pro1["entity_name"],
+                "type": "T1"
+            })
+
+        for pro2 in processor2:
+            processors.append({
+                "id": pro2["id"],
+                "entity_name": pro2["entity_name"],
+                "type": pro2["processor_type__type_name"]
+            })
+
+        # Retrieve the documents associated with this contract
+        documents = AdminProcessorContractDocuments.objects.filter(contract=contract)
+        
+
+        context = {
+            "contract": contract,
+            "processor": processors,
+            'selected_processor_id': contract.processor_id,
+            'selected_processor_type': contract.processor_type,
+            "selected_crop": contract.crop,
+            'crop_type': contract.crop_type,
+            "contract_amount": contract.contract_amount,
+            "amount_unit": contract.amount_unit,
+            "contract_start_date": contract.contract_start_date,
+            "contract_period": contract.contract_period,
+            "status": contract.status,
+            "documents": documents,
+        }
+
+        if request.method == "POST":
+            if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+                # Handle updates by admin or superuser
+                selected_processor = request.POST.get('selected_processor')
+                selected_crop = request.POST.get('crop')
+                contract_amount = request.POST.get('contract_amount')
+                amount_unit = request.POST.get('amount_unit')
+                contract_start_date = request.POST.get('contract_start_date')
+                contract_period = request.POST.get('contract_period')
+                status = request.POST.get('status')
+                
+                if selected_processor:
+                    try:
+                        processor_id, processor_type = selected_processor.split("_")
+                    except ValueError:
+                        context["error_messages"] = "Invalid processor selection."
+                        return render(request, 'contracts/edit_admin_processor_contract.html', context)
+
+                    if processor_type == "T1":
+                        processor = Processor.objects.filter(id=processor_id).first()
+                    else:
+                        processor = Processor2.objects.filter(id=processor_id).first()
+
+                    if not processor:
+                        context["error_messages"] = "Selected processor does not exist."
+                        return render(request, 'contracts/edit_admin_processor_contract.html', context)
+
+                    # Update contract details
+                    contract.processor_id = processor_id
+                    contract.processor_type = processor_type
+                    contract.processor_entity_name = processor.entity_name
+                    contract.crop = selected_crop
+                    contract.contract_amount = contract_amount
+                    contract.amount_unit = amount_unit
+                    contract.contract_start_date = contract_start_date
+                    contract.contract_period = contract_period
+                    contract.status = status
+                    contract.save()
+
+                    delete_document_ids = request.POST.getlist('delete_document_ids[]')
+                    print(delete_document_ids)
+                    for document_id in delete_document_ids:
+                        try:
+                            document = AdminProcessorContractDocuments.objects.get(id=document_id)
+                            document.delete()  # Delete the document from the database
+                        except AdminProcessorContractDocuments.DoesNotExist:
+                            pass
+
+                    document_ids =  request.POST.getlist('document_ids')
+                    for document_id in document_ids:
+                        document_status = f'document_status_{document_id}'
+                        if document_status in request.POST:                            
+                            document_stat = request.POST.get(document_status)                         
+                            
+                            document = AdminProcessorContractDocuments.objects.filter(id=document_id).first()
+                            document.document_status = document_stat  # Assign the file to the FileField
+                            document.save()                                
+                            
+                    document_names = request.POST.getlist('document_name[]')  
+                    if document_names:                      
+                    
+                        for i, name in enumerate(document_names):
+                            # Check if there's a corresponding document ID
+                            if i < len(document_ids):
+                                document_id = document_ids[i]
+                                # Update existing document
+                                document = AdminProcessorContractDocuments.objects.filter(id=document_id).first()
+                                if document:
+                                    document.name = name  # Update the name
+                                    document.save()
+                            else:
+                                # Create new document if the document ID does not exist
+                                AdminProcessorContractDocuments.objects.create(contract=contract, name=name)
+
+                return redirect('list-contract')
+            
+            elif request.user.is_processor or request.user.is_processor2:
+                document_ids = request.POST.getlist('document_ids')        
+                for document_id in document_ids:
+                    file_field_name = f'document_file_{document_id}'
+                    
+                    if file_field_name in request.FILES:
+                        uploaded_file = request.FILES[file_field_name]
+                        
+                        
+                        # Handle the uploaded file
+                        try:
+                            document = AdminProcessorContractDocuments.objects.get(id=document_id)
+                            document.document = uploaded_file  # Assign the file to the FileField
+                            document.save()
+                            
+                        except AdminProcessorContractDocuments.DoesNotExist:
+                            # Handle the case where the document does not exist
+                            pass
+                contract.status = "Under Review"
+                contract.save()
+                return redirect('list-contract')
+        return render(request, 'contracts/edit_admin_processor_contract.html', context)
+    except Exception as e:
+        print(f"Exception occurred: {str(e)}")
+        context["error_messages"] = str(e)
+        return render(request, 'contracts/edit_admin_processor_contract.html', context)
+
+
+@login_required()
+def admin_customer_contract_create(request):
+    context = {}
+    try:
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+            # Get customers and add to context
+            customers = Customer.objects.all().values('id', 'name')          
+            context["customers"] = customers
+            
+            if request.method == "POST":
+                print("post method is hit")
+                # Extract data from the POST request
+                selected_customer = request.POST.get('selected_customer')
+                selected_crop = request.POST.get('crop')
+                crop_type = request.POST.get('crop_type')
+                contract_amount = request.POST.get('contract_amount')
+                amount_unit = request.POST.get('amount_unit')
+                contract_start_date = request.POST.get('contract_start_date')
+                contract_period = request.POST.get('contract_period')
+                status = request.POST.get('status')                
+                print(selected_customer)
+                # Ensure selected_customer is not empty and correctly formatted
+                if selected_customer:
+                    customer = Customer.objects.filter(id=selected_customer).first()                   
+                    
+                    if not customer:
+                        context["error_messages"] = "Selected customer does not exist."
+                        return render(request, 'contracts/create_admin_customer_contract.html', context)
+                    
+                    contract = AdminCustomerContract.objects.create(                        
+                        customer_id=customer.id,                         
+                        crop=selected_crop,
+                        crop_type = crop_type,
+                        contract_amount=contract_amount, 
+                        amount_unit=amount_unit,
+                        contract_start_date=contract_start_date, 
+                        contract_period=contract_period,
+                        status=status, 
+                        created_by_id=request.user.id
+                    )
+
+                    ## Send notification to the customer.                    
+                    all_customer_user = CustomerUser.objects.filter(customer_id=customer.id)
+                    
+                    for user in all_customer_user :
+                        msg = 'A new Contract has been initiated between Admin and you.'
+                        get_user = User.objects.get(username=user.contact_email)
+                        notification_reason = 'New Contract Assigned.'
+                        redirect_url = "/contracts/admin-customer-contract-list/"
+                        save_notification = ShowNotification(user_id_to_show=get_user.id,msg=msg,status="UNREAD",redirect_url=redirect_url,
+                            notification_reason=notification_reason)
+                        save_notification.save()
+
+                    document_names = request.POST.getlist('document_name[]')                   
+                    
+                    for name in document_names:
+                        AdminCustomerContractDocuments.objects.create(
+                            contract=contract,
+                            name=name                            
+                        )
+                    
+                    return redirect('admin-customer-contract-list')
+                else:
+                    context["error_messages"] = "Customer must be selected."
+            
+            return render(request, 'contracts/create_admin_customer_contract.html', context)
+        else:
+            messages.error(request, "Not a valid request.")
+            return redirect("dashboard")                                  
+    except (ValueError, AttributeError, AdminCustomerContract.DoesNotExist) as e:
+        context["error_messages"] = str(e)
+    return render(request, 'contracts/create_admin_customer_contract.html', context)
+
+
+@login_required()
+def admin_customer_contract_list(request):
+    context = {}
+    try:
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+            customers = Customer.objects.all().values('id', 'name')           
+                    
+            context["customers"] = customers            
+            contracts = AdminCustomerContract.objects.all()
+            selected_customer = request.GET.get('selected_customer','All')
+            
+            if selected_customer != 'All':
+                customer_id = int(selected_customer)
+                context['selected_customer_id'] = int(customer_id)
+                
+            else:   
+                customer_id = None             
+                context['selected_customer_id'] = None
+                
+            if selected_customer and selected_customer != 'All':                
+                contracts = contracts.filter(customer_id=int(customer_id))
+            search_name = request.GET.get('search_name', '')   
+            if search_name and search_name is not None:
+                contracts = contracts.filter(Q(secret_key__icontains=search_name)| Q(crop__icontains=search_name))
+                context['search_name'] = search_name
+            else:
+                context['search_name'] = None            
+            
+            contracts = contracts.order_by('-id')
+            paginator = Paginator(contracts, 100)
+            page = request.GET.get('page')
+            try:
+                report = paginator.page(page)
+            except PageNotAnInteger:
+                report = paginator.page(1)
+            except EmptyPage:
+                report = paginator.page(paginator.num_pages)             
+            context['contracts'] = report
+            return render(request, 'contracts/admin_customer_contract_list.html', context)
+        
+        elif request.user.is_customer:
+            user_email = request.user.email
+            c = CustomerUser.objects.get(contact_email=user_email)
+            customer_id = Customer.objects.get(id=c.customer.id).id
+
+            contracts = AdminCustomerContract.objects.filter(customer_id=customer_id)
+            contracts = contracts.order_by('-id')
+            paginator = Paginator(contracts, 100)
+            page = request.GET.get('page')
+            try:
+                report = paginator.page(page)
+            except PageNotAnInteger:
+                report = paginator.page(1)
+            except EmptyPage:
+                report = paginator.page(paginator.num_pages)             
+            context['contracts'] = report
+            return render(request, 'contracts/admin_customer_contract_list.html', context)      
+        
+    
+        else:
+            messages.error(request, "Not a valid request.")
+            return redirect("dashboard")   
+    except (ValueError, AttributeError, AdminProcessorContract.DoesNotExist) as e:
+        context["error_messages"] = str(e)
+    return render(request, 'contracts/admin_processor_contract_list.html', context)
+
+
+@login_required()
+def admin_customer_contract_view(request, pk):
+    context ={}
+    try:
+        # Superuser................
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role() or request.user.is_customer:
+            contract = AdminCustomerContract.objects.filter(id=pk).first()
+            documents = AdminCustomerContractDocuments.objects.filter(contract=contract)
+            context["contract"] = contract
+            context['customer'] = Customer.objects.filter(id=contract.customer_id).first().name
+            
+            context["documents"] = documents
+            return render (request, 'contracts/admin_customer_contract_view.html', context)
+        else:
+            return redirect('login') 
+    except Exception as e:
+        context["error_messages"] = str(e)
+        return render (request, 'contracts/admin_customer_contract_view.html', context)
+
+
+@login_required()
+def edit_admin_customer_contract(request, pk):
+    context = {}
+    try:
+        contract = get_object_or_404(AdminCustomerContract, id=pk)      
+        # Retrieve customers
+        customers = Customer.objects.all().values('id', 'name')        
+        # Retrieve the documents associated with this contract
+        documents = AdminCustomerContractDocuments.objects.filter(contract=contract)        
+
+        context = {
+            "contract": contract,
+            "customers": customers,
+            'selected_customer_id': contract.customer_id,            
+            "selected_crop": contract.crop,
+            'crop_type': contract.crop_type,
+            "contract_amount": contract.contract_amount,
+            "amount_unit": contract.amount_unit,
+            "contract_start_date": contract.contract_start_date,
+            "contract_period": contract.contract_period,
+            "status": contract.status,
+            "documents": documents,
+        }
+
+        if request.method == "POST":
+            if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+                # Handle updates by admin or superuser
+                selected_customer = request.POST.get('selected_customer')
+                selected_crop = request.POST.get('crop')
+                contract_amount = request.POST.get('contract_amount')
+                amount_unit = request.POST.get('amount_unit')
+                contract_start_date = request.POST.get('contract_start_date')
+                contract_period = request.POST.get('contract_period')
+                status = request.POST.get('status')
+                
+                if selected_customer:                    
+                    customer = Customer.objects.filter(id=int(selected_customer)).first()                   
+
+                    if not customer:
+                        context["error_messages"] = "Selected customer does not exist."
+                        return render(request, 'contracts/edit_admin_customer_contract.html', context)
+
+                    # Update contract details
+                    contract.customer_id = customer.id                    
+                    contract.crop = selected_crop
+                    contract.contract_amount = contract_amount
+                    contract.amount_unit = amount_unit
+                    contract.contract_start_date = contract_start_date
+                    contract.contract_period = contract_period
+                    contract.status = status
+                    contract.save()
+
+                    delete_document_ids = request.POST.getlist('delete_document_ids[]')
+                    print(delete_document_ids)
+                    for document_id in delete_document_ids:
+                        try:
+                            document = AdminCustomerContractDocuments.objects.get(id=document_id)
+                            document.delete()  # Delete the document from the database
+                        except AdminCustomerContractDocuments.DoesNotExist:
+                            pass
+
+                    document_ids =  request.POST.getlist('document_ids')
+                    for document_id in document_ids:
+                        document_status = f'document_status_{document_id}'
+                        if document_status in request.POST:                            
+                            document_stat = request.POST.get(document_status)                         
+                            
+                            document = AdminCustomerContractDocuments.objects.filter(id=document_id).first()
+                            document.document_status = document_stat  # Assign the file to the FileField
+                            document.save()                                
+                            
+                    document_names = request.POST.getlist('document_name[]')  
+                    if document_names:                     
+                        for i, name in enumerate(document_names):
+                            # Check if there's a corresponding document ID
+                            if i < len(document_ids):
+                                document_id = document_ids[i]
+                                # Update existing document
+                                document = AdminCustomerContractDocuments.objects.filter(id=document_id).first()
+                                if document:
+                                    document.name = name  # Update the name
+                                    document.save()
+                            else:
+                                # Create new document if the document ID does not exist
+                                AdminCustomerContractDocuments.objects.create(contract=contract, name=name)
+                return redirect('admin-customer-contract-list')
+                        
+            elif request.user.is_customer:
+                document_ids = request.POST.getlist('document_ids')        
+                for document_id in document_ids:
+                    file_field_name = f'document_file_{document_id}'
+                    
+                    if file_field_name in request.FILES:
+                        uploaded_file = request.FILES[file_field_name]                       
+                        
+                        # Handle the uploaded file
+                        try:
+                            document = AdminCustomerContractDocuments.objects.get(id=document_id)
+                            document.document = uploaded_file  # Assign the file to the FileField
+                            document.save()
+                            
+                        except AdminCustomerContractDocuments.DoesNotExist:
+                            # Handle the case where the document does not exist
+                            pass
+                contract.status = "Under Review"
+                contract.save()
+                return redirect('admin-customer-contract-list')
+        return render(request, 'contracts/edit_admin_customer_contract.html', context)
+    except Exception as e:
+        print(f"Exception occurred: {str(e)}")
+        context["error_messages"] = str(e)
+        return render(request, 'contracts/edit_admin_customer_contract.html', context)

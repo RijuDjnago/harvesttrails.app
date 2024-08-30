@@ -962,6 +962,7 @@ def add_outbound_shipment_processor3(request):
                             get_obj.save()
                     else:
                         pass
+ 
                     return redirect('outbound_shipment_list_processor3')
             return render(request, 'processor3/add_outbound_shipment_processor3.html', context)
         else:
@@ -1171,6 +1172,7 @@ def link_processor_three(request):
                                             action_by_email=action_by_email,action_by_role=action_by_role,log_details=log_details,
                                             log_device=log_device)
                         logtable.save()
+                        
                     return redirect('processor3_processor_management')                    
 
             return render(request, 'processor3/link_processor3.html', context)

@@ -80,6 +80,9 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_processor = models.BooleanField(default=False)
     is_processor2 = models.BooleanField(default=False)
     is_processor3 = models.BooleanField(default=False)
+    is_distributor = models.BooleanField(default=False)
+    is_warehouse_manager = models.BooleanField(default=False)
+    is_customer = models.BooleanField(default=False)
     created_date = models.DateTimeField(default=timezone.now)
     modified_date = models.DateTimeField(auto_now=True)
     is_staff = models.BooleanField(default=False)
@@ -205,6 +208,9 @@ class ShowNotification(models.Model):
     redirect_url = models.TextField(null=True, blank=True)
     added_data_time = models.DateTimeField(auto_now_add=True,null=True, blank=True)
 
+    def __str__(self):
+        return f"{self.notification_reason}-{self.msg}"
+
 # 05-04-23
 LOG_TYPE_CHOICES = (
     ("User", "User"),
@@ -247,4 +253,16 @@ class LogTable(models.Model):
     action_by_email = models.CharField(max_length=250, null=True, blank=True)
     action_by_role = models.CharField(max_length=250, null=True, blank=True)
     action_datetime = models.DateTimeField(auto_now_add=True,null=True, blank=True)
+
+
+class VersionUpdate(models.Model):
+    version = models.CharField(max_length=5, null=True, blank=True)
+    release_date = models.DateTimeField()
+    description = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.CharField(max_length=50, null=True, blank=True)
+    updated_users = models.ManyToManyField(User, blank=True)
+
+    def __str__(self):
+        return f"Version {self.version} : {self.release_date}"
     

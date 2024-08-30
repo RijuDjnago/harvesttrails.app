@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Create Admin Processor Contract{% endblock title %}
+
+{% block content %}
+{% include 'navbar.html' %}
+<div class="main-content">
+    {% include 'header.html' %}
+    <main>
+
+        <style>
+            .btn_remove_unic{
+                width: 41px;
+                height: 24px;
+                padding: 0;
+                display: inline-flex;
+                justify-content: center;
+                align-items: center;
+                font-size: 19px;
+            }
+        </style>
+
+        {% include '_alerts.html' %}
+        <span class="farm headingtop">Admin Processor Contract Add</span>
+        <div class="card farm-fields-container">
+            <div class="container-fluid">
+                <form id="contractForm" method="post" class="farm-fields-form" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="processor_id">Select Processor<span class="asteriskField">*</span></label>
+                                <select name="selected_processor" id="processor_id" class="form-control" required>
+                                    <option value="All">Select Processor</option>
+                                    {% with t1_processors=processor|dictsort:"type" %}
+                                        {% if t1_processors %}
+                                            <optgroup label="Select T1 Processor">
+                                            {% for pro in t1_processors %}
+                                                {% if pro.type == "T1" %}
+                                                    <option value="{{pro.id}}_{{pro.type}}">{{pro.entity_name}}</option>
+                                                {% endif %}
+                                            {% endfor %}
+                                            </optgroup>
+                                        {% endif %}
+                                    {% endwith %}
+
+                                    {% with t2_processors=processor|dictsort:"type" %}
+                                        {% if t2_processors %}
+                                            <optgroup label="Select T2 Processor">
+                                            {% for pro in t2_processors %}
+                                                {% if pro.type == "T2" %}
+                                                    <option value="{{pro.id}}_{{pro.type}}">{{pro.entity_name}}</option>
+                                                {% endif %}
+                                            {% endfor %}
+                                            </optgroup>
+                                        {% endif %}
+                                    {% endwith %} 
+                                    {% with t3_processors=processor|dictsort:"type" %}
+                                        {% if t3_processors %}
+                                            <optgroup label="Select T3 Processor">
+                                            {% for pro in t3_processors %}
+                                                {% if pro.type == "T3" %}
+                                                    <option value="{{pro.id}}_{{pro.type}}">{{pro.entity_name}}</option>
+                                                {% endif %}
+                                            {% endfor %}
+                                            </optgroup>
+                                        {% endif %}
+                                    {% endwith %}
+                                    {% with t4_processors=processor|dictsort:"type" %}
+                                        {% if t4_processors %}
+                                            <optgroup label="Select T4 Processor">
+                                            {% for pro in t4_processors %}
+                                                {% if pro.type == "T4" %}
+                                                    <option value="{{pro.id}}_{{pro.type}}">{{pro.entity_name}}</option>
+                                                {% endif %}
+                                            {% endfor %}
+                                            </optgroup>
+                                        {% endif %}
+                                    {% endwith %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>                         
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="crop">Crop</label>
+                                <select name="crop" id="crop" class="form-control" required>                                   
+                                    <option value="RICE">Rice</option>
+                                    <option value="WHEAT">Wheat</option>
+                                    <option value="PEANUT">Peanut</option>
+                                    <option value="BEANS">Beans</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="crop_type">Crop Type</label>
+                                <input type="text" name="crop_type" id="crop_type" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">                                
+                                <label for="contract_amount">Contract Amount</label>
+                                <div class="d-flex">
+                                <input type="number" name="contract_amount" id="contract_amount" class="textinput textInput form-control" style="margin-top:0; border-top-right-radius:0 !important; border-bottom-right-radius:0 !important" required>
+                                <select name="amount_unit" id="unitSelction" class="form-select" style="border-top-left-radius:0 !important; border-bottom-left-radius:0 !important; border-left:0; width:90px;" required>                                   
+                                    <option value="LBS">LBS</option>
+                                    <option value="MT">MT</option>
+                                </select>
+                            </div>
+                            </div>
+                        </div>                     
+                        
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="contract_start_date">Contract Start Date</label>
+                                <input type="date" name="contract_start_date" id="contract_start_date" class="form-control" required>
+                            </div>
+                        </div>                      
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="contract_period">Contract Period</label>
+                                <div class="d-flex">
+                                <input type="number" name="contract_period" id="contract_amount" class="textinput textInput form-control" style="margin-top:0; border-top-right-radius:0 !important; border-bottom-right-radius:0 !important"  required>
+                                <select name="contract_period_choice" id="unitSelction" class="form-control" style="border-top-left-radius:0 !important; border-bottom-left-radius:0 !important; border-left:0; width:100px;" required>                                   
+                                    <option value="Days">Days</option>
+                                    <option value="Months">Months</option>
+                                    <option value="Year">Year</option>
+                                </select>
+                            </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="status">Status</label>
+                                <select name="status" id="status" class="form-control" required>                                   
+                                    <option value="Contract Initiated">Contract Initiated</option>
+                                    <option value="Under Review">Under Review</option>
+                                    <option value="Active With Documentation Processing">Active With Documentation Processing</option>
+                                    <option value="Active With Documentation Completed">Active With Documentation Completed</option>
+                                    <option value="Completed">Completed</option>
+                                    <option value="Terminated">Terminated</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group d-flex align-items-center justify-content-center">
+                                <label for="required_documents" class="mb-0">Required Documents:</label>                               
+                                {% comment %} <div class="flex-grow-1"></div> {% endcomment %}
+                                <button type="button" class="btn btn-primary font-weight-bold btn-lg ms-2" id="add-document" style="width: 41px;height: 24px;padding: 0;display: inline-flex;justify-content: center;align-items: center;font-size: 19px;">+</button>                                
+                                <div class="flex-grow-1"></div>
+                            </div>                            
+                            <div id="document-container">
+                                
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="form-btn-row text-center text-md-end">
+                            <a href="{% url 'list-contract' %}" class="btn-close-cancel">Cancel</a>
+                            <button type="submit" class="btn-save-submit">Save</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+    {% include 'footer.html' %}
+</div>
+{% endblock %}
+{% block jquery %}
+<script>
+    document.getElementById('add-document').addEventListener('click', function () {
+        // Create a new div to hold the document name and remove button
+        var newDocumentRow = document.createElement('div');
+        newDocumentRow.classList.add('document-row', 'd-flex', 'align-items-center');
+        
+        // Create the document name input
+        var nameInput = document.createElement('input');
+        nameInput.setAttribute('type', 'text');
+        nameInput.setAttribute('name', 'document_name[]');
+        nameInput.setAttribute('placeholder', 'Document Name');
+        nameInput.classList.add('form-control', 'mb-2', 'mr-2','me-5');
+        
+        // Create the remove button
+        var removeButton = document.createElement('button');
+        removeButton.setAttribute('type', 'button');
+        removeButton.classList.add('btn', 'btn-danger', 'btn-remove','btn_remove_unic');
+        removeButton.textContent = '-';
+        
+        // Append the inputs and remove button to the new div
+        newDocumentRow.appendChild(nameInput);
+        newDocumentRow.appendChild(removeButton);
+        
+        // Append the new document row to the document container
+        document.getElementById('document-container').appendChild(newDocumentRow);
+        
+        // Attach event listener to the remove button
+        removeButton.addEventListener('click', function () {
+            newDocumentRow.remove();
+        });
+    });
+    
+    // Attach event listener to the initial remove button
+    document.querySelector('.btn-remove').addEventListener('click', function () {
+        this.parentElement.remove();
+    });
+</script>
+<script>
+    $('#Contracts-active').addClass('activeLink');
+  
+    $('#Contracts-down').addClass('down');
+    $('#Contracts-sub').show();
+  
+    $('#Add-Contracts').addClass('activeLink active-nav');
+  
+</script>
+
+{% endblock jquery %}

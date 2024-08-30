@@ -1,0 +1,91 @@
+{% extends "base.html" %} {% load static %} {% block title %} Add Processor {% endblock title %} 
+
+{% block extrahead %}
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-Y3EWVPF7PQ"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-Y3EWVPF7PQ');
+</script>
+{% endblock extrahead %}
+
+
+{% block content %} {% include 'navbar.html' %}
+<div class="main-content">
+    {% include 'header.html' %} {% load crispy_forms_tags %}
+  <main>
+    {% include '_alerts.html' %}
+        <span class="farm headingtop">Add Warehouse</span>
+        <div class="card farm-fields-container">
+            <div class="container-fluid">
+                <form method="post" class="farm-fields-form">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-4">
+                            {{ form.name|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.location|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.latitude|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.longitude|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.status|as_crispy_field }}
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div>
+                                <label for="user_name">User Name<span class="asteriskField">*</span></label>
+                                <input type="text" name="user_name" id="user_name" class="textinput textInput form-control" required>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div>
+                                <label for="user_email">User Email<span class="asteriskField">*</span></label>
+                                <input type="email" name="user_email" id="user_email" class="textinput textInput form-control" required>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div>
+                                <label for="user_phone">User Phone</label>
+                                <input type="number" name="user_phone" id="user_phone" class="textinput textInput form-control">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div>
+                                <label for="user_fax">User Fax</label>
+                                <input type="number" name="user_fax" id="user_fax" class="textinput textInput form-control">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="form-btn-row">
+                            <a href="{% url 'list-warehouse' %}" class="btn-close-cancel btn-space">Cancel</a>
+                            <input type="submit" class="btn-save-submit" value="Save">
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+    {% include 'footer.html' %}
+</div>
+<script>
+    $('#Warehouse-active').addClass('activeLink');
+  
+    $('#Warehouse-down').addClass('down');
+    $('#Warehouse-sub_unic').show();
+
+    $('#warehouse-management').addClass('activeLink active-nav');
+
+</script>
+{% endblock %}
