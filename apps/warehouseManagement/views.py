@@ -691,7 +691,7 @@ def create_processor_shipment(request):
                         outbound = ProcessorWarehouseShipment.objects.create(contract=contract, processor_id=processor_id, processor_type=processor_type, processor_entity_name=contract.processor_entity_name,
                                                                                 processor_sku_list=[selected_sku_id],carrier_type=context.get('carrier_type'),outbound_type=context.get('outbound_type'),
                                                                                 purchase_order_name=context.get('purchase_order_name'), purchase_order_number=context.get('purchase_order_number'), lot_number=context.get('lot_number'),
-                                                                                gross_weight=gross_weight,net_weight=net_weight,weight_unit=context.get('amount_unit'), contract_weight_left=contract_weight_left,
+                                                                                gross_weight=gross_weight,net_weight=net_weight,weight_unit=context.get('amount_unit'),ship_quantity=data.get('ship_quantity'), contract_weight_left=contract_weight_left,
                                                                                 status= data.get('status'), customer_id=customer_id, warehouse_id=warehouse_id, customer_name=customer_name, warehouse_name=warehouse_name)
                         carrier_id = data.get('carrier_id')
                         if carrier_id:
@@ -809,7 +809,7 @@ def create_processor_shipment(request):
                         outbound = ProcessorWarehouseShipment.objects.create(contract=contract, processor_id=processor_id, processor_type=processor_type, processor_entity_name=contract.processor_entity_name,
                                                                                 processor_sku_list=[selected_sku_id],carrier_type=context.get('carrier_type'),outbound_type=context.get('outbound_type'),
                                                                                 purchase_order_name=context.get('purchase_order_name'), purchase_order_number=context.get('purchase_order_number'), lot_number=context.get('lot_number'),
-                                                                                gross_weight=gross_weight,net_weight=net_weight,weight_unit=context.get('amount_unit'), contract_weight_left=contract_weight_left,
+                                                                                gross_weight=gross_weight,net_weight=net_weight,weight_unit=context.get('amount_unit'),ship_quantity=data.get('ship_quantity'), contract_weight_left=contract_weight_left,
                                                                                 status= data.get('status'), customer_id=customer_id, warehouse_id=warehouse_id, customer_name=customer_name, warehouse_name=warehouse_name)
                         carrier_id = data.get('carrier_id')
                         if carrier_id:
@@ -926,11 +926,11 @@ def create_processor_shipment(request):
                         outbound = ProcessorWarehouseShipment.objects.create(contract=contract, processor_id=processor_id, processor_type=processor_type, processor_entity_name=contract.processor_entity_name,
                                                                                 processor_sku_list=[selected_sku_id],carrier_type=context.get('carrier_type'),outbound_type=context.get('outbound_type'),
                                                                                 purchase_order_name=context.get('purchase_order_name'), purchase_order_number=context.get('purchase_order_number'), lot_number=context.get('lot_number'),
-                                                                                gross_weight=gross_weight,net_weight=net_weight,weight_unit=context.get('amount_unit'), contract_weight_left=contract_weight_left,
+                                                                                gross_weight=gross_weight,net_weight=net_weight,weight_unit=context.get('amount_unit'),ship_quantity=data.get('ship_quantity'), contract_weight_left=contract_weight_left,
                                                                                 status= data.get('status'), customer_id=customer_id, warehouse_id=warehouse_id, customer_name=customer_name, warehouse_name=warehouse_name)
                         carrier_id = data.get('carrier_id')
                         if carrier_id:
-                            CarrierDetails.objects.create(shipment=outbound, carrier_id=int(id))
+                            CarrierDetails.objects.create(shipment=outbound, carrier_id=carrier_id)
                         
                         files = request.FILES.getlist('files')
                         for file in files:
@@ -1104,6 +1104,191 @@ def list_processor_shipment(request):
             return redirect("dashboard")   
     except (ValueError, AttributeError, AdminProcessorContract.DoesNotExist) as e:
         context["error_messages"] = str(e)
-    return render(request, 'distributor/list_outbound.html', context)
+        return render(request, 'distributor/list_outbound.html', context)
 
 
+def processor_shipment_view(request, pk):
+    context = {}
+    try:
+        shipment = ProcessorWarehouseShipment.objects.filter(id=pk).first()
+        documents = ProcessorWarehouseShipmentDocuments.objects.filter(shipment=shipment)
+        carrier_details = CarrierDetails.objects.filter(shipment=shipment)
+        context["shipment"] = shipment
+        context["documents"] = documents
+        context["carriers"] = carrier_details
+        return render (request, 'distributor/view_outbound.html', context)
+    except (ValueError, AttributeError, AdminProcessorContract.DoesNotExist) as e:
+        context["error_messages"] = str(e)
+        return render(request, 'distributor/view_outbound.html', context)
+    
+def edit_processor_shipment(request, pk):
+    context = {}
+    # try:
+    if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+        check_shipment = ProcessorWarehouseShipment.objects.filter(id=pk)
+        
+        shipment = check_shipment.first()
+        gross_weight_per_unit = float(shipment.gross_weight) / int(shipment.ship_quantity)
+        net_weight_per_unit = float(shipment.net_weight) / int(shipment.ship_quantity)
+        context['gross_weight'] = gross_weight_per_unit
+        context['net_weight'] = net_weight_per_unit
+        carrier = CarrierDetails.objects.filter(shipment=shipment).first()
+        if carrier:
+            context['carrier_id'] = carrier.carrier_id
+        context["files"] = ProcessorWarehouseShipmentDocuments.objects.filter(shipment=shipment)
+        context["shipment"] = shipment
+        selected_contract = shipment.contract               
+                                
+        processor_id = shipment.contract.processor_id
+        processor_type = shipment.contract.processor_type
+        destination_type = 'customer' if shipment.customer_id is not None else 'warehouse'
+        if destination_type == 'customer':
+            destination_list = Customer.objects.all().values('id','name')
+        else:
+            destination_list = Warehouse.objects.all().values('id','name')
+        destination_id = shipment.warehouse_id if shipment.warehouse_id not in [None,'',' ', 'null'] else shipment.customer_id
+        print(destination_id)
+        context.update({           
+            "milled_value": "None",
+            "selected_processor_sku_id_list":shipment.processor_sku_list,
+            "selected_destination": destination_type,
+            "warehouse_name" : shipment.warehouse_name,
+            "customer_name": shipment.customer_name ,             
+            "contract":selected_contract,                        
+            "selected_processor_id": processor_id,
+            'destination_list':destination_list,
+            "destination_id" : destination_id           
+        })
+        
+        if request.method == "POST":
+            data = request.POST
+            button_value = request.POST.getlist('remove_files')                
+            if button_value:
+                for file_id in button_value:
+                    try:
+                        file_obj = ProcessorWarehouseShipmentDocuments.objects.get(id=file_id)
+                        file_obj.delete()
+                    except ProcessorWarehouseShipmentDocuments.DoesNotExist:
+                        pass          
+            selected_sku_id = data.get('sender_sku_id')
+            destination_type = data.get('selected_destination')
+            print(data.get('border_receive_date'))
+            context.update({                    
+                "carrier_type": data.get('carrier_type'),                    
+                "outbound_type": data.get('outbound_type'),
+                "purchase_order_name":data.get('purchase_order_name'),
+                "purchase_order_number": data.get('purchase_order_number'),
+                "lot_number": data.get('lot_number'),
+                "selected_processor_sku_id_list": [selected_sku_id],
+                "selected_destination": destination_type,
+                "weight":data.get('weight'),
+                "gross_weight":data.get('gross_weight'),
+                "net_weight":data.get('net_Weight'),
+                "ship_quantity":data.get('ship_quantity'),
+                "status":data.get('status'),
+                "amount_unit":data.get('amount_unit') ,   
+                "final_receive_date": data.get('final_receive_date'),
+                "border_receive_date" : data.get('border_receive_date'),
+                "border_leaving_date": data.get('border_leaving_date'),
+                "final_leaving_date" : data.get('final_leaving_date'),
+                "border_receive_date2": data.get('border_receive_date2'),
+                "border_leaving_date2" : data.get('border_leaving_date2'),
+                "processor_receive_date": data.get('processor_receive_date')             
+                
+            })
+            print(data.get('border_receive_date'))
+            if destination_id:
+                context["destination_id"] = int(destination_id)
+            if processor_id and not data.get("save"): 
+            
+                if selected_sku_id:
+                    context["milled_value"] =  calculate_milled_volume(int(processor_id), processor_type, selected_sku_id)
+                    context["selected_sku"] = selected_sku_id
+                else:
+                    context["milled_value"] =  calculate_milled_volume(int(processor_id), processor_type, selected_sku_id)
+                context["sender_sku_id_list"] = get_sku_list(int(processor_id),processor_type)["data"]
+                if destination_type == 'warehouse':
+                    context['destination_list'] = Warehouse.objects.all().values('id','name')
+                if destination_type == 'customer':
+                    context['destination_list'] = Customer.objects.all().values('id','name')
+                return render(request, 'distributor/create_outbound.html', context)
+            else:
+                if destination_type == 'warehouse':
+                    warehouse_id = Warehouse.objects.get(id=int(context.get('destination_id'))).id
+                    warehouse_name = Warehouse.objects.get(id=int(context.get('destination_id'))).name
+                    customer_id = None
+                    customer_name = None
+                else:
+                    warehouse_id = None
+                    warehouse_name = None
+                    customer_id = Customer.objects.get(id=int(context.get('destination_id'))).id
+                    customer_name = Customer.objects.get(id=int(context.get('destination_id'))).name
+
+                if data.get('carrier_type') == 'Truck/Trailer':
+                    gross_weight = float(data.get('gross_weight'))* int(data.get('ship_quantity'))
+                    if data.get('net_weight') not in [None, 'null', ' ', '']:
+                        print('00000')
+                        net_weight = float(data.get('net_weight')) * int(data.get('ship_quantity'))
+                    else:
+                        context["error_messages"] = "Please give net weight."
+                        return render(request, 'distributor/create_outbound.html', context)
+                elif data.get('carrier_type') == 'Rail Car':
+                    gross_weight = 0
+                    if data.get('weight') not in [None, 'null', ' ', '']:
+                        net_weight = float(context.get('weight'))
+                    else:
+                        context["error_messages"] = "Please give weight."
+                        return render(request, 'distributor/create_outbound.html', context)
+                
+                if shipment.contract.amount_unit == context.get('amount_unit'):
+                    contract_weight_left = float(shipment.contract.contract_amount) - float(net_weight)
+                else:
+                    if shipment.contract.amount_unit == "LBS" and context.get('amount_unit') == "MT":
+                        net_weight_lbs = float(net_weight) * 2204.62
+                        contract_weight_left = float(shipment.contract.contract_amount) - net_weight_lbs 
+                    else:
+                        net_weight_mt = float(net_weight) * 0.000453592
+                        contract_weight_left = float(shipment.contract.contract_amount) - net_weight_mt 
+                
+                outbound = check_shipment.update(contract=shipment.contract, processor_id=processor_id, processor_type=processor_type, processor_entity_name=shipment.contract.processor_entity_name,
+                                                                        processor_sku_list=[selected_sku_id],carrier_type=context.get('carrier_type'),outbound_type=context.get('outbound_type'),
+                                                                        purchase_order_name=context.get('purchase_order_name'), purchase_order_number=context.get('purchase_order_number'), lot_number=context.get('lot_number'),
+                                                                        gross_weight=gross_weight,net_weight=net_weight,weight_unit=context.get('amount_unit'), ship_quantity=data.get('ship_quantity'), contract_weight_left=contract_weight_left,
+                                                                        status= data.get('status'), customer_id=customer_id, warehouse_id=warehouse_id, customer_name=customer_name, warehouse_name=warehouse_name,
+                                                                        )
+                if data.get('border_receive_date') not in [None, '', ' ', 'null']:
+                    border_receive_date = data.get('border_receive_date')
+                    shipment.border_receive_date= border_receive_date
+                if data.get('border_leaving_date') not in [None, '', ' ', 'null']:
+                    border_leaving_date = data.get('border_leaving_date')
+                    shipment.border_leaving_date=border_leaving_date
+                if data.get('final_receive_date') not in [None, '', ' ', 'null']:
+                    final_receive_date = data.get('final_receive_date')
+                    shipment.distributor_receive_date=final_receive_date
+                if data.get('final_leaving_date') not in [None, '', ' ', 'null']:
+                    final_leaving_date = data.get('final_leaving_date')
+                    shipment.distributor_leaving_date=final_leaving_date
+                if data.get('border_receive_date2') not in [None, '', ' ', 'null']:
+                    border_receive_date2 = data.get('border_receive_date2')
+                    shipment.border_back_receive_date=border_receive_date2
+                if data.get('border_leaving_date2') not in [None, '', ' ', 'null']:
+                    border_leaving_date2 = data.get('border_leaving_date2')                    
+                    shipment.border_back_leaving_date= border_leaving_date2, 
+                if data.get('processor_receive_date') not in [None, '', ' ', 'null']:
+                    processor_receive_date = data.get('processor_receive_date')
+                    shipment.processor_receive_date=processor_receive_date
+                
+                shipment.save()
+                carrier_id = data.get('carrier_id')
+                if carrier_id:
+                    CarrierDetails.objects.create(shipment=shipment, carrier_id=carrier_id)
+                
+                files = request.FILES.getlist('files')
+                for file in files:
+                    ProcessorWarehouseShipmentDocuments.objects.create(shipment=shipment, document_file=file)
+            return redirect('list-processor-shipment')
+        return render(request, 'distributor/edit_outbound.html', context)
+                        
+    # except (ValueError, AttributeError, AdminProcessorContract.DoesNotExist) as e:
+    #     context["error_messages"] = str(e)
+        return render(request, 'distributor/edit_outbound.html', context)

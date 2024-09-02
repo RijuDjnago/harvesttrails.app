@@ -194,10 +194,9 @@ class AdminProcessorContract(models.Model):
                 self.end_date = self.contract_start_date + timedelta(days=self.contract_period * 30)  # Approximate to 30 days per month
             elif self.contract_period_choice == "Year":
                 self.end_date = self.contract_start_date + timedelta(days=self.contract_period * 365)  # Approximate to 365 days per year
-        
+
         if self._state.adding and self.left_amount is None:
             self.left_amount = self.contract_amount
-        
         super().save(*args, **kwargs)   
 
     def __str__(self):

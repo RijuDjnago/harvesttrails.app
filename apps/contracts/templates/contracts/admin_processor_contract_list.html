@@ -9,7 +9,14 @@
     {% include 'header.html' %}
     <main>
         {% include '_alerts.html' %}
+        <div class="page-title-with-or-without-btn">
         <span class="farm headingtop">Admin Processor Contract List</span>
+        {% if request.user.is_superuser %}
+            <div class="flex-header-btn">
+                <a href="{% url 'add-contract' %}" class="btn-close-cancel">Create Contract</a>
+            </div>
+            {% endif %}
+        </div>
         <div class="card farm-fields-container">
             <form action="" method="get" class="">
                 <div class="card card-padding">
