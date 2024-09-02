@@ -1210,7 +1210,7 @@ def edit_admin_processor_contract(request, pk):
 def admin_customer_contract_create(request):
     context = {}
     try:
-        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role() or request.user.is_distributor:
             # Get customers and add to context
             customers = Customer.objects.all().values('id', 'name')          
             context["customers"] = customers
@@ -1392,7 +1392,7 @@ def edit_admin_customer_contract(request, pk):
         }
 
         if request.method == "POST":
-            if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+            if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role() or request.user.is_distributor:
                 # Handle updates by admin or superuser
                 selected_customer = request.POST.get('selected_customer')
                 selected_crop = request.POST.get('crop')

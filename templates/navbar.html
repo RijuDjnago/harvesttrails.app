@@ -253,10 +253,7 @@
                   {% if request.user.is_superuser or request.user.is_customer %}
                      <li><a id="Customer-Contract-List" href="{% url 'admin-customer-contract-list' %}">Admin-Customer Contracts</a></li>
                   {% endif %}
-                  {% if 'Contracts' in request.user.get_role_perm or request.user.is_superuser %}
-                     <li><a id="Add-Contracts" href="{% url 'add-contract' %}">Add Admin-Processor Contract</a></li>
-                     <li><a id="Add-Customer-Contract" href="{% url 'add-admin-customer-contract' %}">Add Admin-Customer Contract</a></li>
-                  {% endif %}
+                  
                   {% comment %} <li><a id="Signed-Contracts" href="{% url 'contract-view' %}">View Contract Details</a></li> {% endcomment %}
                </ul>
          </li>
@@ -428,15 +425,14 @@
              </span>
          </a>           
          <ul id="Warehouse-sub_unic" class="dropdown-1014" style="display: none;">
-
-             <li><a id="customer-management" href="{% url 'list-customer' %}">Customer Management</a></li>
-             <li><a id="distibutor-management" href="{% url 'list-distributor' %}">Distibutor Management</a></li>
+            {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role %}
+            <li><a id="customer-management" href="{% url 'list-customer' %}">Customer Management</a></li>
+             <li><a id="distibutor-management" href="{% url 'list-distributor' %}">Distributor Management</a></li>
              <li><a id="warehouse-management" href="{% url 'list-warehouse' %}">Warehouse Management</a></li>
-
-             <li><a id="Processor-Shipment" href="{% url 'list-processor-shipment' %}">Processor Shipment</a></li>
-             {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or request.user.is_processor or request.user.is_processor2 %}
-             <li><a id="Processor-Shipment-Add" href="{% url 'add-processor-shipment' %}">Add Processor Shipment</a></li>
              {% endif %}
+             <li><a id="Processor-Shipment" href="{% url 'list-processor-shipment' %}">Processor Shipment</a></li>
+             
+             
          </ul>
      </li>
       {% endif %}
@@ -480,20 +476,10 @@
          <!-- 16-02-23 -->
          {% if request.user.is_authenticated %}
          {% if request.user.grower or request.user.is_consultant or request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
-            <!--<li>
-               <a id="Chat-Section" href="{% url 'chat_ag' %}">
-                     <span class="rightimg">
-                        <i class="fas fa-comment-dots"></i>
-                     </span>
-                     <&nbsp;>Chat&nbsp;( 
-                     <span >0</span> )
-               </a>
-            </li>-->
-            <li><a id="Chat-Section" href="{% url 'chat_ag' %}"> <span class="rightimg"><i class="fas fa-comment-dots"></i></span>
-               <span>Chat(0)</span></a>
-            </li>
+         <li><a id="Chat-Section" href="{% url 'chat_ag' %}"> <span class="rightimg"><i class="fas fa-comment-dots"></i></span>
+            <span>Chat</span>&nbsp;( <span id="show-chat-noti" style="color: red;">0</span> )</a>
+         </li>
          {% endif %}
-
          {% endif %}
          <!-- 16-02-23 -->
 

@@ -22,7 +22,7 @@ class AdminProcessorContractSignatureInline(admin.TabularInline):
 
 @admin.register(models.AdminProcessorContract)
 class AdminProcessorContractAdmin(admin.ModelAdmin):
-    list_display = ('processor_id', 'left_amount','processor_type', 'crop', 'contract_amount', 'amount_unit', 'total_price', 'contract_start_date', 'end_date', 'status', 'created_by', 'created_at')
+    list_display = ('processor_id', 'processor_type', 'crop', 'contract_amount', 'amount_unit', 'total_price', 'contract_start_date', 'end_date', 'status', 'created_by', 'created_at')
     search_fields = ('processor_id', 'crop', 'status', 'created_by__username')
     list_filter = ('status', 'processor_type', 'crop', 'amount_unit')
     readonly_fields = ('created_at', 'updated_at', 'end_date')

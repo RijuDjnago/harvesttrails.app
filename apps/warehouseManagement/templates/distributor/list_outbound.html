@@ -9,8 +9,16 @@
     {% include 'header.html' %}
     <main>
         {% include '_alerts.html' %}
-        <span class="farm headingtop">Processor Outbound List</span>
-        {% comment %} <div class="card farm-fields-container"> {% endcomment %}
+        <div class="page-title-with-or-without-btn">
+            <span class="farm headingtop">Processor Contract Shipment Management</span>
+            <!-- Create button for add-processor-->
+            {% if request.user.is_superuser or request.user.is_processor or request.user.is_processor2 %}
+            <div class="flex-header-btn">
+                <a href="{% url 'add-processor-shipment' %}" class="btn-close-cancel">Send Shipment</a>
+            </div>
+            {% endif %}
+        </div>
+        <div class="card farm-fields-container">
             <form method="GET">
                 <div class="card card-padding">
                     <div class="main-simple-table-with-search col-12">
@@ -116,17 +124,17 @@
                                                 <td>{{item.processor_entity_name}}</td>
                                                 <td>{{item.carrier_type}}</td>
                                                 <td>{{item.outbound_type}}</td>
-                                                <td>{{item.date_pulled}}</td>
+                                                <td>{{item.date_pulled|date:'Y-m-d'}}</td>
                                                 <td>{{item.purchase_order_name}}</td>                                                
                                                 <td>{{item.lot_number}}</td>
                                                 <td>{{item.net_weight}} {{item.weight_unit}}</td>
-                                                <td>{% if item.distributor_receive_date %}{{item.distributor_receive_date}}{% else %} - {%endif %}</td>
+                                                <td>{% if item.distributor_receive_date %}{{item.distributor_receive_date|date:'Y-m-d'}}{% else %} - {%endif %}</td>
                                                 <td>{% if item.warehouse_name %}{{item.warehouse_name}}{% else %}{{item.customer_name}}{% endif %}</td>
                                                 <td>{{item.status}}</td>
                                                 <td class="backk action-td rmv-bd">
                                                     <ul>
-                                                        <li><a href="#" class="update-btn-link" alt="view contract details" title="view contract details"> <span class="fas fa-eye"></span></a></li>
-                                                        <li><a href="#" class="update-btn-link" alt="update contract details" title="{%  if request.user.is_superuser %}update contract details {% endif %} {% if request.user.is_processor or request.user.is_processor2 %} upload documents {% endif %}">{% if request.user.is_superuser %}<span class="fas fa-edit">{% endif %}{% if request.user.is_processor or request.user.is_processor2 %}<span class="fas fa-file-upload">{% endif %}</span></a></li>
+                                                        <li><a href="{% url 'view-processor-shipment' item.id %}" class="update-btn-link" alt="view contract details" title="view contract details"> <span class="fas fa-eye"></span></a></li>
+                                                        <li><a href="{% url 'edit-processor-shipment' item.id %}" class="update-btn-link" alt="update contract details" title="{%  if request.user.is_superuser %}update contract details {% endif %} {% if request.user.is_processor or request.user.is_processor2 %} upload documents {% endif %}">{% if request.user.is_superuser %}<span class="fas fa-edit">{% endif %}{% if request.user.is_processor or request.user.is_processor2 %}<span class="fas fa-file-upload">{% endif %}</span></a></li>
                                                     </ul>
                                                 </td>
                                             </tr>
@@ -173,7 +181,7 @@
                     </div>
                 </div>
             </form>
-        {% comment %} </div> {% endcomment %}
+        </div>
     </main>
     {% include 'footer.html' %}
 </div>

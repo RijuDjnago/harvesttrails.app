@@ -125,6 +125,13 @@ class WarehouseStock(models.Model):
     def __str__(self):
         return f'Order - {self.order.invoice_request_id} | product- {self.product_name} | stock- {self.final_stock}'
 
+status_choices = (
+    ('Released','Released'),
+    ('At Border', 'At Border'),
+    ('Crossed Border','Crossed Border'),
+    ('Received','Received'),
+    ('Released/Received','Released/Received'),
+)
 
 class ProcessorWarehouseShipment(models.Model):
     contract = models.ForeignKey(AdminProcessorContract, on_delete=models.CASCADE, null=True, blank=True, related_name='contract_delivery')
@@ -149,18 +156,18 @@ class ProcessorWarehouseShipment(models.Model):
     weight_unit = models.CharField(max_length=10, choices=Unit_choice)
     contract_weight_left = models.CharField(max_length=255, null=True, blank=True)   
 
-    border_receive_date = models.DateTimeField(null=True, blank=True)
-    border_leaving_date = models.DateTimeField(null=True, blank=True)
+    border_receive_date = models.DateField(null=True, blank=True)
+    border_leaving_date = models.DateField(null=True, blank=True)
 
-    distributor_receive_date = models.DateTimeField(null=True, blank=True)
-    distributor_leaving_date = models.DateTimeField(null=True, blank=True)
+    distributor_receive_date = models.DateField(null=True, blank=True)
+    distributor_leaving_date = models.DateField(null=True, blank=True)
 
-    border_back_receive_date = models.DateTimeField(null=True, blank=True)
-    border_back_leaving_date = models.DateTimeField(null=True, blank=True)
+    border_back_receive_date = models.DateField(null=True, blank=True)
+    border_back_leaving_date = models.DateField(null=True, blank=True)
 
-    processor_receive_date = models.DateTimeField(null=True, blank=True)
+    processor_receive_date = models.DateField(null=True, blank=True)
 
-    status = models.CharField(max_length=255, null=True, blank=True)
+    status = models.CharField(max_length=255, choices=status_choices, null=True, blank=True)
     
     distributor_id = models.CharField(max_length=255, null=True, blank=True)
     distributor_entity_name = models.CharField(max_length=255, null=True, blank=True)
@@ -170,7 +177,7 @@ class ProcessorWarehouseShipment(models.Model):
     warehouse_id = models.CharField(max_length=255, null=True, blank=True)
     warehouse_name = models.CharField(max_length=255, null=True, blank=True)
     warehouse_order_id = models.CharField(max_length=255, null=True, blank=True)
-    
+
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
 
@@ -182,7 +189,7 @@ class ProcessorWarehouseShipment(models.Model):
             AdminProcessorContract.objects.filter(id=self.contract.id).update(left_amount=left_amount_int)
             
             super().save(*args, **kwargs)
-
+   
 
     def __str__(self):
         return f'{self.processor_entity_name} - {self.contract.crop}'
