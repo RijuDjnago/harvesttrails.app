@@ -425,11 +425,15 @@
              </span>
          </a>           
          <ul id="Warehouse-sub_unic" class="dropdown-1014" style="display: none;">
-            {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role %}
-            <li><a id="customer-management" href="{% url 'list-customer' %}">Customer Management</a></li>
-             <li><a id="distibutor-management" href="{% url 'list-distributor' %}">Distributor Management</a></li>
+            {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or request.user.is_distributor %}
+            <li><a id="distibutor-management" href="{% url 'list-distributor' %}">Distributor Management</a></li>
+            {% endif %}
+            {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or request.user.is_warehouse_manager or request.user.is_distributor %}
              <li><a id="warehouse-management" href="{% url 'list-warehouse' %}">Warehouse Management</a></li>
              {% endif %}
+            {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or request.user.is_customer %}
+            <li><a id="customer-management" href="{% url 'list-customer' %}">Customer Management</a></li>
+             {% endif %}             
              <li><a id="Processor-Shipment" href="{% url 'list-processor-shipment' %}">Processor Shipment</a></li>
              
              

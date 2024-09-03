@@ -46,6 +46,21 @@
         <span class="farm headingtop">Edit Shipment</span>
         <div class="card farm-fields-container">
             {% include '_alerts.html' %}
+            <nav aria-label="breadcrumb m-5">
+                {% if error_messages %}
+                <div id="alertMessage" class="alert alert-warning alert-dismissible fade show" role="alert">
+                    <strong>{{error_messages}}</strong>  
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>                         
+                  </div> 
+                  <script>                            
+                    setTimeout(function() {
+                        document.getElementById('alertMessage').style.display = 'none';
+                    }, 5000);
+                </script>                          
+                  {% endif %}
+            </nav>
             <div class="container-fluid">
                 <form method="post" class="farm-fields-form" enctype="multipart/form-data">
                     {% csrf_token %}                   
@@ -228,7 +243,7 @@
                         <div class="col-md-4">
                             <div class="form-group">
                                 <label for="status">Status</label>                                
-                                <select name="status" id="unitSelction" class="form-select" style="width: 100%;padding-left:10px ;" required>                                   
+                                <select name="status" id="status" class="form-select" style="width: 100%;padding-left:10px ;" required>                                   
                                     <option value="Released"{% if shipment.status == 'Released' %}selected {% endif %}>Released</option>
                                     <option value="At Border"{% if shipment.status == 'At Border' %}selected {% endif %}>At Border</option>
                                     <option value="Crossed Border"{% if shipment.status == 'Crossed Border' %}selected {% endif %}>Crossed Border</option>
@@ -308,6 +323,18 @@
                         </div>
                     </div>
                     <div class="row">
+                        <h2 style="background-color: #d7d5d5; color: #0b6c39; font-size: 22px; font-weight: 600; margin: 20px 0; padding: 12px 0; text-align: center">Updated Details</h2>
+                        <div id="field_details_container" class="row">
+                            <!-- Initial field_name and description fields -->                            
+                            <div class="col-md-12 mb-2">
+                                <div class="form-group">
+                                    <label for="description_1">Description</label>
+                                    <textarea id="description_1" name="description" class="form-control" placeholder="Description"></textarea>
+                                </div>
+                            </div>                            
+                        </div>
+                    </div>
+                    <div class="row">
                         <div class="form-btn-row">
                             <a href="{% url 'list-processor-shipment' %}" class="btn-close-cancel btn-space">Cancel</a>
                             <input style="display: none;" id="hide_btn1" type="submit" class="btn-save-submit"
@@ -316,6 +343,7 @@
                             <input type="submit" name="save" class="btn-save-submit" value="Save" onclick="activityButton1()">
                         </div>
                     </div>
+                    
                     <script>
                         document.addEventListener("DOMContentLoaded", function() {
                             function handleRemoveButtonClick(button) {
@@ -513,6 +541,7 @@
         toggleFields();
     });
 </script>
+
 <script>
     $('#Warehouse-active').addClass('activeLink');
   

@@ -179,7 +179,17 @@ class ProcessorWarehouseShipment(models.Model):
     warehouse_order_id = models.CharField(max_length=255, null=True, blank=True)
 
     def save(self, *args, **kwargs):
+        is_new = self.pk is None
+
         super().save(*args, **kwargs)
+
+        # Log creation only if the instance is new
+        if is_new:
+            log_entry = ProcessorShipmentLog(
+                shipment=self,                
+                description=f"A new shipment was created from processor '{self.processor_entity_name}' of {self.net_weight}{self.weight_unit} under contract '{self.contract}'."
+            )
+            log_entry.save()
 
         if self.contract and self.contract_weight_left:
             # Convert contract_weight_left to float first, then to int
@@ -202,7 +212,7 @@ class ProcessorWarehouseShipmentDocuments(models.Model):
     uploaded_at = models.DateTimeField(auto_now_add=True)   
 
     def __str__(self):
-        return f'Shipment documents for {self.document_name}'
+        return f'Shipment documents for {self.shipment.id}'
     
 class CarrierDetails(models.Model):
     shipment = models.ForeignKey(ProcessorWarehouseShipment, on_delete=models.CASCADE, related_name='shipment_carrier')
@@ -213,3 +223,10 @@ class CarrierDetails(models.Model):
         return self.shipment.carrier_type
 
 
+class ProcessorShipmentLog(models.Model):
+    shipment = models.ForeignKey(ProcessorWarehouseShipment, on_delete=models.CASCADE, related_name='shipment_log')    
+    description = models.TextField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f'Shipment - {self.shipment}, contract - {self.shipment.contract.secret_key}'

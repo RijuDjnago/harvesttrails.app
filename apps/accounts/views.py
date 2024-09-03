@@ -814,6 +814,9 @@ def dashboard(request):
     ad_grower_payment_paid_cotton = ''
     ad_premium_paid_rice = ''
     ad_premium_paid_cotton = ''
+    contract_count = None
+    warehouse_count = None
+    distributor_warehouses = None
     # recent_users = User.objects.all().order_by('-id')[:10]
     
     
@@ -858,26 +861,35 @@ def dashboard(request):
         pp_grower_payment_paid_cotton = f"$ {sum_grower_payment_paid_cotton}"
         pp_premium_paid_rice = f"$ {sum_grower_premium_paid_rice}"
         pp_premium_paid_cotton = f"$ {sum_grower_premium_paid_cotton}"
+        contract_count = AdminProcessorContract.objects.filter(processor_id=processor.id, processor_type='T1').count()
 
     if request.user.is_processor2 :
         user_email = request.user.email
         p2_user = ProcessorUser2.objects.get(contact_email=user_email)
         processor2 = Processor2.objects.get(id=p2_user.processor2_id)
+        contract_count = AdminProcessorContract.objects.filter(processor_id=processor2.id, processor_type=processor2.processor_type.all().first().type_name).count()
 
     if request.user.is_distributor :
         user_email = request.user.email
         distributor_user = DistributorUser.objects.get(contact_email=user_email)
         distributor = Distributor.objects.get(id=distributor_user.distributor_id)
+        distributor_warehouses = distributor.warehouse.all().values('name')
+        contract_count = AdminProcessorContract.objects.all().count()
+        warehouse_count = Warehouse.objects.all().count()
 
     if request.user.is_warehouse_manager :
         user_email = request.user.email
         warehouse_user = WarehouseUser.objects.get(contact_email=user_email)
         warehouse = Warehouse.objects.get(id=warehouse_user.warehouse_id)
+        contract_count = AdminProcessorContract.objects.all().count()
+        warehouse_count = Warehouse.objects.all().count()
 
     if request.user.is_customer :
         user_email = request.user.email
         customer_user = CustomerUser.objects.get(contact_email=user_email)
         customer = Customer.objects.get(id=customer_user.customer_id)
+        contract_count = AdminProcessorContract.objects.all().count()
+        warehouse_count = Warehouse.objects.all().count()
 
     if request.user.is_consultant:
         consultant_id = Consultant.objects.get(
@@ -1299,7 +1311,7 @@ def dashboard(request):
         'processor2':processor2,
         'distributor': distributor,
         'distributor_user':distributor_user,
-        'warhouse_user':warehouse_user,
+        'warehouse_user':warehouse_user,
         'warehouse':warehouse,
         'customer_user':customer_user,
         'customer':customer,
@@ -1313,6 +1325,9 @@ def dashboard(request):
         'ad_grower_payment_paid_cotton':ad_grower_payment_paid_cotton,
         'ad_premium_paid_rice':ad_premium_paid_rice,
         'ad_premium_paid_cotton':ad_premium_paid_cotton,
+        'contract_count': contract_count,
+        'warehouse_count': warehouse_count,
+        'distributor_warehouses':distributor_warehouses,
     })
 
 
@@ -1322,7 +1337,7 @@ class EmailSendView(LoginRequiredMixin, View):
 
     def get(self, request, pk):
         obj = Grower.objects.get(pk=pk)
-        user = get(grower_id=obj.id)
+        user = User.objects.get(grower_id=obj.id)
         email = user.email
         username = user.username
         password = user.password_raw
