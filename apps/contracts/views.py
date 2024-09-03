@@ -837,8 +837,8 @@ def admin_processor_contract_create(request):
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
             # Get processors and add to context
             processors = []
-            processor1 = Processor.objects.all().values('id', 'entity_name')
-            processor2 = Processor2.objects.all().values('id', 'entity_name', 'processor_type__type_name')
+            processor1 = Processor.objects.all().values('id', 'entity_name').order_by('entity_name')
+            processor2 = Processor2.objects.all().values('id', 'entity_name', 'processor_type__type_name').order_by('entity_name')
             
             for pro1 in processor1:
                 processors.append({
@@ -942,8 +942,8 @@ def admin_processor_contract_list(request):
     try:
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
             processors = []
-            processor1 = Processor.objects.all().values('id', 'entity_name')
-            processor2 = Processor2.objects.all().values('id', 'entity_name', 'processor_type__type_name')
+            processor1 = Processor.objects.all().values('id', 'entity_name').order_by('entity_name')
+            processor2 = Processor2.objects.all().values('id', 'entity_name', 'processor_type__type_name').order_by('entity_name')
             
             for pro1 in processor1:
                 processors.append({
@@ -1065,8 +1065,8 @@ def edit_admin_processor_contract(request, pk):
 
         # Retrieve processors
         processors = []
-        processor1 = Processor.objects.all().values('id', 'entity_name')
-        processor2 = Processor2.objects.all().values('id', 'entity_name', 'processor_type__type_name')
+        processor1 = Processor.objects.all().values('id', 'entity_name').order_by('entity_name')
+        processor2 = Processor2.objects.all().values('id', 'entity_name', 'processor_type__type_name').order_by('entity_name')
         
 
         for pro1 in processor1:
@@ -1212,7 +1212,7 @@ def admin_customer_contract_create(request):
     try:
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role() or request.user.is_distributor:
             # Get customers and add to context
-            customers = Customer.objects.all().values('id', 'name')          
+            customers = Customer.objects.all().values('id', 'name').order_by('name')          
             context["customers"] = customers
             
             if request.method == "POST":
@@ -1285,7 +1285,7 @@ def admin_customer_contract_list(request):
     context = {}
     try:
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
-            customers = Customer.objects.all().values('id', 'name')           
+            customers = Customer.objects.all().values('id', 'name').order_by('name')           
                     
             context["customers"] = customers            
             contracts = AdminCustomerContract.objects.all()
@@ -1373,7 +1373,7 @@ def edit_admin_customer_contract(request, pk):
     try:
         contract = get_object_or_404(AdminCustomerContract, id=pk)      
         # Retrieve customers
-        customers = Customer.objects.all().values('id', 'name')        
+        customers = Customer.objects.all().values('id', 'name').order_by('name')        
         # Retrieve the documents associated with this contract
         documents = AdminCustomerContractDocuments.objects.filter(contract=contract)        
 

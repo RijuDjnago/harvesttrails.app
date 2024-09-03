@@ -24,7 +24,15 @@ class DistributorForm(forms.ModelForm):
             'warehouse': forms.SelectMultiple(attrs={'class': 'form-control'}),
         }
 
+
 class WarehouseForm(forms.ModelForm):
+    distributor = forms.ModelChoiceField(
+        queryset=Distributor.objects.all(),
+        required=False,  # Make this field optional
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        label="Select Distributor"
+    )
+
     def __init__(self, *args, **kwargs):
         super(WarehouseForm, self).__init__(*args, **kwargs)
         self.fields['name'].required = True
@@ -37,14 +45,15 @@ class WarehouseForm(forms.ModelForm):
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'location': forms.Textarea(attrs={
                 'class': 'form-control',
-                'rows': 1,   # Set the number of rows
-                'cols': 30   # Set the number of columns
+                'rows': 1,
+                'cols': 30
             }),
             'latitude': forms.TextInput(attrs={'class': 'form-control'}),
             'longitude': forms.TextInput(attrs={'class': 'form-control'}),
             'status': forms.TextInput(attrs={'class': 'form-control'}),
         }
 
+        
 class CustomerForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super(CustomerForm, self).__init__(*args, **kwargs)

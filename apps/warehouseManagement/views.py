@@ -36,17 +36,19 @@ def add_distributor(request):
                 if request.method == 'POST':
                     form = DistributorForm(request.POST)                   
                     entity_name = request.POST.get('entity_name')
-                    warehouse_ids  = request.POST.getlist('warehouse ')
+                    warehouse_ids  = request.POST.getlist('warehouse')
                     location = request.POST.get('location')
                     latitude  = request.POST.get('latitude ')
                     longitude = request.POST.get('longitude')                    
                 
                     distributor = Distributor.objects.create(entity_name=entity_name,location=location,latitude =latitude ,longitude=longitude)
                     for warehouse_id in warehouse_ids:
-                        warehouse = Warehouse.objects.filter(id=warehouse_id)
-                        if warehouse:
+                        try:
+                            warehouse = Warehouse.objects.get(id=warehouse_id)
                             distributor.warehouse.add(warehouse)
-                                        
+                        except Warehouse.DoesNotExist:
+                            pass  # Handle error or continue as per your need
+                                
                     log_type, log_status, log_device = "Distributor", "Added", "Web"
                     log_idd, log_name = distributor.id, entity_name
                     log_email = None
@@ -290,6 +292,91 @@ def distributor_list(request):
         context["error_messages"] = str(e)
         return render(request, 'distributor/list_distributor.html', context)
 
+@login_required()
+def distributor_change_password(request,pk):
+    context={}
+    try:
+        # Superuser..............
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+            dist = DistributorUser.objects.get(id=pk)
+            user = User.objects.get(email=dist.contact_email)
+            context["userr"] = user
+            if request.method == "POST":
+                password1 = request.POST.get("password1")
+                password2 = request.POST.get("password2")
+                if len(password1) != 0 and len(password2) != 0 and password1 != None and password2 != None and password1 == password2:
+                    # update_pass_user = User.objects.get(id=pk)
+                    password = make_password(password1)
+                    user.password = password
+                    user.password_raw = password1
+                    user.save()
+                    dist.p_password_raw = password1
+                    dist.save()
+                    # 10-04-23 Log Table
+                    log_type, log_status, log_device = "DistributorUser", "Password changed", "Web"
+                    log_idd, log_name = dist.id, dist.contact_name
+                    log_email = dist.contact_email
+                    log_details = f"distributor_id = {dist.distributor.id} | distributor = {dist.distributor.entity_name} | contact_name= {dist.contact_name} | contact_email = {dist.contact_email} | contact_phone = {dist.contact_phone} | contact_fax = {dist.contact_fax}"
+                    action_by_userid = request.user.id
+                    user = User.objects.get(pk=action_by_userid)
+                    user_role = user.role.all()
+                    action_by_username = f'{user.first_name} {user.last_name}'
+                    action_by_email = user.username
+                    if request.user.id == 1 :
+                        action_by_role = "superuser"
+                    else:
+                        action_by_role = str(','.join([str(i.role) for i in user_role]))
+                    logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+                                        action_by_userid=action_by_userid,action_by_username=action_by_username,
+                                        action_by_email=action_by_email,action_by_role=action_by_role,log_email=log_email,
+                                        log_details=log_details, log_device=log_device)
+                    logtable.save()
+                    messages.success(request,"Password changed successfully!")
+            return render (request, 'distributor/distributor_change_password.html', context)
+        # Distributor...............
+        elif request.user.is_distributor:
+            dist = DistributorUser.objects.get(id=pk)
+            user = User.objects.get(email=dist.contact_email)
+            context["userr"] = user
+            if request.method == "POST":
+                password1 = request.POST.get("password1")
+                password2 = request.POST.get("password2")
+                if len(password1) != 0 and len(password2) != 0 and password1 != None and password2 != None and password1 == password2:
+                    # update_pass_user = User.objects.get(id=pk)
+                    password = make_password(password1)
+                    user.password = password
+                    user.password_raw = password1
+                    user.save()
+                    dist.p_password_raw = password1
+                    dist.save()
+                    # 10-04-23 Log Table
+                    log_type, log_status, log_device = "DistributorUser", "Password changed", "Web"
+                    log_idd, log_name = dist.id, dist.contact_name
+                    log_email = dist.contact_email
+                    log_details = f"distributor_id = {dist.distributor.id} | distributor = {dist.distributor.entity_name} | contact_name= {dist.contact_name} | contact_email = {dist.contact_email} | contact_phone = {dist.contact_phone} | contact_fax = {dist.contact_fax}"
+                    action_by_userid = request.user.id
+                    user = User.objects.get(pk=action_by_userid)
+                    user_role = user.role.all()
+                    action_by_username = f'{user.first_name} {user.last_name}'
+                    action_by_email = user.username
+                    if request.user.id == 1 :
+                        action_by_role = "superuser"
+                    else:
+                        action_by_role = str(','.join([str(i.role) for i in user_role]))
+                    logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+                                        action_by_userid=action_by_userid,action_by_username=action_by_username,
+                                        action_by_email=action_by_email,action_by_role=action_by_role,log_email=log_email,
+                                        log_details=log_details, log_device=log_device)
+                    logtable.save()
+                    messages.success(request,"Password changed successfully!")
+        
+        else:
+            return redirect('dashboard')
+        return render (request, 'distributor/distributor_change_password.html', context)
+    except Exception as e:
+        context["error_messages"] = str(e)
+        return render (request, 'distributor/distributor_change_password.html', context)
+
 
 def add_warehouse(request):
     context = {}
@@ -306,6 +393,7 @@ def add_warehouse(request):
                     latitude = request.POST.get('latitude')
                     longitude = request.POST.get('longitude')
                     status = request.POST.get('status')
+                    distributor = request.POST.get('distributor')
 
                     # Check if a warehouse with the same name already exists
                     if Warehouse.objects.filter(name=name).exists():
@@ -320,6 +408,10 @@ def add_warehouse(request):
                         longitude=longitude,
                         status=status
                     )
+                    check_distributor = Distributor.objects.filter(id=distributor)
+                    if check_distributor:
+                        get_distributor = check_distributor.first()
+                        get_distributor.warehouse.add(warehouse)
 
                     # Log the action
                     log_type, log_status, log_device = "Warehouse", "Added", "Web"
@@ -411,14 +503,14 @@ def list_warehouse(request):
             elif request.user.is_consultant:
                 pass
             elif request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
-                warehouse = WarehouseUser.objects.all()
+                warehouse = WarehouseUser.objects.all().select_related('warehouse').prefetch_related('warehouse__distributor_set')
                 if search_name:
                     warehouse = warehouse.filter(Q(contact_name__icontains=search_name) | Q(warehouse__name__icontains=search_name)| Q(contact_email__icontains=search_name))
                     context['search_name'] = search_name
             elif request.user.is_warehouse_user:
-                warehouse_user= WarehouseUser.objects.filter(contact_email=request.user.email).first()
+                warehouse_user= WarehouseUser.objects.filter(contact_email=request.user.email).select_related('warehouse').prefetch_related('warehouse__distributor_set').first()
                 entity_name = warehouse_user.warehouse
-                warehouse = WarehouseUser.objects.filter(warehouse=entity_name)
+                warehouse = WarehouseUser.objects.filter(warehouse=entity_name).select_related('warehouse').prefetch_related('warehouse__distributor_set')
                 if search_name:
                     warehouse = warehouse.filter(Q(contact_name__icontains=search_name) | Q(warehouse__name__icontains=search_name)| Q(contact_email__icontains=search_name))
                     context['search_name'] = search_name
@@ -439,6 +531,93 @@ def list_warehouse(request):
     except Exception as e:
         context["error_messages"] = str(e)
         return render(request, 'distributor/list_warehouse.html', context)
+
+
+@login_required()
+def warehouse_change_password(request,pk):
+    context={}
+    try:
+        # Superuser..............
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+            warehouse = WarehouseUser.objects.get(id=pk)
+            user = User.objects.get(email=warehouse.contact_email)
+            context["userr"] = user
+            if request.method == "POST":
+                password1 = request.POST.get("password1")
+                password2 = request.POST.get("password2")
+                if len(password1) != 0 and len(password2) != 0 and password1 != None and password2 != None and password1 == password2:
+                    # update_pass_user = User.objects.get(id=pk)
+                    password = make_password(password1)
+                    user.password = password
+                    user.password_raw = password1
+                    user.save()
+                    warehouse.p_password_raw = password1
+                    warehouse.save()
+                    # 10-04-23 Log Table
+                    log_type, log_status, log_device = "WarehouseUser", "Password changed", "Web"
+                    log_idd, log_name = warehouse.id, warehouse.contact_name
+                    log_email = warehouse.contact_email
+                    log_details = f"warehouse_id = {warehouse.warehouse.id} | warehouse = {warehouse.warehouse.name} | contact_name= {warehouse.contact_name} | contact_email = {warehouse.contact_email} | contact_phone = {warehouse.contact_phone} | contact_fax = {warehouse.contact_fax}"
+                    action_by_userid = request.user.id
+                    user = User.objects.get(pk=action_by_userid)
+                    user_role = user.role.all()
+                    action_by_username = f'{user.first_name} {user.last_name}'
+                    action_by_email = user.username
+                    if request.user.id == 1 :
+                        action_by_role = "superuser"
+                    else:
+                        action_by_role = str(','.join([str(i.role) for i in user_role]))
+                    logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+                                        action_by_userid=action_by_userid,action_by_username=action_by_username,
+                                        action_by_email=action_by_email,action_by_role=action_by_role,log_email=log_email,
+                                        log_details=log_details, log_device=log_device)
+                    logtable.save()
+                    messages.success(request,"Password changed successfully!")
+            return render (request, 'distributor/warehouse_change_password.html', context)
+        # Distributor...............
+        elif request.user.is_warehouse_manager:
+            warehouse = WarehouseUser.objects.get(id=pk)
+            user = User.objects.get(email=warehouse.contact_email)
+            context["userr"] = user
+            if request.method == "POST":
+                password1 = request.POST.get("password1")
+                password2 = request.POST.get("password2")
+                if len(password1) != 0 and len(password2) != 0 and password1 != None and password2 != None and password1 == password2:
+                    # update_pass_user = User.objects.get(id=pk)
+                    password = make_password(password1)
+                    user.password = password
+                    user.password_raw = password1
+                    user.save()
+                    warehouse.p_password_raw = password1
+                    warehouse.save()
+                    # 10-04-23 Log Table
+                    log_type, log_status, log_device = "WarehouseUser", "Password changed", "Web"
+                    log_idd, log_name = warehouse.id, warehouse.contact_name
+                    log_email = warehouse.contact_email
+                    log_details = f"warehouse_id = {warehouse.warehouse.id} | warehouse = {warehouse.warehouse.name} | contact_name= {warehouse.contact_name} | contact_email = {warehouse.contact_email} | contact_phone = {warehouse.contact_phone} | contact_fax = {warehouse.contact_fax}"
+                    action_by_userid = request.user.id
+                    user = User.objects.get(pk=action_by_userid)
+                    user_role = user.role.all()
+                    action_by_username = f'{user.first_name} {user.last_name}'
+                    action_by_email = user.username
+                    if request.user.id == 1 :
+                        action_by_role = "superuser"
+                    else:
+                        action_by_role = str(','.join([str(i.role) for i in user_role]))
+                    logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+                                        action_by_userid=action_by_userid,action_by_username=action_by_username,
+                                        action_by_email=action_by_email,action_by_role=action_by_role,log_email=log_email,
+                                        log_details=log_details, log_device=log_device)
+                    logtable.save()
+                    messages.success(request,"Password changed successfully!")
+        
+        else:
+            return redirect('dashboard')
+        return render (request, 'distributor/warehouse_change_password.html', context)
+    except Exception as e:
+        context["error_messages"] = str(e)
+        return render (request, 'distributor/warehouse_change_password.html', context)
+
 
 def add_customer(request):
     context = {}
@@ -589,12 +768,98 @@ def list_customer(request):
         return render(request, 'distributor/list_customer.html', context)
 
 
+@login_required()
+def customer_change_password(request,pk):
+    context={}
+    try:
+        # Superuser..............
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+            customer = CustomerUser.objects.get(id=pk)
+            user = User.objects.get(email=customer.contact_email)
+            context["userr"] = user
+            if request.method == "POST":
+                password1 = request.POST.get("password1")
+                password2 = request.POST.get("password2")
+                if len(password1) != 0 and len(password2) != 0 and password1 != None and password2 != None and password1 == password2:
+                    # update_pass_user = User.objects.get(id=pk)
+                    password = make_password(password1)
+                    user.password = password
+                    user.password_raw = password1
+                    user.save()
+                    customer.p_password_raw = password1
+                    customer.save()
+                    # 10-04-23 Log Table
+                    log_type, log_status, log_device = "CustomerUser", "Password changed", "Web"
+                    log_idd, log_name = customer.id, customer.contact_name
+                    log_email = customer.contact_email
+                    log_details = f"customer_id = {customer.customer.id} | customer = {customer.customer.name} | contact_name= {customer.contact_name} | contact_email = {customer.contact_email} | contact_phone = {customer.contact_phone} | contact_fax = {customer.contact_fax}"
+                    action_by_userid = request.user.id
+                    user = User.objects.get(pk=action_by_userid)
+                    user_role = user.role.all()
+                    action_by_username = f'{user.first_name} {user.last_name}'
+                    action_by_email = user.username
+                    if request.user.id == 1 :
+                        action_by_role = "superuser"
+                    else:
+                        action_by_role = str(','.join([str(i.role) for i in user_role]))
+                    logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+                                        action_by_userid=action_by_userid,action_by_username=action_by_username,
+                                        action_by_email=action_by_email,action_by_role=action_by_role,log_email=log_email,
+                                        log_details=log_details, log_device=log_device)
+                    logtable.save()
+                    messages.success(request,"Password changed successfully!")
+            return render (request, 'distributor/customer_change_password.html', context)
+        # Distributor...............
+        elif request.user.is_customer:
+            customer = CustomerUser.objects.get(id=pk)
+            user = User.objects.get(email=customer.contact_email)
+            context["userr"] = user
+            if request.method == "POST":
+                password1 = request.POST.get("password1")
+                password2 = request.POST.get("password2")
+                if len(password1) != 0 and len(password2) != 0 and password1 != None and password2 != None and password1 == password2:
+                    # update_pass_user = User.objects.get(id=pk)
+                    password = make_password(password1)
+                    user.password = password
+                    user.password_raw = password1
+                    user.save()
+                    customer.p_password_raw = password1
+                    customer.save()
+                    # 10-04-23 Log Table
+                    log_type, log_status, log_device = "CustomerUser", "Password changed", "Web"
+                    log_idd, log_name = customer.id, customer.contact_name
+                    log_email = customer.contact_email
+                    log_details = f"customer_id = {customer.customer.id} | customer = {customer.customer.name} | contact_name= {customer.contact_name} | contact_email = {customer.contact_email} | contact_phone = {customer.contact_phone} | contact_fax = {customer.contact_fax}"
+                    action_by_userid = request.user.id
+                    user = User.objects.get(pk=action_by_userid)
+                    user_role = user.role.all()
+                    action_by_username = f'{user.first_name} {user.last_name}'
+                    action_by_email = user.username
+                    if request.user.id == 1 :
+                        action_by_role = "superuser"
+                    else:
+                        action_by_role = str(','.join([str(i.role) for i in user_role]))
+                    logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+                                        action_by_userid=action_by_userid,action_by_username=action_by_username,
+                                        action_by_email=action_by_email,action_by_role=action_by_role,log_email=log_email,
+                                        log_details=log_details, log_device=log_device)
+                    logtable.save()
+                    messages.success(request,"Password changed successfully!")
+        
+        else:
+            return redirect('dashboard')
+        return render (request, 'distributor/customer_change_password.html', context)
+    except Exception as e:
+        context["error_messages"] = str(e)
+        return render (request, 'distributor/customer_change_password.html', context)
+
+
 def create_processor_shipment(request):
     context = {}
     try:
         if request.user.is_authenticated:
             if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
-                contracts = AdminProcessorContract.objects.all().values('id','secret_key','processor_id','processor_type','processor_entity_name','crop')
+                contracts = AdminProcessorContract.objects.all().values('id','secret_key','processor_id','processor_type','processor_entity_name','crop').order_by('secret_key')
                 
                 context["contracts"] = contracts
                 context.update({
@@ -951,8 +1216,8 @@ def list_processor_shipment(request):
     try:
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
             processors = []
-            processor1 = Processor.objects.all().values('id', 'entity_name')
-            processor2 = Processor2.objects.all().values('id', 'entity_name', 'processor_type__type_name')
+            processor1 = Processor.objects.all().values('id', 'entity_name').order_by('entity_name')
+            processor2 = Processor2.objects.all().values('id', 'entity_name', 'processor_type__type_name').order_by('entity_name')
             
             for pro1 in processor1:
                 processors.append({
@@ -1110,11 +1375,17 @@ def list_processor_shipment(request):
 def processor_shipment_view(request, pk):
     context = {}
     try:
-        shipment = ProcessorWarehouseShipment.objects.filter(id=pk).first()
-        documents = ProcessorWarehouseShipmentDocuments.objects.filter(shipment=shipment)
+        shipment = ProcessorWarehouseShipment.objects.filter(id=pk).first()        
         carrier_details = CarrierDetails.objects.filter(shipment=shipment)
         context["shipment"] = shipment
-        context["documents"] = documents
+        context["documents"] = [
+            {
+                "id": file.id,
+                "file": file.document_file,
+                "name": file.document_file.name.split("/")[-1]  # Extract only the file name
+            }
+            for file in ProcessorWarehouseShipmentDocuments.objects.filter(shipment=shipment)
+        ]
         context["carriers"] = carrier_details
         return render (request, 'distributor/view_outbound.html', context)
     except (ValueError, AttributeError, AdminProcessorContract.DoesNotExist) as e:
@@ -1135,7 +1406,13 @@ def edit_processor_shipment(request, pk):
         carrier = CarrierDetails.objects.filter(shipment=shipment).first()
         if carrier:
             context['carrier_id'] = carrier.carrier_id
-        context["files"] = ProcessorWarehouseShipmentDocuments.objects.filter(shipment=shipment)
+        context["files"] = [
+            {
+                "id": file.id,
+                "name": file.document_file.name.split("/")[-1]  # Extract only the file name
+            }
+            for file in ProcessorWarehouseShipmentDocuments.objects.filter(shipment=shipment)
+        ]
         context["shipment"] = shipment
         selected_contract = shipment.contract               
                                 
