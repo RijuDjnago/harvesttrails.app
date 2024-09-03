@@ -119,7 +119,7 @@ border-radius: 0;
 
     <h3 class="headingtop">Hi, {{user.username}}</h3>
     <p class="dashboard-subtitle">Welcome to your dashboard</p>
-    {% if request.user.is_processor or request.user.is_processor2 %}
+    {% if request.user.is_processor or request.user.is_processor2 or request.user.is_distributor or request.user.is_customer or request.user.is_warehouse_manager %}
       <!-- showing progress with grower payments on the main dashboard. By crop.  -->
       <!-- {% if request.user.is_processor %}
         <div class="cards-2columns">
@@ -291,7 +291,7 @@ border-radius: 0;
     {% endif %}
     <div class="container-fluid dashboard-container">
       <div class="row">
-        {% if request.user.is_processor or request.user.is_processor2 or request.user.is_distributor %}
+        {% if request.user.is_processor or request.user.is_processor2 or request.user.is_distributor or request.user.is_customer or request.user.is_warehouse_manager %}
         {% if request.user.is_processor %}
         <div class="col-md-9 col-12">
           <div class="card card-padding">
@@ -391,22 +391,24 @@ border-radius: 0;
           <div class="card card-padding">
             <h2 class="user-detls">Your Details</h2>
               <div class="row">
-                
-                <div class="col-3"><strong>Entity Name : </strong>
+                <div class="col-4"><strong>Entity Name : </strong>
                   <div>{{distributor.entity_name}}</div>
                 </div>
-                <div class="col-3"><strong>Location : </strong>
+                <div class="col-4"><strong>Location : </strong>
                   <div>{{distributor.location}}</div>
                 </div>
-              </div>              
-                <div class="col-3"><strong>Latitude : </strong>
+                <div class="col-4"><strong>Latitude : </strong>
                   <div>{{distributor.latitude}}</div>
                 </div>
-                <div class="col-3"><strong>Longitude : </strong>
+              </div>
+              <div class="row">
+                <div class="col-4"><strong>Longitude : </strong>
                   <div>{{distributor.longitude}}</div>
                 </div>
+                <div class="col-4"><strong>Warehouses : </strong>
+                  <div>{% for warehouse in distributor_warehouses %}{{warehouse.name}}{% if not forloop.last %}<br>{% endif %}{% endfor %}</div>
+                </div>
               </div>
-              
               <div class="row">
                 <div class="col-3"><strong>Contact Name : </strong>
                   <div>{{distributor_user.contact_name}}</div>
@@ -419,6 +421,83 @@ border-radius: 0;
                 </div>
                 <div class="col-3"><strong>Contact Fax : </strong>
                   <div>{{distributor_user.contact_fax}}</div>
+                </div>
+              </div>
+          </div>
+        </div>        
+        {% elif request.user.is_customer %}
+        <div class="col-md-9 col-12">
+          <div class="card card-padding">
+            <h2 class="user-detls">Your Details</h2>
+              <div class="row">
+                <div class="col-4"><strong>Entity Name : </strong>
+                  <div>{{customer.name}}</div>
+                </div>
+                <div class="col-4"><strong>Location : </strong>
+                  <div>{{customer.location}}</div>
+                </div>
+                <div class="col-4"><strong>Latitude : </strong>
+                  <div>{{customer.latitude}}</div>
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-4"><strong>Longitude : </strong>
+                  <div>{{customer.longitude}}</div>
+                </div>                
+              </div>
+              <div class="row">
+                <div class="col-3"><strong>Contact Name : </strong>
+                  <div>{{customer_user.contact_name}}</div>
+                </div>
+                <div class="col-3"><strong>Contact Email : </strong>
+                  <div>{{customer_user.contact_email}}</div>
+                </div>
+                <div class="col-3"><strong>Contact Phone : </strong>
+                  <div>{{customer_user.contact_phone}}</div>
+                </div>
+                <div class="col-3"><strong>Contact Fax : </strong>
+                  <div>{{customer_user.contact_fax}}</div>
+                </div>
+              </div>
+          </div>
+        </div>        
+        {% elif request.user.is_warehouse_manager %}
+        <div class="col-md-9 col-12">
+          <div class="card card-padding">
+            <h2 class="user-detls">Your Details</h2>
+              <div class="row">
+                <div class="col-4"><strong>Entity Name : </strong>
+                  <div>{{warehouse.name}}</div>
+                </div>
+                <div class="col-4"><strong>Location : </strong>
+                  <div>{{warehouse.location}}</div>
+                </div>
+                <div class="col-4"><strong>Latitude : </strong>
+                  <div>{{warehouse.latitude}}</div>
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-4"><strong>Longitude : </strong>
+                  <div>{{warehouse.longitude}}</div>
+                </div>
+                <div class="col-4"><strong>Distributor : </strong>
+                  <div>{% for distributor in warehouse.distributor_set.all %}
+                    {{ distributor.entity_name }}{% if not forloop.last %}, {% endif %}
+                {% endfor %}</div>
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-3"><strong>Contact Name : </strong>
+                  <div>{{warehouse_user.contact_name}}</div>
+                </div>
+                <div class="col-3"><strong>Contact Email : </strong>
+                  <div>{{warehouse_user.contact_email}}</div>
+                </div>
+                <div class="col-3"><strong>Contact Phone : </strong>
+                  <div>{{warehouse_user.contact_phone}}</div>
+                </div>
+                <div class="col-3"><strong>Contact Fax : </strong>
+                  <div>{{warehouse_user.contact_fax}}</div>
                 </div>
               </div>
           </div>

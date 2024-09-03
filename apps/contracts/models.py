@@ -200,7 +200,7 @@ class AdminProcessorContract(models.Model):
         super().save(*args, **kwargs)   
 
     def __str__(self):
-        return f'Contract of {self.crop} || Amount - {self.contract_amount} {self.amount_unit}'
+        return f'Contract ID - {self.secret_key} || Crop -  {self.crop} || Amount - {self.contract_amount} {self.amount_unit}'
 
 
 class AdminProcessorContractSignature(models.Model):

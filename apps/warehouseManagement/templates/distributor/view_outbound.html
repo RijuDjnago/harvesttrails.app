@@ -102,114 +102,114 @@
         <div class="card farm-fields-container">
             <div class="container-fluid">                
                     <div class="row" style="margin-bottom: 20px;">
-                        <div class="col-md-4" style="margin-bottom: 10px;">
+                        <div class="col-md-4 text-center" style="margin-bottom: 10px;">
                             <label for="shipment" style="font-weight:bold;">Contract Id</label>
                             <p>{{shipment.contract.secret_key}}</p>                            
                         </div>
-                        <div class="col-md-4" style="margin-bottom: 10px;">
+                        <div class="col-md-4 text-center" style="margin-bottom: 10px;">
                             <label for="shipment" style="font-weight:bold;">Processor Id</label>
                             <p>{{shipment.processor_id}}</p>                            
                         </div>
-                        <div class="col-md-4" style="margin-bottom: 10px;">
+                        <div class="col-md-4 text-center" style="margin-bottom: 10px;">
                             <label for="shipment"style="font-weight:bold;">Processor Entity Name</label>
                             <p>{{shipment.processor_entity_name}}</p>                            
                         </div>
-                        <div class="col-md-4" style="margin-bottom: 10px;">
+                        <div class="col-md-4 text-center" style="margin-bottom: 10px;">
                             <label for="shipment"style="font-weight:bold;">Processor Type</label>
                             <p>{{shipment.processor_type}}</p>                            
                         </div>                        
-                        <div class="col-md-4" style="margin-bottom: 10px;">
+                        <div class="col-md-4 text-center" style="margin-bottom: 10px;">
                             <label for="shipment"style="font-weight:bold;">Crop</label>
                             <p>{{shipment.contract.crop}}</p>                            
                         </div>
-                        <div class="col-md-4" style="margin-bottom: 10px;">
+                        <div class="col-md-4 text-center" style="margin-bottom: 10px;">
                             <label for="shipment"style="font-weight:bold;">Carrier</label>
                             <p>{{shipment.carrier_type}}</p>                            
                         </div>
-                        <div class="col-md-4" style="margin-bottom: 10px;">
+                        <div class="col-md-4 text-center" style="margin-bottom: 10px;">
                             <label for="shipment"style="font-weight:bold;">Outbound type</label>
                             <p>{{shipment.outbound_type}}</p>                            
                         </div>
-                        <div class="col-md-4" style="margin-bottom: 10px;">
+                        <div class="col-md-4 text-center" style="margin-bottom: 10px;">
                             <label for="Balance"style="font-weight:bold;">Date pulled</label>
                             <p>{{shipment.date_pulled}}</p>                            
                         </div>
-                        <div class="col-md-4" style="margin-bottom: 10px;">
+                        <div class="col-md-4 text-center" style="margin-bottom: 10px;">
                             <label for="shipment"style="font-weight:bold;">Purchase Order Name</label>
                             <p>{{shipment.purchase_order_name}}</p>                            
                         </div>                        
-                        <div class="col-md-4" style="margin-bottom: 10px;">
+                        <div class="col-md-4 text-center" style="margin-bottom: 10px;">
                             <label for="shipment"style="font-weight:bold;">Purchase Order Number</label>
                             <p>{{shipment.purchase_order_number}}</p>                           
                         </div>                         
-                        <div class="col-md-4" style="margin-bottom: 10px;">
+                        <div class="col-md-4 text-center" style="margin-bottom: 10px;">
                             <label for="shipment"style="font-weight:bold;">Lot Number</label>
                             <p>{{shipment.lot_number}}</p>                            
                         </div>
                                                 
-                        <div class="col-md-4" style="margin-bottom: 10px;">
+                        <div class="col-md-4 text-center" style="margin-bottom: 10px;">
                             <label for="shipment"style="font-weight:bold;">Weight</label>
                             <p>{{shipment.net_weight}} {{shipment.weight_unit}}</p>                            
                         </div> 
                         {% if shipment.border_receive_date%}
-                        <div class="col-md-4" style="margin-bottom: 10px;">
+                        <div class="col-md-4 text-center" style="margin-bottom: 10px;">
                             <label for="shipment"style="font-weight:bold;">Border Receive Date</label>
                             <p>{{shipment.border_receive_date}}</p>                            
                         </div>
                         {% endif %}
                         {% if shipment.border_leaving_date%}
-                        <div class="col-md-4" style="margin-bottom: 10px;">
+                        <div class="col-md-4 text-center" style="margin-bottom: 10px;">
                             <label for="shipment"style="font-weight:bold;">Border Leaving Date</label>
                             <p>{{shipment.border_leaving_date}}</p>                            
                         </div>
                         {% endif %}
                         {% if shipment.distributor_receive_date%}
-                        <div class="col-md-4" style="margin-bottom: 10px;">
+                        <div class="col-md-4 text-center" style="margin-bottom: 10px;">
                             <label for="shipment"style="font-weight:bold;">Warehouse/Customer Receive Date</label>
                             <p>{{shipment.distributor_receive_date}}</p>                            
                         </div>
                         {% endif %}
                         {% if shipment.distributor_leaving_date%}
-                        <div class="col-md-4" style="margin-bottom: 10px;">
+                        <div class="col-md-4 text-center" style="margin-bottom: 10px;">
                             <label for="shipment"style="font-weight:bold;">Warehouse/Customer Leaving Date</label>
                             <p>{{shipment.distributor_leaving_date}}</p>                            
                         </div>
                         {% endif %}
                         {% if shipment.border_back_receive_date%}
-                        <div class="col-md-4" style="margin-bottom: 10px;">
+                        <div class="col-md-4 text-center" style="margin-bottom: 10px;">
                             <label for="shipment"style="font-weight:bold;">Border Receive Date Back</label>
                             <p>{{shipment.border_back_receive_date}}</p>                            
                         </div>
                         {% endif %}
                         {% if shipment.border_back_leaving_date%}
-                        <div class="col-md-4" style="margin-bottom: 10px;">
+                        <div class="col-md-4 text-center" style="margin-bottom: 10px;">
                             <label for="shipment"style="font-weight:bold;">Border Leaving Date Back</label>
                             <p>{{shipment.border_back_leaving_date}}</p>                            
                         </div>
                         {% endif %}
                         {% if shipment.processor_receive_date%}
-                        <div class="col-md-4" style="margin-bottom: 10px;">
+                        <div class="col-md-4 text-center" style="margin-bottom: 10px;">
                             <label for="shipment"style="font-weight:bold;">Processor Receive Date </label>
                             <p>{{shipment.processor_receive_date}}</p>                            
                         </div>
                         {% endif %}
-                        <div class="col-md-4" style="margin-bottom: 10px;">
+                        <div class="col-md-4 text-center" style="margin-bottom: 10px;">
                             <label for="shipment"style="font-weight:bold;">Status</label>
                             <p>{{shipment.status}}</p>                            
                         </div>
                         {% if shipment.warehouse_name %}
-                        <div class="col-md-4" style="margin-bottom: 10px;">
+                        <div class="col-md-4 text-center" style="margin-bottom: 10px;">
                             <label for="shipment"style="font-weight:bold;">Warehouse</label>
                             <p>{{shipment.warehouse_name}}</p>                            
                         </div>
                         {% endif %}
                         {% if shipment.customer_name %}
-                        <div class="col-md-4" style="margin-bottom: 10px;">
+                        <div class="col-md-4 text-center" style="margin-bottom: 10px;">
                             <label for="shipment"style="font-weight:bold;">Customer</label>
                             <p>{{shipment.customer_name}}</p>                            
                         </div>
                         {% endif %}
-                        <div class="col-md-4" >
+                        <div class="col-md-4 text-center" >
                             <label for="UploadedFiles" style="font-weight:bold;">Uploaded Documents</label>
                             {% for document in documents %}
                             <div class="row mt-3">
@@ -222,6 +222,23 @@
                             </div>
                             {% endfor %}
                         </div>                                        
+                    </div>
+                    <div class="row" style="margin-bottom: 20px;">
+                        <div class="col-md-12 p-5" >
+                            <h5 class="font-weight-bold">Shipment Tracking Logs</h5>
+                            {% if logs %}
+                                <div class="list-group">
+                                    {% for log in logs %}
+                                        <div class="list-group-item">                                            
+                                            <p class="mb-1">{{ log.description }}</p>
+                                            <small class="text-muted">Updated at: {{ log.updated_at }}</small>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <p>No logs available for this shipment.</p>
+                            {% endif %}
+                        </div>
                     </div>
                    
                     <div class="row" style="margin-top: 10px;">

@@ -32,7 +32,7 @@
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label for="processor_id">Select Processor<span class="asteriskField">*</span></label>
-                                <select name="selected_processor" id="processor_id" class="form-control" required>
+                                <select name="selected_processor" id="processor_id" class="form-control selectpicker" required >
                                     <option value="All">Select Processor</option>
                                     {% with t1_processors=processor|dictsort:"type" %}
                                         {% if t1_processors %}
