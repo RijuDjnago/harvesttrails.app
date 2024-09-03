@@ -75,9 +75,9 @@
                                     {% comment %} <li>
                                         <a href="{% url 'update-processor' i.pk %}" class="update-btn-link" alt="edit processor" title="edit processor"> <span class="fas fa-edit"></span> </a>
                                     </li> {% endcomment %}
-                                    {% comment %} <li>
-                                        <a href="{% url 'processor_change_password' i.pk %}" alt="change password" title="change password"><span class="fas fa-key" data-mdb-toggle="modal" data-mdb-target="#exampleModal"></span></a>
-                                    </li> {% endcomment %}
+                                    <li>
+                                        <a href="{% url 'customer-change-password' i.pk %}" alt="change password" title="change password"><span class="fas fa-key" data-mdb-toggle="modal" data-mdb-target="#exampleModal"></span></a>
+                                    </li>
                                     {% if request.user.is_superuser %}
                                     {% comment %} <li>
                                         <a href="{% url 'add-location' %}" class="map-icon-link" alt="add location" title="add location"><span class="fas fa-globe-americas"></span></a>

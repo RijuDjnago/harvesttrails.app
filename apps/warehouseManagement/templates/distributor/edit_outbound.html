@@ -87,7 +87,7 @@
                                     <div>                                
                                         <div class='d-flex align-items-end'>
                                             <div class='w-100'>
-                                                <label for="sender_sku_id_1">Sender Storage Bin ID (SKU ID)<span class="asteriskField">*</span></label>
+                                                <label for="sender_sku_id_1">Sender Storage Bin ID (SKU ID)</label>
                                                 <input type="text" id="sender_sku_id_1" name="sender_sku_id" class="textinput textInput form-control" value="{% for sku in shipment.processor_sku_list %}{{sku}}{% endfor%}" list="suggestions_1" autocomplete="off" placeholder="Sender SKU ID" onchange="this.form.submit()"> 
                                             </div>
                                             <div>
@@ -296,7 +296,7 @@
                                         <div class="file-item" style="margin-bottom: 10px;">
                                             <div class="file-info">
                                                 <input type="hidden" name="existing_files" value="{{ file.id }}">
-                                                <span>{{ file.document_file }}</span>
+                                                <span>{{file.name }}</span>
                                             </div>
                                             <button type="button" class="remove-file btn-danger" data-file-id="{{ file.id }}"><span style="width: 25px;height: 18px;padding: 0;display: inline-flex;justify-content: center;align-items: center;font-size: 10px;"><b>X</b></span></button>
                                         </div>

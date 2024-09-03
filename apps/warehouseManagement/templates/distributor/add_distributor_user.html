@@ -23,13 +23,7 @@
         <div class="container-fluid">
             <form method="post" class="farm-fields-form">
                 {% csrf_token %}
-                <div class="row">
-                    <div class="col-md-4 mb-3">
-                        <div>
-                            <label for="">FEIN<span class="asteriskField">*</span></label>
-                            <input type="text" value="{{distributor.fein}}" id="" class="textinput textInput form-control" readonly>
-                        </div>
-                    </div>
+                <div class="row">                    
                     <div class="col-md-4 mb-3">
                         <div>
                             <label for="">Entity Name<span class="asteriskField">*</span></label>
@@ -38,35 +32,28 @@
                     </div>
                     <div class="col-md-4 mb-3">
                         <div>
-                            <label for="">Billing Address<span class="asteriskField">*</span></label>
-                            <input type="text" value="{{distributor.billing_address}}" id="" class="textinput textInput form-control" readonly>
+                            <label for="">Location<span class="asteriskField">*</span></label>
+                            <input type="text" value="{{distributor.location}}" id="" class="textinput textInput form-control" readonly>
                         </div>
                     </div>
                     <div class="col-md-4 mb-3">
                         <div>
-                            <label for="">Shipping Address</label>
-                            <input type="text" value="{{distributor.shipping_address}}" id="" class="textinput textInput form-control" readonly>
+                            <label for="">Warehouses</label>
+                            <input type="text" value="{% for wh in distributor.warehouse.all %}{{wh.name}}{% endfor %}" id="" class="textinput textInput form-control" readonly>
                         </div>
                     </div>
                     <div class="col-md-4 mb-3">
                         <div>
-                            <label for="">Main number<span class="asteriskField">*</span></label>
-                            <input type="text" value="{{distributor.main_number}}" id="" class="textinput textInput form-control" readonly>
+                            <label for="">Latitude</label>
+                            <input type="text" value="{{distributor.latitude}}" id="" class="textinput textInput form-control" readonly>
                         </div>
                     </div>
                     <div class="col-md-4 mb-3">
                         <div>
-                            <label for="">Main fax<span class="asteriskField">*</span></label>
-                            <input type="text" value="{{distributor.main_fax}}" id="" class="textinput textInput form-control" readonly>
+                            <label for="">Longitude</label>
+                            <input type="text" value="{{distributor.longitude}}" id="" class="textinput textInput form-control" readonly>
                         </div>
-                    </div>
-                    <div class="col-md-4 mb-3">
-                        <div>
-                            <label for="">Website</label>
-                            <input type="text" value="{{distributor.website}}" id="" class="textinput textInput form-control" readonly>
-                        </div>
-                    </div>
-                    
+                    </div>                    
                 </div>
                 <hr>
                 <!-- Processor User -->

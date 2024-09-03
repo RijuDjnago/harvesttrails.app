@@ -213,8 +213,8 @@
                             <label for="UploadedFiles" style="font-weight:bold;">Uploaded Documents</label>
                             {% for document in documents %}
                             <div class="row mt-3">
-                            {%  if document.document_file %}                        
-                            <span> <a href="{{ document.document_file.url }}" class="" target="_blank">{{ document.document_file }}</a></span>
+                            {%  if document.file %}                        
+                            <span> <a href="{{ document.document_file }}" class="" target="_blank">{{ document.name }}</a></span>
                                
                             {% else %}
                             <span>Not uploaded yet.</span>
