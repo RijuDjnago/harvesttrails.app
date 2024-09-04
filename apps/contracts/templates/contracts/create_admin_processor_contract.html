@@ -52,8 +52,8 @@
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label for="processor_id">Select Processor<span class="asteriskField">*</span></label>
-                                <select name="selected_processor" id="processor_id" class="form-control" required>
-                                    <option value="">Select Processor</option>
+                                <select name="selected_processor" id="processor_id" class="form-control" required >
+                                    <option value="All">Select Processor</option>
                                     {% with t1_processors=processor|dictsort:"type" %}
                                         {% if t1_processors %}
                                             <optgroup label="Select T1 Processor">
