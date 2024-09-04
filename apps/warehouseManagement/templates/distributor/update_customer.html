@@ -1,0 +1,97 @@
+{% extends "base.html" %} {% load static %} {% block title %} Customer Update {% endblock title %} 
+
+{% block extrahead %}
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-Y3EWVPF7PQ"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-Y3EWVPF7PQ');
+</script>
+{% endblock extrahead %}
+
+{% block content %} {% include 'navbar.html' %}
+<div class="main-content">
+    {% include 'header.html' %} {% load crispy_forms_tags %}
+  <main>
+    <span class="farm headingtop">Customer Update</span>
+    <div class="card farm-fields-container">
+        <div class="container-fluid">
+            <form method="post" class="farm-fields-form">
+                {% csrf_token %}
+                <div class="row">
+                    
+                    <div class="col-md-4">
+                        {{ form.name|as_crispy_field }}
+                    </div>
+                    <div class="col-md-4">
+                        {{ form.location|as_crispy_field }}
+                    </div>
+                    
+                    <div class="col-md-4">
+                        {{ form.latitude|as_crispy_field }}
+                    </div>
+                    <div class="col-md-4">
+                        {{ form.longitude|as_crispy_field }}
+                    </div>
+                    
+                    
+                    <br>
+                    <hr>
+
+                    <div class="row">
+                    <div class="col-md-3">
+                        <div>
+                            <label for="contact_name">Contact Name<span class="asteriskField">*</span></label>
+                            <input value="{{p_user.contact_name}}" type="text" name="contact_name1" id="contact_name1" class="textinput textInput form-control" required>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div>
+                            <label for="contact_email">Contact Email<span class="asteriskField">*</span></label>
+                            <input value="{{p_user.contact_email}}" type="email" name="contact_email1" id="contact_email1" class="textinput textInput form-control" required>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div>
+                            <label for="contact_phone">Contact Phone</label>
+                            <input value="{{p_user.contact_phone}}" type="number" name="contact_phone1" id="contact_phone1" class="textinput textInput form-control">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div>
+                            <label for="ccontact_fax">Contact Fax</label>
+                            <input value="{{p_user.contact_fax}}" type="number" name="contact_fax1" id="contact_fax1" class="textinput textInput form-control">
+                        </div>
+                    </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="form-btn-row">
+                        <a href="{% url 'list-customer' %}" class="btn-close-cancel btn-space">Cancel</a>
+                        <input type="submit" class="btn-save-submit" value="Save"> 
+                    </div>
+                </div>
+        </div>
+            </form>
+    
+  </main>
+  {% include 'footer.html' %}
+</div>
+{% endblock %}
+
+{% block jquery %}
+
+<script>
+    $('#Warehouse-active').addClass('activeLink');
+  
+    $('#Warehouse-down').addClass('down');
+    $('#Warehouse-sub_unic').show();
+
+    $('#customer-management').addClass('activeLink active-nav');
+
+</script>
+{% endblock jquery %}

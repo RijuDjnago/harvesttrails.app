@@ -250,8 +250,9 @@ def add_distributor_user(request,pk):
     except Exception as e:
         context["error_messages"] = str(e)
         return render(request, 'distributor/add_distributor_user.html',context)
-    
 
+
+@login_required()
 def distributor_list(request):
     context = {}
     try:
@@ -291,6 +292,135 @@ def distributor_list(request):
     except Exception as e:
         context["error_messages"] = str(e)
         return render(request, 'distributor/list_distributor.html', context)
+
+
+@login_required()
+def distributor_update(request,pk):
+    context = {}
+    try:
+        if request.user.is_authenticated:        
+            if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+                obj_id = DistributorUser.objects.get(id=pk)
+                print(obj_id)
+                context['p_user'] = obj_id
+                distributor = Distributor.objects.get(id=obj_id.distributor.id)
+
+                context['form'] = DistributorForm(instance=distributor)
+                distributor_email = obj_id.contact_email
+                user = User.objects.get(email=distributor_email)
+                if request.method == 'POST':                   
+                    form = DistributorForm( request.POST,instance=distributor)                    
+                    if form.is_valid():                       
+                        email_update = request.POST.get('contact_email1')
+                        name_update = request.POST.get('contact_name1')
+                        phone_update = request.POST.get('contact_phone1')
+                        fax_update = request.POST.get('contact_fax1')
+                        
+                        obj_id.contact_name = name_update
+                        obj_id.contact_email = email_update
+                        obj_id.contact_phone = phone_update
+                        obj_id.contact_fax = fax_update
+                        obj_id.save()
+                        log_email = ''
+                        if email_update != distributor_email:
+                            f_name = name_update
+                            user.email = email_update
+                            user.username = email_update
+                            user.first_name = f_name
+                            user.save()
+                            form.save()
+                            log_email = email_update
+                        else :
+                            f_name = name_update
+                            user.first_name = f_name
+                            user.save()
+                            form.save()
+                            log_email = obj_id.contact_email
+                        # 07-04-23 Log Table
+                        log_type, log_status, log_device = "DistributorUser", "Edited", "Web"
+                        log_idd, log_name = obj_id.id, name_update
+                        log_details = f"distributor_id = {distributor.id} | distributor = {distributor.entity_name}  | contact_name= {name_update} | contact_email = {email_update} | contact_phone = {phone_update} | contact_fax = {fax_update}"
+                        action_by_userid = request.user.id
+                        userr = User.objects.get(pk=action_by_userid)
+                        user_role = userr.role.all()
+                        action_by_username = f'{userr.first_name} {userr.last_name}'
+                        action_by_email = userr.username
+                        if request.user.id == 1 :
+                            action_by_role = "superuser"
+                        else:
+                            action_by_role = str(','.join([str(i.role) for i in user_role]))
+                        logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+                                            action_by_userid=action_by_userid,action_by_username=action_by_username,
+                                            action_by_email=action_by_email,action_by_role=action_by_role,log_email=log_email,
+                                            log_details=log_details,log_device=log_device)
+                        logtable.save()
+                        return redirect('list-distributor')
+                return render(request, 'distributor/update_distributor.html',context)
+            # distributor..........
+            elif request.user.is_distributor:
+                obj_id = DistributorUser.objects.get(id=pk)
+                context['p_user'] = obj_id
+                distributor = Distributor.objects.get(id=obj_id.distributor.id)
+
+                context['form'] = DistributorForm(instance=distributor)
+                distributor_email = obj_id.contact_email
+                user = User.objects.get(email=distributor_email)
+                if request.method == 'POST':
+                    form = DistributorForm( request.POST,instance=distributor)
+                    if form.is_valid():
+                        email_update = request.POST.get('contact_email1')
+                        name_update = request.POST.get('contact_name1')
+                        phone_update = request.POST.get('contact_phone1')
+                        fax_update = request.POST.get('contact_fax1')
+                        obj_id.contact_name = name_update
+                        obj_id.contact_email = email_update
+                        obj_id.contact_phone = phone_update
+                        obj_id.contact_fax = fax_update
+                        obj_id.save()
+                        log_email = ''
+                        if email_update != distributor_email:
+                            f_name = name_update
+                            user.email = email_update
+                            user.username = email_update
+                            user.first_name = f_name
+                            user.save()
+                            form.save()
+                            log_email = email_update
+                        else :
+                            f_name = name_update
+                            user.first_name = f_name
+                            user.save()
+                            form.save()
+                            log_email = obj_id.contact_email
+                        # 07-04-23 Log Table
+                        log_type, log_status, log_device = "DistributorUser", "Edited", "Web"
+                        log_idd, log_name = obj_id.id, name_update
+                        log_details = f"distributor_id = {distributor.id} | distributor = {distributor.entity_name}  | contact_name= {name_update} | contact_email = {email_update} | contact_phone = {phone_update} | contact_fax = {fax_update}"
+                        action_by_userid = request.user.id
+                        userr = User.objects.get(pk=action_by_userid)
+                        user_role = userr.role.all()
+                        action_by_username = f'{userr.first_name} {userr.last_name}'
+                        action_by_email = userr.username
+                        if request.user.id == 1 :
+                            action_by_role = "superuser"
+                        else:
+                            action_by_role = str(','.join([str(i.role) for i in user_role]))
+                        logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+                                            action_by_userid=action_by_userid,action_by_username=action_by_username,
+                                            action_by_email=action_by_email,action_by_role=action_by_role,log_email=log_email,
+                                            log_details=log_details,log_device=log_device)
+                        logtable.save()
+                        return redirect('list-distributor')
+                return render(request, 'distributor/update_distributor.html',context)
+            else:
+                messages.error(request, "Not a valid request")
+                return redirect("dashboard")
+        else:
+            return redirect('login')
+    except Exception as e:
+        context["error_messages"] = str(e)
+        return render(request, 'distributor/update_distributor.html',context)
+
 
 @login_required()
 def distributor_change_password(request,pk):
@@ -378,6 +508,7 @@ def distributor_change_password(request,pk):
         return render (request, 'distributor/distributor_change_password.html', context)
 
 
+@login_required()
 def add_warehouse(request):
     context = {}
     try:
@@ -492,6 +623,7 @@ def add_warehouse(request):
         return render(request, 'distributor/add_warehouse.html', context)
 
 
+@login_required()
 def list_warehouse(request):
     context = {}
     try:
@@ -547,6 +679,148 @@ def list_warehouse(request):
     except Exception as e:
         context["error_messages"] = str(e)
         return render(request, 'distributor/list_warehouse.html', context)
+
+
+@login_required()
+def warehouse_update(request,pk):
+    context = {}
+    try:
+        if request.user.is_authenticated:        
+            if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+                obj_id = WarehouseUser.objects.get(id=pk)
+                print(obj_id)
+                context['p_user'] = obj_id
+                warehouse = Warehouse.objects.get(id=obj_id.warehouse.id)
+
+                context['form'] = WarehouseForm(instance=warehouse)
+                warehouse_email = obj_id.contact_email
+                user = User.objects.get(email=warehouse_email)
+                if request.method == 'POST':                   
+                    form = WarehouseForm( request.POST,instance=warehouse)                    
+                    if form.is_valid(): 
+                        distributor = request.POST.get('distributor')                       
+                                            
+                        email_update = request.POST.get('contact_email1')
+                        name_update = request.POST.get('contact_name1')
+                        phone_update = request.POST.get('contact_phone1')
+                        fax_update = request.POST.get('contact_fax1')
+                        
+                        obj_id.contact_name = name_update
+                        obj_id.contact_email = email_update
+                        obj_id.contact_phone = phone_update
+                        obj_id.contact_fax = fax_update
+                        obj_id.save()
+                        check_distributor = Distributor.objects.filter(id=distributor)
+                        if check_distributor:
+                            get_distributor = check_distributor.first()
+                            get_distributor.warehouse.add(warehouse)
+                        log_email = ''
+                        if email_update != warehouse_email:
+                            f_name = name_update
+                            user.email = email_update
+                            user.username = email_update
+                            user.first_name = f_name
+                            user.save()
+                            form.save()
+                            log_email = email_update
+                        else :
+                            f_name = name_update
+                            user.first_name = f_name
+                            user.save()
+                            form.save()
+                            log_email = obj_id.contact_email
+                        # 07-04-23 Log Table
+                        log_type, log_status, log_device = "WarehouseUser", "Edited", "Web"
+                        log_idd, log_name = obj_id.id, name_update
+                        log_details = f"warehouse_id = {warehouse.id} | warehouse = {warehouse.name}  | contact_name= {name_update} | contact_email = {email_update} | contact_phone = {phone_update} | contact_fax = {fax_update}"
+                        action_by_userid = request.user.id
+                        userr = User.objects.get(pk=action_by_userid)
+                        user_role = userr.role.all()
+                        action_by_username = f'{userr.first_name} {userr.last_name}'
+                        action_by_email = userr.username
+                        if request.user.id == 1 :
+                            action_by_role = "superuser"
+                        else:
+                            action_by_role = str(','.join([str(i.role) for i in user_role]))
+                        logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+                                            action_by_userid=action_by_userid,action_by_username=action_by_username,
+                                            action_by_email=action_by_email,action_by_role=action_by_role,log_email=log_email,
+                                            log_details=log_details,log_device=log_device)
+                        logtable.save()
+                        return redirect('list-warehouse')
+                return render(request, 'distributor/update_warehouse.html',context)
+            # warehouse manager..........
+            elif request.user.is_warehouse_manager:
+                obj_id = WarehouseUser.objects.get(id=pk)
+                print(obj_id)
+                context['p_user'] = obj_id
+                warehouse = Warehouse.objects.get(id=obj_id.warehouse.id)
+
+                context['form'] = WarehouseForm(instance=warehouse)
+                warehouse_email = obj_id.contact_email
+                user = User.objects.get(email=warehouse_email)
+                if request.method == 'POST':                   
+                    form = WarehouseForm( request.POST,instance=warehouse)                    
+                    if form.is_valid(): 
+                        distributor = request.POST.get('distributor')    
+                                           
+                        email_update = request.POST.get('contact_email1')
+                        name_update = request.POST.get('contact_name1')
+                        phone_update = request.POST.get('contact_phone1')
+                        fax_update = request.POST.get('contact_fax1')
+                        
+                        obj_id.contact_name = name_update
+                        obj_id.contact_email = email_update
+                        obj_id.contact_phone = phone_update
+                        obj_id.contact_fax = fax_update
+                        obj_id.save()
+                        check_distributor = Distributor.objects.filter(id=distributor)
+                        if check_distributor:
+                            get_distributor = check_distributor.first()
+                            get_distributor.warehouse.add(warehouse)
+                        log_email = ''
+                        if email_update != warehouse_email:
+                            f_name = name_update
+                            user.email = email_update
+                            user.username = email_update
+                            user.first_name = f_name
+                            user.save()
+                            form.save()
+                            log_email = email_update
+                        else :
+                            f_name = name_update
+                            user.first_name = f_name
+                            user.save()
+                            form.save()
+                            log_email = obj_id.contact_email
+                        # 07-04-23 Log Table
+                        log_type, log_status, log_device = "WarehouseUser", "Edited", "Web"
+                        log_idd, log_name = obj_id.id, name_update
+                        log_details = f"warehouse_id = {warehouse.id} | warehouse = {warehouse.name}  | contact_name= {name_update} | contact_email = {email_update} | contact_phone = {phone_update} | contact_fax = {fax_update}"
+                        action_by_userid = request.user.id
+                        userr = User.objects.get(pk=action_by_userid)
+                        user_role = userr.role.all()
+                        action_by_username = f'{userr.first_name} {userr.last_name}'
+                        action_by_email = userr.username
+                        if request.user.id == 1 :
+                            action_by_role = "superuser"
+                        else:
+                            action_by_role = str(','.join([str(i.role) for i in user_role]))
+                        logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+                                            action_by_userid=action_by_userid,action_by_username=action_by_username,
+                                            action_by_email=action_by_email,action_by_role=action_by_role,log_email=log_email,
+                                            log_details=log_details,log_device=log_device)
+                        logtable.save()
+                        return redirect('list-warehouse')
+                return render(request, 'distributor/update_warehouse.html',context)
+            else:
+                messages.error(request, "Not a valid request")
+                return redirect("dashboard")
+        else:
+            return redirect('login')
+    except Exception as e:
+        context["error_messages"] = str(e)
+        return render(request, 'distributor/update_warehouse.html',context)
 
 
 @login_required()
@@ -635,6 +909,7 @@ def warehouse_change_password(request,pk):
         return render (request, 'distributor/warehouse_change_password.html', context)
 
 
+@login_required()
 def add_customer(request):
     context = {}
     try:
@@ -743,6 +1018,7 @@ def add_customer(request):
         return render(request, 'distributor/add_customer.html', context)
 
 
+@login_required()
 def list_customer(request):
     context = {}
     try:
@@ -782,6 +1058,137 @@ def list_customer(request):
     except Exception as e:
         context["error_messages"] = str(e)
         return render(request, 'distributor/list_customer.html', context)
+
+
+
+@login_required()
+def customer_update(request,pk):
+    context = {}
+    try:
+        if request.user.is_authenticated:        
+            if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+                obj_id = CustomerUser.objects.get(id=pk)
+                print(obj_id)
+                context['p_user'] = obj_id
+                customer = Customer.objects.get(id=obj_id.customer.id)
+
+                context['form'] = CustomerForm(instance=customer)
+                customer_email = obj_id.contact_email
+                user = User.objects.get(email=customer_email)
+                if request.method == 'POST':                   
+                    form = CustomerForm( request.POST,instance=customer)                    
+                    if form.is_valid():  
+                        print('000000000000')                     
+                        email_update = request.POST.get('contact_email1')
+                        name_update = request.POST.get('contact_name1')
+                        phone_update = request.POST.get('contact_phone1')
+                        fax_update = request.POST.get('contact_fax1')
+                        
+                        obj_id.contact_name = name_update
+                        obj_id.contact_email = email_update
+                        obj_id.contact_phone = phone_update
+                        obj_id.contact_fax = fax_update
+                        obj_id.save()
+                        print(obj_id)
+                        log_email = ''
+                        if email_update != customer_email:
+                            f_name = name_update
+                            user.email = email_update
+                            user.username = email_update
+                            user.first_name = f_name
+                            user.save()
+                            form.save()
+                            log_email = email_update
+                        else :
+                            f_name = name_update
+                            user.first_name = f_name
+                            user.save()
+                            form.save()
+                            log_email = obj_id.contact_email
+                        # 07-04-23 Log Table
+                        log_type, log_status, log_device = "CustomerUser", "Edited", "Web"
+                        log_idd, log_name = obj_id.id, name_update
+                        log_details = f"customer_id = {customer.id} | customer = {customer.name}  | contact_name= {name_update} | contact_email = {email_update} | contact_phone = {phone_update} | contact_fax = {fax_update}"
+                        action_by_userid = request.user.id
+                        userr = User.objects.get(pk=action_by_userid)
+                        user_role = userr.role.all()
+                        action_by_username = f'{userr.first_name} {userr.last_name}'
+                        action_by_email = userr.username
+                        if request.user.id == 1 :
+                            action_by_role = "superuser"
+                        else:
+                            action_by_role = str(','.join([str(i.role) for i in user_role]))
+                        logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+                                            action_by_userid=action_by_userid,action_by_username=action_by_username,
+                                            action_by_email=action_by_email,action_by_role=action_by_role,log_email=log_email,
+                                            log_details=log_details,log_device=log_device)
+                        logtable.save()
+                        return redirect('list-customer')
+                return render(request, 'distributor/update_customer.html',context)
+            # customer..........
+            elif request.user.is_customer:
+                obj_id = CustomerUser.objects.get(id=pk)
+                context['p_user'] = obj_id
+                customer = Customer.objects.get(id=obj_id.customer.id)
+
+                context['form'] = CustomerForm(instance=customer)
+                customer_email = obj_id.contact_email
+                user = User.objects.get(email=customer_email)
+                if request.method == 'POST':
+                    form = CustomerForm( request.POST,instance=customer)
+                    if form.is_valid():
+                        email_update = request.POST.get('contact_email1')
+                        name_update = request.POST.get('contact_name1')
+                        phone_update = request.POST.get('contact_phone1')
+                        fax_update = request.POST.get('contact_fax1')
+                        obj_id.contact_name = name_update
+                        obj_id.contact_email = email_update
+                        obj_id.contact_phone = phone_update
+                        obj_id.contact_fax = fax_update
+                        obj_id.save()
+                        log_email = ''
+                        if email_update != customer_email:
+                            f_name = name_update
+                            user.email = email_update
+                            user.username = email_update
+                            user.first_name = f_name
+                            user.save()
+                            form.save()
+                            log_email = email_update
+                        else :
+                            f_name = name_update
+                            user.first_name = f_name
+                            user.save()
+                            form.save()
+                            log_email = obj_id.contact_email
+                        # 07-04-23 Log Table
+                        log_type, log_status, log_device = "CustomerUser", "Edited", "Web"
+                        log_idd, log_name = obj_id.id, name_update
+                        log_details = f"customer_id = {customer.id} | customer = {customer.name}  | contact_name= {name_update} | contact_email = {email_update} | contact_phone = {phone_update} | contact_fax = {fax_update}"
+                        action_by_userid = request.user.id
+                        userr = User.objects.get(pk=action_by_userid)
+                        user_role = userr.role.all()
+                        action_by_username = f'{userr.first_name} {userr.last_name}'
+                        action_by_email = userr.username
+                        if request.user.id == 1 :
+                            action_by_role = "superuser"
+                        else:
+                            action_by_role = str(','.join([str(i.role) for i in user_role]))
+                        logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+                                            action_by_userid=action_by_userid,action_by_username=action_by_username,
+                                            action_by_email=action_by_email,action_by_role=action_by_role,log_email=log_email,
+                                            log_details=log_details,log_device=log_device)
+                        logtable.save()
+                        return redirect('list-customer')
+                return render(request, 'distributor/update_customer.html',context)
+            else:
+                messages.error(request, "Not a valid request")
+                return redirect("dashboard")
+        else:
+            return redirect('login')
+    except Exception as e:
+        context["error_messages"] = str(e)
+        return render(request, 'distributor/update_customer.html',context)
 
 
 @login_required()
@@ -869,7 +1276,8 @@ def customer_change_password(request,pk):
         context["error_messages"] = str(e)
         return render (request, 'distributor/customer_change_password.html', context)
 
-from django.core.exceptions import ValidationError
+
+@login_required()
 def create_processor_shipment(request):
     context = {}
     try:
@@ -1017,7 +1425,7 @@ def create_processor_shipment(request):
                             distributor_users = []                          
                         all_users = list(all_user) + list(distributor_users)
                         for user in all_users :
-                            msg = f'A shipment has been sent to you of {outbound.net_weight}{outbound.weight_unit} under Contract ID - {outbound.contract.secret_key}'
+                            msg = f'A shipment has been sent of {outbound.net_weight}{outbound.weight_unit} under Contract ID - {outbound.contract.secret_key}'
                             get_user = User.objects.get(username=user.contact_email)
                             notification_reason = 'New Shipment'
                             redirect_url = "/warehouse/list-processor-shipment/"
@@ -1178,7 +1586,7 @@ def create_processor_shipment(request):
                         all_users = list(all_user) + list(distributor_users)
                         
                         for user in all_users :
-                            msg = f'A shipment has been sent to you of {outbound.net_weight}{outbound.weight_unit} under Contract ID - {outbound.contract.secret_key}'
+                            msg = f'A shipment has been sent of {outbound.net_weight}{outbound.weight_unit} under Contract ID - {outbound.contract.secret_key}'
                             get_user = User.objects.get(username=user.contact_email)
                             notification_reason = 'New Shipment'
                             redirect_url = "/warehouse/list-processor-shipment/"
@@ -1355,6 +1763,7 @@ def create_processor_shipment(request):
         return render(request, 'distributor/create_outbound.html', context) 
 
 
+@login_required()
 def list_processor_shipment(request):
     context = {}
     try:
@@ -1396,7 +1805,15 @@ def list_processor_shipment(request):
             search_name = request.GET.get('search_name', '')
 
             if search_name and search_name is not None:
-                shipments = shipments.filter()
+                shipments = shipments.filter(Q(warehouse_name__icontains=search_name) |
+                                             Q(customer_name__icontains=search_name) |
+                                             Q(contract__secret_key__icontains=search_name) |
+                                             Q(outbound_type__icontains=search_name) |
+                                             Q(carrier_type__icontains=search_name) |
+                                             Q(status__icontains=search_name) |
+                                             Q(purchase_order_name__icontains=search_name) |
+                                             Q(lot_number__icontains=search_name) |
+                                             Q(purchase_order_number__icontains=search_name))
                 context['search_name'] = search_name
             else:
                 context['search_name'] = None            
@@ -1516,6 +1933,7 @@ def list_processor_shipment(request):
         return render(request, 'distributor/list_outbound.html', context)
 
 
+@login_required()
 def processor_shipment_view(request, pk):
     context = {}
     try:
@@ -1531,7 +1949,7 @@ def processor_shipment_view(request, pk):
             for file in ProcessorWarehouseShipmentDocuments.objects.filter(shipment=shipment)
         ]
         context["carriers"] = carrier_details
-        logs = ProcessorShipmentLog.objects.filter(shipment=shipment).order_by('-id')
+        logs = ProcessorShipmentLog.objects.filter(shipment=shipment).order_by('id')
         context['logs'] = logs
         return render (request, 'distributor/view_outbound.html', context)
     except (ValueError, AttributeError, AdminProcessorContract.DoesNotExist) as e:
@@ -1539,6 +1957,7 @@ def processor_shipment_view(request, pk):
         return render(request, 'distributor/view_outbound.html', context)
 
 
+@login_required()
 def edit_processor_shipment(request, pk):
     context = {}
     # try:
@@ -1759,3 +2178,163 @@ def edit_processor_shipment(request, pk):
     # except (ValueError, AttributeError, AdminProcessorContract.DoesNotExist) as e:
     #     context["error_messages"] = str(e)
         return render(request, 'distributor/edit_outbound.html', context)
+
+
+def create_warehouse_shipment(request):
+    context = {}
+    try:
+        if request.user.is_authenticated:
+            if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+                contracts = AdminCustomerContract.objects.all().values('id','secret_key','customer_id','customer_name','crop').order_by('-id')                
+                context["contracts"] = contracts
+                context.update({
+                    "selected_contract": None,                    
+                    "customer_id": None,
+                    "customer_name": None             
+                })
+              
+                if request.method == "POST":
+                    data = request.POST
+                    selected_contract = request.POST.get('selected_contract') 
+                    print(selected_contract)
+                    contract = AdminProcessorContract.objects.get(id=int(selected_contract))                   
+                    processor_id = contract.processor_id
+                    processor_type = contract.processor_type
+                    selected_sku_id = data.get('sender_sku_id')
+                    destination_type = data.get('selected_destination')
+                    destination_id = data.get('destination_id')
+                    context.update({
+                        "selected_contract":contract.id,
+                        "contract":contract,                        
+                        "selected_processor_id": processor_id,
+                        "carrier_type": data.get('carrier_type'),                    
+                        "outbound_type": data.get('outbound_type'),
+                        "purchase_order_name":data.get('purchase_order_name'),
+                        "purchase_order_number": data.get('purchase_order_number'),
+                        "lot_number": data.get('lot_number'),
+                        "sender_sku_id": selected_sku_id,
+                        "selected_destination": destination_type,
+                        "weight":data.get('weight'),
+                        "gross_weight":data.get('gross_weight'),
+                        "net_weight":data.get('net_Weight'),
+                        "ship_quantity":data.get('ship_quantity'),
+                        "status":data.get('status'),
+                        "amount_unit":data.get('amount_unit') ,                     
+                        
+                    })
+                    if destination_id:
+                        context["destination_id"] = int(destination_id)
+                    if processor_id and not data.get("save"): 
+                    
+                        if selected_sku_id:
+                            context["milled_value"] =  calculate_milled_volume(int(processor_id), processor_type, selected_sku_id)
+                            context["selected_sku"] = selected_sku_id
+                        else:
+                            context["milled_value"] =  calculate_milled_volume(int(processor_id), processor_type, selected_sku_id)
+                        context["sender_sku_id_list"] = get_sku_list(int(processor_id),processor_type)["data"]
+                        if destination_type == 'warehouse':
+                            context['destination_list'] = Warehouse.objects.all().values('id','name')
+                        if destination_type == 'customer':
+                            context['destination_list'] = Customer.objects.all().values('id','name')
+                        return render(request, 'distributor/create_outbound.html', context)
+                    else:
+                        if destination_type == 'warehouse':
+                            warehouse_id = Warehouse.objects.get(id=int(context.get('destination_id'))).id
+                            warehouse_name = Warehouse.objects.get(id=int(context.get('destination_id'))).name
+                            customer_id = None
+                            customer_name = None
+                        else:
+                            warehouse_id = None
+                            warehouse_name = None
+                            customer_id = Customer.objects.get(id=int(context.get('destination_id'))).id
+                            customer_name = Customer.objects.get(id=int(context.get('destination_id'))).name
+
+                        if data.get('carrier_type') == 'Truck/Trailer':
+                            ship_quantity = data.get('ship_quantity')
+                            gross_weight = float(data.get('gross_weight'))* int(ship_quantity)
+                            if data.get('net_weight') not in [None, 'null', ' ', '']:
+                                
+                                net_weight = float(data.get('net_weight')) * int(ship_quantity)
+                            else:
+                                context["error_messages"] = "Please give net weight."
+                                return render(request, 'distributor/create_outbound.html', context)
+                        elif data.get('carrier_type') == 'Rail Car':
+                            
+                            gross_weight = 0
+                            ship_quantity = 1
+                            if data.get('weight') not in [None, 'null', ' ', '']:
+                                net_weight = float(data.get('weight'))
+                            else:
+                                context["error_messages"] = "Please give weight."
+                                return render(request, 'distributor/create_outbound.html', context)
+                       
+                        if contract.amount_unit == context.get('amount_unit'):
+                            contract_weight_left = float(contract.contract_amount) - float(net_weight)
+                        else:
+                            if contract.amount_unit == "LBS" and context.get('amount_unit') == "MT":
+                                net_weight_lbs = float(net_weight) * 2204.62
+                                contract_weight_left = float(contract.contract_amount) - net_weight_lbs 
+                            else:
+                                net_weight_mt = float(net_weight) * 0.000453592
+                                contract_weight_left = float(contract.contract_amount) - net_weight_mt                         
+                        
+                        outbound = ProcessorWarehouseShipment(
+                            contract=contract,
+                            processor_id=processor_id,
+                            processor_type=processor_type,
+                            processor_entity_name=contract.processor_entity_name,
+                            processor_sku_list=[selected_sku_id],
+                            carrier_type=context.get('carrier_type'),
+                            outbound_type=context.get('outbound_type'),
+                            purchase_order_name=context.get('purchase_order_name'),
+                            purchase_order_number=context.get('purchase_order_number'),
+                            lot_number=context.get('lot_number'),
+                            gross_weight=gross_weight,
+                            net_weight=net_weight,
+                            weight_unit=context.get('amount_unit'),
+                            ship_quantity=ship_quantity,
+                            contract_weight_left=contract_weight_left,
+                            status=context.get('status'),
+                            customer_id=customer_id,
+                            warehouse_id=warehouse_id,
+                            customer_name=customer_name,
+                            warehouse_name=warehouse_name
+                        )
+                        outbound.save()
+                            
+                        
+                        carrier_id = data.get('carrier_id')
+                        if carrier_id:
+                            CarrierDetails.objects.create(shipment=outbound, carrier_id=carrier_id)
+                        
+                        files = request.FILES.getlist('files')
+                        for file in files:
+                            ProcessorWarehouseShipmentDocuments.objects.create(shipment=outbound, document_file=file)
+
+                        ## Send notification to the Destination.
+                        if outbound.warehouse_id not in [None, 'null', ' ', '']:                            
+                            all_user = WarehouseUser.objects.filter(warehouse_id=outbound.warehouse_id)                           
+                           
+                            distributors = Distributor.objects.filter(warehouse__id=outbound.warehouse_id)                           
+                         
+                            distributor_users = DistributorUser.objects.filter(distributor__in=distributors)
+                        else:                            
+                            all_user = CustomerUser.objects.filter(customer_id=outbound.customer_id)
+                            distributor_users = []                          
+                        all_users = list(all_user) + list(distributor_users)
+                        for user in all_users :
+                            msg = f'A shipment has been sent of {outbound.net_weight}{outbound.weight_unit} under Contract ID - {outbound.contract.secret_key}'
+                            get_user = User.objects.get(username=user.contact_email)
+                            notification_reason = 'New Shipment'
+                            redirect_url = "/warehouse/list-processor-shipment/"
+                            save_notification = ShowNotification(user_id_to_show=get_user.id,msg=msg,status="UNREAD",redirect_url=redirect_url,
+                                notification_reason=notification_reason)
+                            save_notification.save()
+                        
+                    return redirect('list-processor-shipment')  
+                return render(request, 'distributor/create_outbound.html', context) 
+        else:
+            return redirect('login')        
+    except Exception as e:
+        context["error_messages"] = str(e)
+        return render(request, 'distributor/create_outbound.html', context)  
