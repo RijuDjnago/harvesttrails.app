@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %} Add Shipment {% endblock title %}
+{% block title %} Send Shipment {% endblock title %}
 
 {% block extrahead %}
 <!-- Google tag (gtag.js) -->
@@ -68,7 +68,7 @@
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label for="selected_contract">Select Contract<span class="asteriskField">*</span></label>
-                                <select name="selected_contract" id="selected_contract" class="form-control" required onchange="this.form.submit()">
+                                <select name="selected_contract" id="selected_contract" class="form-control selectpicker" data-live-search="true"  required onchange="this.form.submit()">
                                     <option value="All" selected disabled>Select Contract</option>                                 
                                     {% for contract in contracts %}
                                     <option value="{{contract.id}}"{% if selected_contract == contract.id %} selected {% endif %}>{{contract.secret_key}}- {{contract.processor_entity_name}} - {{contract.crop}}</option>
@@ -418,7 +418,7 @@
     $('#Warehouse-down').addClass('down');
     $('#Warehouse-sub_unic').show();
   
-    $('#Processor-Shipment-Add').addClass('activeLink active-nav');
+    $('#Processor-Shipment').addClass('activeLink active-nav');
   
 </script>
 {% endblock jquery %}

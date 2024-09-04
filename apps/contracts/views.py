@@ -1229,14 +1229,16 @@ def admin_customer_contract_create(request):
                 print(selected_customer)
                 # Ensure selected_customer is not empty and correctly formatted
                 if selected_customer:
-                    customer = Customer.objects.filter(id=selected_customer).first()                   
+                    customer = Customer.objects.filter(id=selected_customer).first()  
+                    customer_name = customer.name                 
                     
                     if not customer:
                         context["error_messages"] = "Selected customer does not exist."
                         return render(request, 'contracts/create_admin_customer_contract.html', context)
                     
                     contract = AdminCustomerContract.objects.create(                        
-                        customer_id=customer.id,                         
+                        customer_id=customer.id,  
+                        customer_name= customer_name,                       
                         crop=selected_crop,
                         crop_type = crop_type,
                         contract_amount=contract_amount, 
@@ -1344,7 +1346,7 @@ def admin_customer_contract_list(request):
             return redirect("dashboard")   
     except (ValueError, AttributeError, AdminProcessorContract.DoesNotExist) as e:
         context["error_messages"] = str(e)
-    return render(request, 'contracts/admin_processor_contract_list.html', context)
+    return render(request, 'contracts/admin_customer_contract_list.html', context)
 
 
 @login_required()
@@ -1403,14 +1405,16 @@ def edit_admin_customer_contract(request, pk):
                 status = request.POST.get('status')
                 
                 if selected_customer:                    
-                    customer = Customer.objects.filter(id=int(selected_customer)).first()                   
+                    customer = Customer.objects.filter(id=int(selected_customer)).first()  
+                    customer_name = customer.name                 
 
                     if not customer:
                         context["error_messages"] = "Selected customer does not exist."
                         return render(request, 'contracts/edit_admin_customer_contract.html', context)
 
                     # Update contract details
-                    contract.customer_id = customer.id                    
+                    contract.customer_id = customer.id  
+                    contract.customer_name = customer_name                  
                     contract.crop = selected_crop
                     contract.contract_amount = contract_amount
                     contract.amount_unit = amount_unit
