@@ -20,5 +20,10 @@ urlpatterns = [
     path('list-processor-shipment/', list_processor_shipment, name='list-processor-shipment'),
     path('view-processor-shipment/<int:pk>/', processor_shipment_view, name='view-processor-shipment'),
     path('edit-processor-shipment/<int:pk>/', edit_processor_shipment, name='edit-processor-shipment'),
+
+    path('add-warehouse-shipment/', create_warehouse_shipment, name='add-warehouse-shipment'),
+    path('list-warehouse-shipment/', warehouse_shipment_list, name='list-warehouse-shipment'),
+    path('warehouse-shipment-view/<int:pk>/', warehouse_shipment_view, name='warehouse-shipment-view'),
+    path('edit-warehouse-shipment/<int:pk>/', edit_warehouse_shipment, name='edit-warehouse-shipment'),
     
 ]

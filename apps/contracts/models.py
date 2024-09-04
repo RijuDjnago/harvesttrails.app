@@ -222,12 +222,12 @@ class AdminProcessorContractDocuments(models.Model):
 
     def __str__(self):
         return f'Documents for {self.contract.id}'
-    
+
+
 class AdminCustomerContract(models.Model):
     secret_key = models.CharField(max_length=255, unique=True)
     customer_id = models.CharField(max_length=255) 
-    customer_name = models.CharField(max_length=255)
-    
+    customer_name = models.CharField(max_length=255)    
     crop = models.CharField(max_length=10, choices=crop_choices)
     crop_type = models.CharField(max_length=255, null=True, blank=True)
     contract_amount = models.PositiveBigIntegerField()
@@ -244,6 +244,7 @@ class AdminCustomerContract(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='contractUSer')  
     is_signed = models.BooleanField(default=False)
+    left_amount = models.PositiveBigIntegerField(null=True, blank=True)
 
     def save(self, *args, **kwargs):
         if not self.secret_key:  # Generate a new key only if it does not already exist
