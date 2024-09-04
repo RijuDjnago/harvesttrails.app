@@ -64,7 +64,7 @@ from apps.processor.models import Processor, ProcessorUser
 from apps.processor2.models import Processor2, ProcessorUser2
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from apps.contracts.models import *
-from apps.warehouseManagement.models import Customer, CustomerUser
+from apps.warehouseManagement.models import Customer, CustomerUser, Distributor, DistributorUser, Warehouse, WarehouseUser
 
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -1210,7 +1210,7 @@ def edit_admin_processor_contract(request, pk):
 def admin_customer_contract_create(request):
     context = {}
     try:
-        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role() or request.user.is_distributor:
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role() or request.user.is_distributor or request.user.warehouse_manager:
             # Get customers and add to context
             customers = Customer.objects.all().values('id', 'name').order_by('name')          
             context["customers"] = customers
@@ -1338,9 +1338,41 @@ def admin_customer_contract_list(request):
             except EmptyPage:
                 report = paginator.page(paginator.num_pages)             
             context['contracts'] = report
-            return render(request, 'contracts/admin_customer_contract_list.html', context)      
+            return render(request, 'contracts/admin_customer_contract_list.html', context) 
+             
+        elif request.user.is_distributor:
+            user_email = request.user.email
+            d = DistributorUser.objects.get(contact_email=user_email)
+            distributor_id = Distributor.objects.get(id=d.distributor.id).id
+            contracts = AdminCustomerContract.objects.filter(created_by=request.user)
+            contracts = contracts.order_by('-id')
+            paginator = Paginator(contracts, 100)
+            page = request.GET.get('page')
+            try:
+                report = paginator.page(page)
+            except PageNotAnInteger:
+                report = paginator.page(1)
+            except EmptyPage:
+                report = paginator.page(paginator.num_pages)             
+            context['contracts'] = report
+            return render(request, 'contracts/admin_customer_contract_list.html', context)
         
-    
+        elif request.user.is_warehouse_manager:
+            user_email = request.user.email
+            # d = DistributorUser.objects.get(contact_email=user_email)
+            # distributor_id = Distributor.objects.get(id=d.distributor.id).id
+            contracts = AdminCustomerContract.objects.filter(created_by=request.user)
+            contracts = contracts.order_by('-id')
+            paginator = Paginator(contracts, 100)
+            page = request.GET.get('page')
+            try:
+                report = paginator.page(page)
+            except PageNotAnInteger:
+                report = paginator.page(1)
+            except EmptyPage:
+                report = paginator.page(paginator.num_pages)             
+            context['contracts'] = report
+            return render(request, 'contracts/admin_customer_contract_list.html', context)
         else:
             messages.error(request, "Not a valid request.")
             return redirect("dashboard")   
@@ -1354,7 +1386,7 @@ def admin_customer_contract_view(request, pk):
     context ={}
     try:
         # Superuser................
-        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role() or request.user.is_customer:
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role() or request.user.is_customer or request.user.is_distributor or request.user.is_warehouse_manager:
             contract = AdminCustomerContract.objects.filter(id=pk).first()
             documents = AdminCustomerContractDocuments.objects.filter(contract=contract)
             context["contract"] = contract
@@ -1394,7 +1426,7 @@ def edit_admin_customer_contract(request, pk):
         }
 
         if request.method == "POST":
-            if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role() or request.user.is_distributor:
+            if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role() or request.user.is_distributor or request.user.warehouse_manager:
                 # Handle updates by admin or superuser
                 selected_customer = request.POST.get('selected_customer')
                 selected_crop = request.POST.get('crop')

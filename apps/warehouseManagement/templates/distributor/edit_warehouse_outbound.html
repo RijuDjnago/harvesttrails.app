@@ -1,0 +1,498 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %} Edit Shipment {% endblock title %}
+
+{% block extrahead %}
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-Y3EWVPF7PQ"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-Y3EWVPF7PQ');
+</script>
+{% endblock extrahead %}
+
+{% block content %}
+{% include 'navbar.html' %}
+
+<style>
+    .shipment-custom-btn {
+        height: 100%;
+        display: flex;
+        align-items: flex-end;
+    }
+
+    .shipment-custom-btn .btn-save-submit {
+        padding-top: 11px;
+        padding-bottom: 11px;
+        border-radius: 4px;
+    }
+    .extra_border_select{
+        border: 1px solid #ccc
+    }
+
+.ui-menu{height: 20vh;overflow-y: auto;padding: 0px 10px;margin: 0px 15px;}
+.ui-menu::-webkit-scrollbar{width:6px;max-height:20px;padding-right: 10px;}
+.ui-menu::-webkit-scrollbar-track{background:#ccc}
+.ui-menu:-webkit-scrollbar-thumb{background-color:#000;border-radius:20px;min-height:20px}
+
+</style>
+<div class="main-content">
+    {% include 'header.html' %} {% load crispy_forms_tags %}
+    <main>
+        <span class="farm headingtop">Edit Shipment</span>
+        <div class="card farm-fields-container">
+            {% include '_alerts.html' %}
+            <nav aria-label="breadcrumb m-5">
+                {% if error_messages %}
+                <div id="alertMessage" class="alert alert-warning alert-dismissible fade show" role="alert">
+                    <strong>{{error_messages}}</strong>  
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>                         
+                  </div> 
+                  <script>                            
+                    setTimeout(function() {
+                        document.getElementById('alertMessage').style.display = 'none';
+                    }, 5000);
+                </script>                          
+                  {% endif %}
+            </nav>
+            <div class="container-fluid">
+                <form method="post" class="farm-fields-form" enctype="multipart/form-data">
+                    {% csrf_token %}                   
+                    <div class="row mb-2">  
+                        <h2 style="background-color: #d7d5d5;color: #0b6c39;font-size: 22px;font-weight: 600;margin: 20px 0;padding: 12px 0;text-align: center">Contract Details</h2>                                            
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="selected_contract">Select Contract<span class="asteriskField">*</span></label>
+                                <select name="selected_contract" id="selected_contract" class="form-control" required readonly>                                                                    
+                                    
+                                    <option value="{{contract.id}}" selected>{{contract.secret_key}}- {{contract.customer_name}} - {{contract.crop}}</option>
+                                 
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="customer_id">Customer</label>
+                                <input type="text" name="customer_id" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{contract.customer_name}}" readonly>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="selected_contract">Select Contract<span class="asteriskField">*</span></label>
+                                <select name="selected_contract" id="selected_contract" class="form-control" required readonly>                                                                    
+                                    {% for destination in destination_list%}
+                                    <option value="{{destination.id}}"{% if destination_id == destination.id %} selected{% endif %}>{{destination.name}}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>                    
+                                 
+                    <div class="row">  
+                        <h2 style="background-color: #d7d5d5;color: #0b6c39;font-size: 22px;font-weight: 600;margin: 20px 0;padding: 12px 0;text-align: center">Delivery details</h2>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="carrier_type">Carrier type</label>
+                                <select name="carrier_type" id="carrier_type" class="form-control" required onchange="this.form.submit()">                                 
+                                    <option value="Rail Car"{% if shipment.carrier_type == 'Rail Car'%} selected {% endif %}>Rail Car</option>
+                                    <option value="Truck/Trailer"{% if shipment.carrier_type == 'Truck/Trailer'%} selected {% endif %}>Truck/Trailer</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="carrier_id">Carrier ID </label>
+                                <input type="text" name="carrier_id" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{carrier_id}}">
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="outbound_type">Outbound Type</label>
+                                <select name="outbound_type" id="outbound_type" class="form-control" required onchange="this.form.submit()">                                 
+                                    <option value="Domestic"{% if shipmet.outbound_type == 'Domestic'%} selected {% endif %}>Domestic</option>
+                                    <option value="International"{% if shipment.outbound_type == 'International'%} selected {% endif %}>International</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="purchase_order_name">Purchase Order Name </label>
+                                <input type="text" name="purchase_order_name" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{shipment.purchase_order_name}}">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="purchase_order_number">Purchase Order Number </label>
+                                <input type="number" name="purchase_order_number" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{shipment.purchase_order_number}}">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="lot_number">Lot Number </label>
+                                <input type="text" name="lot_number" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{shipment.lot_number}}">
+                            </div>
+                        </div>
+                    
+                        <div class="col-md-4 rail">
+                            <div class="form-group">
+                                <label for="weight">Weight</label>
+                                <div class="d-flex">
+                                <input type="number" name="weight" class="textinput textInput form-control" value="{{net_weight}}" style="margin-top:0; border-top-right-radius:0 !important; border-bottom-right-radius:0 !important" >
+                                <select name="amount_unit" id="unitSelction" class="form-select" style="border-top-left-radius:0 !important; border-bottom-left-radius:0 !important; border-left:0; width:90px;" required>                                   
+                                    <option value="LBS">LBS</option>
+                                    <option value="MT">MT</option>
+                                </select>
+                            </div>
+                            </div>
+                        </div>
+                                           
+                        <div class="col-md-4 truck">
+                            <div class="form-group">
+                                <label for="gross_weight">Gross Weight</label>
+                                <div class="d-flex">
+                                <input type="number" name="gross_weight" class="textinput textInput form-control" value="{{gross_weight}}" style="margin-top:0; border-top-right-radius:0 !important; border-bottom-right-radius:0 !important">
+                                <select name="amount_unit" id="unitSelction" class="form-select" style="border-top-left-radius:0 !important; border-bottom-left-radius:0 !important; border-left:0; width:90px;" required>                                   
+                                    <option value="LBS"{% if shipment.weight_unit == "LBS" %} selected {% endif %}>LBS</option>
+                                    <option value="MT"{% if shipment.weight_unit == "MT" %} selected {% endif %}>MT</option>
+                                </select>
+                            </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 truck">
+                            <div class="form-group">
+                                <label for="net_weight">Net Weight</label>
+                                <div class="d-flex">
+                                <input type="number" name="net_weight" class="textinput textInput form-control" value="{{net_weight}}" style="margin-top:0; border-top-right-radius:0 !important; border-bottom-right-radius:0 !important">
+                                <select name="amount_unit" id="unitSelction" class="form-select" style="border-top-left-radius:0 !important; border-bottom-left-radius:0 !important; border-left:0; width:90px;" required>                                   
+                                    <option value="LBS" {% if shipment.weight_unit == "LBS" %} selected {% endif %}>LBS</option>
+                                    <option value="MT" {% if shipment.weight_unit == "MT" %} selected {% endif %}>MT</option>
+                                </select>
+                            </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 truck">
+                            <div class="form-group">
+                                <label for="ship_quantity">Ship Quantity</label>
+                                <input type="number" name="ship_quantity" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{shipment.ship_quantity}}">
+                            </div>
+                        </div>                       
+                                               
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="status">Status</label>                                
+                                <select name="status" id="status" class="form-select" style="width: 100%;padding-left:10px ;" required>                                   
+                                    <option value="Released"{% if shipment.status == 'Released' %}selected {% endif %}>Released</option>
+                                    <option value="At Border"{% if shipment.status == 'At Border' %}selected {% endif %}>At Border</option>
+                                    <option value="Crossed Border"{% if shipment.status == 'Crossed Border' %}selected {% endif %}>Crossed Border</option>
+                                    <option value="Received"{% if shipment.status == 'Received' %}selected {% endif %}>Received</option>
+                                    <option value="Released/Received"{% if shipment.status == 'Released/Received' %}selected {% endif %}>Released/Received</option>
+                                </select>
+                            </div>
+                        </div>                    
+
+                        <div class="col-md-4 international">
+                            <div class="form-group">
+                                <label for="border_receive_date">Border Receive Date</label>
+                                <input type="date" name="border_receive_date" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{shipment.border_receive_date|date:'Y-m-d'}}">
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 international">
+                            <div class="form-group">
+                                <label for="border_leaving_date">Border Leaving Date</label>
+                                <input type="date" name="border_leaving_date" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{shipment.border_leaving_date|date:'Y-m-d'}}">
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 ">
+                            <div class="form-group">
+                                <label for="final_receive_date">Warehouse/Customer Receive Date</label>
+                                <input type="date" name="final_receive_date" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{shipment.distributor_receive_date|date:'Y-m-d'}}">
+                            </div>
+                        </div>
+                        <div class="col-md-4 international">
+                            <div class="form-group">
+                                <label for="final_leaving_date">Warehouse/Customer Leaving Date</label>
+                                <input type="date" name="final_leaving_date" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{shipment.distributor_leaving_date|date:'Y-m-d'}}">
+                            </div>
+                        </div>
+                        <div class="col-md-4 international">
+                            <div class="form-group">
+                                <label for="border_receive_date2">Border Receive Date Back</label>
+                                <input type="date" name="border_receive_date2" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{shipment.border_back_receive_date|date:'Y-m-d'}}">
+                            </div>
+                        </div>
+                        <div class="col-md-4 international">
+                            <div class="form-group">
+                                <label for="border_leaving_date2">Border Leaving Date Back</label>
+                                <input type="date" name="border_leaving_date2" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{shipment.border_back_leaving_date|date:'Y-m-d'}}">
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4 international">
+                            <div class="form-group">
+                                <label for="processor_receive_date">Processor Receive Date</label>
+                                <input type="date" name="processor_receive_date" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{shipment.processor_receive_date|date:'Y-m-d'}}">
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <div class="form-group">
+                                <label for="multi_file">Upload File <span class="asteriskField">*</span></label>
+                                <input type="file" name="files" multiple accept=".jpg,.png,.xlsx,.csv,.pdf" id="multi_file" class="textinput textInput form-control" >
+                                <div class="col-md-8 mb-2"> 
+                                    <div id="file_names_container" style="margin-bottom: 10px;">
+                                        <!-- New files will be listed here -->
+                                    </div>
+                                    <div id="file_names_container2" style="margin-bottom: 10px;">
+                                        {% for file in files %}
+                                        <div class="file-item" style="margin-bottom: 10px;">
+                                            <div class="file-info">
+                                                <input type="hidden" name="existing_files" value="{{ file.id }}">
+                                                <span>{{file.name }}</span>
+                                            </div>
+                                            <button type="button" class="remove-file btn-danger" data-file-id="{{ file.id }}"><span style="width: 25px;height: 18px;padding: 0;display: inline-flex;justify-content: center;align-items: center;font-size: 10px;"><b>X</b></span></button>
+                                        </div>
+                                        {% endfor %}
+                                    </div>    
+                                    <p id="alert_msg8" style="color:red"></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <h2 style="background-color: #d7d5d5; color: #0b6c39; font-size: 22px; font-weight: 600; margin: 20px 0; padding: 12px 0; text-align: center">Updated Details</h2>
+                        <div id="field_details_container" class="row">
+                            <!-- Initial field_name and description fields -->                            
+                            <div class="col-md-12 mb-2">
+                                <div class="form-group">
+                                    <label for="description_1">Description</label>
+                                    <textarea id="description_1" name="description" class="form-control" placeholder="Description"></textarea>
+                                </div>
+                            </div>                            
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="form-btn-row">
+                            <a href="{% url 'list-warehouse-shipment' %}" class="btn-close-cancel btn-space">Cancel</a>
+                            <input style="display: none;" id="hide_btn1" type="submit" class="btn-save-submit"
+                                value="Save" name="save">
+                            <!-- <input type="button" id="hide_btn2" class="btn-save-submit" value="Save" onclick="btnClick()"> -->
+                            <input type="submit" name="save" class="btn-save-submit" value="Save" onclick="activityButton1()">
+                        </div>
+                    </div>
+                    
+                    <script>
+                        document.addEventListener("DOMContentLoaded", function() {
+                            function handleRemoveButtonClick(button) {
+                                let parent = button.parentElement;
+                                parent.style.display = 'none';
+                                let input = parent.querySelector('input[name="existing_files"]');
+                                input.setAttribute('name', 'remove_files'); // Change name to indicate removal
+                                parent.classList.add('removed');
+                            }
+                        
+                            document.querySelectorAll('.remove-file').forEach(button => {
+                                button.addEventListener('click', function() {
+                                    handleRemoveButtonClick(this);
+                                });
+                            });
+                        
+                            function updateFileList(files) {
+                                var fileNamesContainer = document.getElementById('file_names_container');
+                                fileNamesContainer.innerHTML = ''; // Clear previous list
+                                files.forEach(function(file) {
+                                    var fileItem = document.createElement('div');
+                                    fileItem.classList.add('file-item');
+                                    fileItem.innerHTML = `
+                                        <div class="file-info">
+                                            <input type="hidden" name="new_files" value="${file.name}">
+                                            <span>${file.name}</span>
+                                        </div>
+                                        <button type="button" class="remove-file btn-danger" data-file="${file.name}"><span style="width: 25px;height: 18px;padding: 0;display: inline-flex;justify-content: center;align-items: center;font-size: 10px;">x</span></button>
+                                    `;
+                                    fileNamesContainer.appendChild(fileItem);
+                        
+                                    fileItem.querySelector('.remove-file').addEventListener('click', function() {
+                                        handleRemoveButtonClick(this);
+                                    });
+                                });
+                            }
+                        
+                            var fileInput = document.getElementById('multi_file');
+                            fileInput.addEventListener('change', function() {
+                                var files = Array.from(fileInput.files); // Convert file list to array
+                                updateFileList(files);
+                            });
+                        
+                            function activityButton1() {
+                                var form = document.querySelector('form');
+                                form.querySelectorAll('.file-item.removed input').forEach(input => {
+                                    input.remove(); // Remove hidden inputs for removed files
+                                });
+                                form.submit(); // Submit the form
+                            }
+                        
+                            document.querySelector('.btn-save-submit').addEventListener('click', activityButton1);
+                        });
+                        
+                    </script>
+                </form>
+            </div>
+        </div>
+    </main>
+    {% include 'footer.html' %}
+</div>
+{% endblock %}
+
+{% block jquery %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<script>
+    $(document).ready(function() {
+        let skuCount = 1;
+
+        // Event listener for the + button
+        $('#add_sku_button').on('click', function() {
+            skuCount++;
+
+            // Create a new sender_sku_id input field
+            let newSkuField = `
+                <div class="col-md-4 mb-2 sender_sku_item">
+                    <div class='d-flex align-items-end'>
+                        <div class='w-100'>
+                            <label for="sender_sku_id_${skuCount}">Sender Storage Bin ID (SKU ID) <span class="asteriskField">*</span></label>
+                            <input type="text" id="sender_sku_id_${skuCount}" name="sender_sku_id" class="textinput textInput form-control" list="suggestions_${skuCount}" autocomplete="off" placeholder="Sender SKU ID">
+                            <datalist id="suggestions_${skuCount}">
+                                {% for data in sender_sku_id_list %}
+                                <option value="{{ data }}">
+                                {% endfor %}
+                            </datalist>
+                        </div>
+                        <div>
+                            <!-- Add - button for removing this field -->
+                            <button type="button" class="btn btn-danger remove_sku_button ms-2 mb-2">-</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Append the new field to the container
+            $('#sender_sku_container').append(newSkuField);
+        });
+
+        // Event listener for the - button to remove the sender_sku_id field
+        $('#sender_sku_container').on('click', '.remove_sku_button', function() {
+            $(this).closest('.sender_sku_item').remove();
+        });
+
+        // Show the remove button for the first input if more than one exists
+        $('#sender_sku_container').on('DOMNodeInserted', function() {
+            if ($('.sender_sku_item').length > 1) {
+                $('.remove_sku_button').show();
+            } else {
+                $('.remove_sku_button').hide();
+            }
+        });
+
+        // Hide the remove button if only one input exists
+        $('#sender_sku_container').on('DOMNodeRemoved', function() {
+            if ($('.sender_sku_item').length === 1) {
+                $('.remove_sku_button').hide();
+            }
+        });
+    });
+</script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var statusSelect = document.getElementById('outbound_type');
+        var approvedFields = document.querySelectorAll('.domestic');
+        var disapprovedFields = document.querySelectorAll('.international');
+    
+        function toggleFields() {
+            var status = statusSelect.value;
+            if (status === 'Domestic') {
+                approvedFields.forEach(function(field) {
+                    field.style.display = 'block';
+                });
+                disapprovedFields.forEach(function(field) {
+                    field.style.display = 'none';
+                });
+            } else if (status === 'International') {
+                approvedFields.forEach(function(field) {
+                    field.style.display = 'none';
+                });
+                disapprovedFields.forEach(function(field) {
+                    field.style.display = 'block';
+                });
+            } else {
+                approvedFields.forEach(function(field) {
+                    field.style.display = 'none';
+                });
+                disapprovedFields.forEach(function(field) {
+                    field.style.display = 'none';
+                });
+            }
+        }
+    
+        statusSelect.addEventListener('change', toggleFields);
+    
+        // Initial call to set the correct fields based on the current value
+        toggleFields();
+    });
+</script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var statusSelect = document.getElementById('carrier_type');
+        var approvedFields = document.querySelectorAll('.rail');
+        var disapprovedFields = document.querySelectorAll('.truck');
+    
+        function toggleFields() {
+            var status = statusSelect.value;
+            if (status === 'Rail Car') {
+                approvedFields.forEach(function(field) {
+                    field.style.display = 'block';
+                });
+                disapprovedFields.forEach(function(field) {
+                    field.style.display = 'none';
+                });
+            } else if (status === 'Truck/Trailer') {
+                approvedFields.forEach(function(field) {
+                    field.style.display = 'none';
+                });
+                disapprovedFields.forEach(function(field) {
+                    field.style.display = 'block';
+                });
+            } else {
+                approvedFields.forEach(function(field) {
+                    field.style.display = 'none';
+                });
+                disapprovedFields.forEach(function(field) {
+                    field.style.display = 'none';
+                });
+            }
+        }
+    
+        statusSelect.addEventListener('change', toggleFields);
+    
+        // Initial call to set the correct fields based on the current value
+        toggleFields();
+    });
+</script>
+
+<script>
+    $('#Warehouse-active').addClass('activeLink');
+  
+    $('#Warehouse-down').addClass('down');
+    $('#Warehouse-sub_unic').show();
+  
+    $('#Warehouse-Shipment').addClass('activeLink active-nav');
+  
+</script>
+{% endblock jquery %}

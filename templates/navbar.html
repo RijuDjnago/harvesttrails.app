@@ -240,7 +240,7 @@
          {% endif %}
 
          {% if request.user.is_authenticated %}
-         {% if request.user.is_superuser or request.user.is_processor or request.user.is_processor2 or request.user.is_customer %}
+         {% if request.user.is_superuser or request.user.is_processor or request.user.is_processor2 or request.user.is_customer or request.user.is_distributor or request.user.is_warehouse_manager %}
          <li class="for-drop">
             <a id="Contracts-active" href="javascript:void(0)" class="parent-nav66"> <span class="rightimg"><i class="fas fa-file-signature"></i></span>
                <span class="forn-none6">Contracts
@@ -250,7 +250,7 @@
                     <li><a id="Contract-List" href="{% url 'list-contract' %}">Admin-Processor Contracts</a></li>
                   {% endif %}
 
-                  {% if request.user.is_superuser or request.user.is_customer %}
+                  {% if request.user.is_superuser or request.user.is_customer or request.user.is_distributor %}
                      <li><a id="Customer-Contract-List" href="{% url 'admin-customer-contract-list' %}">Admin-Customer Contracts</a></li>
                   {% endif %}
                   
@@ -435,7 +435,7 @@
             <li><a id="customer-management" href="{% url 'list-customer' %}">Customer Management</a></li>
              {% endif %}             
              <li><a id="Processor-Shipment" href="{% url 'list-processor-shipment' %}">Processor Shipment</a></li>
-             
+             <li><a id="Warehouse-Shipment" href="{% url 'list-warehouse-shipment' %}">Warehouse Shipment</a></li>
              
          </ul>
      </li>

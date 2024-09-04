@@ -180,10 +180,8 @@ class ProcessorWarehouseShipment(models.Model):
 
     def save(self, *args, **kwargs):
         is_new = self.pk is None
-
         super().save(*args, **kwargs)
-
-        # Log creation only if the instance is new
+       
         if is_new:
             log_entry = ProcessorShipmentLog(
                 shipment=self,                
@@ -191,13 +189,10 @@ class ProcessorWarehouseShipment(models.Model):
             )
             log_entry.save()
 
-        if self.contract and self.contract_weight_left:
-            # Convert contract_weight_left to float first, then to int
-            left_amount_int = int(float(self.contract_weight_left))
-            
-            # Update the left_amount in the AdminProcessorContract model
-            AdminProcessorContract.objects.filter(id=self.contract.id).update(left_amount=left_amount_int)
-            
+        if self.contract and self.contract_weight_left:          
+            left_amount_int = int(float(self.contract_weight_left))           
+       
+            AdminProcessorContract.objects.filter(id=self.contract.id).update(left_amount=left_amount_int)            
             super().save(*args, **kwargs)
    
 
@@ -269,13 +264,30 @@ class WarehouseCustomerShipment(models.Model):
 
     customer_id = models.CharField(max_length=255, null=True, blank=True)
     customer_name = models.CharField(max_length=255, null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        is_new = self.pk is None
+        super().save(*args, **kwargs)
+       
+        if is_new:
+            log_entry = WarehouseShipmentLog(
+                shipment=self,                
+                description=f"A new shipment was created from warehouse '{self.warehouse_name}' of {self.net_weight}{self.weight_unit} under contract '{self.contract}'."
+            )
+            log_entry.save()
+
+        if self.contract and self.contract_weight_left:          
+            left_amount_int = int(float(self.contract_weight_left))           
+       
+            AdminCustomerContract.objects.filter(id=self.contract.id).update(left_amount=left_amount_int)            
+            super().save(*args, **kwargs)
     
     def __str__(self):
         return f'{self.contract.secret_key} || {self.warehouse_name} || {self.customer_name}'
 
 
 class WarehouseCustomerShipmentDocuments(models.Model):
-    shipment = models.ForeignKey(ProcessorWarehouseShipment, on_delete=models.CASCADE)
+    shipment = models.ForeignKey(WarehouseCustomerShipment, on_delete=models.CASCADE)
     document_name = models.CharField(max_length=255, null=True, blank=True)
     document_file = models.FileField(upload_to='warehouse_shipment/file/', null=True, blank=True) 
     uploaded_at = models.DateTimeField(auto_now_add=True)   
@@ -283,6 +295,13 @@ class WarehouseCustomerShipmentDocuments(models.Model):
     def __str__(self):
         return f'Shipment documents for {self.shipment.id}'
 
+class CarrierDetails2(models.Model):
+    shipment = models.ForeignKey(WarehouseCustomerShipment, on_delete=models.CASCADE, related_name='customer_shipment_carrier')
+    carrier_id = models.CharField(max_length=255, null=True, blank=True)
+    description = models.TextField(null=True, blank=True)
+
+    def __str__(self):
+        return self.shipment.carrier_type
 
 class WarehouseShipmentLog(models.Model):
     shipment = models.ForeignKey(WarehouseCustomerShipment, on_delete=models.CASCADE, related_name='shipmentLog')    

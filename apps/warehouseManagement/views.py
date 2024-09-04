@@ -1952,7 +1952,7 @@ def processor_shipment_view(request, pk):
         logs = ProcessorShipmentLog.objects.filter(shipment=shipment).order_by('id')
         context['logs'] = logs
         return render (request, 'distributor/view_outbound.html', context)
-    except (ValueError, AttributeError, AdminProcessorContract.DoesNotExist) as e:
+    except (ValueError, AttributeError, ProcessorWarehouseShipment.DoesNotExist) as e:
         context["error_messages"] = str(e)
         return render(request, 'distributor/view_outbound.html', context)
 
@@ -1965,8 +1965,8 @@ def edit_processor_shipment(request, pk):
         check_shipment = ProcessorWarehouseShipment.objects.filter(id=pk)
         
         shipment = check_shipment.first()
-        gross_weight_per_unit = float(shipment.gross_weight) / int(shipment.ship_quantity)
-        net_weight_per_unit = float(shipment.net_weight) / int(shipment.ship_quantity)
+        gross_weight_per_unit = (float(shipment.gross_weight) / int(shipment.ship_quantity)) if shipment.gross_weight != 0 else 0
+        net_weight_per_unit = (float(shipment.net_weight) / int(shipment.ship_quantity)) 
         context['gross_weight'] = gross_weight_per_unit
         context['net_weight'] = net_weight_per_unit
         carrier = CarrierDetails.objects.filter(shipment=shipment).first()
@@ -2185,8 +2185,10 @@ def create_warehouse_shipment(request):
     try:
         if request.user.is_authenticated:
             if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
-                contracts = AdminCustomerContract.objects.all().values('id','secret_key','customer_id','customer_name','crop').order_by('-id')                
+                contracts = AdminCustomerContract.objects.all().values('id','secret_key','customer_id','customer_name','crop').order_by('-id')  
+                warehouses = Warehouse.objects.all().values('id', 'name')              
                 context["contracts"] = contracts
+                context["warehouses"] = warehouses
                 context.update({
                     "selected_contract": None,                    
                     "customer_id": None,
@@ -2196,59 +2198,38 @@ def create_warehouse_shipment(request):
                 if request.method == "POST":
                     data = request.POST
                     selected_contract = request.POST.get('selected_contract') 
-                    print(selected_contract)
-                    contract = AdminProcessorContract.objects.get(id=int(selected_contract))                   
-                    processor_id = contract.processor_id
-                    processor_type = contract.processor_type
-                    selected_sku_id = data.get('sender_sku_id')
-                    destination_type = data.get('selected_destination')
-                    destination_id = data.get('destination_id')
-                    context.update({
-                        "selected_contract":contract.id,
-                        "contract":contract,                        
-                        "selected_processor_id": processor_id,
-                        "carrier_type": data.get('carrier_type'),                    
-                        "outbound_type": data.get('outbound_type'),
-                        "purchase_order_name":data.get('purchase_order_name'),
-                        "purchase_order_number": data.get('purchase_order_number'),
-                        "lot_number": data.get('lot_number'),
-                        "sender_sku_id": selected_sku_id,
-                        "selected_destination": destination_type,
-                        "weight":data.get('weight'),
-                        "gross_weight":data.get('gross_weight'),
-                        "net_weight":data.get('net_Weight'),
-                        "ship_quantity":data.get('ship_quantity'),
-                        "status":data.get('status'),
-                        "amount_unit":data.get('amount_unit') ,                     
-                        
-                    })
-                    if destination_id:
-                        context["destination_id"] = int(destination_id)
-                    if processor_id and not data.get("save"): 
+                    selected_warehouse = request.POST.get('selected_warehouse') 
                     
-                        if selected_sku_id:
-                            context["milled_value"] =  calculate_milled_volume(int(processor_id), processor_type, selected_sku_id)
-                            context["selected_sku"] = selected_sku_id
-                        else:
-                            context["milled_value"] =  calculate_milled_volume(int(processor_id), processor_type, selected_sku_id)
-                        context["sender_sku_id_list"] = get_sku_list(int(processor_id),processor_type)["data"]
-                        if destination_type == 'warehouse':
-                            context['destination_list'] = Warehouse.objects.all().values('id','name')
-                        if destination_type == 'customer':
-                            context['destination_list'] = Customer.objects.all().values('id','name')
-                        return render(request, 'distributor/create_outbound.html', context)
-                    else:
-                        if destination_type == 'warehouse':
-                            warehouse_id = Warehouse.objects.get(id=int(context.get('destination_id'))).id
-                            warehouse_name = Warehouse.objects.get(id=int(context.get('destination_id'))).name
-                            customer_id = None
-                            customer_name = None
-                        else:
-                            warehouse_id = None
-                            warehouse_name = None
-                            customer_id = Customer.objects.get(id=int(context.get('destination_id'))).id
-                            customer_name = Customer.objects.get(id=int(context.get('destination_id'))).name
-
+                    contract = AdminCustomerContract.objects.get(id=int(selected_contract))                   
+                    customer_id = contract.customer_id
+                    if not data.get('save'):
+                        context.update({
+                            "selected_contract":contract.id,
+                            "contract":contract,                        
+                            "selected_customer_id": customer_id,                            
+                            "carrier_type": data.get('carrier_type'),                    
+                            "outbound_type": data.get('outbound_type'),
+                            "purchase_order_name":data.get('purchase_order_name'),
+                            "purchase_order_number": data.get('purchase_order_number'),
+                            "lot_number": data.get('lot_number'),                        
+                            "weight":data.get('weight'),
+                            "gross_weight":data.get('gross_weight'),
+                            "net_weight":data.get('net_Weight'),
+                            "ship_quantity":data.get('ship_quantity'),
+                            "status":data.get('status'),
+                            "amount_unit":data.get('amount_unit') ,                     
+                            
+                        }) 
+                        if selected_warehouse:
+                            context['selected_warehouse'] = int(selected_warehouse)
+                        if selected_contract:
+                            context['selected_contract'] = int(selected_contract)
+                    else:                   
+                        selected_contract = request.POST.get('selected_contract') 
+                        selected_warehouse = request.POST.get('selected_warehouse') 
+                        
+                        contract = AdminCustomerContract.objects.get(id=int(selected_contract))                   
+                        customer_id = contract.customer_id
                         if data.get('carrier_type') == 'Truck/Trailer':
                             ship_quantity = data.get('ship_quantity')
                             gross_weight = float(data.get('gross_weight'))* int(ship_quantity)
@@ -2266,8 +2247,8 @@ def create_warehouse_shipment(request):
                                 net_weight = float(data.get('weight'))
                             else:
                                 context["error_messages"] = "Please give weight."
-                                return render(request, 'distributor/create_outbound.html', context)
-                       
+                                return render(request, 'distributor/create_warehouse_outbound.html', context)
+                        
                         if contract.amount_unit == context.get('amount_unit'):
                             contract_weight_left = float(contract.contract_amount) - float(net_weight)
                         else:
@@ -2276,65 +2257,614 @@ def create_warehouse_shipment(request):
                                 contract_weight_left = float(contract.contract_amount) - net_weight_lbs 
                             else:
                                 net_weight_mt = float(net_weight) * 0.000453592
-                                contract_weight_left = float(contract.contract_amount) - net_weight_mt                         
-                        
-                        outbound = ProcessorWarehouseShipment(
+                                contract_weight_left = float(contract.contract_amount) - net_weight_mt 
+                        warehouse_name = Warehouse.objects.get(id=int(data.get('selected_warehouse'))).name                        
+                        print(context.get('carrier_type'), context.get('outbound_type'), context.get('purchase_order_name'), context.get('purchase_order_number'), context.get('lot_number'), context.get('status'))
+                        outbound = WarehouseCustomerShipment(
                             contract=contract,
-                            processor_id=processor_id,
-                            processor_type=processor_type,
-                            processor_entity_name=contract.processor_entity_name,
-                            processor_sku_list=[selected_sku_id],
-                            carrier_type=context.get('carrier_type'),
-                            outbound_type=context.get('outbound_type'),
-                            purchase_order_name=context.get('purchase_order_name'),
-                            purchase_order_number=context.get('purchase_order_number'),
-                            lot_number=context.get('lot_number'),
+                            warehouse_id=selected_warehouse, 
+                            warehouse_name = warehouse_name,                       
+                            carrier_type=data.get('carrier_type'),
+                            outbound_type=data.get('outbound_type'),
+                            purchase_order_name=data.get('purchase_order_name'),
+                            purchase_order_number=data.get('purchase_order_number'),
+                            lot_number=data.get('lot_number'),
                             gross_weight=gross_weight,
                             net_weight=net_weight,
-                            weight_unit=context.get('amount_unit'),
+                            weight_unit=data.get('amount_unit'),
                             ship_quantity=ship_quantity,
                             contract_weight_left=contract_weight_left,
-                            status=context.get('status'),
-                            customer_id=customer_id,
-                            warehouse_id=warehouse_id,
-                            customer_name=customer_name,
-                            warehouse_name=warehouse_name
-                        )
-                        outbound.save()
+                            status=data.get('status'),
+                            customer_id=customer_id,                        
+                            customer_name=contract.customer_name,
                             
+                        )
+                        outbound.save()                           
                         
                         carrier_id = data.get('carrier_id')
                         if carrier_id:
-                            CarrierDetails.objects.create(shipment=outbound, carrier_id=carrier_id)
+                            CarrierDetails2.objects.create(shipment=outbound, carrier_id=carrier_id)
                         
                         files = request.FILES.getlist('files')
                         for file in files:
-                            ProcessorWarehouseShipmentDocuments.objects.create(shipment=outbound, document_file=file)
+                            WarehouseCustomerShipmentDocuments.objects.create(shipment=outbound, document_file=file)
 
-                        ## Send notification to the Destination.
-                        if outbound.warehouse_id not in [None, 'null', ' ', '']:                            
-                            all_user = WarehouseUser.objects.filter(warehouse_id=outbound.warehouse_id)                           
-                           
-                            distributors = Distributor.objects.filter(warehouse__id=outbound.warehouse_id)                           
-                         
-                            distributor_users = DistributorUser.objects.filter(distributor__in=distributors)
-                        else:                            
-                            all_user = CustomerUser.objects.filter(customer_id=outbound.customer_id)
-                            distributor_users = []                          
-                        all_users = list(all_user) + list(distributor_users)
+                        ## Send notification to the Destination.                                                
+                        all_users = CustomerUser.objects.filter(customer_id=outbound.customer_id)
+                        
                         for user in all_users :
                             msg = f'A shipment has been sent of {outbound.net_weight}{outbound.weight_unit} under Contract ID - {outbound.contract.secret_key}'
                             get_user = User.objects.get(username=user.contact_email)
                             notification_reason = 'New Shipment'
-                            redirect_url = "/warehouse/list-processor-shipment/"
+                            redirect_url = "/warehouse/list-warehouse-shipment/"
                             save_notification = ShowNotification(user_id_to_show=get_user.id,msg=msg,status="UNREAD",redirect_url=redirect_url,
                                 notification_reason=notification_reason)
                             save_notification.save()
+                            
+                        return redirect('list-warehouse-shipment')  
+                return render(request, 'distributor/create_warehouse_outbound.html', context) 
+            elif request.user.is_distributor:
+                contracts = AdminCustomerContract.objects.filter(created_by=request.user).values('id','secret_key','customer_id','customer_name','crop').order_by('-id') 
+                distributor_user = DistributorUser.objects.get(contact_email=request.user.email) 
+                distributor = Distributor.objects.get(id=distributor_user.distributor.id)
+                warehouses = distributor.warehouse.all().values('id', 'name')              
+                context["contracts"] = contracts
+                context["warehouses"] = warehouses
+                context.update({
+                    "selected_contract": None,                    
+                    "customer_id": None,
+                    "customer_name": None             
+                })
+              
+                if request.method == "POST":
+                    data = request.POST
+                    selected_contract = request.POST.get('selected_contract') 
+                    selected_warehouse = request.POST.get('selected_warehouse') 
+                    
+                    contract = AdminCustomerContract.objects.get(id=int(selected_contract))                   
+                    customer_id = contract.customer_id
+                    if not data.get('save'):
+                        context.update({
+                            "selected_contract":contract.id,
+                            "contract":contract,                        
+                            "selected_customer_id": customer_id,                            
+                            "carrier_type": data.get('carrier_type'),                    
+                            "outbound_type": data.get('outbound_type'),
+                            "purchase_order_name":data.get('purchase_order_name'),
+                            "purchase_order_number": data.get('purchase_order_number'),
+                            "lot_number": data.get('lot_number'),                        
+                            "weight":data.get('weight'),
+                            "gross_weight":data.get('gross_weight'),
+                            "net_weight":data.get('net_Weight'),
+                            "ship_quantity":data.get('ship_quantity'),
+                            "status":data.get('status'),
+                            "amount_unit":data.get('amount_unit') ,                     
+                            
+                        }) 
+                        if selected_warehouse:
+                            context['selected_warehouse'] = int(selected_warehouse)
+                        if selected_contract:
+                            context['selected_contract'] = int(selected_contract)
+                    else:                   
+                        selected_contract = request.POST.get('selected_contract') 
+                        selected_warehouse = request.POST.get('selected_warehouse') 
                         
-                    return redirect('list-processor-shipment')  
-                return render(request, 'distributor/create_outbound.html', context) 
+                        contract = AdminCustomerContract.objects.get(id=int(selected_contract))                   
+                        customer_id = contract.customer_id
+                        if data.get('carrier_type') == 'Truck/Trailer':
+                            ship_quantity = data.get('ship_quantity')
+                            gross_weight = float(data.get('gross_weight'))* int(ship_quantity)
+                            if data.get('net_weight') not in [None, 'null', ' ', '']:
+                                
+                                net_weight = float(data.get('net_weight')) * int(ship_quantity)
+                            else:
+                                context["error_messages"] = "Please give net weight."
+                                return render(request, 'distributor/create_outbound.html', context)
+                        elif data.get('carrier_type') == 'Rail Car':
+                            
+                            gross_weight = 0
+                            ship_quantity = 1
+                            if data.get('weight') not in [None, 'null', ' ', '']:
+                                net_weight = float(data.get('weight'))
+                            else:
+                                context["error_messages"] = "Please give weight."
+                                return render(request, 'distributor/create_warehouse_outbound.html', context)
+                        
+                        if contract.amount_unit == context.get('amount_unit'):
+                            contract_weight_left = float(contract.contract_amount) - float(net_weight)
+                        else:
+                            if contract.amount_unit == "LBS" and context.get('amount_unit') == "MT":
+                                net_weight_lbs = float(net_weight) * 2204.62
+                                contract_weight_left = float(contract.contract_amount) - net_weight_lbs 
+                            else:
+                                net_weight_mt = float(net_weight) * 0.000453592
+                                contract_weight_left = float(contract.contract_amount) - net_weight_mt 
+                        warehouse_name = Warehouse.objects.get(id=int(data.get('selected_warehouse'))).name                        
+                        print(context.get('carrier_type'), context.get('outbound_type'), context.get('purchase_order_name'), context.get('purchase_order_number'), context.get('lot_number'), context.get('status'))
+                        outbound = WarehouseCustomerShipment(
+                            contract=contract,
+                            warehouse_id=selected_warehouse, 
+                            warehouse_name = warehouse_name,                       
+                            carrier_type=data.get('carrier_type'),
+                            outbound_type=data.get('outbound_type'),
+                            purchase_order_name=data.get('purchase_order_name'),
+                            purchase_order_number=data.get('purchase_order_number'),
+                            lot_number=data.get('lot_number'),
+                            gross_weight=gross_weight,
+                            net_weight=net_weight,
+                            weight_unit=data.get('amount_unit'),
+                            ship_quantity=ship_quantity,
+                            contract_weight_left=contract_weight_left,
+                            status=data.get('status'),
+                            customer_id=customer_id,                        
+                            customer_name=contract.customer_name,
+                            
+                        )
+                        outbound.save()                           
+                        
+                        carrier_id = data.get('carrier_id')
+                        if carrier_id:
+                            CarrierDetails2.objects.create(shipment=outbound, carrier_id=carrier_id)
+                        
+                        files = request.FILES.getlist('files')
+                        for file in files:
+                            WarehouseCustomerShipmentDocuments.objects.create(shipment=outbound, document_file=file)
+
+                        ## Send notification to the Destination.                                                
+                        all_users = CustomerUser.objects.filter(customer_id=outbound.customer_id)
+                        
+                        for user in all_users :
+                            msg = f'A shipment has been sent of {outbound.net_weight}{outbound.weight_unit} under Contract ID - {outbound.contract.secret_key}'
+                            get_user = User.objects.get(username=user.contact_email)
+                            notification_reason = 'New Shipment'
+                            redirect_url = "/warehouse/list-warehouse-shipment/"
+                            save_notification = ShowNotification(user_id_to_show=get_user.id,msg=msg,status="UNREAD",redirect_url=redirect_url,
+                                notification_reason=notification_reason)
+                            save_notification.save()
+                            
+                        return redirect('list-warehouse-shipment')  
+                return render(request, 'distributor/create_warehouse_outbound.html', context)
+            elif request.user.is_warehouse_manager:
+                contracts = AdminCustomerContract.objects.filter(created_by=request.user).values('id','secret_key','customer_id','customer_name','crop').order_by('-id') 
+                warehouse_user = WarehouseUser.objects.get(contact_email=request.user.email) 
+                warehouses = Warehouse.objects.filter(id=warehouse_user.warehouse.id)
+                            
+                context["contracts"] = contracts
+                context["warehouses"] = warehouses
+                context.update({
+                    "selected_contract": None,                    
+                    "customer_id": None,
+                    "customer_name": None             
+                })
+              
+                if request.method == "POST":
+                    data = request.POST
+                    selected_contract = request.POST.get('selected_contract') 
+                    selected_warehouse = request.POST.get('selected_warehouse') 
+                    
+                    contract = AdminCustomerContract.objects.get(id=int(selected_contract))                   
+                    customer_id = contract.customer_id
+                    if not data.get('save'):
+                        context.update({
+                            "selected_contract":contract.id,
+                            "contract":contract,                        
+                            "selected_customer_id": customer_id,                            
+                            "carrier_type": data.get('carrier_type'),                    
+                            "outbound_type": data.get('outbound_type'),
+                            "purchase_order_name":data.get('purchase_order_name'),
+                            "purchase_order_number": data.get('purchase_order_number'),
+                            "lot_number": data.get('lot_number'),                        
+                            "weight":data.get('weight'),
+                            "gross_weight":data.get('gross_weight'),
+                            "net_weight":data.get('net_Weight'),
+                            "ship_quantity":data.get('ship_quantity'),
+                            "status":data.get('status'),
+                            "amount_unit":data.get('amount_unit') ,                     
+                            
+                        }) 
+                        if selected_warehouse:
+                            context['selected_warehouse'] = int(selected_warehouse)
+                        if selected_contract:
+                            context['selected_contract'] = int(selected_contract)
+                    else:                   
+                        selected_contract = request.POST.get('selected_contract') 
+                        selected_warehouse = request.POST.get('selected_warehouse') 
+                        
+                        contract = AdminCustomerContract.objects.get(id=int(selected_contract))                   
+                        customer_id = contract.customer_id
+                        if data.get('carrier_type') == 'Truck/Trailer':
+                            ship_quantity = data.get('ship_quantity')
+                            gross_weight = float(data.get('gross_weight'))* int(ship_quantity)
+                            if data.get('net_weight') not in [None, 'null', ' ', '']:
+                                
+                                net_weight = float(data.get('net_weight')) * int(ship_quantity)
+                            else:
+                                context["error_messages"] = "Please give net weight."
+                                return render(request, 'distributor/create_outbound.html', context)
+                        elif data.get('carrier_type') == 'Rail Car':
+                            
+                            gross_weight = 0
+                            ship_quantity = 1
+                            if data.get('weight') not in [None, 'null', ' ', '']:
+                                net_weight = float(data.get('weight'))
+                            else:
+                                context["error_messages"] = "Please give weight."
+                                return render(request, 'distributor/create_warehouse_outbound.html', context)
+                        
+                        if contract.amount_unit == context.get('amount_unit'):
+                            contract_weight_left = float(contract.contract_amount) - float(net_weight)
+                        else:
+                            if contract.amount_unit == "LBS" and context.get('amount_unit') == "MT":
+                                net_weight_lbs = float(net_weight) * 2204.62
+                                contract_weight_left = float(contract.contract_amount) - net_weight_lbs 
+                            else:
+                                net_weight_mt = float(net_weight) * 0.000453592
+                                contract_weight_left = float(contract.contract_amount) - net_weight_mt 
+                        warehouse_name = Warehouse.objects.get(id=int(data.get('selected_warehouse'))).name                        
+                        print(context.get('carrier_type'), context.get('outbound_type'), context.get('purchase_order_name'), context.get('purchase_order_number'), context.get('lot_number'), context.get('status'))
+                        outbound = WarehouseCustomerShipment(
+                            contract=contract,
+                            warehouse_id=selected_warehouse, 
+                            warehouse_name = warehouse_name,                       
+                            carrier_type=data.get('carrier_type'),
+                            outbound_type=data.get('outbound_type'),
+                            purchase_order_name=data.get('purchase_order_name'),
+                            purchase_order_number=data.get('purchase_order_number'),
+                            lot_number=data.get('lot_number'),
+                            gross_weight=gross_weight,
+                            net_weight=net_weight,
+                            weight_unit=data.get('amount_unit'),
+                            ship_quantity=ship_quantity,
+                            contract_weight_left=contract_weight_left,
+                            status=data.get('status'),
+                            customer_id=customer_id,                        
+                            customer_name=contract.customer_name,
+                            
+                        )
+                        outbound.save()                           
+                        
+                        carrier_id = data.get('carrier_id')
+                        if carrier_id:
+                            CarrierDetails2.objects.create(shipment=outbound, carrier_id=carrier_id)
+                        
+                        files = request.FILES.getlist('files')
+                        for file in files:
+                            WarehouseCustomerShipmentDocuments.objects.create(shipment=outbound, document_file=file)
+
+                        ## Send notification to the Destination.                                                
+                        all_users = CustomerUser.objects.filter(customer_id=outbound.customer_id)
+                        
+                        for user in all_users :
+                            msg = f'A shipment has been sent of {outbound.net_weight}{outbound.weight_unit} under Contract ID - {outbound.contract.secret_key}'
+                            get_user = User.objects.get(username=user.contact_email)
+                            notification_reason = 'New Shipment'
+                            redirect_url = "/warehouse/list-warehouse-shipment/"
+                            save_notification = ShowNotification(user_id_to_show=get_user.id,msg=msg,status="UNREAD",redirect_url=redirect_url,
+                                notification_reason=notification_reason)
+                            save_notification.save()
+                            
+                        return redirect('list-warehouse-shipment')  
+                return render(request, 'distributor/create_warehouse_outbound.html', context)
         else:
             return redirect('login')        
     except Exception as e:
         context["error_messages"] = str(e)
-        return render(request, 'distributor/create_outbound.html', context)  
+        return render(request, 'distributor/create_warehouse_outbound.html', context)  
+
+
+def warehouse_shipment_list(request):
+    context = {}
+    try:
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+            customers = Customer.objects.all()
+            
+            context["customers"] = customers
+            shipments = WarehouseCustomerShipment.objects.all()
+            selected_customer = request.GET.get('selected_customer','All')
+            
+            if selected_customer != 'All':
+                customer_id = int(selected_customer)
+                context['selected_customer_id'] = customer_id
+                
+            else:  
+                customer_id = None              
+                context['selected_customer_id'] = None            
+
+            if selected_customer and selected_customer != 'All':                
+                shipments = shipments.filter(customer_id=int(customer_id))
+
+            search_name = request.GET.get('search_name', '')
+
+            if search_name and search_name is not None:
+                shipments = shipments.filter(Q(warehouse_name__icontains=search_name) |
+                                             Q(customer_name__icontains=search_name) |
+                                             Q(contract__secret_key__icontains=search_name) |
+                                             Q(outbound_type__icontains=search_name) |
+                                             Q(carrier_type__icontains=search_name) |
+                                             Q(status__icontains=search_name) |
+                                             Q(purchase_order_name__icontains=search_name) |
+                                             Q(lot_number__icontains=search_name) |
+                                             Q(purchase_order_number__icontains=search_name))
+                context['search_name'] = search_name
+            else:
+                context['search_name'] = None            
+            
+            shipments = shipments.order_by('-id')
+            paginator = Paginator(shipments, 100)
+            page = request.GET.get('page')
+            try:
+                report = paginator.page(page)
+            except PageNotAnInteger:
+                report = paginator.page(1)
+            except EmptyPage:
+                report = paginator.page(paginator.num_pages)             
+            context['contracts'] = report
+            return render(request, 'distributor/list_warehouse_outbound.html', context)
+      
+        elif request.user.is_distributor:
+            print('0000000000')
+            user_email = request.user.email
+            d = DistributorUser.objects.get(contact_email=user_email)
+            distributor = Distributor.objects.get(id=d.distributor.id)
+            warehouses = distributor.warehouse.all().values_list('id', flat=True)
+            shipments = []
+            for warehouse_id in warehouses:
+                check_shipment = WarehouseCustomerShipment.objects.filter(warehouse_id=warehouse_id).order_by('-id')
+                if check_shipment:
+                    shipments = shipments+list(check_shipment)
+            paginator = Paginator(shipments, 100)
+            print(paginator)
+            page = request.GET.get('page')
+            try:
+                report = paginator.page(page)
+            except PageNotAnInteger:
+                report = paginator.page(1)
+            except EmptyPage:
+                report = paginator.page(paginator.num_pages)             
+            context['contracts'] = report
+            print(context)
+            return render(request, 'distributor/list_warehouse_outbound.html', context)
+        
+        elif request.user.is_warehouse_manager:
+            user_email = request.user.email
+            w = WarehouseUser.objects.get(contact_email=user_email)
+            warehouse_id = Warehouse.objects.get(id=w.warehouse.id).id
+            shipments = WarehouseCustomerShipment.objects.filter(warehouse_id=warehouse_id)
+            shipments = shipments.order_by('-id')
+            paginator = Paginator(shipments, 100)
+            page = request.GET.get('page')
+            try:
+                report = paginator.page(page)
+            except PageNotAnInteger:
+                report = paginator.page(1)
+            except EmptyPage:
+                report = paginator.page(paginator.num_pages)             
+            context['contracts'] = report
+            return render(request, 'distributor/list_warehouse_outbound.html', context)
+        
+        elif request.user.is_customer:
+            user_email = request.user.email
+            c = CustomerUser.objects.get(contact_email=user_email)
+            customer_id = Customer.objects.get(id=c.customer.id).id
+            shipments = WarehouseCustomerShipment.objects.filter(customer_id=customer_id)
+            shipments = shipments.order_by('-id')
+            paginator = Paginator(shipments, 100)
+            page = request.GET.get('page')
+            try:
+                report = paginator.page(page)
+            except PageNotAnInteger:
+                report = paginator.page(1)
+            except EmptyPage:
+                report = paginator.page(paginator.num_pages)             
+            context['contracts'] = report
+            return render(request, 'distributor/list_warehouse_outbound.html', context)
+        else:
+            messages.error(request, "Not a valid request.")
+            return redirect("dashboard")   
+    except (ValueError, AttributeError, AdminProcessorContract.DoesNotExist) as e:
+        context["error_messages"] = str(e)
+        return render(request, 'distributor/list_warehouse_outbound.html', context)
+    
+
+def warehouse_shipment_view(request, pk):
+    context = {}
+    try:
+        shipment = WarehouseCustomerShipment.objects.filter(id=pk).first()        
+        carrier_details = CarrierDetails2.objects.filter(shipment=shipment)
+        context["shipment"] = shipment
+        context["documents"] = [
+            {
+                "id": file.id,
+                "file": file.document_file,
+                "name": file.document_file.name.split("/")[-1]  # Extract only the file name
+            }
+            for file in WarehouseCustomerShipmentDocuments.objects.filter(shipment=shipment)
+        ]
+        context["carriers"] = carrier_details
+        logs = WarehouseShipmentLog.objects.filter(shipment=shipment).order_by('id')
+        context['logs'] = logs
+        return render (request, 'distributor/view_warehouse_outbound.html', context)
+    except (ValueError, AttributeError, WarehouseCustomerShipment.DoesNotExist) as e:
+        context["error_messages"] = str(e)
+        return render(request, 'distributor/view_warehouse_outbound.html', context)
+
+
+def edit_warehouse_shipment(request, pk):
+    context = {}
+    # try:
+    if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+        check_shipment = WarehouseCustomerShipment.objects.filter(id=pk)
+        if not check_shipment.exists():
+            # Handle the case where the shipment does not exist
+            context["error_messages"] = "Shipment not found."
+            return render(request, 'distributor/edit_warehouse_outbound.html', context)
+        print(check_shipment)
+        shipment = check_shipment.first()
+        print(shipment)
+        gross_weight_per_unit = (float(shipment.gross_weight) / int(shipment.ship_quantity)) if shipment.gross_weight != 0 else 0
+        net_weight_per_unit = (float(shipment.net_weight) / int(shipment.ship_quantity)) 
+        context['gross_weight'] = gross_weight_per_unit
+        context['net_weight'] = net_weight_per_unit
+        carrier = CarrierDetails2.objects.filter(shipment=shipment).first()
+        if carrier:
+            context['carrier_id'] = carrier.carrier_id
+        context["files"] = [
+            {
+                "id": file.id,
+                "name": file.document_file.name.split("/")[-1]  # Extract only the file name
+            }
+            for file in WarehouseCustomerShipmentDocuments.objects.filter(shipment=shipment)
+        ]
+        context["shipment"] = shipment
+        
+        selected_contract = shipment.contract               
+        warehouse_id = shipment.warehouse_id                  
+        
+        destination_list = Customer.objects.all().values('id','name')
+        destination_id = shipment.customer_id
+        print(destination_id)
+        context.update({        
+            "warehouse_name" : shipment.warehouse_name,
+            "customer_name": shipment.customer_name ,             
+            "contract":selected_contract,                        
+            "selected_warehouse_id": warehouse_id,
+            'destination_list':destination_list,
+            "destination_id" : destination_id           
+        })
+        
+        if request.method == "POST":
+            data = request.POST
+            
+            button_value = request.POST.getlist('remove_files')                
+            if button_value:
+                for file_id in button_value:
+                    try:
+                        file_obj = WarehouseCustomerShipmentDocuments.objects.get(id=file_id)
+                        file_obj.delete()
+                    except WarehouseCustomerShipmentDocuments.DoesNotExist:
+                        pass          
+            if not data.get('save'):
+                context.update({                    
+                    "carrier_type": data.get('carrier_type'),                    
+                    "outbound_type": data.get('outbound_type'),
+                    "purchase_order_name":data.get('purchase_order_name'),
+                    "purchase_order_number": data.get('purchase_order_number'),
+                    "lot_number": data.get('lot_number'),                
+                    "weight":data.get('weight'),
+                    "gross_weight":data.get('gross_weight'),
+                    "net_weight":data.get('net_Weight'),
+                    "ship_quantity":data.get('ship_quantity'),
+                    "status":data.get('status'),
+                    "amount_unit":data.get('amount_unit') ,   
+                    "final_receive_date": data.get('final_receive_date'),
+                    "border_receive_date" : data.get('border_receive_date'),
+                    "border_leaving_date": data.get('border_leaving_date'),
+                    "final_leaving_date" : data.get('final_leaving_date'),
+                    "border_receive_date2": data.get('border_receive_date2'),
+                    "border_leaving_date2" : data.get('border_leaving_date2'),
+                    "processor_receive_date": data.get('processor_receive_date')             
+                    
+                })
+                
+                if destination_id:
+                    context["destination_id"] = int(destination_id)
+            else:           
+
+                if data.get('carrier_type') == 'Truck/Trailer':
+                    ship_quantity = data.get('ship_quantity')
+                    gross_weight = float(data.get('gross_weight'))* int(ship_quantity)
+                    if data.get('net_weight') not in [None, 'null', ' ', '']:
+                        print('00000')
+                        net_weight = float(data.get('net_weight')) * int(ship_quantity)
+                    else:
+                        context["error_messages"] = "Please give net weight."
+                        return render(request, 'distributor/create_outbound.html', context)
+                elif data.get('carrier_type') == 'Rail Car':
+                    gross_weight = 0
+                    ship_quantity = 1
+                    if data.get('weight') not in [None, 'null', ' ', '']:
+                        net_weight = float(data.get('weight'))
+                    else:
+                        context["error_messages"] = "Please give weight."
+                        return render(request, 'distributor/create_outbound.html', context)
+                
+                if shipment.contract.amount_unit == context.get('amount_unit'):
+                    contract_weight_left = float(shipment.contract.contract_amount) - float(net_weight)
+                else:
+                    if shipment.contract.amount_unit == "LBS" and context.get('amount_unit') == "MT":
+                        net_weight_lbs = float(net_weight) * 2204.62
+                        contract_weight_left = float(shipment.contract.contract_amount) - net_weight_lbs 
+                    else:
+                        net_weight_mt = float(net_weight) * 0.000453592
+                        contract_weight_left = float(shipment.contract.contract_amount) - net_weight_mt 
+                
+                shipment.contract=shipment.contract                
+                shipment.carrier_type=data.get('carrier_type')
+                shipment.outbound_type=data.get('outbound_type')
+                shipment.purchase_order_name=data.get('purchase_order_name')
+                shipment.purchase_order_number=data.get('purchase_order_number')
+                shipment.lot_number=data.get('lot_number')
+                shipment.gross_weight=gross_weight
+                shipment.net_weight=net_weight
+                shipment.weight_unit=data.get('amount_unit')
+                shipment.ship_quantity=ship_quantity
+                shipment.contract_weight_left=contract_weight_left
+                shipment.status= data.get('status')
+                shipment.customer_id=destination_id
+                shipment.warehouse_id=warehouse_id
+                shipment.customer_name=shipment.customer_name
+                shipment.warehouse_name=shipment.warehouse_name
+                                                                        
+                shipment.save()
+                if data.get('border_receive_date') not in [None, '', ' ', 'null']:
+                    border_receive_date = data.get('border_receive_date')
+                    shipment.border_receive_date= border_receive_date
+                if data.get('border_leaving_date') not in [None, '', ' ', 'null']:
+                    border_leaving_date = data.get('border_leaving_date')
+                    shipment.border_leaving_date=border_leaving_date
+                if data.get('final_receive_date') not in [None, '', ' ', 'null']:
+                    final_receive_date = data.get('final_receive_date')
+                    shipment.distributor_receive_date=final_receive_date
+                if data.get('final_leaving_date') not in [None, '', ' ', 'null']:
+                    final_leaving_date = data.get('final_leaving_date')
+                    shipment.distributor_leaving_date=final_leaving_date
+                if data.get('border_receive_date2') not in [None, '', ' ', 'null']:
+                    border_receive_date2 = data.get('border_receive_date2')
+                    shipment.border_back_receive_date=border_receive_date2
+                if data.get('border_leaving_date2') not in [None, '', ' ', 'null']:
+                    border_leaving_date2 = data.get('border_leaving_date2')                    
+                    shipment.border_back_leaving_date= border_leaving_date2, 
+                if data.get('processor_receive_date') not in [None, '', ' ', 'null']:
+                    processor_receive_date = data.get('processor_receive_date')
+                    shipment.processor_receive_date=processor_receive_date
+                
+                shipment.save()
+                carrier_id = data.get('carrier_id')
+                if carrier_id:
+                    # Get or create carrier details
+                    carrier_details, created = CarrierDetails2.objects.update_or_create(
+                        shipment=shipment,
+                        defaults={'carrier_id': carrier_id}
+                    )
+                else:
+                    # Ensure that carrier details are not deleted if no carrier_id is provided
+                    CarrierDetails2.objects.filter(shipment=shipment).delete()
+                
+                files = request.FILES.getlist('files')
+                for file in files:
+                    WarehouseCustomerShipmentDocuments.objects.create(shipment=shipment, document_file=file)                
+                descriptions = request.POST.getlist('description')
+                
+                for  description in  descriptions:
+                    if  description:
+                        
+                        WarehouseShipmentLog.objects.create(
+                            shipment=shipment,                           
+                            description=description
+                        )
+                    else:
+                        context["error_messages"] = f'PLease give description'
+                        return render(request, 'distributor/edit_warehouse_outbound.html', context)
+            return redirect('list-warehouse-shipment')
+            
+        return render(request, 'distributor/edit_warehouse_outbound.html', context)
