@@ -226,6 +226,7 @@ class AdminProcessorContractDocuments(models.Model):
 class AdminCustomerContract(models.Model):
     secret_key = models.CharField(max_length=255, unique=True)
     customer_id = models.CharField(max_length=255) 
+    customer_name = models.CharField(max_length=255)
     
     crop = models.CharField(max_length=10, choices=crop_choices)
     crop_type = models.CharField(max_length=255, null=True, blank=True)

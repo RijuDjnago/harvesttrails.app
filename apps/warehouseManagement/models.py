@@ -1,5 +1,5 @@
 from django.db import models
-from apps.contracts.models import AdminProcessorContract
+from apps.contracts.models import AdminProcessorContract, AdminCustomerContract
 
 # Create your models here.
 class Warehouse(models.Model):
@@ -57,7 +57,7 @@ class Customer(models.Model):
     longitude = models.CharField(max_length=255, null=True, blank=True)
 
     def __str__(self):
-        return self.entity_name
+        return self.name
 
 
 class CustomerUser(models.Model):
@@ -202,7 +202,7 @@ class ProcessorWarehouseShipment(models.Model):
    
 
     def __str__(self):
-        return f'{self.processor_entity_name} - {self.contract.crop}'
+        return f'{self.contract.secret_key} || {self.processor_entity_name} - {self.contract.crop}'
 
 
 class ProcessorWarehouseShipmentDocuments(models.Model):
@@ -230,3 +230,65 @@ class ProcessorShipmentLog(models.Model):
 
     def __str__(self):
         return f'Shipment - {self.shipment}, contract - {self.shipment.contract.secret_key}'
+    
+
+class WarehouseCustomerShipment(models.Model):
+    contract = models.ForeignKey(AdminCustomerContract, on_delete=models.CASCADE, null=True, blank=True)
+
+    warehouse_id = models.CharField(max_length=255, null=True, blank=True)
+    warehouse_name = models.CharField(max_length=255, null=True, blank=True)
+    distributor_id = models.CharField(max_length=255, null=True, blank=True)
+    distributor_name = models.CharField(max_length=255, null=True, blank=True)
+
+    carrier_type = models.CharField(max_length=15, choices=Carrier_type)
+    outbound_type = models.CharField(max_length=15, choices=Outbound_type)
+
+    date_pulled= models.DateTimeField(auto_now_add=True)
+    purchase_order_name = models.CharField(max_length=255, null=True, blank=True)
+    purchase_order_number = models.CharField(max_length=255, null=True, blank=True)
+    lot_number = models.CharField(max_length=255, null=True, blank=True)
+
+    ship_quantity = models.PositiveIntegerField(null=True, blank=True)    
+    gross_weight = models.CharField(max_length=255, null=True, blank=True)
+    net_weight = models.CharField(max_length=255, null=True, blank=True)
+    weight_unit = models.CharField(max_length=10, choices=Unit_choice)
+    contract_weight_left = models.CharField(max_length=255, null=True, blank=True)   
+
+    border_receive_date = models.DateField(null=True, blank=True)
+    border_leaving_date = models.DateField(null=True, blank=True)
+
+    customer_receive_date = models.DateField(null=True, blank=True)
+    customer_leaving_date = models.DateField(null=True, blank=True)
+
+    border_back_receive_date = models.DateField(null=True, blank=True)
+    border_back_leaving_date = models.DateField(null=True, blank=True)
+
+    warehouse_receive_date = models.DateField(null=True, blank=True)
+
+    status = models.CharField(max_length=255, choices=status_choices, null=True, blank=True)    
+
+    customer_id = models.CharField(max_length=255, null=True, blank=True)
+    customer_name = models.CharField(max_length=255, null=True, blank=True)
+    
+    def __str__(self):
+        return f'{self.contract.secret_key} || {self.warehouse_name} || {self.customer_name}'
+
+
+class WarehouseCustomerShipmentDocuments(models.Model):
+    shipment = models.ForeignKey(ProcessorWarehouseShipment, on_delete=models.CASCADE)
+    document_name = models.CharField(max_length=255, null=True, blank=True)
+    document_file = models.FileField(upload_to='warehouse_shipment/file/', null=True, blank=True) 
+    uploaded_at = models.DateTimeField(auto_now_add=True)   
+
+    def __str__(self):
+        return f'Shipment documents for {self.shipment.id}'
+
+
+class WarehouseShipmentLog(models.Model):
+    shipment = models.ForeignKey(WarehouseCustomerShipment, on_delete=models.CASCADE, related_name='shipmentLog')    
+    description = models.TextField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f'Shipment - {self.shipment}, contract - {self.shipment.contract.secret_key}'
+    

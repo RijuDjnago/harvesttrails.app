@@ -1,5 +1,5 @@
 {% extends "base.html" %} {% load static %}
-{% block title %} Admin Processor Contract View {% endblock title %}
+{% block title %} Processor Shipment View {% endblock title %}
 
 {% block extrahead %}
 <!-- Google tag (gtag.js) -->
@@ -89,12 +89,41 @@
             text-align: center;
             margin-top: 5px;
         }
+        .list-group{
+            position: relative;
+            padding-left: 20px;
+            padding-top: 25px
+        }
+        .list-group::after{
+            content: '';
+            position: absolute;
+            width: 5px;
+            height: 100%;
+            background: linear-gradient(180deg, rgb(48 48 48 / 64%) 0%, rgba(0, 212, 255, 0) 100%);
+            left: 0;
+            border-radius: 20px;
+        }
+        .list-group .list-group-item{
+            position: relative;
+        }
+        .list-group .list-group-item::after{
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background-color: #0b6c39;
+            border-radius: 50%;
+            left: -29px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 1;
+        }
     </style>
 
     <main>
         {% include '_alerts.html' %}
         <div class="page-title-with-or-without-btn">
-            <span class="farm headingtop">Contract Detail</span>
+            <span class="farm headingtop">Shipment Details</span>
             <!-- Create button for Account-->
             
         </div>

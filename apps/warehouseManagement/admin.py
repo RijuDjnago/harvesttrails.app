@@ -12,3 +12,7 @@ admin.site.register(CustomerUser)
 admin.site.register(ProcessorWarehouseShipmentDocuments)
 admin.site.register(CarrierDetails)
 admin.site.register(ProcessorShipmentLog)
+
+admin.site.register(WarehouseCustomerShipment)
+admin.site.register(WarehouseCustomerShipmentDocuments)
+admin.site.register(WarehouseShipmentLog)

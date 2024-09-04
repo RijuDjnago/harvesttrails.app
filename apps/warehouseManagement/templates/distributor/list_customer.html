@@ -1,5 +1,5 @@
 {% extends "base.html" %} {% load static %}
-{% block title %} Processor Management {% endblock title %}
+{% block title %} Customer Management {% endblock title %}
 
 {% block extrahead %}
 <!-- Google tag (gtag.js) -->
@@ -72,9 +72,9 @@
                                     {% comment %} <li>
                                         <a href="{% url 'add-distributor-user' i.pk %}" class="map-icon-link" alt="add user" title="add user"><span class="fas fa-user-plus"></span></a>
                                     </li> {% endcomment %}
-                                    {% comment %} <li>
-                                        <a href="{% url 'update-processor' i.pk %}" class="update-btn-link" alt="edit processor" title="edit processor"> <span class="fas fa-edit"></span> </a>
-                                    </li> {% endcomment %}
+                                    <li>
+                                        <a href="{% url 'update-customer' i.pk %}" class="update-btn-link" alt="edit customer" title="edit customer"> <span class="fas fa-edit"></span> </a>
+                                    </li>
                                     <li>
                                         <a href="{% url 'customer-change-password' i.pk %}" alt="change password" title="change password"><span class="fas fa-key" data-mdb-toggle="modal" data-mdb-target="#exampleModal"></span></a>
                                     </li>

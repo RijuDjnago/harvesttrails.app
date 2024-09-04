@@ -38,6 +38,9 @@ class WarehouseForm(forms.ModelForm):
         self.fields['name'].required = True
         self.fields['location'].required = True
 
+        if self.instance.pk:
+            self.fields['distributor'].initial = self.instance.distributor_set.all()
+
     class Meta:
         model = Warehouse
         fields = ['name', 'location', 'latitude', 'longitude', 'status']

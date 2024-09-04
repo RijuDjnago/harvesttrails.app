@@ -32,8 +32,8 @@
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label for="customer_id">Select Customer<span class="asteriskField">*</span></label>
-                                <select name="selected_customer" id="customer_id" class="form-control" required>
-                                    <option value="All">Select Customer</option>                                  
+                                <select name="selected_customer" id="customer_id" class="form-control selectpicker" data-live-search="true" required>
+                                    <option value="All" selected disabled>Select Customer</option>                                  
                                     {% for customer in customers %}
                                     <option value="{{customer.id}}">{{customer.name}}</option>
                                     {% endfor %}                                    
@@ -123,7 +123,7 @@
                     
                     <div class="row">
                         <div class="form-btn-row text-center text-md-end">
-                            <a href="{% url 'list-contract' %}" class="btn-close-cancel">Cancel</a>
+                            <a href="{% url 'admin-customer-contract-list' %}" class="btn-close-cancel">Cancel</a>
                             <button type="submit" class="btn-save-submit">Save</button>
                         </div>
                     </div>
