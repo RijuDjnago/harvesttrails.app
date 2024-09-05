@@ -1,6 +1,9 @@
 import string
 import random
-from django.shortcuts import render, redirect
+import stripe
+from django.urls import reverse
+from django.shortcuts import render, redirect, get_object_or_404
+from django.http import HttpResponseRedirect
 from apps.warehouseManagement.models import *
 from apps.warehouseManagement.forms import *
 from apps.processor.models import Processor, ProcessorUser
@@ -12,6 +15,9 @@ from apps.accounts.models import User, Role, ShowNotification, LogTable
 from django.db.models import Q
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from apps.processor.views import calculate_milled_volume, get_sku_list
+from rest_framework.response import Response
+from django.conf import settings
+protocol = 'http'
 # Create your views here.
 
 characters = list(string.ascii_letters + string.digits + "@#$%")
@@ -1318,7 +1324,7 @@ def create_processor_shipment(request):
                         "selected_destination": destination_type,
                         "weight":data.get('weight'),
                         "gross_weight":data.get('gross_weight'),
-                        "net_weight":data.get('net_Weight'),
+                        "ship_weight":data.get('ship_Weight'),
                         "ship_quantity":data.get('ship_quantity'),
                         "status":data.get('status'),
                         "amount_unit":data.get('amount_unit') ,                     
@@ -1352,33 +1358,35 @@ def create_processor_shipment(request):
                             customer_name = Customer.objects.get(id=int(context.get('destination_id'))).name
 
                         if data.get('carrier_type') == 'Truck/Trailer':
-                            ship_quantity = data.get('ship_quantity')
-                            gross_weight = float(data.get('gross_weight'))* int(ship_quantity)
-                            if data.get('net_weight') not in [None, 'null', ' ', '']:
-                                
-                                net_weight = float(data.get('net_weight')) * int(ship_quantity)
+                            if data.get('gross_weight') not in [None, 'null', ' ', ''] and data.get('ship_weight') not in [None, 'null', ' ', ''] and data.get('ship_quantity') not in [None, 'null', ' ', '']:
+                                ship_quantity = int(data.get('ship_quantity'))
+                                gross_weight = float(data.get('gross_weight'))
+                                ship_weight = float(data.get('ship_weight'))                                    
+                                net_weight = gross_weight - (ship_weight * ship_quantity)
                             else:
-                                context["error_messages"] = "Please give net weight."
+                                context["error_messages"] = "Please provide Gross weight, Ship weight and Ship quantity."
                                 return render(request, 'distributor/create_outbound.html', context)
+                            
                         elif data.get('carrier_type') == 'Rail Car':
                             
                             gross_weight = 0
                             ship_quantity = 1
+                            ship_weight = 0
                             if data.get('weight') not in [None, 'null', ' ', '']:
                                 net_weight = float(data.get('weight'))
                             else:
-                                context["error_messages"] = "Please give weight."
+                                context["error_messages"] = "Please provide Weight."
                                 return render(request, 'distributor/create_outbound.html', context)
                        
                         if contract.amount_unit == context.get('amount_unit'):
-                            contract_weight_left = float(contract.contract_amount) - float(net_weight)
+                            contract_weight_left = float(contract.left_amount) - float(net_weight)
                         else:
                             if contract.amount_unit == "LBS" and context.get('amount_unit') == "MT":
                                 net_weight_lbs = float(net_weight) * 2204.62
-                                contract_weight_left = float(contract.contract_amount) - net_weight_lbs 
+                                contract_weight_left = float(contract.left_amount) - net_weight_lbs 
                             else:
                                 net_weight_mt = float(net_weight) * 0.000453592
-                                contract_weight_left = float(contract.contract_amount) - net_weight_mt                         
+                                contract_weight_left = float(contract.left_amount) - net_weight_mt                         
                         
                         outbound = ProcessorWarehouseShipment(
                             contract=contract,
@@ -1394,6 +1402,7 @@ def create_processor_shipment(request):
                             gross_weight=gross_weight,
                             net_weight=net_weight,
                             weight_unit=context.get('amount_unit'),
+                            ship_weight = ship_weight,
                             ship_quantity=ship_quantity,
                             contract_weight_left=contract_weight_left,
                             status=context.get('status'),
@@ -1478,7 +1487,7 @@ def create_processor_shipment(request):
                         "selected_destination": destination_type,
                         "weight":data.get('weight'),
                         "gross_weight":data.get('gross_weight'),
-                        "net_weight":data.get('net_Weight'),
+                        "ship_weight":data.get('ship_Weight'),
                         "ship_quantity":data.get('ship_quantity'),
                         "status":data.get('status'),
                         "amount_unit":data.get('amount_unit') ,                     
@@ -1512,33 +1521,35 @@ def create_processor_shipment(request):
                             customer_name = Customer.objects.get(id=int(context.get('destination_id'))).name
 
                         if data.get('carrier_type') == 'Truck/Trailer':
-                            ship_quantity = data.get('ship_quantity')
-                            gross_weight = float(data.get('gross_weight'))* int(ship_quantity)
-                            if data.get('net_weight') not in [None, 'null', ' ', '']:
-                                
-                                net_weight = float(data.get('net_weight')) * int(ship_quantity)
+                            if data.get('gross_weight') not in [None, 'null', ' ', ''] and data.get('ship_weight') not in [None, 'null', ' ', ''] and data.get('ship_quantity') not in [None, 'null', ' ', '']:
+                                ship_quantity = int(data.get('ship_quantity'))
+                                gross_weight = float(data.get('gross_weight'))
+                                ship_weight = float(data.get('ship_weight'))                                    
+                                net_weight = gross_weight - (ship_weight * ship_quantity)
                             else:
-                                context["error_messages"] = "Please give net weight."
+                                context["error_messages"] = "Please provide Gross weight, Ship weight and Ship quantity."
                                 return render(request, 'distributor/create_outbound.html', context)
+                            
                         elif data.get('carrier_type') == 'Rail Car':
                             
                             gross_weight = 0
                             ship_quantity = 1
+                            ship_weight = 0
                             if data.get('weight') not in [None, 'null', ' ', '']:
                                 net_weight = float(data.get('weight'))
                             else:
-                                context["error_messages"] = "Please give weight."
+                                context["error_messages"] = "Please provide Weight."
                                 return render(request, 'distributor/create_outbound.html', context)
                        
                         if contract.amount_unit == context.get('amount_unit'):
-                            contract_weight_left = float(contract.contract_amount) - float(net_weight)
+                            contract_weight_left = float(contract.left_amount) - float(net_weight)
                         else:
                             if contract.amount_unit == "LBS" and context.get('amount_unit') == "MT":
                                 net_weight_lbs = float(net_weight) * 2204.62
-                                contract_weight_left = float(contract.contract_amount) - net_weight_lbs 
+                                contract_weight_left = float(contract.left_amount) - net_weight_lbs 
                             else:
                                 net_weight_mt = float(net_weight) * 0.000453592
-                                contract_weight_left = float(contract.contract_amount) - net_weight_mt                         
+                                contract_weight_left = float(contract.left_amount) - net_weight_mt                         
                         
                         outbound = ProcessorWarehouseShipment(
                             contract=contract,
@@ -1553,6 +1564,7 @@ def create_processor_shipment(request):
                             lot_number=context.get('lot_number'),
                             gross_weight=gross_weight,
                             net_weight=net_weight,
+                            ship_weight = ship_weight,
                             weight_unit=context.get('amount_unit'),
                             ship_quantity=ship_quantity,
                             contract_weight_left=contract_weight_left,
@@ -1638,7 +1650,7 @@ def create_processor_shipment(request):
                         "selected_destination": destination_type,
                         "weight":data.get('weight'),
                         "gross_weight":data.get('gross_weight'),
-                        "net_weight":data.get('net_Weight'),
+                        "ship_weight":data.get('ship_Weight'),
                         "ship_quantity":data.get('ship_quantity'),
                         "status":data.get('status'),
                         "amount_unit":data.get('amount_unit') ,                     
@@ -1672,33 +1684,35 @@ def create_processor_shipment(request):
                             customer_name = Customer.objects.get(id=int(context.get('destination_id'))).name
 
                         if data.get('carrier_type') == 'Truck/Trailer':
-                            ship_quantity = data.get('ship_quantity')
-                            gross_weight = float(data.get('gross_weight'))* int(ship_quantity)
-                            if data.get('net_weight') not in [None, 'null', ' ', '']:
-                                
-                                net_weight = float(data.get('net_weight')) * int(ship_quantity)
+                            if data.get('gross_weight') not in [None, 'null', ' ', ''] and data.get('ship_weight') not in [None, 'null', ' ', ''] and data.get('ship_quantity') not in [None, 'null', ' ', '']:
+                                ship_quantity = int(data.get('ship_quantity'))
+                                gross_weight = float(data.get('gross_weight'))
+                                ship_weight = float(data.get('ship_weight'))                                    
+                                net_weight = gross_weight - (ship_weight * ship_quantity)
                             else:
-                                context["error_messages"] = "Please give net weight."
+                                context["error_messages"] = "Please provide Gross weight, Ship weight and Ship quantity."
                                 return render(request, 'distributor/create_outbound.html', context)
+                            
                         elif data.get('carrier_type') == 'Rail Car':
                             
                             gross_weight = 0
                             ship_quantity = 1
+                            ship_weight = 0
                             if data.get('weight') not in [None, 'null', ' ', '']:
                                 net_weight = float(data.get('weight'))
                             else:
-                                context["error_messages"] = "Please give weight."
+                                context["error_messages"] = "Please provide Weight."
                                 return render(request, 'distributor/create_outbound.html', context)
                        
                         if contract.amount_unit == context.get('amount_unit'):
-                            contract_weight_left = float(contract.contract_amount) - float(net_weight)
+                            contract_weight_left = float(contract.left_amount) - float(net_weight)
                         else:
                             if contract.amount_unit == "LBS" and context.get('amount_unit') == "MT":
                                 net_weight_lbs = float(net_weight) * 2204.62
-                                contract_weight_left = float(contract.contract_amount) - net_weight_lbs 
+                                contract_weight_left = float(contract.left_amount) - net_weight_lbs 
                             else:
                                 net_weight_mt = float(net_weight) * 0.000453592
-                                contract_weight_left = float(contract.contract_amount) - net_weight_mt                         
+                                contract_weight_left = float(contract.left_amount) - net_weight_mt                         
                         
                         outbound = ProcessorWarehouseShipment(
                             contract=contract,
@@ -1713,6 +1727,7 @@ def create_processor_shipment(request):
                             lot_number=context.get('lot_number'),
                             gross_weight=gross_weight,
                             net_weight=net_weight,
+                            ship_weight = ship_weight,
                             weight_unit=context.get('amount_unit'),
                             ship_quantity=ship_quantity,
                             contract_weight_left=contract_weight_left,
@@ -1964,11 +1979,7 @@ def edit_processor_shipment(request, pk):
     if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
         check_shipment = ProcessorWarehouseShipment.objects.filter(id=pk)
         
-        shipment = check_shipment.first()
-        gross_weight_per_unit = (float(shipment.gross_weight) / int(shipment.ship_quantity)) if shipment.gross_weight != 0 else 0
-        net_weight_per_unit = (float(shipment.net_weight) / int(shipment.ship_quantity)) 
-        context['gross_weight'] = gross_weight_per_unit
-        context['net_weight'] = net_weight_per_unit
+        shipment = check_shipment.first()        
         carrier = CarrierDetails.objects.filter(shipment=shipment).first()
         if carrier:
             context['carrier_id'] = carrier.carrier_id
@@ -2028,7 +2039,7 @@ def edit_processor_shipment(request, pk):
                 "selected_destination": destination_type,
                 "weight":data.get('weight'),
                 "gross_weight":data.get('gross_weight'),
-                "net_weight":data.get('net_Weight'),
+                "ship_weight":data.get('ship_Weight'),
                 "ship_quantity":data.get('ship_quantity'),
                 "status":data.get('status'),
                 "amount_unit":data.get('amount_unit') ,   
@@ -2070,32 +2081,35 @@ def edit_processor_shipment(request, pk):
                     customer_name = Customer.objects.get(id=int(context.get('destination_id'))).name
 
                 if data.get('carrier_type') == 'Truck/Trailer':
-                    ship_quantity = data.get('ship_quantity')
-                    gross_weight = float(data.get('gross_weight'))* int(ship_quantity)
-                    if data.get('net_weight') not in [None, 'null', ' ', '']:
-                        print('00000')
-                        net_weight = float(data.get('net_weight')) * int(ship_quantity)
+                    if data.get('gross_weight') not in [None, 'null', ' ', ''] and data.get('ship_weight') not in [None, 'null', ' ', ''] and data.get('ship_quantity') not in [None, 'null', ' ', '']:
+                        ship_quantity = int(data.get('ship_quantity'))
+                        gross_weight = float(data.get('gross_weight'))
+                        ship_weight = float(data.get('ship_weight'))                                    
+                        net_weight = gross_weight - (ship_weight * ship_quantity)
                     else:
-                        context["error_messages"] = "Please give net weight."
+                        context["error_messages"] = "Please provide Gross weight, Ship weight and Ship quantity."
                         return render(request, 'distributor/create_outbound.html', context)
+                            
                 elif data.get('carrier_type') == 'Rail Car':
+                    
                     gross_weight = 0
                     ship_quantity = 1
+                    ship_weight = 0
                     if data.get('weight') not in [None, 'null', ' ', '']:
-                        net_weight = float(context.get('weight'))
+                        net_weight = float(data.get('weight'))
                     else:
-                        context["error_messages"] = "Please give weight."
+                        context["error_messages"] = "Please provide Weight."
                         return render(request, 'distributor/create_outbound.html', context)
                 
                 if shipment.contract.amount_unit == context.get('amount_unit'):
-                    contract_weight_left = float(shipment.contract.contract_amount) - float(net_weight)
+                    contract_weight_left = float(shipment.contract.left_amount) - float(net_weight)
                 else:
                     if shipment.contract.amount_unit == "LBS" and context.get('amount_unit') == "MT":
                         net_weight_lbs = float(net_weight) * 2204.62
-                        contract_weight_left = float(shipment.contract.contract_amount) - net_weight_lbs 
+                        contract_weight_left = float(shipment.contract.left_amount) - net_weight_lbs 
                     else:
                         net_weight_mt = float(net_weight) * 0.000453592
-                        contract_weight_left = float(shipment.contract.contract_amount) - net_weight_mt 
+                        contract_weight_left = float(shipment.contract.left_amount) - net_weight_mt 
                 
                 shipment.contract=shipment.contract
                 shipment.processor_id=processor_id
@@ -2109,6 +2123,7 @@ def edit_processor_shipment(request, pk):
                 shipment.lot_number=context.get('lot_number')
                 shipment.gross_weight=gross_weight
                 shipment.net_weight=net_weight
+                shipment.ship_weight=ship_weight
                 shipment.weight_unit=context.get('amount_unit')
                 shipment.ship_quantity=ship_quantity
                 shipment.contract_weight_left=contract_weight_left
@@ -2214,7 +2229,7 @@ def create_warehouse_shipment(request):
                             "lot_number": data.get('lot_number'),                        
                             "weight":data.get('weight'),
                             "gross_weight":data.get('gross_weight'),
-                            "net_weight":data.get('net_Weight'),
+                            "ship_weight":data.get('ship_Weight'),
                             "ship_quantity":data.get('ship_quantity'),
                             "status":data.get('status'),
                             "amount_unit":data.get('amount_unit') ,                     
@@ -2230,34 +2245,37 @@ def create_warehouse_shipment(request):
                         
                         contract = AdminCustomerContract.objects.get(id=int(selected_contract))                   
                         customer_id = contract.customer_id
+
                         if data.get('carrier_type') == 'Truck/Trailer':
-                            ship_quantity = data.get('ship_quantity')
-                            gross_weight = float(data.get('gross_weight'))* int(ship_quantity)
-                            if data.get('net_weight') not in [None, 'null', ' ', '']:
-                                
-                                net_weight = float(data.get('net_weight')) * int(ship_quantity)
+                            if data.get('gross_weight') not in [None, 'null', ' ', ''] and data.get('ship_weight') not in [None, 'null', ' ', ''] and data.get('ship_quantity') not in [None, 'null', ' ', '']:
+                                ship_quantity = int(data.get('ship_quantity'))
+                                gross_weight = float(data.get('gross_weight'))
+                                ship_weight = float(data.get('ship_weight'))                                    
+                                net_weight = gross_weight - (ship_weight * ship_quantity)
                             else:
-                                context["error_messages"] = "Please give net weight."
+                                context["error_messages"] = "Please provide Gross weight, Ship weight and Ship quantity."
                                 return render(request, 'distributor/create_outbound.html', context)
+                            
                         elif data.get('carrier_type') == 'Rail Car':
                             
                             gross_weight = 0
                             ship_quantity = 1
+                            ship_weight = 0
                             if data.get('weight') not in [None, 'null', ' ', '']:
                                 net_weight = float(data.get('weight'))
                             else:
-                                context["error_messages"] = "Please give weight."
-                                return render(request, 'distributor/create_warehouse_outbound.html', context)
+                                context["error_messages"] = "Please provide Weight."
+                                return render(request, 'distributor/create_outbound.html', context)
                         
                         if contract.amount_unit == context.get('amount_unit'):
-                            contract_weight_left = float(contract.contract_amount) - float(net_weight)
+                            contract_weight_left = float(contract.left_amount) - float(net_weight)
                         else:
                             if contract.amount_unit == "LBS" and context.get('amount_unit') == "MT":
                                 net_weight_lbs = float(net_weight) * 2204.62
-                                contract_weight_left = float(contract.contract_amount) - net_weight_lbs 
+                                contract_weight_left = float(contract.left_amount) - net_weight_lbs 
                             else:
                                 net_weight_mt = float(net_weight) * 0.000453592
-                                contract_weight_left = float(contract.contract_amount) - net_weight_mt 
+                                contract_weight_left = float(contract.left_amount) - net_weight_mt 
                         warehouse_name = Warehouse.objects.get(id=int(data.get('selected_warehouse'))).name                        
                         print(context.get('carrier_type'), context.get('outbound_type'), context.get('purchase_order_name'), context.get('purchase_order_number'), context.get('lot_number'), context.get('status'))
                         outbound = WarehouseCustomerShipment(
@@ -2271,6 +2289,7 @@ def create_warehouse_shipment(request):
                             lot_number=data.get('lot_number'),
                             gross_weight=gross_weight,
                             net_weight=net_weight,
+                            ship_weight=ship_weight,
                             weight_unit=data.get('amount_unit'),
                             ship_quantity=ship_quantity,
                             contract_weight_left=contract_weight_left,
@@ -2335,7 +2354,7 @@ def create_warehouse_shipment(request):
                             "lot_number": data.get('lot_number'),                        
                             "weight":data.get('weight'),
                             "gross_weight":data.get('gross_weight'),
-                            "net_weight":data.get('net_Weight'),
+                            "ship_weight":data.get('ship_Weight'),
                             "ship_quantity":data.get('ship_quantity'),
                             "status":data.get('status'),
                             "amount_unit":data.get('amount_unit') ,                     
@@ -2351,34 +2370,37 @@ def create_warehouse_shipment(request):
                         
                         contract = AdminCustomerContract.objects.get(id=int(selected_contract))                   
                         customer_id = contract.customer_id
+
                         if data.get('carrier_type') == 'Truck/Trailer':
-                            ship_quantity = data.get('ship_quantity')
-                            gross_weight = float(data.get('gross_weight'))* int(ship_quantity)
-                            if data.get('net_weight') not in [None, 'null', ' ', '']:
-                                
-                                net_weight = float(data.get('net_weight')) * int(ship_quantity)
+                            if data.get('gross_weight') not in [None, 'null', ' ', ''] and data.get('ship_weight') not in [None, 'null', ' ', ''] and data.get('ship_quantity') not in [None, 'null', ' ', '']:
+                                ship_quantity = int(data.get('ship_quantity'))
+                                gross_weight = float(data.get('gross_weight'))
+                                ship_weight = float(data.get('ship_weight'))                                    
+                                net_weight = gross_weight - (ship_weight * ship_quantity)
                             else:
-                                context["error_messages"] = "Please give net weight."
+                                context["error_messages"] = "Please provide Gross weight, Ship weight and Ship quantity."
                                 return render(request, 'distributor/create_outbound.html', context)
+                            
                         elif data.get('carrier_type') == 'Rail Car':
                             
                             gross_weight = 0
                             ship_quantity = 1
+                            ship_weight = 0
                             if data.get('weight') not in [None, 'null', ' ', '']:
                                 net_weight = float(data.get('weight'))
                             else:
-                                context["error_messages"] = "Please give weight."
-                                return render(request, 'distributor/create_warehouse_outbound.html', context)
+                                context["error_messages"] = "Please provide Weight."
+                                return render(request, 'distributor/create_outbound.html', context)
                         
                         if contract.amount_unit == context.get('amount_unit'):
-                            contract_weight_left = float(contract.contract_amount) - float(net_weight)
+                            contract_weight_left = float(contract.left_amount) - float(net_weight)
                         else:
                             if contract.amount_unit == "LBS" and context.get('amount_unit') == "MT":
                                 net_weight_lbs = float(net_weight) * 2204.62
-                                contract_weight_left = float(contract.contract_amount) - net_weight_lbs 
+                                contract_weight_left = float(contract.left_amount) - net_weight_lbs 
                             else:
                                 net_weight_mt = float(net_weight) * 0.000453592
-                                contract_weight_left = float(contract.contract_amount) - net_weight_mt 
+                                contract_weight_left = float(contract.left_amount) - net_weight_mt 
                         warehouse_name = Warehouse.objects.get(id=int(data.get('selected_warehouse'))).name                        
                         print(context.get('carrier_type'), context.get('outbound_type'), context.get('purchase_order_name'), context.get('purchase_order_number'), context.get('lot_number'), context.get('status'))
                         outbound = WarehouseCustomerShipment(
@@ -2392,6 +2414,7 @@ def create_warehouse_shipment(request):
                             lot_number=data.get('lot_number'),
                             gross_weight=gross_weight,
                             net_weight=net_weight,
+                            ship_weight=ship_weight,
                             weight_unit=data.get('amount_unit'),
                             ship_quantity=ship_quantity,
                             contract_weight_left=contract_weight_left,
@@ -2456,7 +2479,7 @@ def create_warehouse_shipment(request):
                             "lot_number": data.get('lot_number'),                        
                             "weight":data.get('weight'),
                             "gross_weight":data.get('gross_weight'),
-                            "net_weight":data.get('net_Weight'),
+                            "ship_weight":data.get('ship_Weight'),
                             "ship_quantity":data.get('ship_quantity'),
                             "status":data.get('status'),
                             "amount_unit":data.get('amount_unit') ,                     
@@ -2472,34 +2495,37 @@ def create_warehouse_shipment(request):
                         
                         contract = AdminCustomerContract.objects.get(id=int(selected_contract))                   
                         customer_id = contract.customer_id
+
                         if data.get('carrier_type') == 'Truck/Trailer':
-                            ship_quantity = data.get('ship_quantity')
-                            gross_weight = float(data.get('gross_weight'))* int(ship_quantity)
-                            if data.get('net_weight') not in [None, 'null', ' ', '']:
-                                
-                                net_weight = float(data.get('net_weight')) * int(ship_quantity)
+                            if data.get('gross_weight') not in [None, 'null', ' ', ''] and data.get('ship_weight') not in [None, 'null', ' ', ''] and data.get('ship_quantity') not in [None, 'null', ' ', '']:
+                                ship_quantity = int(data.get('ship_quantity'))
+                                gross_weight = float(data.get('gross_weight'))
+                                ship_weight = float(data.get('ship_weight'))                                    
+                                net_weight = gross_weight - (ship_weight * ship_quantity)
                             else:
-                                context["error_messages"] = "Please give net weight."
+                                context["error_messages"] = "Please provide Gross weight, Ship weight and Ship quantity."
                                 return render(request, 'distributor/create_outbound.html', context)
+                            
                         elif data.get('carrier_type') == 'Rail Car':
                             
                             gross_weight = 0
                             ship_quantity = 1
+                            ship_weight = 0
                             if data.get('weight') not in [None, 'null', ' ', '']:
                                 net_weight = float(data.get('weight'))
                             else:
-                                context["error_messages"] = "Please give weight."
-                                return render(request, 'distributor/create_warehouse_outbound.html', context)
+                                context["error_messages"] = "Please provide Weight."
+                                return render(request, 'distributor/create_outbound.html', context)
                         
                         if contract.amount_unit == context.get('amount_unit'):
-                            contract_weight_left = float(contract.contract_amount) - float(net_weight)
+                            contract_weight_left = float(contract.left_amount) - float(net_weight)
                         else:
                             if contract.amount_unit == "LBS" and context.get('amount_unit') == "MT":
                                 net_weight_lbs = float(net_weight) * 2204.62
-                                contract_weight_left = float(contract.contract_amount) - net_weight_lbs 
+                                contract_weight_left = float(contract.left_amount) - net_weight_lbs 
                             else:
                                 net_weight_mt = float(net_weight) * 0.000453592
-                                contract_weight_left = float(contract.contract_amount) - net_weight_mt 
+                                contract_weight_left = float(contract.left_amount) - net_weight_mt 
                         warehouse_name = Warehouse.objects.get(id=int(data.get('selected_warehouse'))).name                        
                         print(context.get('carrier_type'), context.get('outbound_type'), context.get('purchase_order_name'), context.get('purchase_order_number'), context.get('lot_number'), context.get('status'))
                         outbound = WarehouseCustomerShipment(
@@ -2513,6 +2539,7 @@ def create_warehouse_shipment(request):
                             lot_number=data.get('lot_number'),
                             gross_weight=gross_weight,
                             net_weight=net_weight,
+                            ship_weight=ship_weight,
                             weight_unit=data.get('amount_unit'),
                             ship_quantity=ship_quantity,
                             contract_weight_left=contract_weight_left,
@@ -2700,11 +2727,7 @@ def edit_warehouse_shipment(request, pk):
             return render(request, 'distributor/edit_warehouse_outbound.html', context)
         print(check_shipment)
         shipment = check_shipment.first()
-        print(shipment)
-        gross_weight_per_unit = (float(shipment.gross_weight) / int(shipment.ship_quantity)) if shipment.gross_weight != 0 else 0
-        net_weight_per_unit = (float(shipment.net_weight) / int(shipment.ship_quantity)) 
-        context['gross_weight'] = gross_weight_per_unit
-        context['net_weight'] = net_weight_per_unit
+        
         carrier = CarrierDetails2.objects.filter(shipment=shipment).first()
         if carrier:
             context['carrier_id'] = carrier.carrier_id
@@ -2752,7 +2775,7 @@ def edit_warehouse_shipment(request, pk):
                     "lot_number": data.get('lot_number'),                
                     "weight":data.get('weight'),
                     "gross_weight":data.get('gross_weight'),
-                    "net_weight":data.get('net_Weight'),
+                    "ship_weight":data.get('ship_Weight'),
                     "ship_quantity":data.get('ship_quantity'),
                     "status":data.get('status'),
                     "amount_unit":data.get('amount_unit') ,   
@@ -2771,32 +2794,35 @@ def edit_warehouse_shipment(request, pk):
             else:           
 
                 if data.get('carrier_type') == 'Truck/Trailer':
-                    ship_quantity = data.get('ship_quantity')
-                    gross_weight = float(data.get('gross_weight'))* int(ship_quantity)
-                    if data.get('net_weight') not in [None, 'null', ' ', '']:
-                        print('00000')
-                        net_weight = float(data.get('net_weight')) * int(ship_quantity)
+                    if data.get('gross_weight') not in [None, 'null', ' ', ''] and data.get('ship_weight') not in [None, 'null', ' ', ''] and data.get('ship_quantity') not in [None, 'null', ' ', '']:
+                        ship_quantity = int(data.get('ship_quantity'))
+                        gross_weight = float(data.get('gross_weight'))
+                        ship_weight = float(data.get('ship_weight'))                                    
+                        net_weight = gross_weight - (ship_weight * ship_quantity)
                     else:
-                        context["error_messages"] = "Please give net weight."
+                        context["error_messages"] = "Please provide Gross weight, Ship weight and Ship quantity."
                         return render(request, 'distributor/create_outbound.html', context)
+                    
                 elif data.get('carrier_type') == 'Rail Car':
+                    
                     gross_weight = 0
                     ship_quantity = 1
+                    ship_weight = 0
                     if data.get('weight') not in [None, 'null', ' ', '']:
                         net_weight = float(data.get('weight'))
                     else:
-                        context["error_messages"] = "Please give weight."
+                        context["error_messages"] = "Please provide Weight."
                         return render(request, 'distributor/create_outbound.html', context)
                 
                 if shipment.contract.amount_unit == context.get('amount_unit'):
-                    contract_weight_left = float(shipment.contract.contract_amount) - float(net_weight)
+                    contract_weight_left = float(shipment.contract.left_amount) - float(net_weight)
                 else:
                     if shipment.contract.amount_unit == "LBS" and context.get('amount_unit') == "MT":
                         net_weight_lbs = float(net_weight) * 2204.62
-                        contract_weight_left = float(shipment.contract.contract_amount) - net_weight_lbs 
+                        contract_weight_left = float(shipment.contract.left_amount) - net_weight_lbs 
                     else:
                         net_weight_mt = float(net_weight) * 0.000453592
-                        contract_weight_left = float(shipment.contract.contract_amount) - net_weight_mt 
+                        contract_weight_left = float(shipment.contract.left_amount) - net_weight_mt 
                 
                 shipment.contract=shipment.contract                
                 shipment.carrier_type=data.get('carrier_type')
@@ -2808,6 +2834,7 @@ def edit_warehouse_shipment(request, pk):
                 shipment.net_weight=net_weight
                 shipment.weight_unit=data.get('amount_unit')
                 shipment.ship_quantity=ship_quantity
+                shipment.ship_weight=ship_weight
                 shipment.contract_weight_left=contract_weight_left
                 shipment.status= data.get('status')
                 shipment.customer_id=destination_id
@@ -2868,3 +2895,123 @@ def edit_warehouse_shipment(request, pk):
             return redirect('list-warehouse-shipment')
             
         return render(request, 'distributor/edit_warehouse_outbound.html', context)
+
+
+@login_required()
+def warehouse_shipment_invoice(request, pk):
+    context = {}
+    try:
+        shipment = WarehouseCustomerShipment.objects.filter(id=pk).first()      
+        customer = Customer.objects.filter(id=shipment.customer_id).first()
+        customer_user = CustomerUser.objects.filter(customer=customer).first()
+        payment_details = PaymentForShipment.objects.filter(shipment_type='warehouse', warehouse_shipment=shipment, status=True).first()
+        context["shipment"] = shipment
+        context["payment"] = payment_details       
+        context['customer'] = customer
+        context['total_amount'] = float(shipment.total_payment) + float(shipment.tax_amount)
+        context['customer_user'] = customer_user
+        return render (request, 'distributor/warehouse_shipment_invoice.html', context)
+    except (ValueError, AttributeError, AdminProcessorContract.DoesNotExist) as e:
+        context["error_messages"] = str(e)
+        return render(request, 'distributor/warehouse_shipment_invoice.html', context)
+
+stripe.api_key = settings.STRIPE_SECRET_KEY
+
+
+def create_payment_for_shipment(request, pk, type):
+    if type == 'warehouse':
+        warehouse_shipment = WarehouseCustomerShipment.objects.get(id=pk)        
+        amount = float(warehouse_shipment.total_payment) + float(warehouse_shipment.tax_amount)
+        currency = 'USD'          
+    else:
+        processor_shipment = ProcessorWarehouseShipment.objects.get(id=pk)       
+        amount = float(processor_shipment.total_payment) + float(processor_shipment.tax_amount)
+        currency = 'USD'        
+
+    # Create a Stripe Checkout session
+    host = request.get_host()
+    current_site = f"{protocol}://{host}"
+    main_url = f'{current_site}/warehouse/checkout-success/{pk}/{type}/'
+    user_email = request.user.email
+    customer_user = CustomerUser.objects.filter(contact_email=user_email).first()
+    if customer_user.stripe_id :
+            stripe_customer_id = customer_user.stripe_id
+    else:
+        customer = stripe.Customer.create(email=user_email).to_dict()
+        stripe_customer_id = customer["id"]
+        customer_user.stripe_id = stripe_customer_id
+        customer_user.save()
+    session = stripe.checkout.Session.create(
+        payment_method_types=['card'],
+        customer=stripe_customer_id,
+        line_items=[
+            {
+                'price_data': {
+                    'currency': currency.lower(),
+                    'product_data': {
+                        'name': f"Shipment Payment for {type.capitalize()}",
+                    },
+                    'unit_amount': int(amount * 100),  # Stripe expects amount in cents
+                },
+                'quantity': 1,
+            },
+        ],
+        mode='payment',
+       
+        success_url=main_url + "{CHECKOUT_SESSION_ID}" + "/",
+        cancel_url=f"{request.build_absolute_uri('/payment-cancelled/')}",
+    )
+    return HttpResponseRedirect(session.url)
+
+
+def checkout_success(request,pk,type,checkout_session_id):
+    """
+    This view handles the creation of a PaymentForShipment instance once the payment has been completed.
+    """
+    stripe.api_key = settings.STRIPE_SECRET_KEY
+    pay = stripe.checkout.Session.retrieve(checkout_session_id).to_dict()
+    
+    payment_intent = stripe.PaymentIntent.retrieve(pay['payment_intent'])
+    
+    if type == 'warehouse':
+        shipment = WarehouseCustomerShipment.objects.get(id=pk)
+        amount = shipment.total_payment
+        currency = 'USD'
+        payment_recived_by = User.objects.filter(is_superuser=True, is_staff=True).first()
+        payment_recived_user_type = 'Admin'
+    else:
+        shipment = ProcessorWarehouseShipment.objects.get(id=pk)
+        amount = shipment.total_payment
+        currency = 'USD'
+        payment_recived_by = ''
+        payment_recived_user_type = ''    
+ 
+    payment = PaymentForShipment.objects.create(
+        warehouse_shipment=shipment if type == 'warehouse' else None,
+        processor_shipment=shipment if type == 'processor' else None,
+        shipment_type=type,
+        amount=amount,
+        currency=currency,
+        payment_id=checkout_session_id,
+        payment_by=request.user,
+        user_type='Customer',
+        payment_recived_by=payment_recived_by,
+        payment_recived_user_type=payment_recived_user_type,
+    )
+  
+    payment.payment_responce = pay 
+    payment.save()
+
+    payment_status = payment_intent.status
+
+    if payment_status == 'succeeded':
+        payment.status = True
+        payment.save()  
+        return render(request, "distributor/success_payment.html")
+    else:
+        payment.status = False
+        payment.save()  
+        message = f"Payment failed: {payment_intent.last_payment_error.message}" if payment_intent.last_payment_error else "Payment failed"
+        return render(request, "distributor/failed_payment.html", {'error_message': message})
+
+    

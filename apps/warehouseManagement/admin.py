@@ -17,3 +17,5 @@ admin.site.register(WarehouseCustomerShipment)
 admin.site.register(WarehouseCustomerShipmentDocuments)
 admin.site.register(WarehouseShipmentLog)
 admin.site.register(CarrierDetails2)
+
+admin.site.register(PaymentForShipment)

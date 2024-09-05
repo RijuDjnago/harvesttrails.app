@@ -37,20 +37,19 @@
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     
 
+    <style>
+        .dropdown.bootstrap-select.form-control .btn{
+            border: 1px solid;
+        }
+        .select2-container--default .select2-selection--single{
+            height: 40px !important;
+            padding-top: 6px;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__arrow{
+            top: 5px !important;
+        }
+    </style>
 
-
-<style>
-    .dropdown.bootstrap-select.form-control .btn{
-        border: 1px solid;
-    }
-    .select2-container--default .select2-selection--single{
-        height: 40px !important;
-        padding-top: 6px;
-    }
-    .select2-container--default .select2-selection--single .select2-selection__arrow{
-        top: 5px !important;
-    }
-</style>
 </head>
 <body>
     {% include '_alerts.html' %} 
