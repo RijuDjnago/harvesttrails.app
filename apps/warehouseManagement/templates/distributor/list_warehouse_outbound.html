@@ -93,6 +93,7 @@
                                                     <ul>
                                                         <li><a href="{% url 'warehouse-shipment-view' item.id %}" class="update-btn-link" alt="view shipment details" title="view shipment details"> <span class="fas fa-eye"></span></a></li>
                                                        <li><a href="{% url 'edit-warehouse-shipment' item.id %}" class="update-btn-link" alt="update shipment details" title="{%  if request.user.is_superuser %}update shipment details {% endif %} {% if request.user.is_processor or request.user.is_processor2 %} upload documents {% endif %}">{% if request.user.is_superuser %}<span class="fas fa-edit">{% endif %}{% if request.user.is_processor or request.user.is_processor2 %}<span class="fas fa-file-upload">{% endif %}</span></a></li>
+                                                       <li><a href="{% url 'warehouse-shipment-invoice' item.id %}" class="update-btn-link" alt="view invoice details" title="view invoice details"> <span class="fas fa-invoice"></span></a></li>
                                                     </ul>
                                                 </td>
                                             </tr>

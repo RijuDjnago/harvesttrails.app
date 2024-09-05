@@ -24,7 +24,7 @@
                         {% if request.user.is_superuser %}
                         <div class="row d-flex">
                             <div class="col-3">                            
-                                <select name="selected_processor" id="processor_id" class="form-control selectpicker" data-live-search="true" onchange="this.form.submit();" required>
+                                <select name="selected_processor" id="processor_id" class="form-control" data-live-search="true" onchange="this.form.submit();" required>
                                     <option value="All">Select Customer</option>
                                     {% for customer in customers %}
                                     <option value="{{customer.id}}"{% if selected_customer_id == customer.pk %}selected{% endif %}>{{customer.name}}</option>

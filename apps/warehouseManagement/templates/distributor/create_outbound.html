@@ -224,9 +224,9 @@
                         </div>
                         <div class="col-md-4 truck">
                             <div class="form-group">
-                                <label for="net_weight">Net Weight</label>
+                                <label for="ship_weight">Ship Weight</label>
                                 <div class="d-flex">
-                                <input type="number" name="net_weight" class="textinput textInput form-control" style="margin-top:0; border-top-right-radius:0 !important; border-bottom-right-radius:0 !important">
+                                <input type="number" name="ship_weight" class="textinput textInput form-control" style="margin-top:0; border-top-right-radius:0 !important; border-bottom-right-radius:0 !important">
                                 <select name="amount_unit" id="unitSelction" class="form-select" style="border-top-left-radius:0 !important; border-bottom-left-radius:0 !important; border-left:0; width:90px;" required>                                   
                                     <option value="LBS">LBS</option>
                                     <option value="MT">MT</option>
@@ -263,7 +263,7 @@
                     </div>
                     <div class="row">
                         <div class="form-btn-row">
-                            <a href="{% 'list-processor-shipment' %}" class="btn-close-cancel btn-space">Cancel</a>
+                            <a href="{% url 'list-processor-shipment' %}" class="btn-close-cancel btn-space">Cancel</a>
                             <input style="display: none;" id="hide_btn1" type="submit" class="btn-save-submit"
                                 value="Save" name="save">
                             <!-- <input type="button" id="hide_btn2" class="btn-save-submit" value="Save" onclick="btnClick()"> -->

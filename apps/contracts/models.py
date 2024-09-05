@@ -137,18 +137,11 @@ contract_status = (
 
 def generate_secret_key( length=32):
     """Generate a unique secret key with the format HT+date+random_number."""
-    # Generate the random part
+    
     random_part = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(length))
-
-    # Today's date in YYYYMMDD format
     date_part = datetime.now().strftime("%Y%m%d")
-
-    # Random three-digit number
-    random_number = secrets.randbelow(900) + 100  # Generates a number between 100 and 999
-
-    # Combine all parts
+    random_number = secrets.randbelow(900) + 100  
     secret_key = f"HT{date_part}{random_number}"
-
     return secret_key
        
 class AdminProcessorContract(models.Model):
@@ -161,6 +154,7 @@ class AdminProcessorContract(models.Model):
     contract_amount = models.PositiveBigIntegerField()
     amount_unit = models.CharField(max_length=10, choices=unit_choice)
     per_unit_rate = models.CharField(max_length=255, null=True, blank=True)
+    tax_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=7.0)
     total_price = models.DecimalField( max_digits=20,decimal_places=2,validators=[MinValueValidator(Decimal('0.01'))],null=True, blank=True)
     contract_start_date = models.DateField()
     contract_period = models.PositiveIntegerField(help_text="Warranty period")
@@ -233,6 +227,7 @@ class AdminCustomerContract(models.Model):
     contract_amount = models.PositiveBigIntegerField()
     amount_unit = models.CharField(max_length=10, choices=unit_choice)
     per_unit_rate = models.CharField(max_length=255, null=True, blank=True)
+    tax_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=7.0)
     total_price = models.DecimalField( max_digits=20,decimal_places=2,validators=[MinValueValidator(Decimal('0.01'))],null=True, blank=True)
     contract_start_date = models.DateField()
     contract_period = models.PositiveIntegerField(help_text="Warranty period")

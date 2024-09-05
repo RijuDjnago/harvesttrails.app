@@ -864,6 +864,7 @@ def admin_processor_contract_create(request):
                 crop_type = request.POST.get('crop_type')
                 contract_amount = request.POST.get('contract_amount')
                 amount_unit = request.POST.get('amount_unit')
+                per_unit_rate = request.POST.get('per_unit_rate')
                 contract_start_date = request.POST.get('contract_start_date')
                 contract_period = request.POST.get('contract_period')
                 status = request.POST.get('status')                
@@ -895,6 +896,7 @@ def admin_processor_contract_create(request):
                         crop_type = crop_type,
                         contract_amount=contract_amount, 
                         amount_unit=amount_unit,
+                        per_unit_rate=per_unit_rate,
                         contract_start_date=contract_start_date, 
                         contract_period=contract_period,
                         status=status, 
@@ -1096,6 +1098,7 @@ def edit_admin_processor_contract(request, pk):
             'crop_type': contract.crop_type,
             "contract_amount": contract.contract_amount,
             "amount_unit": contract.amount_unit,
+            "per_unit_rate":contract.per_unit_rate,
             "contract_start_date": contract.contract_start_date,
             "contract_period": contract.contract_period,
             "status": contract.status,
@@ -1109,6 +1112,7 @@ def edit_admin_processor_contract(request, pk):
                 selected_crop = request.POST.get('crop')
                 contract_amount = request.POST.get('contract_amount')
                 amount_unit = request.POST.get('amount_unit')
+                per_unit_rate = request.POST.get('per_unit_rate')
                 contract_start_date = request.POST.get('contract_start_date')
                 contract_period = request.POST.get('contract_period')
                 status = request.POST.get('status')
@@ -1136,6 +1140,7 @@ def edit_admin_processor_contract(request, pk):
                     contract.crop = selected_crop
                     contract.contract_amount = contract_amount
                     contract.amount_unit = amount_unit
+                    contract.per_unit_rate = per_unit_rate
                     contract.contract_start_date = contract_start_date
                     contract.contract_period = contract_period
                     contract.status = status
@@ -1184,8 +1189,7 @@ def edit_admin_processor_contract(request, pk):
                     file_field_name = f'document_file_{document_id}'
                     
                     if file_field_name in request.FILES:
-                        uploaded_file = request.FILES[file_field_name]
-                        
+                        uploaded_file = request.FILES[file_field_name]                        
                         
                         # Handle the uploaded file
                         try:
@@ -1223,6 +1227,7 @@ def admin_customer_contract_create(request):
                 crop_type = request.POST.get('crop_type')
                 contract_amount = request.POST.get('contract_amount')
                 amount_unit = request.POST.get('amount_unit')
+                per_unit_rate = request.POST.get('per_unit_rate')
                 contract_start_date = request.POST.get('contract_start_date')
                 contract_period = request.POST.get('contract_period')
                 status = request.POST.get('status')                
@@ -1243,6 +1248,7 @@ def admin_customer_contract_create(request):
                         crop_type = crop_type,
                         contract_amount=contract_amount, 
                         amount_unit=amount_unit,
+                        per_unit_rate=per_unit_rate,
                         contract_start_date=contract_start_date, 
                         contract_period=contract_period,
                         status=status, 
@@ -1419,6 +1425,7 @@ def edit_admin_customer_contract(request, pk):
             'crop_type': contract.crop_type,
             "contract_amount": contract.contract_amount,
             "amount_unit": contract.amount_unit,
+            "per_unit_rate": contract.per_unit_rate,
             "contract_start_date": contract.contract_start_date,
             "contract_period": contract.contract_period,
             "status": contract.status,
@@ -1432,6 +1439,7 @@ def edit_admin_customer_contract(request, pk):
                 selected_crop = request.POST.get('crop')
                 contract_amount = request.POST.get('contract_amount')
                 amount_unit = request.POST.get('amount_unit')
+                per_unit_rate = request.POST.get('per_unit_rate')
                 contract_start_date = request.POST.get('contract_start_date')
                 contract_period = request.POST.get('contract_period')
                 status = request.POST.get('status')
@@ -1450,6 +1458,7 @@ def edit_admin_customer_contract(request, pk):
                     contract.crop = selected_crop
                     contract.contract_amount = contract_amount
                     contract.amount_unit = amount_unit
+                    contract.per_unit_rate = per_unit_rate
                     contract.contract_start_date = contract_start_date
                     contract.contract_period = contract_period
                     contract.status = status
@@ -1488,6 +1497,7 @@ def edit_admin_customer_contract(request, pk):
                             else:
                                 # Create new document if the document ID does not exist
                                 AdminCustomerContractDocuments.objects.create(contract=contract, name=name)
+                    
                 return redirect('admin-customer-contract-list')
                         
             elif request.user.is_customer:

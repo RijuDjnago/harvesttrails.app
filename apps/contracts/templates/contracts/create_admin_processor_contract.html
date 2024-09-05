@@ -124,15 +124,20 @@
                             <div class="form-group">                                
                                 <label for="contract_amount">Contract Amount</label>
                                 <div class="d-flex">
-                                <input type="number" name="contract_amount" id="contract_amount" class="textinput textInput form-control" style="margin-top:0; border-top-right-radius:0 !important; border-bottom-right-radius:0 !important" required>
-                                <select name="amount_unit" id="unitSelction" class="form-select" style="border-top-left-radius:0 !important; border-bottom-left-radius:0 !important; border-left:0; width:90px;" required>                                   
-                                    <option value="LBS">LBS</option>
-                                    <option value="MT">MT</option>
-                                </select>
-                            </div>
+                                    <input type="number" name="contract_amount" id="contract_amount" class="textinput textInput form-control" style="margin-top:0; border-top-right-radius:0 !important; border-bottom-right-radius:0 !important" required>
+                                    <select name="amount_unit" id="unitSelction" class="form-select" style="border-top-left-radius:0 !important; border-bottom-left-radius:0 !important; border-left:0; width:90px;" required>                                   
+                                        <option value="LBS">LBS</option>
+                                        <option value="MT">MT</option>
+                                    </select>
+                                </div>
                             </div>
                         </div>                     
-                        
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="per_unit_rate">Per Unit Rate</label>
+                                <input type="number" name="per_unit_rate" id="per_unit_rate" placeholder='Enter per unit rate in dollar' class="form-control" required>
+                            </div>
+                        </div>
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label for="contract_start_date">Contract Start Date</label>

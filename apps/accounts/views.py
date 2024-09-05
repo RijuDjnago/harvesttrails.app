@@ -1283,7 +1283,7 @@ def dashboard(request):
             ad_premium_paid_cotton = f"$ {ad_sum_grower_premium_paid_cotton}"
     release_notes = ReleaseNote.objects.filter(status=True)
     all_log = LogTable.objects.all().order_by("-id")[:10]
-    some_date = datetime.date.today()
+    some_date = datetime.today().date()
     upcoming_dates = UpcomingDate.objects.filter(status=True,show_date__gte=some_date).order_by('show_date')
 
     

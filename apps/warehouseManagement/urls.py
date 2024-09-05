@@ -25,5 +25,8 @@ urlpatterns = [
     path('list-warehouse-shipment/', warehouse_shipment_list, name='list-warehouse-shipment'),
     path('warehouse-shipment-view/<int:pk>/', warehouse_shipment_view, name='warehouse-shipment-view'),
     path('edit-warehouse-shipment/<int:pk>/', edit_warehouse_shipment, name='edit-warehouse-shipment'),
+    path('warehouse-shipment-invoice/<int:pk>/', warehouse_shipment_invoice, name='warehouse-shipment-invoice'),
+    path('create-payment/<int:pk>/<str:type>/', create_payment_for_shipment, name='create_payment_for_shipment'),
+    path('checkout-success/<int:pk>/<str:type>/<str:checkout_session_id>/', checkout_success, name='checkout-success'),
     
 ]
