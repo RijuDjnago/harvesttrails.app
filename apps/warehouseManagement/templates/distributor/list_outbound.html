@@ -9,6 +9,13 @@
 <div class="main-content">
     {% include 'header.html' %}
     <main>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+
+        <!-- Include Select2 CSS -->
+        <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
+        <!-- Include Select2 JS -->
+        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
         {% include '_alerts.html' %}
         <div class="page-title-with-or-without-btn">
             <span class="farm headingtop">Processor Contract Shipment Management</span>
@@ -126,11 +133,11 @@
                                                 <td>{{item.processor_entity_name}}</td>
                                                 <td>{{item.carrier_type}}</td>
                                                 <td>{{item.outbound_type}}</td>
-                                                <td>{{item.date_pulled|date:'Y-m-d'}}</td>
+                                                <td>{{item.date_pulled.date}}</td>
                                                 <td>{{item.purchase_order_name}}</td>                                                
                                                 <td>{{item.lot_number}}</td>
                                                 <td>{{item.net_weight}} {{item.weight_unit}}</td>
-                                                <td>{% if item.distributor_receive_date %}{{item.distributor_receive_date|date:'Y-m-d'}}{% else %} - {%endif %}</td>
+                                                <td>{% if item.distributor_receive_date %}{{item.distributor_receive_date.date}}{% else %} - {%endif %}</td>
                                                 <td>{% if item.warehouse_name %}{{item.warehouse_name}}{% else %}{{item.customer_name}}{% endif %}</td>
                                                 <td>{{item.status}}</td>
                                                 <td class="backk action-td rmv-bd">
@@ -189,6 +196,14 @@
 {% endblock content %}
 
 {% block jquery %}
+<script type="text/javascript">
+    $(document).ready(function() {
+        $('#processor_id').select2({
+            placeholder: "Select a Processor",
+            allowClear: true
+        });
+    });
+</script>
 <script>
     $('#Warehouse-active').addClass('activeLink');
     $('#Warehouse-down').addClass('down');

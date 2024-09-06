@@ -53,13 +53,22 @@ class DistributorUser(models.Model):
     def __str__(self):
         return self.contact_email
 
-
+credit_term_choice = (
+    ('0','Pay on invoice receipt'),
+    ('0','Pay while ordering'),
+    ('30', '30 days'),
+    ('60', '60 days'),
+    ('90', '90 days'),
+)
 class Customer(models.Model):
     """Database model for Customer"""
     name = models.CharField(max_length=255, null=True, blank=True)    
     location = models.TextField(null=True,blank=True)
     latitude = models.CharField(max_length=255, null=True, blank=True)
     longitude = models.CharField(max_length=255, null=True, blank=True)
+    credit_terms = models.IntegerField(choices=credit_term_choice, default=30)
+    is_tax_payable = models.BooleanField(default=False)
+    tax_percentage = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
     def __str__(self):
         return self.name

@@ -99,12 +99,14 @@
             
             <div class="flex-header-btn">
                 {% if request.user.is_customer %} 
+                {% if not shipment.is_paid %}
                 <form action="{% url 'create_payment_for_shipment' shipment.id 'warehouse' %}" method="POST">
                     {% csrf_token %}
-                    <button type="submit" class="btn btn-primary">Pay Now</button>
+                    <button type="submit" class="btn-close-cancel me-3">Pay Now</button>
                 </form>
+                {% endif %}
                 {% endif %} 
-                <button id="download-pdf-new" class="btn btn-primary">Download PDF</button>
+                <button id="download-pdf-new" class="btn-close-cancel">Download PDF</button>
             </div>
             
         </div>
@@ -113,7 +115,7 @@
             <div id="invoice" class="container-fluid bg-light p-4 border">
                 <!-- Invoice Header -->
                 <div class="text-center mb-4">
-                    <h2 class="font-weight-bold text-uppercase">Invoice For {{shipment.shipment_id}}</h2>
+                    <h2 class="font-weight-bold text-uppercase">Invoice For Shipment ID -{{shipment.shipment_id}}</h2>
                 </div>
         
                 <!-- Company and Customer Details -->
@@ -137,17 +139,18 @@
                 <div class="row mb-4 mx-0">
                     <div class="col-md-6 border p-3">
                         <strong>Shipping Address:</strong>
-                        <p>{{customer.location}},
-                            lat-{{customer.latitude}},
-                            long-{{customer.longitude}}
+                        <p>{{customer.location}}<br>
+                            Latitude - {{customer.latitude}},<br>
+                            Longitude - {{customer.longitude}}
                         </p>
                     </div>
                     <div class="col-md-6 border p-3">
                         <p><strong>Invoice Number: </strong>{{shipment.invoice_id}}</p>
-                        <p><strong>Invoice Date: </strong>{{shipment.date_pulled|date:'Y-m-d'}}</p>
-                        <p><strong>Place of Service Supply:</strong> {{customer.location}}</p>
-                        <p><strong>Due Date:</strong> 31st June 2024</p>
-                        <p><strong>Reference P.O. Number:</strong> POSTD2400021</p>
+                        <p><strong>Invoice Date: </strong>{{shipment.date_pulled.date}}<br>
+                        <strong>Place of Service Supply:</strong> {{customer.location}}<br>
+                        <strong>Credit Limit:</strong> {{customer.credit_limit}} Days<br>
+                        <strong>Due Date:</strong> {{due_date.date}} </p>
+                        {% comment %} <strong>Reference P.O. Number:</strong> POSTD2400021</p> {% endcomment %}
                     </div>
                 </div>
                 
@@ -166,15 +169,15 @@
                     </thead>
                     <tbody>
                         <tr>
-                            <td>{{shipment.date_pulled|date:'Y-m-d'}}</td>
+                            <td>{{shipment.date_pulled.date}}</td>
                             <td>{{shipment.contract.crop_type}} {{shipment.contract.crop}}</td>
                             <td></td>
                             <td>{{shipment.net_weight}} {{shipment.weight_unit}}</td>
-                            <td>{{shipment.contract.per_unit_rate}}</td>
+                            <td>&#36; {{shipment.contract.per_unit_rate}}</td>
                             <td>&#36; {{shipment.total_payment}}</td>
                         </tr>
                         <tr>
-                            <td>{{shipment.date_pulled|date:'Y-m-d'}}</td>
+                            <td>{{shipment.date_pulled.date}}</td>
                             <td>Sales</td>
                             <td>Freight</td>
                             <td>1</td>
@@ -195,7 +198,7 @@
                                         <td class="text-right">&#36;{{shipment.total_payment}}</td>
                                     </tr>
                                     <tr>
-                                        <td colspan="5" class="text-right"><strong>Sales Tax:</strong></td>
+                                        <td colspan="5" class="text-right"><strong>Tax:</strong></td>
                                         <td class="text-right">&#36;{{shipment.tax_amount}}</td>
                                     </tr>
                                     <tr>
@@ -210,37 +213,48 @@
                 </table>
                 
                 <br>
-                {% if payment %}
+                {% if shipment.is_paid %}
                 <h5>Payment Details:- </h5>                
         
                 <div class="row mb-4 mx-0">
                    
                     <div class="col-md-8  p-3">
-                        <p><strong>Total Amount: </strong>{{total_amount}}</p>
-                        <p><strong>Payment Date: </strong>{{payment.paid_at|date:'Y-m-d'}}</p>
-                        <p><strong>Payment By:</strong> {{payment.payment_by}}</p>
-                        <p><strong>Payment Status</strong> Success.</p>
-                        <strong>Payment ID:</strong><span> {{payment.payment_id}}</span>
+                        <p><strong>Total Amount: </strong>&#36; {{total_amount}}<br>
+                        <strong>Payment Date: </strong>{{payment.paid_at.date}}<br>
+                        <strong>Payment By: </strong> {{payment.payment_by}}<br>
+                        <strong>Payment Status: </strong> Success.<br>
+                        
+                    </div>
+                </div>
+                {% else %}
+                <div class="row mb-4 mx-0">
+                   <i style='color:red;'>Payment is yet to be done.</i>
+                    <div class="col-md-8  p-3">
+                        <p><strong>Total Amount: </strong><br>
+                        <strong>Payment Date: </strong><br>
+                        <strong>Payment By: </strong> <br>
+                        <strong>Payment Status: </strong><br>
+                        
                     </div>
                 </div>
                 {% endif %}
-                                <table width="100%">
-                                    <div class="row">
-                                        <div class="col-8">
-                                            <td colspan="8" width="70%">
-                                                <strong>Way to Pay</strong>
-                                                <p>Stripe</p>
-                                            </td>
-                                        </div>
-                                        <div class="col-4">
-                                            <td colspan="2" width="30%">
-                                                
-                                                <img src="{% static 'img/logo.png' %}" height="100%", width="200" style="margin-left:70px;">
-                                                <span style="display: block;text-align: center; color: blueviolet;">HARVESTTRAILS</span>
-                                            </td>
-                                        </div>
-                                    </div>
-                                </table>
+                <table width="100%">
+                    <div class="row">
+                        <div class="col-8">
+                            <td colspan="8" width="70%">
+                                <strong>Way to Pay</strong>
+                                <p>Stripe</p>
+                            </td>
+                        </div>
+                        <div class="col-4">
+                            <td colspan="2" width="30%">
+                                
+                                <img src="{% static 'img/logo.png' %}" height="100%", width="200" style="margin-left:70px;">
+                                <span style="display: block;text-align: center; color: blueviolet;">HARVESTTRAILS</span>
+                            </td>
+                        </div>
+                    </div>
+                </table>
                                         
     </main>
 {% endblock content %}
@@ -289,6 +303,15 @@
             }
         });
     });
+</script>
+<script>
+    $('#Warehouse-active').addClass('activeLink');
+  
+    $('#Warehouse-down').addClass('down');
+    $('#Warehouse-sub_unic').show();
+  
+    $('#Warehouse-Shipment').addClass('activeLink active-nav');
+  
 </script>
 
 {% endblock scripts %}

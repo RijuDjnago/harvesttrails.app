@@ -18,6 +18,7 @@ from apps.processor.views import calculate_milled_volume, get_sku_list
 from rest_framework.response import Response
 from django.conf import settings
 protocol = 'http'
+import datetime
 # Create your views here.
 
 characters = list(string.ascii_letters + string.digits + "@#$%")
@@ -524,90 +525,45 @@ def add_warehouse(request):
                 context["form"] = form
                 if request.method == 'POST':
                     form = WarehouseForm(request.POST)
-                    
-                    name = request.POST.get('name')
-                    location = request.POST.get('location')
-                    latitude = request.POST.get('latitude')
-                    longitude = request.POST.get('longitude')
-                    status = request.POST.get('status')
-                    distributor = request.POST.get('distributor')
 
-                    # Check if a warehouse with the same name already exists
-                    if Warehouse.objects.filter(name=name).exists():
-                        messages.error(request, "A warehouse with this name already exists.")
-                        return render(request, 'distributor/add_warehouse.html', context)
+                    if form.is_valid():
+                        name = form.cleaned_data['name']
+                        location = form.cleaned_data['location']
+                        latitude = form.cleaned_data['latitude']
+                        longitude = form.cleaned_data['longitude']
+                        status = form.cleaned_data['status']
+                        distributors = form.cleaned_data['distributor']  # Now contains multiple distributors
 
-                    # Create the warehouse
-                    warehouse = Warehouse.objects.create(
-                        name=name,
-                        location=location,
-                        latitude=latitude,
-                        longitude=longitude,
-                        status=status
-                    )
-                    check_distributor = Distributor.objects.filter(id=distributor)
-                    if check_distributor:
-                        get_distributor = check_distributor.first()
-                        get_distributor.warehouse.add(warehouse)
+                        # Check if a warehouse with the same name already exists
+                        if Warehouse.objects.filter(name=name).exists():
+                            messages.error(request, "A warehouse with this name already exists.")
+                            return render(request, 'distributor/add_warehouse.html', context)
 
-                    # Log the action
-                    log_type, log_status, log_device = "Warehouse", "Added", "Web"
-                    log_idd, log_name = warehouse.id, name
-                    log_email = None
-                    log_details = (f"name = {name} | location = {location} | "
-                                    f"latitude = {latitude} | longitude = {longitude} | status = {status}")
-                    action_by_userid = request.user.id
-                    userr = User.objects.get(pk=action_by_userid)
-                    user_role = userr.role.all()
-                    action_by_username = f'{userr.first_name} {userr.last_name}'
-                    action_by_email = userr.username
-                    action_by_role = "superuser" if request.user.id == 1 else str(','.join([str(i.role) for i in user_role]))
-                    logtable = LogTable(
-                        log_type=log_type, log_status=log_status, log_idd=log_idd, log_name=log_name,
-                        action_by_userid=action_by_userid, action_by_username=action_by_username,
-                        action_by_email=action_by_email, action_by_role=action_by_role, log_email=log_email,
-                        log_details=log_details, log_device=log_device
-                    )
-                    logtable.save()
+                        # Create the warehouse
+                        warehouse = Warehouse.objects.create(
+                            name=name,
+                            location=location,
+                            latitude=latitude,
+                            longitude=longitude,
+                            status=status
+                        )
 
-                    # Add the single warehouse user
-                    user_name = request.POST.get('user_name')
-                    user_email = request.POST.get('user_email')
-                    user_phone = request.POST.get('user_phone')
-                    user_fax = request.POST.get('user_fax')
-                    print(user_name, user_email, user_phone, user_fax)
+                        # Add the warehouse to the selected distributors
+                        for distributor in distributors:
+                            distributor.warehouse.add(warehouse)
 
-                    if WarehouseUser.objects.filter(warehouse=warehouse).exists():                       
-                        messages.error(request, "A user is already associated with this warehouse.")
-                        return render(request, 'distributor/add_warehouse.html', context)
-
-                    if User.objects.filter(email=user_email).exists():                        
-                        messages.error(request, f'Email {user_email} already exists.')
-                    else:
-                        password = generate_random_password()                        
-                        warehouse_user = WarehouseUser.objects.create(
-                            warehouse=warehouse,
-                            contact_name=user_name,
-                            contact_email=user_email,
-                            contact_phone=user_phone,
-                            contact_fax=user_fax,
-                            p_password_raw=password
-                        )                    
-                        user = User.objects.create(email=user_email, username=user_email,first_name=user_name)
-                        user.role.add(Role.objects.get(role='WarehouseManager'))
-                        user.is_warehouse_manager=True
-                        user.is_active=True
-                        user.set_password(password)
-                        user.password_raw = password
-                        user.save()
-
-                        # Log the action for user creation
-                        log_type, log_status, log_device = "WarehouseManager", "Added", "Web"
-                        log_idd, log_name = warehouse_user.id, user_name
-                        log_email = user_email
-                        log_details = (f"warehouse_id = {warehouse.id} | warehouse = {warehouse.name} | "
-                                        f"user_name= {user_name} | user_email = {user_email} | "
-                                        f"user_phone = {user_phone} | user_fax = {user_fax} | password_raw = {password}")
+                        # Log the action
+                        log_type, log_status, log_device = "Warehouse", "Added", "Web"
+                        log_idd, log_name = warehouse.id, name
+                        log_email = None
+                        log_details = (f"name = {name} | location = {location} | "
+                                        f"latitude = {latitude} | longitude = {longitude} | status = {status}")
+                        action_by_userid = request.user.id
+                        userr = User.objects.get(pk=action_by_userid)
+                        user_role = userr.role.all()
+                        action_by_username = f'{userr.first_name} {userr.last_name}'
+                        action_by_email = userr.username
+                        action_by_role = "superuser" if request.user.id == 1 else str(','.join([str(i.role) for i in user_role]))
                         logtable = LogTable(
                             log_type=log_type, log_status=log_status, log_idd=log_idd, log_name=log_name,
                             action_by_userid=action_by_userid, action_by_username=action_by_username,
@@ -616,7 +572,53 @@ def add_warehouse(request):
                         )
                         logtable.save()
 
-                    return redirect('list-warehouse')                
+                        # Add the single warehouse user
+                        user_name = request.POST.get('user_name')
+                        user_email = request.POST.get('user_email')
+                        user_phone = request.POST.get('user_phone')
+                        user_fax = request.POST.get('user_fax')
+                        print(user_name, user_email, user_phone, user_fax)
+
+                        if WarehouseUser.objects.filter(warehouse=warehouse).exists():                       
+                            messages.error(request, "A user is already associated with this warehouse.")
+                            return render(request, 'distributor/add_warehouse.html', context)
+
+                        if User.objects.filter(email=user_email).exists():                        
+                            messages.error(request, f'Email {user_email} already exists.')
+                        else:
+                            password = generate_random_password()                        
+                            warehouse_user = WarehouseUser.objects.create(
+                                warehouse=warehouse,
+                                contact_name=user_name,
+                                contact_email=user_email,
+                                contact_phone=user_phone,
+                                contact_fax=user_fax,
+                                p_password_raw=password
+                            )                    
+                            user = User.objects.create(email=user_email, username=user_email,first_name=user_name)
+                            user.role.add(Role.objects.get(role='WarehouseManager'))
+                            user.is_warehouse_manager=True
+                            user.is_active=True
+                            user.set_password(password)
+                            user.password_raw = password
+                            user.save()
+
+                            # Log the action for user creation
+                            log_type, log_status, log_device = "WarehouseManager", "Added", "Web"
+                            log_idd, log_name = warehouse_user.id, user_name
+                            log_email = user_email
+                            log_details = (f"warehouse_id = {warehouse.id} | warehouse = {warehouse.name} | "
+                                            f"user_name= {user_name} | user_email = {user_email} | "
+                                            f"user_phone = {user_phone} | user_fax = {user_fax} | password_raw = {password}")
+                            logtable = LogTable(
+                                log_type=log_type, log_status=log_status, log_idd=log_idd, log_name=log_name,
+                                action_by_userid=action_by_userid, action_by_username=action_by_username,
+                                action_by_email=action_by_email, action_by_role=action_by_role, log_email=log_email,
+                                log_details=log_details, log_device=log_device
+                            )
+                            logtable.save()
+
+                        return redirect('list-warehouse')                
 
                 return render(request, 'distributor/add_warehouse.html', context)
             else:
@@ -929,7 +931,8 @@ def add_customer(request):
                     name = request.POST.get('name')
                     location = request.POST.get('location')
                     latitude = request.POST.get('latitude')
-                    longitude = request.POST.get('longitude')                   
+                    longitude = request.POST.get('longitude') 
+                    credit_limit = request.POST.get('credit_limit')                   
 
                     # Check if a customer with the same name already exists
                     if Customer.objects.filter(name=name).exists():
@@ -941,7 +944,8 @@ def add_customer(request):
                         name=name,
                         location=location,
                         latitude=latitude,
-                        longitude=longitude
+                        longitude=longitude,
+                        credit_limit = credit_limit
                         
                     )
 
@@ -2323,7 +2327,7 @@ def create_warehouse_shipment(request):
                         return redirect('list-warehouse-shipment')  
                 return render(request, 'distributor/create_warehouse_outbound.html', context) 
             elif request.user.is_distributor:
-                contracts = AdminCustomerContract.objects.filter(created_by=request.user).values('id','secret_key','customer_id','customer_name','crop').order_by('-id') 
+                contracts = AdminCustomerContract.objects.all().values('id','secret_key','customer_id','customer_name','crop').order_by('-id') 
                 distributor_user = DistributorUser.objects.get(contact_email=request.user.email) 
                 distributor = Distributor.objects.get(id=distributor_user.distributor.id)
                 warehouses = distributor.warehouse.all().values('id', 'name')              
@@ -2448,7 +2452,7 @@ def create_warehouse_shipment(request):
                         return redirect('list-warehouse-shipment')  
                 return render(request, 'distributor/create_warehouse_outbound.html', context)
             elif request.user.is_warehouse_manager:
-                contracts = AdminCustomerContract.objects.filter(created_by=request.user).values('id','secret_key','customer_id','customer_name','crop').order_by('-id') 
+                contracts = AdminCustomerContract.objects.all().values('id','secret_key','customer_id','customer_name','crop').order_by('-id') 
                 warehouse_user = WarehouseUser.objects.get(contact_email=request.user.email) 
                 warehouses = Warehouse.objects.filter(id=warehouse_user.warehouse.id)
                             
@@ -2719,7 +2723,7 @@ def warehouse_shipment_view(request, pk):
 def edit_warehouse_shipment(request, pk):
     context = {}
     # try:
-    if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+    if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role() or request.user.is_distributor or request.user.is_warehouse_manager:
         check_shipment = WarehouseCustomerShipment.objects.filter(id=pk)
         if not check_shipment.exists():
             # Handle the case where the shipment does not exist
@@ -2743,16 +2747,15 @@ def edit_warehouse_shipment(request, pk):
         selected_contract = shipment.contract               
         warehouse_id = shipment.warehouse_id                  
         
-        destination_list = Customer.objects.all().values('id','name')
-        destination_id = shipment.customer_id
-        print(destination_id)
+        destination_list = Warehouse.objects.all().values('id','name')
+    
         context.update({        
             "warehouse_name" : shipment.warehouse_name,
             "customer_name": shipment.customer_name ,             
             "contract":selected_contract,                        
             "selected_warehouse_id": warehouse_id,
-            'destination_list':destination_list,
-            "destination_id" : destination_id           
+            'destination_list':destination_list
+                   
         })
         
         if request.method == "POST":
@@ -2789,8 +2792,6 @@ def edit_warehouse_shipment(request, pk):
                     
                 })
                 
-                if destination_id:
-                    context["destination_id"] = int(destination_id)
             else:           
 
                 if data.get('carrier_type') == 'Truck/Trailer':
@@ -2837,7 +2838,7 @@ def edit_warehouse_shipment(request, pk):
                 shipment.ship_weight=ship_weight
                 shipment.contract_weight_left=contract_weight_left
                 shipment.status= data.get('status')
-                shipment.customer_id=destination_id
+                shipment.customer_id=shipment.contract.customer_id
                 shipment.warehouse_id=warehouse_id
                 shipment.customer_name=shipment.customer_name
                 shipment.warehouse_name=shipment.warehouse_name
@@ -2910,6 +2911,7 @@ def warehouse_shipment_invoice(request, pk):
         context['customer'] = customer
         context['total_amount'] = float(shipment.total_payment) + float(shipment.tax_amount)
         context['customer_user'] = customer_user
+        context['due_date'] = shipment.date_pulled + datetime.timedelta(days=customer.credit_limit)
         return render (request, 'distributor/warehouse_shipment_invoice.html', context)
     except (ValueError, AttributeError, AdminProcessorContract.DoesNotExist) as e:
         context["error_messages"] = str(e)
@@ -3006,7 +3008,9 @@ def checkout_success(request,pk,type,checkout_session_id):
 
     if payment_status == 'succeeded':
         payment.status = True
+        shipment.is_paid = True
         payment.save()  
+        shipment.save()
         return render(request, "distributor/success_payment.html")
     else:
         payment.status = False
