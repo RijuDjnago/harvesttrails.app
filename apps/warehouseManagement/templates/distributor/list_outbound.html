@@ -1,4 +1,5 @@
-{% extends "base.html" %} {% load static %}
+{% extends "base.html" %}
+{% load static %}
 {% load crispy_forms_tags %}
 
 {% block title %}Processor Contract Shipment List{% endblock title %}
@@ -31,8 +32,9 @@
                     <div class="main-simple-table-with-search col-12">
                         {% if request.user.is_superuser %}
                         <div class="row d-flex">
-                            <div class="col-3">                            
-                                <select name="selected_processor" id="processor_id" class="form-control" onchange="this.form.submit();" required>
+                            <div class="col-4">
+                                                            
+                                <select name="selected_processor" id="processor_id" class="form-control select2" onchange="this.form.submit();" required>
                                     <option value="All">Select Processor</option>
                                     
                                     {% with t1_processors=processor|dictsort:"type" %}
@@ -84,7 +86,7 @@
                             </div>
                             <input style="display : none;" id="submitBtn" type="submit"
                                 class="apply-filter-btn primary-btn" value="Apply Filter" />
-                           <div class="col-5"></div>
+                           <div class="col-4"></div>
     
                             <!-- Search section on the right side -->
                             <div class="col-4">
@@ -190,9 +192,9 @@
             </form>
         </div>
     </main>
-    {% include 'footer.html' %}
 </div>
-{% endblock %}
+{% endblock content %}
+
 {% block jquery %}
 <script type="text/javascript">
     $(document).ready(function() {
@@ -204,11 +206,8 @@
 </script>
 <script>
     $('#Warehouse-active').addClass('activeLink');
-  
     $('#Warehouse-down').addClass('down');
     $('#Warehouse-sub_unic').show();
-  
     $('#Processor-Shipment').addClass('activeLink active-nav');
-  
 </script>
 {% endblock jquery %}
