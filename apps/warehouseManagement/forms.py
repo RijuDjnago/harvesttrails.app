@@ -26,10 +26,10 @@ class DistributorForm(forms.ModelForm):
 
 
 class WarehouseForm(forms.ModelForm):
-    distributor = forms.ModelChoiceField(
+    distributor = forms.ModelMultipleChoiceField(
         queryset=Distributor.objects.all(),
         required=False,  # Make this field optional
-        widget=forms.Select(attrs={'class': 'form-control'}),
+        widget=forms.SelectMultiple(attrs={'class': 'form-control'}),  # SelectMultiple for multiple selection
         label="Select Distributor"
     )
 
@@ -65,7 +65,7 @@ class CustomerForm(forms.ModelForm):
 
     class Meta:
         model = Customer
-        fields = ['name', 'location', 'latitude', 'longitude']
+        fields = ['name', 'location', 'latitude', 'longitude', 'credit_limit']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'location': forms.Textarea(attrs={
@@ -75,5 +75,6 @@ class CustomerForm(forms.ModelForm):
             }),
             'latitude': forms.TextInput(attrs={'class': 'form-control'}),
             'longitude': forms.TextInput(attrs={'class': 'form-control'}),
+            'credit_limit': forms.NumberInput(attrs={'class': 'form-control'}),
             
         }

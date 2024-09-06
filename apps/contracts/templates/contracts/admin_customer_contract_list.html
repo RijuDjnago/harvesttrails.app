@@ -8,6 +8,13 @@
 <div class="main-content">
     {% include 'header.html' %}
     <main>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+
+        <!-- Include Select2 CSS -->
+        <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
+        <!-- Include Select2 JS -->
+        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
         {% include '_alerts.html' %}
         <div class="page-title-with-or-without-btn">
         <span class="farm headingtop">Admin Customer Contract List</span>
@@ -24,10 +31,10 @@
                         {% if request.user.is_superuser %}
                         <div class="row d-flex">
                             <div class="col-3">                            
-                                <select name="selected_processor" id="processor_id" class="form-control" data-live-search="true" onchange="this.form.submit();" required>
-                                    <option value="All">Select Customer</option>
+                                <select name="selected_customer" id="processor_id" class="form-control" data-live-search="true" onchange="this.form.submit();" required>
+                                    <option value="All"selected disabled>Select Customer</option>
                                     {% for customer in customers %}
-                                    <option value="{{customer.id}}"{% if selected_customer_id == customer.pk %}selected{% endif %}>{{customer.name}}</option>
+                                    <option value="{{customer.id}}"{% if selected_customer_id == customer.id %}selected{% endif %}>{{customer.name}}</option>
                                     {% endfor %}
                                 </select>
                             </div>
@@ -137,6 +144,14 @@
 </div>
 {% endblock %}
 {% block jquery %}
+<script type="text/javascript">
+    $(document).ready(function() {
+        $('#processor_id').select2({
+            placeholder: "Select a Processor",
+            allowClear: true
+        });
+    });
+</script>
 <script>
     $('#Contracts-active').addClass('activeLink');
   

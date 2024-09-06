@@ -8,6 +8,13 @@
 <div class="main-content">
     {% include 'header.html' %}
     <main>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+
+        <!-- Include Select2 CSS -->
+        <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
+        <!-- Include Select2 JS -->
+        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
         {% include '_alerts.html' %}
         <div class="page-title-with-or-without-btn">
             <span class="farm headingtop">Warehouse Customer Shipment Management</span>
@@ -25,7 +32,7 @@
                         {% if request.user.is_superuser %}
                         <div class="row d-flex">
                             <div class="col-3">                            
-                                <select name="selected_customer" id="customer_id" class="form-control" onchange="this.form.submit();" required>
+                                <select name="selected_customer" id="processor_id" class="form-control" onchange="this.form.submit();" required>
                                     <option value="All">Select Customer</option>
                                     
                                     {% for customer in customers %}
@@ -69,6 +76,7 @@
                                             <th width="">Received Date</th>                                            
                                             <th width="">Destination</th>
                                             <th width="">Status</th>
+                                            <th width="">Payment Status</th>
                                             <th width="">Action</th>
                                         </tr>
                                     </thead>
@@ -82,18 +90,22 @@
                                                 <td>{{item.warehouse_name}}</td>
                                                 <td>{{item.carrier_type}}</td>
                                                 <td>{{item.outbound_type}}</td>
-                                                <td>{{item.date_pulled|date:'Y-m-d'}}</td>
+                                                <td>{{item.date_pulled.date}}</td>
                                                 <td>{{item.purchase_order_name}}</td>                                                
                                                 <td>{{item.lot_number}}</td>
                                                 <td>{{item.net_weight}} {{item.weight_unit}}</td>
-                                                <td>{% if item.distributor_receive_date %}{{item.distributor_receive_date|date:'Y-m-d'}}{% else %} - {%endif %}</td>
+                                                <td>{% if item.distributor_receive_date %}{{item.distributor_receive_date.date}}{% else %} - {%endif %}</td>
                                                 <td>{{item.customer_name}}</td>
+                                                
                                                 <td>{{item.status}}</td>
+                                                <td>{{item.is_paid}}</td>
                                                 <td class="backk action-td rmv-bd">
                                                     <ul>
                                                         <li><a href="{% url 'warehouse-shipment-view' item.id %}" class="update-btn-link" alt="view shipment details" title="view shipment details"> <span class="fas fa-eye"></span></a></li>
-                                                       <li><a href="{% url 'edit-warehouse-shipment' item.id %}" class="update-btn-link" alt="update shipment details" title="{%  if request.user.is_superuser %}update shipment details {% endif %} {% if request.user.is_processor or request.user.is_processor2 %} upload documents {% endif %}">{% if request.user.is_superuser %}<span class="fas fa-edit">{% endif %}{% if request.user.is_processor or request.user.is_processor2 %}<span class="fas fa-file-upload">{% endif %}</span></a></li>
-                                                       <li><a href="{% url 'warehouse-shipment-invoice' item.id %}" class="update-btn-link" alt="view invoice details" title="view invoice details"> <span class="fas fa-invoice"></span></a></li>
+                                                        {%if request.user.is_superuser or request.user.is_distributor or request.user.is_warehouse_manager %}
+                                                       <li><a href="{% url 'edit-warehouse-shipment' item.id %}" class="update-btn-link" alt="update shipment details" title=""><span class="fas fa-edit"></span></a></li>
+                                                       {% endif %}
+                                                       <li><a href="{% url 'warehouse-shipment-invoice' item.id %}" class="update-btn-link" alt="view invoice details" title="view invoice details"> <span class="fas fa-file-invoice"></span></a></li>
                                                     </ul>
                                                 </td>
                                             </tr>
@@ -146,6 +158,14 @@
 </div>
 {% endblock %}
 {% block jquery %}
+<script type="text/javascript">
+    $(document).ready(function() {
+        $('#processor_id').select2({
+            placeholder: "Select a Processor",
+            allowClear: true
+        });
+    });
+</script>
 <script>
     $('#Warehouse-active').addClass('activeLink');
   

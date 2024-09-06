@@ -84,11 +84,11 @@
                         </div>
                         <div class="col-md-4">
                             <div class="form-group">
-                                <label for="selected_contract">Select Contract<span class="asteriskField">*</span></label>
-                                <select name="selected_contract" id="selected_contract" class="form-control" required readonly>                                                                    
-                                    {% for destination in destination_list%}
-                                    <option value="{{destination.id}}"{% if destination_id == destination.id %} selected{% endif %}>{{destination.name}}</option>
-                                    {% endfor %}
+                                <label for="selected_contract">Select Warehouse<span class="asteriskField">*</span></label>
+                                <select name="selected_warehouse" id="selected_warehouse" class="form-control" required readonly>                                                                    
+                                    
+                                    <option value="{{shipment.warehouse_id}}">{{shipment.warehouse_name}}</option>
+                                    
                                 </select>
                             </div>
                         </div>
@@ -144,7 +144,7 @@
                             <div class="form-group">
                                 <label for="weight">Weight</label>
                                 <div class="d-flex">
-                                <input type="number" name="weight" class="textinput textInput form-control" value="{{net_weight}}" style="margin-top:0; border-top-right-radius:0 !important; border-bottom-right-radius:0 !important" >
+                                <input type="number" step="0.01" name="weight" class="textinput textInput form-control" value="{{shipment.net_weight}}" style="margin-top:0; border-top-right-radius:0 !important; border-bottom-right-radius:0 !important" >
                                 <select name="amount_unit" id="unitSelction" class="form-select" style="border-top-left-radius:0 !important; border-bottom-left-radius:0 !important; border-left:0; width:90px;" required>                                   
                                     <option value="LBS">LBS</option>
                                     <option value="MT">MT</option>
@@ -157,7 +157,7 @@
                             <div class="form-group">
                                 <label for="gross_weight">Gross Weight</label>
                                 <div class="d-flex">
-                                <input type="number" name="gross_weight" class="textinput textInput form-control" value="{{gross_weight}}" style="margin-top:0; border-top-right-radius:0 !important; border-bottom-right-radius:0 !important">
+                                <input type="number" step="0.01" name="gross_weight" class="textinput textInput form-control" value="{{shipment.gross_weight}}" style="margin-top:0; border-top-right-radius:0 !important; border-bottom-right-radius:0 !important">
                                 <select name="amount_unit" id="unitSelction" class="form-select" style="border-top-left-radius:0 !important; border-bottom-left-radius:0 !important; border-left:0; width:90px;" required>                                   
                                     <option value="LBS"{% if shipment.weight_unit == "LBS" %} selected {% endif %}>LBS</option>
                                     <option value="MT"{% if shipment.weight_unit == "MT" %} selected {% endif %}>MT</option>
@@ -167,9 +167,9 @@
                         </div>
                         <div class="col-md-4 truck">
                             <div class="form-group">
-                                <label for="net_weight">Net Weight</label>
+                                <label for="ship_weight">Ship Weight</label>
                                 <div class="d-flex">
-                                <input type="number" name="net_weight" class="textinput textInput form-control" value="{{net_weight}}" style="margin-top:0; border-top-right-radius:0 !important; border-bottom-right-radius:0 !important">
+                                <input type="number" step="0.01" name="ship_weight" class="textinput textInput form-control" value="{{shipment.ship_weight}}" style="margin-top:0; border-top-right-radius:0 !important; border-bottom-right-radius:0 !important">
                                 <select name="amount_unit" id="unitSelction" class="form-select" style="border-top-left-radius:0 !important; border-bottom-left-radius:0 !important; border-left:0; width:90px;" required>                                   
                                     <option value="LBS" {% if shipment.weight_unit == "LBS" %} selected {% endif %}>LBS</option>
                                     <option value="MT" {% if shipment.weight_unit == "MT" %} selected {% endif %}>MT</option>

@@ -42,6 +42,13 @@
 <div class="main-content">
     {% include 'header.html' %} {% load crispy_forms_tags %}
     <main>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+
+        <!-- Include Select2 CSS -->
+        <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
+        <!-- Include Select2 JS -->
+        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
         <span class="farm headingtop">Send Shipment</span>
         <div class="card farm-fields-container">
             {% include '_alerts.html' %}
@@ -68,7 +75,7 @@
                         <div class="col-md-4">
                             <div class="form-group">
                                 <label for="selected_contract">Select Contract<span class="asteriskField">*</span></label>
-                                <select name="selected_contract" id="selected_contract" class="form-control selectpicker" data-live-search="true"  required onchange="this.form.submit()">
+                                <select name="selected_contract" id="processor_id" class="form-control " data-live-search="true"  required onchange="this.form.submit()">
                                     <option value="All" selected disabled>Select Contract</option>                                 
                                     {% for contract in contracts %}
                                     <option value="{{contract.id}}"{% if selected_contract == contract.id %} selected {% endif %}>{{contract.secret_key}}- {{contract.customer_name}} - {{contract.crop}}</option>
@@ -79,8 +86,8 @@
                         <div class="col-md-4">
                             <div class="form-group">
                                 <label for="selected_warehouse">Select Warehouse<span class="asteriskField">*</span></label>
-                                <select name="selected_warehouse" id="selected_warehouse" class="form-control selectpicker" data-live-search="true"  required onchange="this.form.submit()">
-                                    <option value="All" selected disabled>Select Contract</option>                                 
+                                <select name="selected_warehouse" id="processor_id" class="form-control " data-live-search="true"  required onchange="this.form.submit()">
+                                    <option value="All" selected disabled>Select Warehouse</option>                                 
                                     {% for warehouse in warehouses %}
                                     <option value="{{warehouse.id}}"{% if selected_warehouse == warehouse.id %} selected {% endif %}>{{warehouse.name}}</option>
                                     {% endfor %}
@@ -146,7 +153,7 @@
                             <div class="form-group">
                                 <label for="weight">Weight</label>
                                 <div class="d-flex">
-                                <input type="number" name="weight" class="textinput textInput form-control" style="margin-top:0; border-top-right-radius:0 !important; border-bottom-right-radius:0 !important" value="{{weight}}">
+                                <input type="number" step="0.01" name="weight" class="textinput textInput form-control" style="margin-top:0; border-top-right-radius:0 !important; border-bottom-right-radius:0 !important" value="{{weight}}">
                                 <select name="amount_unit" id="unitSelction" class="form-select" style="border-top-left-radius:0 !important; border-bottom-left-radius:0 !important; border-left:0; width:90px;" required>                                   
                                     <option value="LBS">LBS</option>
                                     <option value="MT">MT</option>
@@ -159,7 +166,7 @@
                             <div class="form-group">
                                 <label for="gross_weight">Gross Weight</label>
                                 <div class="d-flex">
-                                <input type="number" name="gross_weight" class="textinput textInput form-control" style="margin-top:0; border-top-right-radius:0 !important; border-bottom-right-radius:0 !important">
+                                <input type="number" step="0.01" name="gross_weight" class="textinput textInput form-control" style="margin-top:0; border-top-right-radius:0 !important; border-bottom-right-radius:0 !important">
                                 <select name="amount_unit" id="unitSelction" class="form-select" style="border-top-left-radius:0 !important; border-bottom-left-radius:0 !important; border-left:0; width:90px;" required>                                   
                                     <option value="LBS">LBS</option>
                                     <option value="MT">MT</option>
@@ -169,9 +176,9 @@
                         </div>
                         <div class="col-md-4 truck">
                             <div class="form-group">
-                                <label for="net_weight">Net Weight</label>
+                                <label for="ship_weight">Ship Weight</label>
                                 <div class="d-flex">
-                                <input type="number" name="net_weight" class="textinput textInput form-control" style="margin-top:0; border-top-right-radius:0 !important; border-bottom-right-radius:0 !important">
+                                <input type="number" step="0.01" name="ship_weight" class="textinput textInput form-control" style="margin-top:0; border-top-right-radius:0 !important; border-bottom-right-radius:0 !important">
                                 <select name="amount_unit" id="unitSelction" class="form-select" style="border-top-left-radius:0 !important; border-bottom-left-radius:0 !important; border-left:0; width:90px;" required>                                   
                                     <option value="LBS">LBS</option>
                                     <option value="MT">MT</option>
@@ -224,7 +231,16 @@
 {% endblock %}
 
 {% block jquery %}
+
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script type="text/javascript">
+    $(document).ready(function() {
+        $('#processor_id').select2({
+            placeholder: "Select a Processor",
+            allowClear: true
+        });
+    });
+</script>
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {

@@ -8,6 +8,13 @@
 <div class="main-content">
     {% include 'header.html' %}
     <main>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+
+        <!-- Include Select2 CSS -->
+        <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
+        <!-- Include Select2 JS -->
+        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
         <style>
             .btn_remove_unic{
@@ -32,7 +39,7 @@
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label for="customer_id">Select Customer<span class="asteriskField">*</span></label>
-                                <select name="selected_customer" id="customer_id" class="form-control selectpicker" data-live-search="true" required>
+                                <select name="selected_customer" id="processor_id" class="form-control " data-live-search="true" required>
                                     <option value="All" selected disabled>Select Customer</option>                                  
                                     {% for customer in customers %}
                                     <option value="{{customer.id}}">{{customer.name}}</option>
@@ -140,6 +147,14 @@
 </div>
 {% endblock %}
 {% block jquery %}
+<script type="text/javascript">
+    $(document).ready(function() {
+        $('#processor_id').select2({
+            placeholder: "Select a Processor",
+            allowClear: true
+        });
+    });
+</script>
 <script>
     document.getElementById('add-document').addEventListener('click', function () {
         // Create a new div to hold the document name and remove button
