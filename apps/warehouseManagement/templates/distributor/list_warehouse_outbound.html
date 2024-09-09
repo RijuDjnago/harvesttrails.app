@@ -66,7 +66,8 @@
                                     <thead>
                                         <tr style="border-bottom: 2px solid #e0e0e0;">                                            
                                             <th width="">Contract Id</th>
-                                            <th width="">Origin</th>                                           
+                                            <th width="">Origin</th>  
+                                            <th width="">Crop</th>                                          
                                             <th width="">Carrier</th>                                            
                                             <th width="">Outbound type</th>
                                             <th width="">Date Pulled</th>
@@ -88,6 +89,7 @@
                                             <tr>
                                                 <td>{{item.contract.secret_key}}</td>
                                                 <td>{{item.warehouse_name}}</td>
+                                                <td>{{item.crop}}</td>
                                                 <td>{{item.carrier_type}}</td>
                                                 <td>{{item.outbound_type}}</td>
                                                 <td>{{item.date_pulled.date}}</td>

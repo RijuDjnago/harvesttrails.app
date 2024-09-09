@@ -28,5 +28,6 @@ urlpatterns = [
     path('warehouse-shipment-invoice/<int:pk>/', warehouse_shipment_invoice, name='warehouse-shipment-invoice'),
     path('create-payment/<int:pk>/<str:type>/', create_payment_for_shipment, name='create_payment_for_shipment'),
     path('checkout-success/<int:pk>/<str:type>/<str:checkout_session_id>/', checkout_success, name='checkout-success'),
+    path('generate_invoice/<int:pk>/', generate_invoice, name='generate_invoice'),
     
 ]

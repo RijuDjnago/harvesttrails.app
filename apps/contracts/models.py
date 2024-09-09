@@ -133,6 +133,10 @@ contract_status = (
     ('Active With Documentation Completed','Active With Documentation Completed'),
     ('Completed', 'Completed'),
     ('Terminated', 'Terminated'),
+)
+contract_type = (
+    ('Single Crop','Single Crop'),
+    ('Multiple Crop', 'Multiple Crop'),
 ) 
 
 def generate_secret_key( length=32):
@@ -148,13 +152,8 @@ class AdminProcessorContract(models.Model):
     secret_key = models.CharField(max_length=255, unique=True)
     processor_id = models.CharField(max_length=255)
     processor_type = models.CharField(max_length=5, choices=processor_type)
-    processor_entity_name = models.CharField(max_length=255, null=True, blank=True)
-    crop = models.CharField(max_length=10, choices=crop_choices)
-    crop_type = models.CharField(max_length=255, null=True, blank=True)
-    contract_amount = models.PositiveBigIntegerField()
-    amount_unit = models.CharField(max_length=10, choices=unit_choice)
-    per_unit_rate = models.CharField(max_length=255, null=True, blank=True)
-    tax_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=7.0)
+    processor_entity_name = models.CharField(max_length=255, null=True, blank=True)  
+    contract_type = models.CharField(max_length=25, choices=contract_type, default='Single Crop')  
     total_price = models.DecimalField( max_digits=20,decimal_places=2,validators=[MinValueValidator(Decimal('0.01'))],null=True, blank=True)
     contract_start_date = models.DateField()
     contract_period = models.PositiveIntegerField(help_text="Warranty period")
@@ -166,7 +165,7 @@ class AdminProcessorContract(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='contractingUser')  
     is_signed = models.BooleanField(default=False)
-    left_amount = models.IntegerField(null=True, blank=True)
+    
 
     def save(self, *args, **kwargs):
         if not self.secret_key:  # Generate a new key only if it does not already exist
@@ -189,12 +188,28 @@ class AdminProcessorContract(models.Model):
             elif self.contract_period_choice == "Year":
                 self.end_date = self.contract_start_date + timedelta(days=self.contract_period * 365)  # Approximate to 365 days per year
 
-        if self._state.adding and self.left_amount is None:
-            self.left_amount = self.contract_amount
         super().save(*args, **kwargs)   
 
     def __str__(self):
-        return f'Contract ID - {self.secret_key} || Crop -  {self.crop} || Amount - {self.contract_amount} {self.amount_unit}'
+        return f'Contract ID - {self.secret_key} || {self.processor_entity_name} || {self.processor_type}'
+
+
+class CropDetails(models.Model):
+    contract = models.ForeignKey(AdminProcessorContract, on_delete=models.CASCADE, related_name='contractCrop')
+    crop = models.CharField(max_length=10, choices=crop_choices)
+    crop_type = models.CharField(max_length=255, null=True, blank=True)
+    contract_amount = models.PositiveBigIntegerField()
+    amount_unit = models.CharField(max_length=10, choices=unit_choice)
+    per_unit_rate = models.CharField(max_length=255, null=True, blank=True) 
+    left_amount = models.IntegerField(null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        if self._state.adding and self.left_amount is None:
+            self.left_amount = self.contract_amount
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f'Contract ID - {self.contract.secret_key} || Crop -  {self.crop} || Amount - {self.contract_amount} {self.amount_unit}'
 
 
 class AdminProcessorContractSignature(models.Model):
@@ -221,13 +236,8 @@ class AdminProcessorContractDocuments(models.Model):
 class AdminCustomerContract(models.Model):
     secret_key = models.CharField(max_length=255, unique=True)
     customer_id = models.CharField(max_length=255) 
-    customer_name = models.CharField(max_length=255)    
-    crop = models.CharField(max_length=10, choices=crop_choices)
-    crop_type = models.CharField(max_length=255, null=True, blank=True)
-    contract_amount = models.PositiveBigIntegerField()
-    amount_unit = models.CharField(max_length=10, choices=unit_choice)
-    per_unit_rate = models.CharField(max_length=255, null=True, blank=True)
-    tax_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=7.0)
+    customer_name = models.CharField(max_length=255)   
+    contract_type = models.CharField(max_length=25, choices=contract_type, default='Single Crop') 
     total_price = models.DecimalField( max_digits=20,decimal_places=2,validators=[MinValueValidator(Decimal('0.01'))],null=True, blank=True)
     contract_start_date = models.DateField()
     contract_period = models.PositiveIntegerField(help_text="Warranty period")
@@ -264,7 +274,24 @@ class AdminCustomerContract(models.Model):
         super().save(*args, **kwargs)   
 
     def __str__(self):
-        return f'Contract of {self.crop} || Amount - {self.contract_amount} {self.amount_unit}'
+        return f'Contract ID - {self.secret_key} || {self.customer_name}'
+
+class CustomerContractCropDetails(models.Model):
+    contract = models.ForeignKey(AdminCustomerContract, on_delete=models.CASCADE, related_name='customerContractCrop')
+    crop = models.CharField(max_length=10, choices=crop_choices)
+    crop_type = models.CharField(max_length=255, null=True, blank=True)
+    contract_amount = models.PositiveBigIntegerField()
+    amount_unit = models.CharField(max_length=10, choices=unit_choice)
+    per_unit_rate = models.CharField(max_length=255, null=True, blank=True) 
+    left_amount = models.IntegerField(null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        if self._state.adding and self.left_amount is None:
+            self.left_amount = self.contract_amount
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f'Contract ID - {self.contract.secret_key} || Crop -  {self.crop} || Amount - {self.contract_amount} {self.amount_unit}'
 
 
 class AdminCustomerContractSignature(models.Model):

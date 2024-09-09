@@ -71,7 +71,7 @@
                                 <label for="selected_contract">Select Contract<span class="asteriskField">*</span></label>
                                 <select name="selected_contract" id="selected_contract" class="form-control" required readonly>                                                                    
                                     
-                                    <option value="{{contract.id}}" selected>{{contract.secret_key}}- {{contract.processor_entity_name}} - {{contract.crop}}</option>
+                                    <option value="{{contract.id}}" selected>{{contract.secret_key}}- {{contract.processor_entity_name}}</option>
                                  
                                 </select>
                             </div>
@@ -82,16 +82,7 @@
                                 <input type="text" name="processor_id" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{contract.processor_entity_name}}" readonly>
                             </div>
                         </div>
-                        {% comment %} <div class="col-md-2 mb-2 text-center">
-                            <label for="id_storage"><strong>Milled Volume</strong></label>
-                            {% if milled_value == "None" %}
-                            <div style="padding: 10px 5px;font-size: 18px;">Contract Not Selected</div>
-                            {% else %}
-                            <div style="padding: 10px 5px;font-size: 18px;">{{milled_value}}</div>
-                            {% endif %}
                         
-                            <input type="hidden" name="milled_value" id="sum_total_bin_location_milled_volume_java" value="{{milled_value}}">
-                        </div> {% endcomment %}
                     </div>                    
                     <div class= "row">                  
                         <div class="col-md-12 mb-2">
@@ -144,7 +135,7 @@
                                 <select name="destination_id" id="destination_id" class="form-control" required>  
                                                                  
                                     {% for destination in destination_list %}
-                                    <option value="{{destination.id}}"{% if destination_id == destination.id  %}selected{% endif %}>{{destination.name}}</option>
+                                    <option value="{{destination.id}}"{% if destination_id  == destination.id  %}selected{% endif %}>{{destination.name}}</option>
                                     {% endfor %}
                                 </select>
                             </div>
@@ -154,8 +145,17 @@
                         <h2 style="background-color: #d7d5d5;color: #0b6c39;font-size: 22px;font-weight: 600;margin: 20px 0;padding: 12px 0;text-align: center">Delivery details</h2>
                         <div class="col-md-4">
                             <div class="form-group">
+                                <label for="outbound_type">Outbound Type</label>
+                                <select name="outbound_type" id="outbound_type" class="form-control" required>                                 
+                                    <option value="Domestic"{% if shipmet.outbound_type == 'Domestic'%} selected {% endif %}>Domestic</option>
+                                    <option value="International"{% if shipment.outbound_type == 'International'%} selected {% endif %}>International</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
                                 <label for="carrier_type">Carrier type</label>
-                                <select name="carrier_type" id="carrier_type" class="form-control" required onchange="this.form.submit()">                                 
+                                <select name="carrier_type" id="carrier_type" class="form-control" required>                                 
                                     <option value="Rail Car"{% if shipment.carrier_type == 'Rail Car'%} selected {% endif %}>Rail Car</option>
                                     <option value="Truck/Trailer"{% if shipment.carrier_type == 'Truck/Trailer'%} selected {% endif %}>Truck/Trailer</option>
                                 </select>
@@ -166,14 +166,15 @@
                                 <label for="carrier_id">Carrier ID </label>
                                 <input type="text" name="carrier_id" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{carrier_id}}">
                             </div>
-                        </div>
+                        </div>                       
                         
                         <div class="col-md-4">
                             <div class="form-group">
-                                <label for="outbound_type">Outbound Type</label>
-                                <select name="outbound_type" id="outbound_type" class="form-control" required onchange="this.form.submit()">                                 
-                                    <option value="Domestic"{% if shipmet.outbound_type == 'Domestic'%} selected {% endif %}>Domestic</option>
-                                    <option value="International"{% if shipment.outbound_type == 'International'%} selected {% endif %}>International</option>
+                                <label for="crop_id">Crop</label>
+                                <select name="crop_id" id="crop_id" class="form-control" required>                                 
+                                    {% for crop in crops %}
+                                    <option value="{{crop.id}}"{% if shipment.crop_id == crop.id %} selected {% endif %}>{{crop.crop}}</option>
+                                    {% endfor %}
                                 </select>
                             </div>
                         </div>
@@ -328,8 +329,8 @@
                             <!-- Initial field_name and description fields -->                            
                             <div class="col-md-12 mb-2">
                                 <div class="form-group">
-                                    <label for="description_1">Description</label>
-                                    <textarea id="description_1" name="description" class="form-control" placeholder="Description"></textarea>
+                                    <label for="description_1">NOTES:</label>
+                                    <textarea id="description_1" name="description" class="form-control" placeholder="Notes"></textarea>
                                 </div>
                             </div>                            
                         </div>

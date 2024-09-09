@@ -71,7 +71,7 @@
                                 <label for="selected_contract">Select Contract<span class="asteriskField">*</span></label>
                                 <select name="selected_contract" id="selected_contract" class="form-control" required readonly>                                                                    
                                     
-                                    <option value="{{contract.id}}" selected>{{contract.secret_key}}- {{contract.customer_name}} - {{contract.crop}}</option>
+                                    <option value="{{contract.id}}" selected>{{contract.secret_key}}- {{contract.customer_name}}</option>
                                  
                                 </select>
                             </div>
@@ -86,9 +86,9 @@
                             <div class="form-group">
                                 <label for="selected_contract">Select Warehouse<span class="asteriskField">*</span></label>
                                 <select name="selected_warehouse" id="selected_warehouse" class="form-control" required readonly>                                                                    
-                                    
-                                    <option value="{{shipment.warehouse_id}}">{{shipment.warehouse_name}}</option>
-                                    
+                                    {% for destination in destination_list%}
+                                    <option value="{{destination.id}}" {% if selected_warehouse_id == destination.id %} selected {% endif %}>{{destination.name}}</option>
+                                    {% endfor %}
                                 </select>
                             </div>
                         </div>
@@ -98,8 +98,28 @@
                         <h2 style="background-color: #d7d5d5;color: #0b6c39;font-size: 22px;font-weight: 600;margin: 20px 0;padding: 12px 0;text-align: center">Delivery details</h2>
                         <div class="col-md-4">
                             <div class="form-group">
+                                <label for="crop_id">Crop</label>
+                                <select name="crop_id" id="crop_id" class="form-control" required>                                 
+                                    {% for crop in crops %}
+                                    <option value="{{crop.id}}"{% if selected_crop == crop.id %} selected {% endif %}>{{crop.crop}}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="outbound_type">Outbound Type</label>
+                                <select name="outbound_type" id="outbound_type" class="form-control" required >                                 
+                                    <option value="Domestic"{% if shipmet.outbound_type == 'Domestic'%} selected {% endif %}>Domestic</option>
+                                    <option value="International"{% if shipment.outbound_type == 'International'%} selected {% endif %}>International</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
                                 <label for="carrier_type">Carrier type</label>
-                                <select name="carrier_type" id="carrier_type" class="form-control" required onchange="this.form.submit()">                                 
+                                <select name="carrier_type" id="carrier_type" class="form-control" required>                                 
                                     <option value="Rail Car"{% if shipment.carrier_type == 'Rail Car'%} selected {% endif %}>Rail Car</option>
                                     <option value="Truck/Trailer"{% if shipment.carrier_type == 'Truck/Trailer'%} selected {% endif %}>Truck/Trailer</option>
                                 </select>
@@ -112,15 +132,6 @@
                             </div>
                         </div>
                         
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                <label for="outbound_type">Outbound Type</label>
-                                <select name="outbound_type" id="outbound_type" class="form-control" required onchange="this.form.submit()">                                 
-                                    <option value="Domestic"{% if shipmet.outbound_type == 'Domestic'%} selected {% endif %}>Domestic</option>
-                                    <option value="International"{% if shipment.outbound_type == 'International'%} selected {% endif %}>International</option>
-                                </select>
-                            </div>
-                        </div>
                         <div class="col-md-4">
                             <div class="form-group">
                                 <label for="purchase_order_name">Purchase Order Name </label>
@@ -213,13 +224,13 @@
 
                         <div class="col-md-4 ">
                             <div class="form-group">
-                                <label for="final_receive_date">Warehouse/Customer Receive Date</label>
+                                <label for="final_receive_date">Customer Receive Date</label>
                                 <input type="date" name="final_receive_date" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{shipment.distributor_receive_date|date:'Y-m-d'}}">
                             </div>
                         </div>
                         <div class="col-md-4 international">
                             <div class="form-group">
-                                <label for="final_leaving_date">Warehouse/Customer Leaving Date</label>
+                                <label for="final_leaving_date">Customer Leaving Date</label>
                                 <input type="date" name="final_leaving_date" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{shipment.distributor_leaving_date|date:'Y-m-d'}}">
                             </div>
                         </div>
@@ -238,11 +249,11 @@
                         
                         <div class="col-md-4 international">
                             <div class="form-group">
-                                <label for="processor_receive_date">Processor Receive Date</label>
+                                <label for="processor_receive_date">Warehouse Receive Date</label>
                                 <input type="date" name="processor_receive_date" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{shipment.processor_receive_date|date:'Y-m-d'}}">
                             </div>
                         </div>
-                        <div class="col-md-4 mb-2">
+                        <div class="col-md-6 mb-2">
                             <div class="form-group">
                                 <label for="multi_file">Upload File <span class="asteriskField">*</span></label>
                                 <input type="file" name="files" multiple accept=".jpg,.png,.xlsx,.csv,.pdf" id="multi_file" class="textinput textInput form-control" >
@@ -272,8 +283,8 @@
                             <!-- Initial field_name and description fields -->                            
                             <div class="col-md-12 mb-2">
                                 <div class="form-group">
-                                    <label for="description_1">Description</label>
-                                    <textarea id="description_1" name="description" class="form-control" placeholder="Description"></textarea>
+                                    <label for="description_1">NOTES:</label>
+                                    <textarea id="description_1" name="description" class="form-control" placeholder="Notes"></textarea>
                                 </div>
                             </div>                            
                         </div>
