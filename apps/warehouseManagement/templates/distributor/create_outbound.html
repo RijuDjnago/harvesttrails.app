@@ -78,7 +78,7 @@
                                 <select name="selected_contract" id="processor_id" class="form-control " data-live-search="true"  required onchange="this.form.submit()">
                                     <option value="All" selected disabled>Select Contract</option>                                 
                                     {% for contract in contracts %}
-                                    <option value="{{contract.id}}"{% if selected_contract == contract.id %} selected {% endif %}>{{contract.secret_key}}- {{contract.processor_entity_name}} - {{contract.crop}}</option>
+                                    <option value="{{contract.id}}"{% if selected_contract == contract.id %} selected {% endif %}>{{contract.secret_key}}- {{contract.processor_entity_name}}</option>
                                     {% endfor %}
                                 </select>
                             </div>
@@ -161,8 +161,18 @@
                         <h2 style="background-color: #d7d5d5;color: #0b6c39;font-size: 22px;font-weight: 600;margin: 20px 0;padding: 12px 0;text-align: center">Delivery details</h2>
                         <div class="col-md-4">
                             <div class="form-group">
+                                <label for="crop_id">Crop</label>
+                                <select name="crop_id" id="crop_id" class="form-control" required>                                 
+                                    {% for crop in crops %}
+                                    <option value="{{crop.id}}"{% if selected_crop == crop.id %} selected {% endif %}>{{crop.crop}}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
                                 <label for="outbound_type">Outbound Type</label>
-                                <select name="outbound_type" id="outbound_type" class="form-control" required onchange="this.form.submit()">                                 
+                                <select name="outbound_type" id="outbound_type" class="form-control" required>                                 
                                     <option value="Domestic"{% if outbound_type == 'Domestic'%} selected {% endif %}>Domestic</option>
                                     <option value="International"{% if outbound_type == 'International'%} selected {% endif %}>International</option>
                                 </select>
@@ -171,7 +181,7 @@
                         <div class="col-md-4">
                             <div class="form-group">
                                 <label for="carrier_type">Carrier type</label>
-                                <select name="carrier_type" id="carrier_type" class="form-control" required onchange="this.form.submit()">                                 
+                                <select name="carrier_type" id="carrier_type" class="form-control" required >                                 
                                     <option value="Rail Car"{% if carrier_type == 'Rail Car'%} selected {% endif %}>Rail Car</option>
                                     <option value="Truck/Trailer"{% if carrier_type == 'Truck/Trailer'%} selected {% endif %}>Truck/Trailer</option>
                                 </select>
@@ -182,8 +192,7 @@
                                 <label for="carrier_id">Carrier ID </label>
                                 <input type="text" name="carrier_id" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{carrier_id}}">
                             </div>
-                        </div>
-                        
+                        </div>                      
                         
                         <div class="col-md-4">
                             <div class="form-group">

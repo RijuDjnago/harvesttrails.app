@@ -56,7 +56,6 @@ class WarehouseForm(forms.ModelForm):
             'status': forms.TextInput(attrs={'class': 'form-control'}),
         }
 
-        
 class CustomerForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super(CustomerForm, self).__init__(*args, **kwargs)
@@ -65,16 +64,28 @@ class CustomerForm(forms.ModelForm):
 
     class Meta:
         model = Customer
-        fields = ['name', 'location', 'latitude', 'longitude', 'credit_limit']
+        fields = ['name', 'location', 'latitude', 'longitude','credit_terms', 'is_tax_payable', 'tax_percentage']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'location': forms.Textarea(attrs={
                 'class': 'form-control',
-                'rows': 1,   # Set the number of rows
-                'cols': 30   # Set the number of columns
+                'rows': 1,
+                'cols': 30
             }),
             'latitude': forms.TextInput(attrs={'class': 'form-control'}),
-            'longitude': forms.TextInput(attrs={'class': 'form-control'}),
-            'credit_limit': forms.NumberInput(attrs={'class': 'form-control'}),
-            
+            'longitude': forms.TextInput(attrs={'class': 'form-control'}), 
+            'credit_terms': forms.Select(attrs={'class': 'form-control'}),
+            'is_tax_payable': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'tax_percentage': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),           
         }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        is_tax_payable = cleaned_data.get("is_tax_payable")
+        tax_percentage = cleaned_data.get("tax_percentage")
+
+        # If tax is payable, tax percentage must be provided
+        if is_tax_payable and not tax_percentage:
+            self.add_error('tax_percentage', "Tax percentage is required when tax is payable.")
+
+        return cleaned_data

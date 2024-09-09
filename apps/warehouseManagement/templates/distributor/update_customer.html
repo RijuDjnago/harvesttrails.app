@@ -22,14 +22,12 @@
             <form method="post" class="farm-fields-form">
                 {% csrf_token %}
                 <div class="row">
-                    
                     <div class="col-md-4">
                         {{ form.name|as_crispy_field }}
                     </div>
                     <div class="col-md-4">
                         {{ form.location|as_crispy_field }}
                     </div>
-                    
                     <div class="col-md-4">
                         {{ form.latitude|as_crispy_field }}
                     </div>
@@ -37,13 +35,18 @@
                         {{ form.longitude|as_crispy_field }}
                     </div>
                     <div class="col-md-4">
-                        {{ form.credit_limit|as_crispy_field }}
+                        {{ form.credit_terms|as_crispy_field }}
                     </div>
-                    
-                    <br>
-                    <hr>
-
-                    <div class="row">
+                    <div class="col-md-4 mt-4">
+                        {{ form.is_tax_payable|as_crispy_field }}
+                    </div>
+                    <div class="col-md-4" id="tax_percentage_group" style="display: none;">
+                        {{ form.tax_percentage|as_crispy_field }}
+                    </div>
+                </div>
+                <br>
+                <hr>
+                <div class="row">
                     <div class="col-md-3">
                         <div>
                             <label for="contact_name">Contact Name<span class="asteriskField">*</span></label>
@@ -76,16 +79,38 @@
                         <a href="{% url 'list-customer' %}" class="btn-close-cancel btn-space">Cancel</a>
                         <input type="submit" class="btn-save-submit" value="Save"> 
                     </div>
-                </div>
-        </div>
+                </div>        
             </form>
-    
+        </div>
   </main>
   {% include 'footer.html' %}
 </div>
 {% endblock %}
 
 {% block jquery %}
+<script>
+    // Tax payable toggle logic
+    document.addEventListener("DOMContentLoaded", function() {
+        // Get elements
+        var isTaxPayable = document.getElementById('{{ form.is_tax_payable.id_for_label }}');
+        var taxPercentageGroup = document.getElementById('tax_percentage_group');
+
+        // Function to toggle visibility
+        function toggleTaxPercentage() {
+            if (isTaxPayable.checked) {
+                taxPercentageGroup.style.display = 'block';
+            } else {
+                taxPercentageGroup.style.display = 'none';
+            }
+        }
+
+        // Initial check
+        toggleTaxPercentage();
+
+        // Add event listener to the checkbox
+        isTaxPayable.addEventListener('change', toggleTaxPercentage);
+    });
+</script>
 
 <script>
     $('#Warehouse-active').addClass('activeLink');

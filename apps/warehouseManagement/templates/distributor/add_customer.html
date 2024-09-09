@@ -37,7 +37,13 @@
                             {{ form.longitude|as_crispy_field }}
                         </div>
                         <div class="col-md-4">
-                            {{ form.credit_limit|as_crispy_field }}
+                            {{ form.credit_terms|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4 mt-4">
+                            {{ form.is_tax_payable|as_crispy_field }}
+                        </div>
+                        <div class="col-md-4" id="tax_percentage_group" style="display: none;">
+                            {{ form.tax_percentage|as_crispy_field }}
                         </div>
                     </div>
                     <hr>
@@ -79,6 +85,32 @@
     </main>
     {% include 'footer.html' %}
 </div>
+
+{% endblock %}
+{% block jquery %}
+<script>
+    // Tax payable toggle logic
+    document.addEventListener("DOMContentLoaded", function() {
+        // Get elements
+        var isTaxPayable = document.getElementById('{{ form.is_tax_payable.id_for_label }}');
+        var taxPercentageGroup = document.getElementById('tax_percentage_group');
+
+        // Function to toggle visibility
+        function toggleTaxPercentage() {
+            if (isTaxPayable.checked) {
+                taxPercentageGroup.style.display = 'block';
+            } else {
+                taxPercentageGroup.style.display = 'none';
+            }
+        }
+
+        // Initial check
+        toggleTaxPercentage();
+
+        // Add event listener to the checkbox
+        isTaxPayable.addEventListener('change', toggleTaxPercentage);
+    });
+</script>
 <script>
     $('#Warehouse-active').addClass('activeLink');
   

@@ -19,6 +19,7 @@ from rest_framework.response import Response
 from django.conf import settings
 protocol = 'http'
 import datetime
+from apps.contracts.models import *
 # Create your views here.
 
 characters = list(string.ascii_letters + string.digits + "@#$%")
@@ -343,6 +344,7 @@ def distributor_update(request,pk):
                             user.save()
                             form.save()
                             log_email = obj_id.contact_email
+                        form.save()
                         # 07-04-23 Log Table
                         log_type, log_status, log_device = "DistributorUser", "Edited", "Web"
                         log_idd, log_name = obj_id.id, name_update
@@ -737,6 +739,7 @@ def warehouse_update(request,pk):
                             user.save()
                             form.save()
                             log_email = obj_id.contact_email
+                        form.save()
                         # 07-04-23 Log Table
                         log_type, log_status, log_device = "WarehouseUser", "Edited", "Web"
                         log_idd, log_name = obj_id.id, name_update
@@ -922,91 +925,49 @@ def add_customer(request):
     context = {}
     try:
         if request.user.is_authenticated:
-            if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role() or request.user.is_distributor:
-                form = CustomerForm()
-                context["form"] = form
+            if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role() or request.user.is_distributor or request.user.is_warehouse_manager:
                 if request.method == 'POST':
                     form = CustomerForm(request.POST)
-                    
-                    name = request.POST.get('name')
-                    location = request.POST.get('location')
-                    latitude = request.POST.get('latitude')
-                    longitude = request.POST.get('longitude') 
-                    credit_limit = request.POST.get('credit_limit')                   
+                    if form.is_valid():
+                        name = form.cleaned_data.get('name')
+                        location = form.cleaned_data.get('location')
+                        latitude = form.cleaned_data.get('latitude')
+                        longitude = form.cleaned_data.get('longitude')
+                        credit_terms = form.cleaned_data.get('credit_terms')
+                        is_tax_payable = form.cleaned_data.get('is_tax_payable')
+                        tax_percentage = form.cleaned_data.get('tax_percentage')
 
-                    # Check if a customer with the same name already exists
-                    if Customer.objects.filter(name=name).exists():
-                        messages.error(request, "A customer with this name already exists.")
-                        return render(request, 'distributor/add_customer.html', context)
+                        # Ensure tax_percentage is only used if is_tax_payable is True
+                        if not is_tax_payable:
+                            tax_percentage = None
 
-                    # Create the customer
-                    customer = Customer.objects.create(
-                        name=name,
-                        location=location,
-                        latitude=latitude,
-                        longitude=longitude,
-                        credit_limit = credit_limit
+                        if Customer.objects.filter(name=name).exists():
+                            messages.error(request, "A customer with this name already exists.")
+                            return render(request, 'distributor/add_customer.html', {'form': form})
+
+                        customer = Customer.objects.create(
+                            name=name,
+                            location=location,
+                            latitude=latitude,
+                            longitude=longitude,
+                            credit_terms=credit_terms,
+                            is_tax_payable=is_tax_payable,
+                            tax_percentage=tax_percentage
+                        )
+
+                        # Log the action
+                        log_type, log_status, log_device = "Customer", "Added", "Web"
+                        log_idd, log_name = customer.id, name
+                        log_email = None
+                        log_details = (f"name = {name} | location = {location} | "
+                                       f"latitude = {latitude} | longitude = {longitude}")
+                        action_by_userid = request.user.id
+                        userr = User.objects.get(pk=action_by_userid)
+                        user_role = userr.role.all()
+                        action_by_username = f'{userr.first_name} {userr.last_name}'
+                        action_by_email = userr.username
+                        action_by_role = "superuser" if request.user.id == 1 else ','.join([str(i.role) for i in user_role])
                         
-                    )
-
-                    # Log the action
-                    log_type, log_status, log_device = "Customer", "Added", "Web"
-                    log_idd, log_name = customer.id, name
-                    log_email = None
-                    log_details = (f"name = {name} | location = {location} | "
-                                    f"latitude = {latitude} | longitude = {longitude}")
-                    action_by_userid = request.user.id
-                    userr = User.objects.get(pk=action_by_userid)
-                    user_role = userr.role.all()
-                    action_by_username = f'{userr.first_name} {userr.last_name}'
-                    action_by_email = userr.username
-                    action_by_role = "superuser" if request.user.id == 1 else str(','.join([str(i.role) for i in user_role]))
-                    logtable = LogTable(
-                        log_type=log_type, log_status=log_status, log_idd=log_idd, log_name=log_name,
-                        action_by_userid=action_by_userid, action_by_username=action_by_username,
-                        action_by_email=action_by_email, action_by_role=action_by_role, log_email=log_email,
-                        log_details=log_details, log_device=log_device
-                    )
-                    logtable.save()
-
-                    # Add the single customer user
-                    user_name = request.POST.get('user_name')
-                    user_email = request.POST.get('user_email')
-                    user_phone = request.POST.get('user_phone')
-                    user_fax = request.POST.get('user_fax')
-                    print(user_name, user_email, user_phone, user_fax)
-
-                    if CustomerUser.objects.filter(customer=customer).exists():                       
-                        messages.error(request, "A user is already associated with this customer.")
-                        return render(request, 'distributor/add_customer.html', context)
-
-                    if User.objects.filter(email=user_email).exists():                        
-                        messages.error(request, f'Email {user_email} already exists.')
-                    else:
-                        password = generate_random_password()                        
-                        customer_user = CustomerUser.objects.create(
-                            customer=customer,
-                            contact_name=user_name,
-                            contact_email=user_email,
-                            contact_phone=user_phone,
-                            contact_fax=user_fax,
-                            p_password_raw=password
-                        )                    
-                        user = User.objects.create(email=user_email, username=user_email,first_name=user_name)
-                        user.role.add(Role.objects.get(role='Customer'))
-                        user.is_customer=True
-                        user.is_active=True
-                        user.set_password(password)
-                        user.password_raw = password
-                        user.save()
-
-                        # Log the action for user creation
-                        log_type, log_status, log_device = "CustomerUser", "Added", "Web"
-                        log_idd, log_name = customer_user.id, user_name
-                        log_email = user_email
-                        log_details = (f"customer_id = {customer.id} | customer = {customer.name} | "
-                                        f"user_name= {user_name} | user_email = {user_email} | "
-                                        f"user_phone = {user_phone} | user_fax = {user_fax} | password_raw = {password}")
                         logtable = LogTable(
                             log_type=log_type, log_status=log_status, log_idd=log_idd, log_name=log_name,
                             action_by_userid=action_by_userid, action_by_username=action_by_username,
@@ -1015,8 +976,58 @@ def add_customer(request):
                         )
                         logtable.save()
 
-                    return redirect('list-customer')                
+                        user_name = request.POST.get('user_name')
+                        user_email = request.POST.get('user_email')
+                        user_phone = request.POST.get('user_phone')
+                        user_fax = request.POST.get('user_fax')
 
+                        if CustomerUser.objects.filter(customer=customer).exists():                       
+                            messages.error(request, "A user is already associated with this customer.")
+                            return render(request, 'distributor/add_customer.html', context)
+
+                        if User.objects.filter(email=user_email).exists():                        
+                            messages.error(request, f'Email {user_email} already exists.')
+                        else:
+                            password = generate_random_password()                        
+                            customer_user = CustomerUser.objects.create(
+                                customer=customer,
+                                contact_name=user_name,
+                                contact_email=user_email,
+                                contact_phone=user_phone,
+                                contact_fax=user_fax,
+                                p_password_raw=password
+                            )                    
+                            user = User.objects.create(email=user_email, username=user_email, first_name=user_name)
+                            user.role.add(Role.objects.get(role='Customer'))
+                            user.is_customer = True
+                            user.is_active = True
+                            user.set_password(password)
+                            user.password_raw = password
+                            user.save()
+
+                            # Log the action for user creation
+                            log_type, log_status, log_device = "CustomerUser", "Added", "Web"
+                            log_idd, log_name = customer_user.id, user_name
+                            log_email = user_email
+                            log_details = (f"customer_id = {customer.id} | customer = {customer.name} | "
+                                           f"user_name= {user_name} | user_email = {user_email} | "
+                                           f"user_phone = {user_phone} | user_fax = {user_fax} | password_raw = {password}")
+                            logtable = LogTable(
+                                log_type=log_type, log_status=log_status, log_idd=log_idd, log_name=log_name,
+                                action_by_userid=action_by_userid, action_by_username=action_by_username,
+                                action_by_email=action_by_email, action_by_role=action_by_role, log_email=log_email,
+                                log_details=log_details, log_device=log_device
+                            )
+                            logtable.save()
+
+                        return redirect('list-customer')
+                    else:
+                        messages.error(request, "Please correct the errors below.")
+                
+                else:
+                    form = CustomerForm()
+
+                context["form"] = form
                 return render(request, 'distributor/add_customer.html', context)
             else:
                 messages.error(request, "Not a valid request.")
@@ -1070,13 +1081,12 @@ def list_customer(request):
         return render(request, 'distributor/list_customer.html', context)
 
 
-
 @login_required()
 def customer_update(request,pk):
     context = {}
     try:
         if request.user.is_authenticated:        
-            if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+            if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role() :
                 obj_id = CustomerUser.objects.get(id=pk)
                 print(obj_id)
                 context['p_user'] = obj_id
@@ -1088,7 +1098,7 @@ def customer_update(request,pk):
                 if request.method == 'POST':                   
                     form = CustomerForm( request.POST,instance=customer)                    
                     if form.is_valid():  
-                        print('000000000000')                     
+                                           
                         email_update = request.POST.get('contact_email1')
                         name_update = request.POST.get('contact_name1')
                         phone_update = request.POST.get('contact_phone1')
@@ -1115,6 +1125,7 @@ def customer_update(request,pk):
                             user.save()
                             form.save()
                             log_email = obj_id.contact_email
+                        form.save()
                         # 07-04-23 Log Table
                         log_type, log_status, log_device = "CustomerUser", "Edited", "Web"
                         log_idd, log_name = obj_id.id, name_update
@@ -1206,7 +1217,7 @@ def customer_change_password(request,pk):
     context={}
     try:
         # Superuser..............
-        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role() or request.user.is_customer:
             customer = CustomerUser.objects.get(id=pk)
             user = User.objects.get(email=customer.contact_email)
             context["userr"] = user
@@ -1293,11 +1304,12 @@ def create_processor_shipment(request):
     try:
         if request.user.is_authenticated:
             if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
-                contracts = AdminProcessorContract.objects.all().values('id','secret_key','processor_id','processor_type','processor_entity_name','crop').order_by('-id')
+                contracts = AdminProcessorContract.objects.all().values('id','secret_key','processor_id','processor_type','processor_entity_name').order_by('-id')
                 
                 context["contracts"] = contracts
                 context.update({
                     "selected_contract": None,
+                    "crops": [],
                     "milled_value": "None",
                     "selected_processor_sku_id_list":[],
                     "selected_destination": None,
@@ -1314,7 +1326,8 @@ def create_processor_shipment(request):
                     processor_type = contract.processor_type
                     selected_sku_id = data.get('sender_sku_id')
                     destination_type = data.get('selected_destination')
-                    destination_id = data.get('destination_id')
+                    destination_id = data.get('destination_id') 
+                    selected_crop = data.get('crop_id')                   
                     context.update({
                         "selected_contract":contract.id,
                         "contract":contract,                        
@@ -1331,12 +1344,15 @@ def create_processor_shipment(request):
                         "ship_weight":data.get('ship_Weight'),
                         "ship_quantity":data.get('ship_quantity'),
                         "status":data.get('status'),
-                        "amount_unit":data.get('amount_unit') ,                     
+                        "amount_unit":data.get('amount_unit') , 
+                        "selected_crop": selected_crop                 
                         
                     })
                     if destination_id:
                         context["destination_id"] = int(destination_id)
                     if processor_id and not data.get("save"): 
+                        context['crops'] = CropDetails.objects.filter(contract=contract).values('id', 'crop')
+                        print(context["crops"])
                     
                         if selected_sku_id:
                             context["milled_value"] =  calculate_milled_volume(int(processor_id), processor_type, selected_sku_id)
@@ -1381,16 +1397,19 @@ def create_processor_shipment(request):
                             else:
                                 context["error_messages"] = "Please provide Weight."
                                 return render(request, 'distributor/create_outbound.html', context)
+                            
+                        crop = CropDetails.objects.filter(id=int(selected_crop), contract=contract).first()
+                        crop_name = crop.crop
                        
-                        if contract.amount_unit == context.get('amount_unit'):
-                            contract_weight_left = float(contract.left_amount) - float(net_weight)
+                        if crop.amount_unit == context.get('amount_unit'):
+                            contract_weight_left = float(crop.left_amount) - float(net_weight)
                         else:
-                            if contract.amount_unit == "LBS" and context.get('amount_unit') == "MT":
+                            if crop.amount_unit == "LBS" and context.get('amount_unit') == "MT":
                                 net_weight_lbs = float(net_weight) * 2204.62
-                                contract_weight_left = float(contract.left_amount) - net_weight_lbs 
+                                contract_weight_left = float(crop.left_amount) - net_weight_lbs 
                             else:
                                 net_weight_mt = float(net_weight) * 0.000453592
-                                contract_weight_left = float(contract.left_amount) - net_weight_mt                         
+                                contract_weight_left = float(crop.left_amount) - net_weight_mt                         
                         
                         outbound = ProcessorWarehouseShipment(
                             contract=contract,
@@ -1398,6 +1417,8 @@ def create_processor_shipment(request):
                             processor_type=processor_type,
                             processor_entity_name=contract.processor_entity_name,
                             processor_sku_list=[selected_sku_id],
+                            crop_id = crop.id,
+                            crop = crop_name,
                             carrier_type=context.get('carrier_type'),
                             outbound_type=context.get('outbound_type'),
                             purchase_order_name=context.get('purchase_order_name'),
@@ -1461,13 +1482,14 @@ def create_processor_shipment(request):
                 context["contracts"] = contracts
                 context.update({
                     "selected_contract": None,
+                    "crops": [],
                     "milled_value": "None",
                     "selected_processor_sku_id_list":[],
                     "selected_destination": None,
                     "warehouse_name" : None,
                     "customer_name": None               
                 })
-                print(context)
+              
                 if request.method == "POST":
                     data = request.POST
                     selected_contract = request.POST.get('selected_contract') 
@@ -1477,7 +1499,8 @@ def create_processor_shipment(request):
                     processor_type = contract.processor_type
                     selected_sku_id = data.get('sender_sku_id')
                     destination_type = data.get('selected_destination')
-                    destination_id = data.get('destination_id')
+                    destination_id = data.get('destination_id') 
+                    selected_crop = data.get('crop_id')                   
                     context.update({
                         "selected_contract":contract.id,
                         "contract":contract,                        
@@ -1494,12 +1517,15 @@ def create_processor_shipment(request):
                         "ship_weight":data.get('ship_Weight'),
                         "ship_quantity":data.get('ship_quantity'),
                         "status":data.get('status'),
-                        "amount_unit":data.get('amount_unit') ,                     
+                        "amount_unit":data.get('amount_unit') , 
+                        "selected_crop": selected_crop                 
                         
                     })
                     if destination_id:
                         context["destination_id"] = int(destination_id)
                     if processor_id and not data.get("save"): 
+                        context['crops'] = CropDetails.objects.filter(contract=contract).values('id', 'crop')
+                        print(context["crops"])
                     
                         if selected_sku_id:
                             context["milled_value"] =  calculate_milled_volume(int(processor_id), processor_type, selected_sku_id)
@@ -1544,16 +1570,19 @@ def create_processor_shipment(request):
                             else:
                                 context["error_messages"] = "Please provide Weight."
                                 return render(request, 'distributor/create_outbound.html', context)
+                            
+                        crop = CropDetails.objects.filter(id=int(selected_crop), contract=contract).first()
+                        crop_name = crop.crop
                        
-                        if contract.amount_unit == context.get('amount_unit'):
-                            contract_weight_left = float(contract.left_amount) - float(net_weight)
+                        if crop.amount_unit == context.get('amount_unit'):
+                            contract_weight_left = float(crop.left_amount) - float(net_weight)
                         else:
-                            if contract.amount_unit == "LBS" and context.get('amount_unit') == "MT":
+                            if crop.amount_unit == "LBS" and context.get('amount_unit') == "MT":
                                 net_weight_lbs = float(net_weight) * 2204.62
-                                contract_weight_left = float(contract.left_amount) - net_weight_lbs 
+                                contract_weight_left = float(crop.left_amount) - net_weight_lbs 
                             else:
                                 net_weight_mt = float(net_weight) * 0.000453592
-                                contract_weight_left = float(contract.left_amount) - net_weight_mt                         
+                                contract_weight_left = float(crop.left_amount) - net_weight_mt                         
                         
                         outbound = ProcessorWarehouseShipment(
                             contract=contract,
@@ -1561,6 +1590,8 @@ def create_processor_shipment(request):
                             processor_type=processor_type,
                             processor_entity_name=contract.processor_entity_name,
                             processor_sku_list=[selected_sku_id],
+                            crop_id = crop.id,
+                            crop = crop_name,
                             carrier_type=context.get('carrier_type'),
                             outbound_type=context.get('outbound_type'),
                             purchase_order_name=context.get('purchase_order_name'),
@@ -1568,8 +1599,8 @@ def create_processor_shipment(request):
                             lot_number=context.get('lot_number'),
                             gross_weight=gross_weight,
                             net_weight=net_weight,
-                            ship_weight = ship_weight,
                             weight_unit=context.get('amount_unit'),
+                            ship_weight = ship_weight,
                             ship_quantity=ship_quantity,
                             contract_weight_left=contract_weight_left,
                             status=context.get('status'),
@@ -1578,8 +1609,7 @@ def create_processor_shipment(request):
                             customer_name=customer_name,
                             warehouse_name=warehouse_name
                         )
-                        outbound.save()
-                            
+                        outbound.save()                            
                         
                         carrier_id = data.get('carrier_id')
                         if carrier_id:
@@ -1624,13 +1654,14 @@ def create_processor_shipment(request):
                 context["contracts"] = contracts
                 context.update({
                     "selected_contract": None,
+                    "crops": [],
                     "milled_value": "None",
                     "selected_processor_sku_id_list":[],
                     "selected_destination": None,
                     "warehouse_name" : None,
                     "customer_name": None               
                 })
-                print(context)
+              
                 if request.method == "POST":
                     data = request.POST
                     selected_contract = request.POST.get('selected_contract') 
@@ -1640,7 +1671,8 @@ def create_processor_shipment(request):
                     processor_type = contract.processor_type
                     selected_sku_id = data.get('sender_sku_id')
                     destination_type = data.get('selected_destination')
-                    destination_id = data.get('destination_id')
+                    destination_id = data.get('destination_id') 
+                    selected_crop = data.get('crop_id')                   
                     context.update({
                         "selected_contract":contract.id,
                         "contract":contract,                        
@@ -1657,12 +1689,15 @@ def create_processor_shipment(request):
                         "ship_weight":data.get('ship_Weight'),
                         "ship_quantity":data.get('ship_quantity'),
                         "status":data.get('status'),
-                        "amount_unit":data.get('amount_unit') ,                     
+                        "amount_unit":data.get('amount_unit') , 
+                        "selected_crop": selected_crop                 
                         
                     })
                     if destination_id:
                         context["destination_id"] = int(destination_id)
                     if processor_id and not data.get("save"): 
+                        context['crops'] = CropDetails.objects.filter(contract=contract).values('id', 'crop')
+                        print(context["crops"])
                     
                         if selected_sku_id:
                             context["milled_value"] =  calculate_milled_volume(int(processor_id), processor_type, selected_sku_id)
@@ -1707,16 +1742,19 @@ def create_processor_shipment(request):
                             else:
                                 context["error_messages"] = "Please provide Weight."
                                 return render(request, 'distributor/create_outbound.html', context)
+                            
+                        crop = CropDetails.objects.filter(id=int(selected_crop), contract=contract).first()
+                        crop_name = crop.crop
                        
-                        if contract.amount_unit == context.get('amount_unit'):
-                            contract_weight_left = float(contract.left_amount) - float(net_weight)
+                        if crop.amount_unit == context.get('amount_unit'):
+                            contract_weight_left = float(crop.left_amount) - float(net_weight)
                         else:
-                            if contract.amount_unit == "LBS" and context.get('amount_unit') == "MT":
+                            if crop.amount_unit == "LBS" and context.get('amount_unit') == "MT":
                                 net_weight_lbs = float(net_weight) * 2204.62
-                                contract_weight_left = float(contract.left_amount) - net_weight_lbs 
+                                contract_weight_left = float(crop.left_amount) - net_weight_lbs 
                             else:
                                 net_weight_mt = float(net_weight) * 0.000453592
-                                contract_weight_left = float(contract.left_amount) - net_weight_mt                         
+                                contract_weight_left = float(crop.left_amount) - net_weight_mt                         
                         
                         outbound = ProcessorWarehouseShipment(
                             contract=contract,
@@ -1724,6 +1762,8 @@ def create_processor_shipment(request):
                             processor_type=processor_type,
                             processor_entity_name=contract.processor_entity_name,
                             processor_sku_list=[selected_sku_id],
+                            crop_id = crop.id,
+                            crop = crop_name,
                             carrier_type=context.get('carrier_type'),
                             outbound_type=context.get('outbound_type'),
                             purchase_order_name=context.get('purchase_order_name'),
@@ -1731,8 +1771,8 @@ def create_processor_shipment(request):
                             lot_number=context.get('lot_number'),
                             gross_weight=gross_weight,
                             net_weight=net_weight,
-                            ship_weight = ship_weight,
                             weight_unit=context.get('amount_unit'),
+                            ship_weight = ship_weight,
                             ship_quantity=ship_quantity,
                             contract_weight_left=contract_weight_left,
                             status=context.get('status'),
@@ -1741,8 +1781,7 @@ def create_processor_shipment(request):
                             customer_name=customer_name,
                             warehouse_name=warehouse_name
                         )
-                        outbound.save()
-                            
+                        outbound.save()                            
                         
                         carrier_id = data.get('carrier_id')
                         if carrier_id:
@@ -1826,6 +1865,7 @@ def list_processor_shipment(request):
             if search_name and search_name is not None:
                 shipments = shipments.filter(Q(warehouse_name__icontains=search_name) |
                                              Q(customer_name__icontains=search_name) |
+                                             Q(crop__icontains=search_name) |
                                              Q(contract__secret_key__icontains=search_name) |
                                              Q(outbound_type__icontains=search_name) |
                                              Q(carrier_type__icontains=search_name) |
@@ -1976,226 +2016,325 @@ def processor_shipment_view(request, pk):
         return render(request, 'distributor/view_outbound.html', context)
 
 
+def find_changes(context, shipment):
+    changes = []
+    
+    # Track changes for Carrier ID
+    carrier_id = context.get("carrier_id")
+    if carrier_id:
+        carrier = CarrierDetails.objects.filter(shipment=shipment).first()
+        if carrier and carrier.carrier_id != carrier_id:
+            changes.append({"field": "Carrier ID", "old": carrier.carrier_id, "new": carrier_id})
+
+    # Track changes for Purchase Order Name
+    purchase_order_name = context.get("purchase_order_name")
+    if purchase_order_name and shipment.purchase_order_name != purchase_order_name:
+        changes.append({"field": "Purchase Order Name", "old": shipment.purchase_order_name, "new": purchase_order_name})
+
+    # Track changes for Purchase Order Number
+    purchase_order_number = context.get("purchase_order_number")
+    if purchase_order_number and shipment.purchase_order_number != purchase_order_number:
+        changes.append({"field": "Purchase Order Number", "old": shipment.purchase_order_number, "new": purchase_order_number})
+
+    # Track changes for Lot Number
+    lot_number = context.get("lot_number")
+    if lot_number and shipment.lot_number != lot_number:
+        changes.append({"field": "Lot Number", "old": shipment.lot_number, "new": lot_number})
+
+    # Track changes for Gross Weight
+    gross_weight = context.get("gross_weight")
+    if gross_weight and shipment.gross_weight:
+        if shipment.gross_weight and float(shipment.gross_weight) != float(gross_weight):
+            changes.append({"field": "Gross Weight", "old": shipment.gross_weight, "new": gross_weight})
+
+    # Track changes for Ship Weight
+    ship_weight = context.get("ship_weight")
+    if ship_weight and shipment.ship_weight != float(ship_weight):
+        changes.append({"field": "Ship Weight", "old": shipment.ship_weight, "new": ship_weight})
+
+    # Track changes for Ship Quantity
+    ship_quantity = context.get("ship_quantity")
+    if ship_quantity and shipment.ship_quantity != int(ship_quantity):
+        changes.append({"field": "Ship Quantity", "old": shipment.ship_quantity, "new": ship_quantity})
+
+    # Track changes for Status
+    status = context.get("status")
+    if status and shipment.status != status:
+        changes.append({"field": "Status", "old": shipment.status, "new": status})
+
+    # Track changes for Border Receive Date
+    border_receive_date = context.get("border_receive_date")
+    if border_receive_date and str(shipment.border_receive_date) != border_receive_date:
+        changes.append({"field": "Border Receive Date", "old": str(shipment.border_receive_date), "new": str(border_receive_date)})
+
+    # Track changes for Border Leaving Date
+    border_leaving_date = context.get("border_leaving_date")
+    if border_leaving_date and str(shipment.border_leaving_date) != border_leaving_date:
+        changes.append({"field": "Border Leaving Date", "old": str(shipment.border_leaving_date), "new": str(border_leaving_date)})
+
+    # Track changes for Warehouse/Customer Receive Date
+    final_receive_date = context.get("final_receive_date")
+    if final_receive_date and str(shipment.distributor_receive_date) != final_receive_date:
+        changes.append({"field": "Warehouse/Customer Receive Date", "old": str(shipment.distributor_receive_date), "new": str(final_receive_date)})
+
+    # Track changes for Warehouse/Customer Leaving Date
+    final_leaving_date = context.get("final_leaving_date")
+    if final_leaving_date and str(shipment.distributor_leaving_date) != final_leaving_date:
+        changes.append({"field": "Warehouse/Customer Leaving Date", "old": str(shipment.distributor_leaving_date), "new": str(final_leaving_date)})
+
+    # Track changes for Border Receive Date Back
+    border_receive_date2 = context.get("border_receive_date2")
+    if border_receive_date2 and str(shipment.border_back_receive_date) != border_receive_date2:
+        changes.append({"field": "Border Receive Date Back", "old": str(shipment.border_back_receive_date), "new": str(border_receive_date2)})
+
+    # Track changes for Border Leaving Date Back
+    border_leaving_date2 = context.get("border_leaving_date2")
+    if border_leaving_date2 and str(shipment.border_back_leaving_date) != border_leaving_date2:
+        changes.append({"field": "Border Leaving Date Back", "old": str(shipment.border_back_leaving_date), "new": str(border_leaving_date2)})
+
+    # Track changes for Processor Receive Date
+    processor_receive_date = context.get("processor_receive_date")
+    if processor_receive_date and str(shipment.processor_receive_date) != processor_receive_date:
+        changes.append({"field": "Processor Receive Date", "old": str(shipment.processor_receive_date), "new": str(processor_receive_date)})
+
+    # Track changes for Uploaded Files (if file changes need to be tracked)
+    if context.get("files"):
+        existing_files = [
+            file.document_file.name.split("/")[-1]
+            for file in ProcessorWarehouseShipmentDocuments.objects.filter(shipment=shipment)
+        ]
+        uploaded_files = [file["name"] for file in context.get("files")]
+        if set(existing_files) != set(uploaded_files):
+            changes.append({"field": "Upload File", "old": existing_files, "new": uploaded_files})
+
+    return changes
+
+
 @login_required()
 def edit_processor_shipment(request, pk):
     context = {}
-    # try:
-    if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
-        check_shipment = ProcessorWarehouseShipment.objects.filter(id=pk)
-        
-        shipment = check_shipment.first()        
-        carrier = CarrierDetails.objects.filter(shipment=shipment).first()
-        if carrier:
-            context['carrier_id'] = carrier.carrier_id
-        context["files"] = [
-            {
-                "id": file.id,
-                "name": file.document_file.name.split("/")[-1]  # Extract only the file name
-            }
-            for file in ProcessorWarehouseShipmentDocuments.objects.filter(shipment=shipment)
-        ]
-        context["shipment"] = shipment
-        
-        selected_contract = shipment.contract               
-                                
-        processor_id = shipment.contract.processor_id
-        processor_type = shipment.contract.processor_type
-        destination_type = 'customer' if shipment.customer_id is not None else 'warehouse'
-        if destination_type == 'customer':
-            destination_list = Customer.objects.all().values('id','name')
-        else:
-            destination_list = Warehouse.objects.all().values('id','name')
-        destination_id = shipment.warehouse_id if shipment.warehouse_id not in [None,'',' ', 'null'] else shipment.customer_id
-        print(destination_id)
-        context.update({           
-            "milled_value": "None",
-            "selected_processor_sku_id_list":shipment.processor_sku_list,
-            "selected_destination": destination_type,
-            "warehouse_name" : shipment.warehouse_name,
-            "customer_name": shipment.customer_name ,             
-            "contract":selected_contract,                        
-            "selected_processor_id": processor_id,
-            'destination_list':destination_list,
-            "destination_id" : destination_id           
-        })
-        
-        if request.method == "POST":
-            data = request.POST
+    try:
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role() or request.user.is_processor or request.user.is_processor2:
+            check_shipment = ProcessorWarehouseShipment.objects.filter(id=pk)
             
-            button_value = request.POST.getlist('remove_files')                
-            if button_value:
-                for file_id in button_value:
-                    try:
-                        file_obj = ProcessorWarehouseShipmentDocuments.objects.get(id=file_id)
-                        file_obj.delete()
-                    except ProcessorWarehouseShipmentDocuments.DoesNotExist:
-                        pass          
-            selected_sku_id = data.get('sender_sku_id')
-            destination_type = data.get('selected_destination')
-            print(data.get('border_receive_date'))
-            context.update({                    
-                "carrier_type": data.get('carrier_type'),                    
-                "outbound_type": data.get('outbound_type'),
-                "purchase_order_name":data.get('purchase_order_name'),
-                "purchase_order_number": data.get('purchase_order_number'),
-                "lot_number": data.get('lot_number'),
-                "selected_processor_sku_id_list": [selected_sku_id],
-                "selected_destination": destination_type,
-                "weight":data.get('weight'),
-                "gross_weight":data.get('gross_weight'),
-                "ship_weight":data.get('ship_Weight'),
-                "ship_quantity":data.get('ship_quantity'),
-                "status":data.get('status'),
-                "amount_unit":data.get('amount_unit') ,   
-                "final_receive_date": data.get('final_receive_date'),
-                "border_receive_date" : data.get('border_receive_date'),
-                "border_leaving_date": data.get('border_leaving_date'),
-                "final_leaving_date" : data.get('final_leaving_date'),
-                "border_receive_date2": data.get('border_receive_date2'),
-                "border_leaving_date2" : data.get('border_leaving_date2'),
-                "processor_receive_date": data.get('processor_receive_date')             
-                
-            })
-            print(data.get('border_receive_date'))
-            if destination_id:
-                context["destination_id"] = int(destination_id)
-            if processor_id and not data.get("save"): 
-            
-                if selected_sku_id:
-                    context["milled_value"] =  calculate_milled_volume(int(processor_id), processor_type, selected_sku_id)
-                    context["selected_sku"] = selected_sku_id
-                else:
-                    context["milled_value"] =  calculate_milled_volume(int(processor_id), processor_type, selected_sku_id)
-                context["sender_sku_id_list"] = get_sku_list(int(processor_id),processor_type)["data"]
-                if destination_type == 'warehouse':
-                    context['destination_list'] = Warehouse.objects.all().values('id','name')
-                if destination_type == 'customer':
-                    context['destination_list'] = Customer.objects.all().values('id','name')
-                return render(request, 'distributor/create_outbound.html', context)
+            shipment = check_shipment.first()        
+            carrier = CarrierDetails.objects.filter(shipment=shipment).first()
+            if carrier:
+                context['carrier_id'] = carrier.carrier_id
+            context["files"] = [
+                {
+                    "id": file.id,
+                    "name": file.document_file.name.split("/")[-1]  # Extract only the file name
+                }
+                for file in ProcessorWarehouseShipmentDocuments.objects.filter(shipment=shipment)
+            ]
+            context["shipment"] = shipment
+            context['crops'] = CropDetails.objects.filter(contract=shipment.contract)
+            selected_contract = shipment.contract               
+                                    
+            processor_id = shipment.contract.processor_id
+            processor_type = shipment.contract.processor_type
+            destination_type = 'customer' if shipment.customer_id not in [None,'',' ', 'null'] else 'warehouse'
+            if destination_type == 'customer':
+                destination_list = Customer.objects.all().values('id','name')
             else:
-                if destination_type == 'warehouse':
-                    warehouse_id = Warehouse.objects.get(id=int(context.get('destination_id'))).id
-                    warehouse_name = Warehouse.objects.get(id=int(context.get('destination_id'))).name
-                    customer_id = None
-                    customer_name = None
-                else:
-                    warehouse_id = None
-                    warehouse_name = None
-                    customer_id = Customer.objects.get(id=int(context.get('destination_id'))).id
-                    customer_name = Customer.objects.get(id=int(context.get('destination_id'))).name
-
-                if data.get('carrier_type') == 'Truck/Trailer':
-                    if data.get('gross_weight') not in [None, 'null', ' ', ''] and data.get('ship_weight') not in [None, 'null', ' ', ''] and data.get('ship_quantity') not in [None, 'null', ' ', '']:
-                        ship_quantity = int(data.get('ship_quantity'))
-                        gross_weight = float(data.get('gross_weight'))
-                        ship_weight = float(data.get('ship_weight'))                                    
-                        net_weight = gross_weight - (ship_weight * ship_quantity)
-                    else:
-                        context["error_messages"] = "Please provide Gross weight, Ship weight and Ship quantity."
-                        return render(request, 'distributor/create_outbound.html', context)
-                            
-                elif data.get('carrier_type') == 'Rail Car':
+                destination_list = Warehouse.objects.all().values('id','name')
+            destination_id = shipment.warehouse_id if shipment.warehouse_id not in [None,'',' ', 'null'] else shipment.customer_id
+            destination_id = int(destination_id) if destination_id else None
+            print(destination_id, type(destination_id))
+            context.update({           
+                "milled_value": "None",
+                "selected_processor_sku_id_list":shipment.processor_sku_list,
+                "selected_destination": destination_type,
+                "warehouse_name" : shipment.warehouse_name,
+                "customer_name": shipment.customer_name ,             
+                "contract":selected_contract,                        
+                "selected_processor_id": processor_id,
+                'destination_list':destination_list,
+                "destination_id" : destination_id           
+            })
+            
+            if request.method == "POST":
+                data = request.POST
+                
+                button_value = request.POST.getlist('remove_files')                
+                if button_value:
+                    for file_id in button_value:
+                        try:
+                            file_obj = ProcessorWarehouseShipmentDocuments.objects.get(id=file_id)
+                            file_obj.delete()
+                        except ProcessorWarehouseShipmentDocuments.DoesNotExist:
+                            pass          
+                selected_sku_id = data.get('sender_sku_id')
+                destination_type = data.get('selected_destination')
+                print(data.get('border_receive_date'))
+                context.update({                    
+                    "carrier_type": data.get('carrier_type'),                    
+                    "outbound_type": data.get('outbound_type'),
+                    "purchase_order_name":data.get('purchase_order_name'),
+                    "purchase_order_number": data.get('purchase_order_number'),
+                    "lot_number": data.get('lot_number'),
+                    "selected_processor_sku_id_list": [selected_sku_id],
+                    "selected_destination": destination_type,
+                    "weight":data.get('weight'),
+                    "gross_weight":data.get('gross_weight'),
+                    "ship_weight":data.get('ship_Weight'),
+                    "ship_quantity":data.get('ship_quantity'),
+                    "status":data.get('status'),
+                    "amount_unit":data.get('amount_unit') , 
+                    "selected_crop": data.get('crop_id'), 
+                    "final_receive_date": data.get('final_receive_date'),
+                    "border_receive_date" : data.get('border_receive_date'),
+                    "border_leaving_date": data.get('border_leaving_date'),
+                    "final_leaving_date" : data.get('final_leaving_date'),
+                    "border_receive_date2": data.get('border_receive_date2'),
+                    "border_leaving_date2" : data.get('border_leaving_date2'),
+                    "processor_receive_date": data.get('processor_receive_date')             
                     
-                    gross_weight = 0
-                    ship_quantity = 1
-                    ship_weight = 0
-                    if data.get('weight') not in [None, 'null', ' ', '']:
-                        net_weight = float(data.get('weight'))
+                })
+                
+                if processor_id and not data.get("save"): 
+                    
+                    if selected_sku_id:
+                        context["milled_value"] =  calculate_milled_volume(int(processor_id), processor_type, selected_sku_id)
+                        context["selected_sku"] = selected_sku_id
                     else:
-                        context["error_messages"] = "Please provide Weight."
-                        return render(request, 'distributor/create_outbound.html', context)
-                
-                if shipment.contract.amount_unit == context.get('amount_unit'):
-                    contract_weight_left = float(shipment.contract.left_amount) - float(net_weight)
+                        context["milled_value"] =  calculate_milled_volume(int(processor_id), processor_type, selected_sku_id)
+                    context["sender_sku_id_list"] = get_sku_list(int(processor_id),processor_type)["data"]
+                    if destination_type == 'warehouse':
+                        context['destination_list'] = Warehouse.objects.all().values('id','name')
+                    if destination_type == 'customer':
+                        context['destination_list'] = Customer.objects.all().values('id','name')
+                    return render(request, 'distributor/create_outbound.html', context)
                 else:
-                    if shipment.contract.amount_unit == "LBS" and context.get('amount_unit') == "MT":
-                        net_weight_lbs = float(net_weight) * 2204.62
-                        contract_weight_left = float(shipment.contract.left_amount) - net_weight_lbs 
+                    if destination_type == 'warehouse':
+                        warehouse_id = Warehouse.objects.get(id=int(context.get('destination_id'))).id
+                        warehouse_name = Warehouse.objects.get(id=int(context.get('destination_id'))).name
+                        customer_id = None
+                        customer_name = None
                     else:
-                        net_weight_mt = float(net_weight) * 0.000453592
-                        contract_weight_left = float(shipment.contract.left_amount) - net_weight_mt 
-                
-                shipment.contract=shipment.contract
-                shipment.processor_id=processor_id
-                shipment.processor_type=processor_type
-                shipment.processor_entity_name=shipment.contract.processor_entity_name
-                shipment.processor_sku_list=[selected_sku_id]
-                shipment.carrier_type=context.get('carrier_type')
-                shipment.outbound_type=context.get('outbound_type')
-                shipment.purchase_order_name=context.get('purchase_order_name')
-                shipment.purchase_order_number=context.get('purchase_order_number')
-                shipment.lot_number=context.get('lot_number')
-                shipment.gross_weight=gross_weight
-                shipment.net_weight=net_weight
-                shipment.ship_weight=ship_weight
-                shipment.weight_unit=context.get('amount_unit')
-                shipment.ship_quantity=ship_quantity
-                shipment.contract_weight_left=contract_weight_left
-                shipment.status= context.get('status')
-                shipment.customer_id=customer_id
-                shipment.warehouse_id=warehouse_id
-                shipment.customer_name=customer_name
-                shipment.warehouse_name=warehouse_name
-                                                                        
-                shipment.save()
-                if data.get('border_receive_date') not in [None, '', ' ', 'null']:
-                    border_receive_date = data.get('border_receive_date')
-                    shipment.border_receive_date= border_receive_date
-                if data.get('border_leaving_date') not in [None, '', ' ', 'null']:
-                    border_leaving_date = data.get('border_leaving_date')
-                    shipment.border_leaving_date=border_leaving_date
-                if data.get('final_receive_date') not in [None, '', ' ', 'null']:
-                    final_receive_date = data.get('final_receive_date')
-                    shipment.distributor_receive_date=final_receive_date
-                if data.get('final_leaving_date') not in [None, '', ' ', 'null']:
-                    final_leaving_date = data.get('final_leaving_date')
-                    shipment.distributor_leaving_date=final_leaving_date
-                if data.get('border_receive_date2') not in [None, '', ' ', 'null']:
-                    border_receive_date2 = data.get('border_receive_date2')
-                    shipment.border_back_receive_date=border_receive_date2
-                if data.get('border_leaving_date2') not in [None, '', ' ', 'null']:
-                    border_leaving_date2 = data.get('border_leaving_date2')                    
-                    shipment.border_back_leaving_date= border_leaving_date2, 
-                if data.get('processor_receive_date') not in [None, '', ' ', 'null']:
-                    processor_receive_date = data.get('processor_receive_date')
-                    shipment.processor_receive_date=processor_receive_date
-                
-                shipment.save()
-                carrier_id = data.get('carrier_id')
-                if carrier_id:
-                    # Get or create carrier details
-                    carrier_details, created = CarrierDetails.objects.update_or_create(
-                        shipment=shipment,
-                        defaults={'carrier_id': carrier_id}
-                    )
-                else:
-                    # Ensure that carrier details are not deleted if no carrier_id is provided
-                    CarrierDetails.objects.filter(shipment=shipment).delete()
-                
-                files = request.FILES.getlist('files')
-                for file in files:
-                    ProcessorWarehouseShipmentDocuments.objects.create(shipment=shipment, document_file=file)
+                        warehouse_id = None
+                        warehouse_name = None
+                        customer = Customer.objects.get(id=int(context.get('destination_id')))
+                        customer_id = customer.id
+                        customer_name = customer.name                    
 
-                
-                descriptions = request.POST.getlist('description')
-
-                # Validate and process each field
-                for  description in  descriptions:
-                    if  description:
+                    if data.get('carrier_type') == 'Truck/Trailer':
+                        if data.get('gross_weight') not in [None, 'null', ' ', ''] and data.get('ship_weight') not in [None, 'null', ' ', ''] and data.get('ship_quantity') not in [None, 'null', ' ', '']:
+                            ship_quantity = int(data.get('ship_quantity'))
+                            gross_weight = float(data.get('gross_weight'))
+                            ship_weight = float(data.get('ship_weight'))                                    
+                            net_weight = gross_weight - (ship_weight * ship_quantity)
+                        else:
+                            context["error_messages"] = "Please provide Gross weight, Ship weight and Ship quantity."
+                            return render(request, 'distributor/create_outbound.html', context)
+                                
+                    elif data.get('carrier_type') == 'Rail Car':
                         
-                        ProcessorShipmentLog.objects.create(
-                            shipment=shipment,                           
-                            description=description
+                        gross_weight = 0
+                        ship_quantity = 1
+                        ship_weight = 0
+                        if data.get('weight') not in [None, 'null', ' ', '']:
+                            net_weight = float(data.get('weight'))
+                        else:
+                            context["error_messages"] = "Please provide Weight."
+                            return render(request, 'distributor/create_outbound.html', context)
+                    crop = CropDetails.objects.filter(id=int(data.get('crop_id')), contract=shipment.contract).first()
+                    crop_name = crop.crop
+                    if crop.amount_unit == context.get('amount_unit'):
+                        contract_weight_left = float(crop.left_amount) - float(net_weight)
+                    else:
+                        if crop.amount_unit == "LBS" and context.get('amount_unit') == "MT":
+                            net_weight_lbs = float(net_weight) * 2204.62
+                            contract_weight_left = float(crop.left_amount) - net_weight_lbs 
+                        else:
+                            net_weight_mt = float(net_weight) * 0.000453592
+                            contract_weight_left = float(crop.left_amount) - net_weight_mt 
+                    changes = find_changes(context, shipment)
+                    shipment.contract=shipment.contract
+                    shipment.processor_id=processor_id
+                    shipment.processor_type=processor_type
+                    shipment.processor_entity_name=shipment.contract.processor_entity_name
+                    shipment.processor_sku_list=[selected_sku_id]
+                    shipment.carrier_type=context.get('carrier_type')
+                    shipment.outbound_type=context.get('outbound_type')
+                    shipment.purchase_order_name=context.get('purchase_order_name')
+                    shipment.purchase_order_number=context.get('purchase_order_number')
+                    shipment.lot_number=context.get('lot_number')
+                    shipment.crop = crop.id
+                    shipment.crop = crop_name
+                    shipment.gross_weight=gross_weight
+                    shipment.net_weight=net_weight
+                    shipment.ship_weight=ship_weight
+                    shipment.weight_unit=context.get('amount_unit')
+                    shipment.ship_quantity=ship_quantity
+                    shipment.contract_weight_left=contract_weight_left
+                    shipment.status= context.get('status')
+                    shipment.customer_id=customer_id
+                    shipment.warehouse_id=warehouse_id
+                    shipment.customer_name=customer_name
+                    shipment.warehouse_name=warehouse_name
+                                                                            
+                    shipment.save()
+                    if data.get('border_receive_date') not in [None, '', ' ', 'null']:
+                        border_receive_date = data.get('border_receive_date')
+                        shipment.border_receive_date= border_receive_date
+                    if data.get('border_leaving_date') not in [None, '', ' ', 'null']:
+                        border_leaving_date = data.get('border_leaving_date')
+                        shipment.border_leaving_date=border_leaving_date
+                    if data.get('final_receive_date') not in [None, '', ' ', 'null']:
+                        final_receive_date = data.get('final_receive_date')
+                        shipment.distributor_receive_date=final_receive_date
+                    if data.get('final_leaving_date') not in [None, '', ' ', 'null']:
+                        final_leaving_date = data.get('final_leaving_date')
+                        shipment.distributor_leaving_date=final_leaving_date
+                    if data.get('border_receive_date2') not in [None, '', ' ', 'null']:
+                        border_receive_date2 = data.get('border_receive_date2')
+                        shipment.border_back_receive_date=border_receive_date2
+                    if data.get('border_leaving_date2') not in [None, '', ' ', 'null']:
+                        border_leaving_date2 = data.get('border_leaving_date2')                    
+                        shipment.border_back_leaving_date= border_leaving_date2
+                    if data.get('processor_receive_date') not in [None, '', ' ', 'null']:
+                        processor_receive_date = data.get('processor_receive_date')
+                        shipment.processor_receive_date=processor_receive_date
+                    
+                    shipment.save()
+                    carrier_id = data.get('carrier_id')
+                    if carrier_id:
+                        # Get or create carrier details
+                        carrier_details, created = CarrierDetails.objects.update_or_create(
+                            shipment=shipment,
+                            defaults={'carrier_id': carrier_id}
                         )
                     else:
-                        context["error_messages"] = f'PLease give description'
-                        return render(request, 'distributor/edit_outbound.html', context)
-            return redirect('list-processor-shipment')
+                        # Ensure that carrier details are not deleted if no carrier_id is provided
+                        CarrierDetails.objects.filter(shipment=shipment).delete()
+                    
+                    files = request.FILES.getlist('files')
+                    for file in files:
+                        ProcessorWarehouseShipmentDocuments.objects.create(shipment=shipment, document_file=file)
+                    
+                    descriptions = request.POST.getlist('description')
+
+                    # Validate and process each field
+                    for  description in  descriptions:
+                        if  description:
+                            
+                            ProcessorShipmentLog.objects.create(
+                                shipment=shipment,                           
+                                description=description,
+                                changes = {"changes":changes},
+                                updated_by = request.user
+                            )
+                        else:
+                            context["error_messages"] = f'PLease give description'
+                            return render(request, 'distributor/edit_outbound.html', context)
+                return redirect('list-processor-shipment')
             
-        return render(request, 'distributor/edit_outbound.html', context)
+            return render(request, 'distributor/edit_outbound.html', context)
                         
-    # except (ValueError, AttributeError, AdminProcessorContract.DoesNotExist) as e:
-    #     context["error_messages"] = str(e)
+    except (ValueError, AttributeError, AdminProcessorContract.DoesNotExist) as e:
+        context["error_messages"] = str(e)
         return render(request, 'distributor/edit_outbound.html', context)
 
 
@@ -2204,28 +2343,29 @@ def create_warehouse_shipment(request):
     try:
         if request.user.is_authenticated:
             if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
-                contracts = AdminCustomerContract.objects.all().values('id','secret_key','customer_id','customer_name','crop').order_by('-id')  
+                contracts = AdminCustomerContract.objects.all().values('id','secret_key','customer_id','customer_name').order_by('-id')  
                 warehouses = Warehouse.objects.all().values('id', 'name')              
                 context["contracts"] = contracts
                 context["warehouses"] = warehouses
                 context.update({
                     "selected_contract": None,                    
                     "customer_id": None,
-                    "customer_name": None             
+                    "customer_name": None,
+                    "crops": [],            
                 })
               
                 if request.method == "POST":
                     data = request.POST
-                    selected_contract = request.POST.get('selected_contract') 
-                    selected_warehouse = request.POST.get('selected_warehouse') 
-                    
+                    selected_contract = data.get('selected_contract') 
+                    selected_warehouse = data.get('selected_warehouse') 
+                    selected_crop = data.get('crop_id') 
                     contract = AdminCustomerContract.objects.get(id=int(selected_contract))                   
                     customer_id = contract.customer_id
                     if not data.get('save'):
                         context.update({
                             "selected_contract":contract.id,
                             "contract":contract,                        
-                            "selected_customer_id": customer_id,                            
+                            "selected_customer_id": int(customer_id),                            
                             "carrier_type": data.get('carrier_type'),                    
                             "outbound_type": data.get('outbound_type'),
                             "purchase_order_name":data.get('purchase_order_name'),
@@ -2236,20 +2376,17 @@ def create_warehouse_shipment(request):
                             "ship_weight":data.get('ship_Weight'),
                             "ship_quantity":data.get('ship_quantity'),
                             "status":data.get('status'),
-                            "amount_unit":data.get('amount_unit') ,                     
+                            "amount_unit":data.get('amount_unit') , 
+                            'selected_crop':data.get('crop_id')                    
                             
                         }) 
                         if selected_warehouse:
                             context['selected_warehouse'] = int(selected_warehouse)
                         if selected_contract:
                             context['selected_contract'] = int(selected_contract)
-                    else:                   
-                        selected_contract = request.POST.get('selected_contract') 
-                        selected_warehouse = request.POST.get('selected_warehouse') 
-                        
-                        contract = AdminCustomerContract.objects.get(id=int(selected_contract))                   
-                        customer_id = contract.customer_id
-
+                            context["crops"] = CustomerContractCropDetails.objects.filter(contract=contract).values('id', 'crop')
+                    else:             
+                         
                         if data.get('carrier_type') == 'Truck/Trailer':
                             if data.get('gross_weight') not in [None, 'null', ' ', ''] and data.get('ship_weight') not in [None, 'null', ' ', ''] and data.get('ship_quantity') not in [None, 'null', ' ', '']:
                                 ship_quantity = int(data.get('ship_quantity'))
@@ -2271,21 +2408,27 @@ def create_warehouse_shipment(request):
                                 context["error_messages"] = "Please provide Weight."
                                 return render(request, 'distributor/create_outbound.html', context)
                         
-                        if contract.amount_unit == context.get('amount_unit'):
-                            contract_weight_left = float(contract.left_amount) - float(net_weight)
+                        crop = CustomerContractCropDetails.objects.filter(id=int(selected_crop), contract=contract).first()
+                        crop_name = crop.crop
+                       
+                        if crop.amount_unit == context.get('amount_unit'):
+                            contract_weight_left = float(crop.left_amount) - float(net_weight)
                         else:
-                            if contract.amount_unit == "LBS" and context.get('amount_unit') == "MT":
+                            if crop.amount_unit == "LBS" and context.get('amount_unit') == "MT":
                                 net_weight_lbs = float(net_weight) * 2204.62
-                                contract_weight_left = float(contract.left_amount) - net_weight_lbs 
+                                contract_weight_left = float(crop.left_amount) - net_weight_lbs 
                             else:
                                 net_weight_mt = float(net_weight) * 0.000453592
-                                contract_weight_left = float(contract.left_amount) - net_weight_mt 
+                                contract_weight_left = float(crop.left_amount) - net_weight_mt 
+
                         warehouse_name = Warehouse.objects.get(id=int(data.get('selected_warehouse'))).name                        
                         print(context.get('carrier_type'), context.get('outbound_type'), context.get('purchase_order_name'), context.get('purchase_order_number'), context.get('lot_number'), context.get('status'))
                         outbound = WarehouseCustomerShipment(
                             contract=contract,
                             warehouse_id=selected_warehouse, 
-                            warehouse_name = warehouse_name,                       
+                            warehouse_name = warehouse_name, 
+                            crop_id = crop.id,
+                            crop= crop_name,                      
                             carrier_type=data.get('carrier_type'),
                             outbound_type=data.get('outbound_type'),
                             purchase_order_name=data.get('purchase_order_name'),
@@ -2327,7 +2470,7 @@ def create_warehouse_shipment(request):
                         return redirect('list-warehouse-shipment')  
                 return render(request, 'distributor/create_warehouse_outbound.html', context) 
             elif request.user.is_distributor:
-                contracts = AdminCustomerContract.objects.all().values('id','secret_key','customer_id','customer_name','crop').order_by('-id') 
+                contracts = AdminCustomerContract.objects.all().values('id','secret_key','customer_id','customer_name').order_by('-id') 
                 distributor_user = DistributorUser.objects.get(contact_email=request.user.email) 
                 distributor = Distributor.objects.get(id=distributor_user.distributor.id)
                 warehouses = distributor.warehouse.all().values('id', 'name')              
@@ -2336,21 +2479,22 @@ def create_warehouse_shipment(request):
                 context.update({
                     "selected_contract": None,                    
                     "customer_id": None,
-                    "customer_name": None             
+                    "customer_name": None,
+                    "crops": [],            
                 })
               
                 if request.method == "POST":
                     data = request.POST
-                    selected_contract = request.POST.get('selected_contract') 
-                    selected_warehouse = request.POST.get('selected_warehouse') 
-                    
+                    selected_contract = data.get('selected_contract') 
+                    selected_warehouse = data.get('selected_warehouse') 
+                    selected_crop = data.get('crop_id') 
                     contract = AdminCustomerContract.objects.get(id=int(selected_contract))                   
                     customer_id = contract.customer_id
                     if not data.get('save'):
                         context.update({
                             "selected_contract":contract.id,
                             "contract":contract,                        
-                            "selected_customer_id": customer_id,                            
+                            "selected_customer_id": int(customer_id),                            
                             "carrier_type": data.get('carrier_type'),                    
                             "outbound_type": data.get('outbound_type'),
                             "purchase_order_name":data.get('purchase_order_name'),
@@ -2361,20 +2505,17 @@ def create_warehouse_shipment(request):
                             "ship_weight":data.get('ship_Weight'),
                             "ship_quantity":data.get('ship_quantity'),
                             "status":data.get('status'),
-                            "amount_unit":data.get('amount_unit') ,                     
+                            "amount_unit":data.get('amount_unit') , 
+                            'selected_crop':data.get('crop_id')                    
                             
                         }) 
                         if selected_warehouse:
                             context['selected_warehouse'] = int(selected_warehouse)
                         if selected_contract:
                             context['selected_contract'] = int(selected_contract)
-                    else:                   
-                        selected_contract = request.POST.get('selected_contract') 
-                        selected_warehouse = request.POST.get('selected_warehouse') 
-                        
-                        contract = AdminCustomerContract.objects.get(id=int(selected_contract))                   
-                        customer_id = contract.customer_id
-
+                            context["crops"] = CustomerContractCropDetails.objects.filter(contract=contract).values('id', 'crop')
+                    else:             
+                         
                         if data.get('carrier_type') == 'Truck/Trailer':
                             if data.get('gross_weight') not in [None, 'null', ' ', ''] and data.get('ship_weight') not in [None, 'null', ' ', ''] and data.get('ship_quantity') not in [None, 'null', ' ', '']:
                                 ship_quantity = int(data.get('ship_quantity'))
@@ -2396,21 +2537,27 @@ def create_warehouse_shipment(request):
                                 context["error_messages"] = "Please provide Weight."
                                 return render(request, 'distributor/create_outbound.html', context)
                         
-                        if contract.amount_unit == context.get('amount_unit'):
-                            contract_weight_left = float(contract.left_amount) - float(net_weight)
+                        crop = CustomerContractCropDetails.objects.filter(id=int(selected_crop), contract=contract).first()
+                        crop_name = crop.crop
+                       
+                        if crop.amount_unit == context.get('amount_unit'):
+                            contract_weight_left = float(crop.left_amount) - float(net_weight)
                         else:
-                            if contract.amount_unit == "LBS" and context.get('amount_unit') == "MT":
+                            if crop.amount_unit == "LBS" and context.get('amount_unit') == "MT":
                                 net_weight_lbs = float(net_weight) * 2204.62
-                                contract_weight_left = float(contract.left_amount) - net_weight_lbs 
+                                contract_weight_left = float(crop.left_amount) - net_weight_lbs 
                             else:
                                 net_weight_mt = float(net_weight) * 0.000453592
-                                contract_weight_left = float(contract.left_amount) - net_weight_mt 
+                                contract_weight_left = float(crop.left_amount) - net_weight_mt 
+
                         warehouse_name = Warehouse.objects.get(id=int(data.get('selected_warehouse'))).name                        
                         print(context.get('carrier_type'), context.get('outbound_type'), context.get('purchase_order_name'), context.get('purchase_order_number'), context.get('lot_number'), context.get('status'))
                         outbound = WarehouseCustomerShipment(
                             contract=contract,
                             warehouse_id=selected_warehouse, 
-                            warehouse_name = warehouse_name,                       
+                            warehouse_name = warehouse_name, 
+                            crop_id = crop.id,
+                            crop= crop_name,                      
                             carrier_type=data.get('carrier_type'),
                             outbound_type=data.get('outbound_type'),
                             purchase_order_name=data.get('purchase_order_name'),
@@ -2452,7 +2599,7 @@ def create_warehouse_shipment(request):
                         return redirect('list-warehouse-shipment')  
                 return render(request, 'distributor/create_warehouse_outbound.html', context)
             elif request.user.is_warehouse_manager:
-                contracts = AdminCustomerContract.objects.all().values('id','secret_key','customer_id','customer_name','crop').order_by('-id') 
+                contracts = AdminCustomerContract.objects.all().values('id','secret_key','customer_id','customer_name').order_by('-id') 
                 warehouse_user = WarehouseUser.objects.get(contact_email=request.user.email) 
                 warehouses = Warehouse.objects.filter(id=warehouse_user.warehouse.id)
                             
@@ -2461,21 +2608,22 @@ def create_warehouse_shipment(request):
                 context.update({
                     "selected_contract": None,                    
                     "customer_id": None,
-                    "customer_name": None             
+                    "customer_name": None,
+                    "crops": [],            
                 })
               
                 if request.method == "POST":
                     data = request.POST
-                    selected_contract = request.POST.get('selected_contract') 
-                    selected_warehouse = request.POST.get('selected_warehouse') 
-                    
+                    selected_contract = data.get('selected_contract') 
+                    selected_warehouse = data.get('selected_warehouse') 
+                    selected_crop = data.get('crop_id') 
                     contract = AdminCustomerContract.objects.get(id=int(selected_contract))                   
                     customer_id = contract.customer_id
                     if not data.get('save'):
                         context.update({
                             "selected_contract":contract.id,
                             "contract":contract,                        
-                            "selected_customer_id": customer_id,                            
+                            "selected_customer_id": int(customer_id),                            
                             "carrier_type": data.get('carrier_type'),                    
                             "outbound_type": data.get('outbound_type'),
                             "purchase_order_name":data.get('purchase_order_name'),
@@ -2486,20 +2634,17 @@ def create_warehouse_shipment(request):
                             "ship_weight":data.get('ship_Weight'),
                             "ship_quantity":data.get('ship_quantity'),
                             "status":data.get('status'),
-                            "amount_unit":data.get('amount_unit') ,                     
+                            "amount_unit":data.get('amount_unit') , 
+                            'selected_crop':data.get('crop_id')                    
                             
                         }) 
                         if selected_warehouse:
                             context['selected_warehouse'] = int(selected_warehouse)
                         if selected_contract:
                             context['selected_contract'] = int(selected_contract)
-                    else:                   
-                        selected_contract = request.POST.get('selected_contract') 
-                        selected_warehouse = request.POST.get('selected_warehouse') 
-                        
-                        contract = AdminCustomerContract.objects.get(id=int(selected_contract))                   
-                        customer_id = contract.customer_id
-
+                            context["crops"] = CustomerContractCropDetails.objects.filter(contract=contract).values('id', 'crop')
+                    else:             
+                         
                         if data.get('carrier_type') == 'Truck/Trailer':
                             if data.get('gross_weight') not in [None, 'null', ' ', ''] and data.get('ship_weight') not in [None, 'null', ' ', ''] and data.get('ship_quantity') not in [None, 'null', ' ', '']:
                                 ship_quantity = int(data.get('ship_quantity'))
@@ -2521,21 +2666,27 @@ def create_warehouse_shipment(request):
                                 context["error_messages"] = "Please provide Weight."
                                 return render(request, 'distributor/create_outbound.html', context)
                         
-                        if contract.amount_unit == context.get('amount_unit'):
-                            contract_weight_left = float(contract.left_amount) - float(net_weight)
+                        crop = CustomerContractCropDetails.objects.filter(id=int(selected_crop), contract=contract).first()
+                        crop_name = crop.crop
+                       
+                        if crop.amount_unit == context.get('amount_unit'):
+                            contract_weight_left = float(crop.left_amount) - float(net_weight)
                         else:
-                            if contract.amount_unit == "LBS" and context.get('amount_unit') == "MT":
+                            if crop.amount_unit == "LBS" and context.get('amount_unit') == "MT":
                                 net_weight_lbs = float(net_weight) * 2204.62
-                                contract_weight_left = float(contract.left_amount) - net_weight_lbs 
+                                contract_weight_left = float(crop.left_amount) - net_weight_lbs 
                             else:
                                 net_weight_mt = float(net_weight) * 0.000453592
-                                contract_weight_left = float(contract.left_amount) - net_weight_mt 
+                                contract_weight_left = float(crop.left_amount) - net_weight_mt 
+
                         warehouse_name = Warehouse.objects.get(id=int(data.get('selected_warehouse'))).name                        
                         print(context.get('carrier_type'), context.get('outbound_type'), context.get('purchase_order_name'), context.get('purchase_order_number'), context.get('lot_number'), context.get('status'))
                         outbound = WarehouseCustomerShipment(
                             contract=contract,
                             warehouse_id=selected_warehouse, 
-                            warehouse_name = warehouse_name,                       
+                            warehouse_name = warehouse_name, 
+                            crop_id = crop.id,
+                            crop= crop_name,                      
                             carrier_type=data.get('carrier_type'),
                             outbound_type=data.get('outbound_type'),
                             purchase_order_name=data.get('purchase_order_name'),
@@ -2719,6 +2870,98 @@ def warehouse_shipment_view(request, pk):
         context["error_messages"] = str(e)
         return render(request, 'distributor/view_warehouse_outbound.html', context)
 
+def find_changes_for_customer_shipment(context, shipment):
+    changes = []
+    print(context)
+    # Track changes for Carrier ID
+    carrier_id = context.get("carrier_id")
+    if carrier_id:
+        carrier = CarrierDetails2.objects.filter(shipment=shipment).first()
+        if carrier and carrier.carrier_id != carrier_id:
+            changes.append({"field": "Carrier ID", "old": carrier.carrier_id, "new": carrier_id})
+
+    # Track changes for Purchase Order Name
+    purchase_order_name = context.get("purchase_order_name")
+    if purchase_order_name and shipment.purchase_order_name != purchase_order_name:
+        changes.append({"field": "Purchase Order Name", "old": shipment.purchase_order_name, "new": purchase_order_name})
+
+    # Track changes for Purchase Order Number
+    purchase_order_number = context.get("purchase_order_number")
+    if purchase_order_number and shipment.purchase_order_number != purchase_order_number:
+        changes.append({"field": "Purchase Order Number", "old": shipment.purchase_order_number, "new": purchase_order_number})
+
+    # Track changes for Lot Number
+    lot_number = context.get("lot_number")
+    if lot_number and shipment.lot_number != lot_number:
+        changes.append({"field": "Lot Number", "old": shipment.lot_number, "new": lot_number})
+
+    # Track changes for Gross Weight
+    gross_weight = context.get("gross_weight")
+    if gross_weight and shipment.gross_weight:
+        if shipment.gross_weight and float(shipment.gross_weight) != float(gross_weight):
+            changes.append({"field": "Gross Weight", "old": shipment.gross_weight, "new": gross_weight})
+
+    # Track changes for Ship Weight
+    ship_weight = context.get("ship_weight")
+    if ship_weight and shipment.ship_weight != float(ship_weight):
+        changes.append({"field": "Ship Weight", "old": shipment.ship_weight, "new": ship_weight})
+
+    # Track changes for Ship Quantity
+    ship_quantity = context.get("ship_quantity")
+    if ship_quantity and shipment.ship_quantity != int(ship_quantity):
+        changes.append({"field": "Ship Quantity", "old": shipment.ship_quantity, "new": ship_quantity})
+
+    # Track changes for Status
+    status = context.get("status")
+    if status and shipment.status != status:
+        changes.append({"field": "Status", "old": shipment.status, "new": status})
+
+    # Track changes for Border Receive Date
+    border_receive_date = context.get("border_receive_date")
+    if border_receive_date and str(shipment.border_receive_date) != border_receive_date:
+        changes.append({"field": "Border Receive Date", "old": str(shipment.border_receive_date), "new": str(border_receive_date)})
+
+    # Track changes for Border Leaving Date
+    border_leaving_date = context.get("border_leaving_date")
+    if border_leaving_date and str(shipment.border_leaving_date) != border_leaving_date:
+        changes.append({"field": "Border Leaving Date", "old": str(shipment.border_leaving_date), "new": str(border_leaving_date)})
+
+    # Track changes for Warehouse/Customer Receive Date
+    final_receive_date = context.get("final_receive_date")
+    if final_receive_date and str(shipment.customer_receive_date) != final_receive_date:
+        changes.append({"field": "Customer Receive Date", "old": str(shipment.customer_receive_date), "new": str(final_receive_date)})
+
+    # Track changes for Warehouse/Customer Leaving Date
+    final_leaving_date = context.get("final_leaving_date")
+    if final_leaving_date and str(shipment.customer_leaving_date) != final_leaving_date:
+        changes.append({"field": "Customer Leaving Date", "old": str(shipment.customer_leaving_date), "new": str(final_leaving_date)})
+
+    # Track changes for Border Receive Date Back
+    border_receive_date2 = context.get("border_receive_date2")
+    if border_receive_date2 and str(shipment.border_back_receive_date) != border_receive_date2:
+        changes.append({"field": "Border Receive Date Back", "old": str(shipment.border_back_receive_date), "new": str(border_receive_date2)})
+
+    # Track changes for Border Leaving Date Back
+    border_leaving_date2 = context.get("border_leaving_date2")
+    if border_leaving_date2 and str(shipment.border_back_leaving_date) != border_leaving_date2:
+        changes.append({"field": "Border Leaving Date Back", "old": str(shipment.border_back_leaving_date), "new": str(border_leaving_date2)})
+
+    # Track changes for Processor Receive Date
+    processor_receive_date = context.get("processor_receive_date")
+    if processor_receive_date and str(shipment.warehouse_receive_date) != processor_receive_date:
+        changes.append({"field": "Warehouse Receive Date", "old": str(shipment.processor_receive_date), "new": str(processor_receive_date)})
+
+    # Track changes for Uploaded Files (if file changes need to be tracked)
+    if context.get("files"):
+        existing_files = [
+            file.document_file.name.split("/")[-1]
+            for file in WarehouseCustomerShipmentDocuments.objects.filter(shipment=shipment)
+        ]
+        uploaded_files = [file["name"] for file in context.get("files")]
+        if set(existing_files) != set(uploaded_files):
+            changes.append({"field": "Upload File", "old": existing_files, "new": uploaded_files})
+
+    return changes
 
 def edit_warehouse_shipment(request, pk):
     context = {}
@@ -2745,22 +2988,21 @@ def edit_warehouse_shipment(request, pk):
         context["shipment"] = shipment
         
         selected_contract = shipment.contract               
-        warehouse_id = shipment.warehouse_id                  
-        
-        destination_list = Warehouse.objects.all().values('id','name')
-    
-        context.update({        
-            "warehouse_name" : shipment.warehouse_name,
-            "customer_name": shipment.customer_name ,             
+        warehouse_id = int(shipment.warehouse_id)                
+        sender_list = Warehouse.objects.all().values('id','name')
+        selected_crop = int(shipment.crop_id) if shipment.crop_id else None
+        crops = CustomerContractCropDetails.objects.filter(contract=shipment.contract)
+        context.update({           
             "contract":selected_contract,                        
             "selected_warehouse_id": warehouse_id,
-            'destination_list':destination_list
+            'destination_list':sender_list,
+            'selected_crop':selected_crop,
+            'crops':crops
                    
         })
         
         if request.method == "POST":
-            data = request.POST
-            
+            data = request.POST            
             button_value = request.POST.getlist('remove_files')                
             if button_value:
                 for file_id in button_value:
@@ -2778,7 +3020,7 @@ def edit_warehouse_shipment(request, pk):
                     "lot_number": data.get('lot_number'),                
                     "weight":data.get('weight'),
                     "gross_weight":data.get('gross_weight'),
-                    "ship_weight":data.get('ship_Weight'),
+                    "ship_weight":data.get('ship_weight'),
                     "ship_quantity":data.get('ship_quantity'),
                     "status":data.get('status'),
                     "amount_unit":data.get('amount_unit') ,   
@@ -2788,12 +3030,13 @@ def edit_warehouse_shipment(request, pk):
                     "final_leaving_date" : data.get('final_leaving_date'),
                     "border_receive_date2": data.get('border_receive_date2'),
                     "border_leaving_date2" : data.get('border_leaving_date2'),
-                    "processor_receive_date": data.get('processor_receive_date')             
+                    "processor_receive_date": data.get('processor_receive_date'),
+                    'selected_crop':data.get('crop_id'),             
                     
                 })
                 
             else:           
-
+                selected_crop = data.get('crop_id')
                 if data.get('carrier_type') == 'Truck/Trailer':
                     if data.get('gross_weight') not in [None, 'null', ' ', ''] and data.get('ship_weight') not in [None, 'null', ' ', ''] and data.get('ship_quantity') not in [None, 'null', ' ', '']:
                         ship_quantity = int(data.get('ship_quantity'))
@@ -2815,19 +3058,24 @@ def edit_warehouse_shipment(request, pk):
                         context["error_messages"] = "Please provide Weight."
                         return render(request, 'distributor/create_outbound.html', context)
                 
-                if shipment.contract.amount_unit == context.get('amount_unit'):
-                    contract_weight_left = float(shipment.contract.left_amount) - float(net_weight)
+                crop = CustomerContractCropDetails.objects.filter(id=int(selected_crop), contract=shipment.contract).first()
+                crop_name = crop.crop
+                
+                if crop.amount_unit == context.get('amount_unit'):
+                    contract_weight_left = float(crop.left_amount) - float(net_weight)
                 else:
-                    if shipment.contract.amount_unit == "LBS" and context.get('amount_unit') == "MT":
+                    if crop.amount_unit == "LBS" and context.get('amount_unit') == "MT":
                         net_weight_lbs = float(net_weight) * 2204.62
-                        contract_weight_left = float(shipment.contract.left_amount) - net_weight_lbs 
+                        contract_weight_left = float(crop.left_amount) - net_weight_lbs 
                     else:
                         net_weight_mt = float(net_weight) * 0.000453592
-                        contract_weight_left = float(shipment.contract.left_amount) - net_weight_mt 
-                
+                        contract_weight_left = float(crop.left_amount) - net_weight_mt
+                changes = find_changes_for_customer_shipment(context, shipment)
                 shipment.contract=shipment.contract                
                 shipment.carrier_type=data.get('carrier_type')
                 shipment.outbound_type=data.get('outbound_type')
+                shipment.crop_id= crop.id
+                shipment.crop = crop_name
                 shipment.purchase_order_name=data.get('purchase_order_name')
                 shipment.purchase_order_number=data.get('purchase_order_number')
                 shipment.lot_number=data.get('lot_number')
@@ -2861,7 +3109,7 @@ def edit_warehouse_shipment(request, pk):
                     shipment.border_back_receive_date=border_receive_date2
                 if data.get('border_leaving_date2') not in [None, '', ' ', 'null']:
                     border_leaving_date2 = data.get('border_leaving_date2')                    
-                    shipment.border_back_leaving_date= border_leaving_date2, 
+                    shipment.border_back_leaving_date= border_leaving_date2
                 if data.get('processor_receive_date') not in [None, '', ' ', 'null']:
                     processor_receive_date = data.get('processor_receive_date')
                     shipment.processor_receive_date=processor_receive_date
@@ -2888,15 +3136,30 @@ def edit_warehouse_shipment(request, pk):
                         
                         WarehouseShipmentLog.objects.create(
                             shipment=shipment,                           
-                            description=description
+                            description=description,
+                            changes = {'changes':changes},
+                            updated_by = request.user
                         )
                     else:
                         context["error_messages"] = f'PLease give description'
                         return render(request, 'distributor/edit_warehouse_outbound.html', context)
-            return redirect('list-warehouse-shipment')
+            return redirect('warehouse-shipment-view', pk=pk)
             
         return render(request, 'distributor/edit_warehouse_outbound.html', context)
 
+
+def generate_invoice(request, pk):    
+    try:
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role() or request.user.is_distributor or request.user.is_warehouse_manager:
+            shipment = WarehouseCustomerShipment.objects.filter(id=pk).first()
+            shipment.invoice_approval = True
+            shipment.approval_time = timezone.now()
+            shipment.save()
+        else:
+            return redirect('dashboard')        
+    except Exception as e:
+        print(str(e))     
+            
 
 @login_required()
 def warehouse_shipment_invoice(request, pk):

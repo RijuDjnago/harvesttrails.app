@@ -106,10 +106,9 @@
                                     style="width:100%">
                                     <thead>
                                         <tr style="border-bottom: 2px solid #e0e0e0;">                                            
-                                            <th width="5%">Contract Id</th>
-                                            <th width="10%">Processor</th>                                           
-                                            <th width="10%">Crop</th>
-                                            <th width="10%">Contract Amount</th>
+                                            <th width="10%">Contract Id</th>
+                                            <th width="15%">Processor</th>                                           
+                                            <th width="25%">Crop / Amount / Per Unit Rate</th>                                            
                                             <th width="10%">Contract Start Date</th>
                                             <th width="10%">Contract Period</th>
                                             <th width="10%">Contract End Date</th>
@@ -123,9 +122,12 @@
                                             {% for contract in contracts %}                                            
                                             <tr>
                                                 <td>{{contract.secret_key}}</td>
-                                                <td>{{contract.processor_entity_name}}</td>
-                                                <td>{{contract.crop}}</td>
-                                                <td>{{contract.contract_amount}} {{contract.amount_unit}}</td>
+                                                <td>{{contract.processor_entity_name}}</td>                                                
+                                                <td><ul>
+                                                    {% for crop in contract.contractCrop.all %}
+                                                        <li>{{ crop.crop }} / {{ crop.contract_amount }} {{ crop.amount_unit }} / &#36;{{crop.per_unit_rate}}</li>
+                                                    {% endfor %}
+                                                </ul></td>
                                                 <td>{{contract.contract_start_date}}</td>
                                                 <td>{{contract.contract_period}} {{contract.contract_period_choice}}</td>
                                                 <td>{{contract.end_date}}</td>

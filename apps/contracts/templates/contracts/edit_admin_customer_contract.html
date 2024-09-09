@@ -41,43 +41,114 @@
                         </div>
                     </div>
 
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="crop">Crop</label>
-                                <select name="crop" id="crop" class="form-control" {% if request.user.is_customer %}disabled{% endif %} required>
-                                    <option value="RICE" {% if contract.crop == "RICE" %}selected{% endif %}>Rice</option>
-                                    <option value="WHEAT" {% if contract.crop == "WHEAT" %}selected{% endif %}>Wheat</option>
-                                    <option value="PEANUT" {% if contract.crop == "PEANUT" %}selected{% endif %}>Peanut</option>
-                                    <option value="BEANS" {% if contract.crop == "BEANS" %}selected{% endif %}>Beans</option>
-                                </select>
+                    <div class="row">                        
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="contract_type">Contract Type</label>
+                                    <select name="contract_type" id="contract_type" class="form-control" required>
+                                        <option value="Single Crop" {% if selected_contract_type == 'Single Crop' %} selected {% endif %}>Single Crop Contract</option>
+                                        <option value="Multiple Crop" {% if selected_contract_type == 'Multiple Crop' %} selected {% endif %}>Multiple Crop Contract</option>
+                                    </select>
+                                </div>
                             </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="crop_type">Crop Type</label>
-                                <input type="text" name="crop_type" id="crop_type" class="form-control" value="{{ contract.crop_type }}" {% if request.user.is_customer %}readonly{% endif %} required>
+                            <div id="crop-fields-container">                           
+                                {% if crops %}        
+                                    {% for crop in crops %}
+                                    <div class="crop-fields-row">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label for="crop">Crop</label>
+                                                    <select name="crop[]" id="crop" class="form-control" required>
+                                                        <option value="RICE" {% if crop.crop == 'RICE' %}selected{% endif %}>Rice</option>
+                                                        <option value="WHEAT" {% if crop.crop == 'WHEAT' %}selected{% endif %}>Wheat</option>
+                                                        <option value="PEANUT" {% if crop.crop == 'PEANUT' %}selected{% endif %}>Peanut</option>
+                                                        <option value="BEANS" {% if crop.crop == 'BEANS' %}selected{% endif %}>Beans</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label for="crop_type">Crop Type</label>
+                                                    <input type="text" name="crop_type[]" id="crop_type" class="form-control" value="{{ crop.crop_type }}" required>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label for="contract_amount">Contract Amount</label>
+                                                    <div class="d-flex">
+                                                        <input type="number" name="contract_amount[]" id="contract_amount" class="form-control" value="{{ crop.contract_amount }}" required>
+                                                        <select name="amount_unit[]" class="form-select" required>
+                                                            <option value="LBS" {% if crop.amount_unit == 'LBS' %}selected{% endif %}>LBS</option>
+                                                            <option value="MT" {% if crop.amount_unit == 'MT' %}selected{% endif %}>MT</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label for="per_unit_rate">Per Unit Rate</label>
+                                                    <input type="number" step="0.01" name="per_unit_rate[]" id="per_unit_rate" class="form-control" value="{{ crop.per_unit_rate }}" required>
+                                                </div>
+                                            </div>
+                                            <input type="hidden" name="crop_id[]" value="{{ crop.id }}">
+                                            <input type="hidden" name="delete_flag[]" value="0" class="delete-flag">
+                                            <div class="col-md-12 text-end me-3">
+                                                <!-- X button for existing rows -->
+                                                <button type="button" class="btn btn-danger remove-existing-crop-btn" data-row-id="{{ crop.id }}">X</button>
+                                            </div>
+                            
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                    {% else %}
+                                    <!-- If no crops exist, show an empty crop row -->
+                                    <div class="crop-fields-row">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label for="crop">Crop</label>
+                                                    <select name="crop[]" id="crop" class="form-control" required>
+                                                        <option value="RICE">Rice</option>
+                                                        <option value="WHEAT">Wheat</option>
+                                                        <option value="PEANUT">Peanut</option>
+                                                        <option value="BEANS">Beans</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label for="crop_type">Crop Type</label>
+                                                    <input type="text" name="crop_type[]" id="crop_type" class="form-control" required>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label for="contract_amount">Contract Amount</label>
+                                                    <div class="d-flex">
+                                                        <input type="number" name="contract_amount[]" id="contract_amount" class="form-control" required>
+                                                        <select name="amount_unit[]" class="form-select" required>
+                                                            <option value="LBS">LBS</option>
+                                                            <option value="MT">MT</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label for="per_unit_rate">Per Unit Rate</label>
+                                                    <input type="number" step="0.01" name="per_unit_rate[]" id="per_unit_rate" class="form-control" required>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endif %}                            
                             </div>
-                        </div>
-
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="contract_amount">Contract Amount</label>
-                                <div class="d-flex">
-                                <input type="number" name="contract_amount" id="contract_amount" class="form-control" value="{{ contract_amount }}" {% if request.user.is_customer %}readonly{% endif %} style="margin-top:0; border-top-right-radius:0 !important; border-bottom-right-radius:0 !important" required>
-                                <select name="amount_unit" id="amount_unit" class="form-control" {% if request.user.is_customer %}disabled{% endif %} style="border-top-left-radius:0 !important; border-bottom-left-radius:0 !important; border-left:0; width:100px;" required>
-                                    <option value="LBS" {% if amount_unit == "LBS" %}selected{% endif %}>LBS</option>
-                                    <option value="MT" {% if amount_unit == "MT" %}selected{% endif %}>MT</option>
-                                </select>
+                            <div id="add-crop-btn-container" class="text-end" style="display: none;">
+                                <!-- + button for adding new rows -->
+                                <button type="button" id="add-crop-btn" class="btn btn-primary">+</button>
+                           
                             </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="per_unit_rate">Per Unit Rate</label>
-                                <input type="number" name="per_unit_rate" id="per_unit_rate" placeholder='Enter per unit rate in dollar' value="{{per_unit_rate}}" class="form-control" required>
-                            </div>
-                        </div>
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label for="contract_start_date">Contract Start Date</label>
@@ -163,8 +234,214 @@
             </div>
         </div>
     </main>
+    {% include 'footer.html' %}
 </div>
+{% endblock content %}
+{% block jquery %}
+<script>
+    // Function to toggle the Add Crop button and remove buttons based on contract type
+    function toggleAddCropButton() {
+        const contractType = document.getElementById('contract_type').value;
+        const addCropBtnContainer = document.getElementById('add-crop-btn-container');
+        const cropRows = document.querySelectorAll('.crop-fields-row');
+        const removeExistingCropBtns = document.querySelectorAll('.remove-existing-crop-btn');
 
+        if (contractType === 'Multiple Crop') {
+            // Show the Add Crop button if multiple crops
+            addCropBtnContainer.style.display = 'block';
+
+            // Add remove buttons to existing rows if they don't have one
+            cropRows.forEach(row => {
+                if (!row.querySelector('.remove-existing-crop-btn')) {
+                    addRemoveButton(row);
+                }
+            });
+
+            // Show X buttons for existing rows
+            removeExistingCropBtns.forEach(btn => {
+                btn.style.display = 'inline-block';
+            });
+        } else {
+            // Hide the Add Crop button if single crop contract
+            addCropBtnContainer.style.display = 'none';
+
+            // Remove remove buttons from existing rows
+            cropRows.forEach(row => {
+                const removeBtn = row.querySelector('.remove-existing-crop-btn');
+                if (removeBtn) {
+                    removeBtn.remove();
+                }
+            });
+        }
+    }
+
+    // Function to add a remove button to a row
+    function addRemoveButton(row) {
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'btn btn-danger remove-existing-crop-btn';
+        removeBtn.textContent = 'X';
+
+        // Create a container for the remove button and append it to the row
+        const buttonContainer = document.createElement('div');
+        buttonContainer.className = 'col-md-12 text-end me-3';
+        buttonContainer.appendChild(removeBtn);
+        row.appendChild(buttonContainer);
+
+        // Add event listener to the remove button
+        removeBtn.addEventListener('click', function () {
+            // Mark the row for deletion
+            row.querySelector('.delete-flag').value = '1';
+            row.style.display = 'none'; // Hide the row
+        });
+    }
+
+    // Event listener for the contract type change
+    document.getElementById('contract_type').addEventListener('change', toggleAddCropButton);
+
+    // Event listener for adding a new crop row
+    document.getElementById('add-crop-btn').addEventListener('click', function () {
+        // Create a new div for the crop fields
+        var newCropRow = document.createElement('div');
+        newCropRow.classList.add('crop-fields-row');
+        newCropRow.innerHTML = `
+            <div class="row">
+                <input type="hidden" name="delete_flag[]" value="0" class="delete-flag"> <!-- Hidden field to mark for deletion -->
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="crop">Crop</label>
+                        <select name="crop[]" class="form-control" required>
+                            <option value="RICE">Rice</option>
+                            <option value="WHEAT">Wheat</option>
+                            <option value="PEANUT">Peanut</option>
+                            <option value="BEANS">Beans</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="crop_type">Crop Type</label>
+                        <input type="text" name="crop_type[]" class="form-control" required>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="contract_amount">Contract Amount</label>
+                        <div class="d-flex">
+                            <input type="number" name="contract_amount[]" class="form-control" style="margin-top:0; border-top-right-radius:0 !important; border-bottom-right-radius:0 !important" required>
+                            <select name="amount_unit[]" class="form-select" style="border-top-left-radius:0 !important; border-bottom-left-radius:0 !important; border-left:0; width:100px;" required>
+                                <option value="LBS">LBS</option>
+                                <option value="MT">MT</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="per_unit_rate">Per Unit Rate</label>
+                        <input type="number" step="0.01" name="per_unit_rate[]" class="form-control" required>
+                    </div>
+                </div>
+                <div class="col-md-12 text-end me-3">
+                    <!-- - button for newly added rows -->
+                    <button type="button" class="btn btn-danger remove-crop-btn">-</button>
+                </div>
+            </div>
+        `;
+
+        // Append the new crop row
+        document.getElementById('crop-fields-container').appendChild(newCropRow);
+
+        // Add event listener to the remove button in the new row
+        newCropRow.querySelector('.remove-crop-btn').addEventListener('click', function () {
+            newCropRow.remove(); // Completely remove new row as it's not saved yet
+        });
+    });
+
+    // Event listener for remove buttons of existing rows
+    document.addEventListener('click', function(event) {
+        if (event.target.classList.contains('remove-existing-crop-btn')) {
+            const row = event.target.closest('.crop-fields-row');
+            row.querySelector('.delete-flag').value = '1';  // Mark for deletion
+            row.style.display = 'none';  // Hide the row visually
+        }
+    });
+
+    // Run the function on page load to check initial state and existing rows
+    window.addEventListener('load', toggleAddCropButton);
+</script>
+
+<script>
+    document.getElementById('contract_type').addEventListener('change', function () {
+        const contractType = this.value;
+        const cropFieldsContainer = document.getElementById('crop-fields-container');
+        const addCropBtnContainer = document.getElementById('add-crop-btn-container');
+        
+        if (contractType === 'Multiple Crop') {
+            // Show the Add Crop button if multiple crops
+            addCropBtnContainer.style.display = 'block';
+        } else {
+            // Hide the Add Crop button if single crop contract
+            addCropBtnContainer.style.display = 'none';
+        }
+    });
+
+    document.getElementById('add-crop-btn').addEventListener('click', function () {
+        // Create a new div for the crop fields
+        var newCropRow = document.createElement('div');
+        newCropRow.classList.add('crop-fields-row');
+        newCropRow.innerHTML = `
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="crop">Crop</label>
+                        <select name="crop[]" class="form-control" required>
+                            <option value="RICE">Rice</option>
+                            <option value="WHEAT">Wheat</option>
+                            <option value="PEANUT">Peanut</option>
+                            <option value="BEANS">Beans</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="crop_type">Crop Type</label>
+                        <input type="text" name="crop_type[]" class="form-control" required>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="contract_amount">Contract Amount</label>
+                        <div class="d-flex">
+                            <input type="number" name="contract_amount[]" class="form-control" style="margin-top:0; border-top-right-radius:0 !important; border-bottom-right-radius:0 !important" required>
+                            <select name="amount_unit[]" class="form-select" style="border-top-left-radius:0 !important; border-bottom-left-radius:0 !important; border-left:0; width:100px;" required>
+                                <option value="LBS">LBS</option>
+                                <option value="MT">MT</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="per_unit_rate">Per Unit Rate</label>
+                        <input type="number" step="0.01" name="per_unit_rate[]" class="form-control" required>
+                    </div>
+                </div>
+                <div class="col-md-12 text-end me-3">
+                    <button type="button" class="btn btn-danger remove-crop-btn">-</button>
+                </div>
+            </div>
+        `;
+
+        // Append the new crop row
+        document.getElementById('crop-fields-container').appendChild(newCropRow);
+
+        // Add event listener to the remove button
+        newCropRow.querySelector('.remove-crop-btn').addEventListener('click', function () {
+            newCropRow.remove();
+        });
+    });
+</script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         // Event delegation for dynamically added delete buttons
@@ -218,4 +495,4 @@
     $('#Customer-Contract-List').addClass('activeLink active-nav');
   
 </script>
-{% endblock content %}
+{% endblock jquery %}
