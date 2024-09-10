@@ -98,7 +98,7 @@
                                             </div>
                                             <div>
                                                 <!-- Button to add more sender_sku_id fields -->
-                                                <button type="button" id="add_sku_button" class="btn btn-primary mb-2 ms-2">+</button>
+                                                <button type="button" id="add_sku_button" class="btn btn-primary mb-2 ms-2" style="width: 41px;height: 24px;padding: 0;display: inline-flex;justify-content: center;align-items: center;font-size: 19px;">+</button>
                                             </div>
                                         </div>
                                         <datalist id="suggestions_1">
@@ -112,7 +112,7 @@
                                         <p id="warning" style="color:grey;"> <i>First select Contract</i> </p> 
                                         {% endif %}
                                         <!-- Add - button for removing this field -->
-                                        <button type="button" class="btn btn-danger remove_sku_button" style="display: none;">-</button>
+                                        <button type="button" class="btn btn-danger remove_sku_button" style="display: none;" style="width: 41px;height: 24px;padding: 0;display: inline-flex;justify-content: center;align-items: center;font-size: 19px;">-</button>
                                     </div>
                                 </div>
                             </div>  
@@ -314,7 +314,7 @@
                                                 <input type="hidden" name="existing_files" value="{{ file.id }}">
                                                 <span>{{file.name }}</span>
                                             </div>
-                                            <button type="button" class="remove-file btn-danger" data-file-id="{{ file.id }}"><span style="width: 25px;height: 18px;padding: 0;display: inline-flex;justify-content: center;align-items: center;font-size: 10px;"><b>X</b></span></button>
+                                            <button type="button" class="remove-file btn-danger" data-file-id="{{ file.id }}"><span style="width: 20px;height: 20px;padding: 0;display: inline-flex;justify-content: center;align-items: center;font-size: 10px;"><b>X</b></span></button>
                                         </div>
                                         {% endfor %}
                                     </div>    
@@ -329,7 +329,7 @@
                             <!-- Initial field_name and description fields -->                            
                             <div class="col-md-12 mb-2">
                                 <div class="form-group">
-                                    <label for="description_1">NOTES:</label>
+                                    <label for="description_1">**NOTES:</label>
                                     <textarea id="description_1" name="description" class="form-control" placeholder="Notes"></textarea>
                                 </div>
                             </div>                            
@@ -434,7 +434,7 @@
                         </div>
                         <div>
                             <!-- Add - button for removing this field -->
-                            <button type="button" class="btn btn-danger remove_sku_button ms-2 mb-2">-</button>
+                            <button type="button" class="btn btn-danger remove_sku_button ms-2 mb-2" style="width: 41px;height: 24px;padding: 0;display: inline-flex;justify-content: center;align-items: center;font-size: 19px;">-</button>
                         </div>
                     </div>
                 </div>

@@ -19,6 +19,15 @@
                 align-items: center;
                 font-size: 19px;
             }
+            .remove-existing-crop-btn{
+                width: 41px;
+                height: 24px;
+                padding: 0;
+                display: inline-flex;
+                justify-content: center;
+                align-items: center;
+                font-size: 15px;
+            }
         </style>
 
         {% include '_alerts.html' %}
@@ -56,6 +65,11 @@
                                     {% for crop in crops %}
                                     <div class="crop-fields-row">
                                         <div class="row">
+                                            <div class="col-md-12 text-end me-3">
+                                                <!-- X button for existing rows -->
+                                                <button type="button" class="btn btn-danger remove-existing-crop-btn" data-row-id="{{ crop.id }}">X</button>
+                                            </div>
+                            
                                             <div class="col-md-6">
                                                 <div class="form-group">
                                                     <label for="crop">Crop</label>
@@ -93,11 +107,7 @@
                                             </div>
                                             <input type="hidden" name="crop_id[]" value="{{ crop.id }}">
                                             <input type="hidden" name="delete_flag[]" value="0" class="delete-flag">
-                                            <div class="col-md-12 text-end me-3">
-                                                <!-- X button for existing rows -->
-                                                <button type="button" class="btn btn-danger remove-existing-crop-btn" data-row-id="{{ crop.id }}">X</button>
-                                            </div>
-                            
+                                            
                                         </div>
                                     </div>
                                     {% endfor %}
@@ -146,7 +156,7 @@
                             </div>
                             <div id="add-crop-btn-container" class="text-end" style="display: none;">
                                 <!-- + button for adding new rows -->
-                                <button type="button" id="add-crop-btn" class="btn btn-primary">+</button>
+                                <button type="button" id="add-crop-btn" class="btn btn-primary" style="width: 41px; height: 24px; padding: 0; display: inline-flex; justify-content: center; align-items: center; font-size: 19px;">+</button>
                            
                             </div>
                         <div class="col-md-6">
@@ -344,7 +354,7 @@
                 </div>
                 <div class="col-md-12 text-end me-3">
                     <!-- - button for newly added rows -->
-                    <button type="button" class="btn btn-danger remove-crop-btn">-</button>
+                    <button type="button" class="btn btn-danger remove-crop-btn" style="width: 41px; height: 24px; padding: 0; display: inline-flex; justify-content: center; align-items: center; font-size: 19px;">-</button>
                 </div>
             </div>
         `;
@@ -371,77 +381,7 @@
     window.addEventListener('load', toggleAddCropButton);
 </script>
 
-<script>
-    document.getElementById('contract_type').addEventListener('change', function () {
-        const contractType = this.value;
-        const cropFieldsContainer = document.getElementById('crop-fields-container');
-        const addCropBtnContainer = document.getElementById('add-crop-btn-container');
-        
-        if (contractType === 'Multiple Crop') {
-            // Show the Add Crop button if multiple crops
-            addCropBtnContainer.style.display = 'block';
-        } else {
-            // Hide the Add Crop button if single crop contract
-            addCropBtnContainer.style.display = 'none';
-        }
-    });
 
-    document.getElementById('add-crop-btn').addEventListener('click', function () {
-        // Create a new div for the crop fields
-        var newCropRow = document.createElement('div');
-        newCropRow.classList.add('crop-fields-row');
-        newCropRow.innerHTML = `
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label for="crop">Crop</label>
-                        <select name="crop[]" class="form-control" required>
-                            <option value="RICE">Rice</option>
-                            <option value="WHEAT">Wheat</option>
-                            <option value="PEANUT">Peanut</option>
-                            <option value="BEANS">Beans</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label for="crop_type">Crop Type</label>
-                        <input type="text" name="crop_type[]" class="form-control" required>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label for="contract_amount">Contract Amount</label>
-                        <div class="d-flex">
-                            <input type="number" name="contract_amount[]" class="form-control" style="margin-top:0; border-top-right-radius:0 !important; border-bottom-right-radius:0 !important" required>
-                            <select name="amount_unit[]" class="form-select" style="border-top-left-radius:0 !important; border-bottom-left-radius:0 !important; border-left:0; width:100px;" required>
-                                <option value="LBS">LBS</option>
-                                <option value="MT">MT</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label for="per_unit_rate">Per Unit Rate</label>
-                        <input type="number" step="0.01" name="per_unit_rate[]" class="form-control" required>
-                    </div>
-                </div>
-                <div class="col-md-12 text-end me-3">
-                    <button type="button" class="btn btn-danger remove-crop-btn">-</button>
-                </div>
-            </div>
-        `;
-
-        // Append the new crop row
-        document.getElementById('crop-fields-container').appendChild(newCropRow);
-
-        // Add event listener to the remove button
-        newCropRow.querySelector('.remove-crop-btn').addEventListener('click', function () {
-            newCropRow.remove();
-        });
-    });
-</script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         // Event delegation for dynamically added delete buttons

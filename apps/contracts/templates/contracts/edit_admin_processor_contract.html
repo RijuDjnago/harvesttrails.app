@@ -19,6 +19,15 @@
                 align-items: center;
                 font-size: 19px;
             }
+            .remove-existing-crop-btn{
+                width: 41px;
+                height: 24px;
+                padding: 0;
+                display: inline-flex;
+                justify-content: center;
+                align-items: center;
+                font-size: 15px;
+            }
         </style>
 
         {% include '_alerts.html' %}
@@ -122,6 +131,10 @@
                                 {% for crop in crops %}
                                 <div class="crop-fields-row">
                                     <div class="row">
+                                        <div class="col-md-12 text-end me-3">
+                                            <!-- X button for existing rows -->
+                                            <button type="button" class="btn btn-danger remove-existing-crop-btn" data-row-id="{{ crop.id }}">X</button>
+                                        </div>
                                         <div class="col-md-6">
                                             <div class="form-group">
                                                 <label for="crop">Crop</label>
@@ -159,11 +172,6 @@
                                         </div>
                                         <input type="hidden" name="crop_id[]" value="{{ crop.id }}">
                                         <input type="hidden" name="delete_flag[]" value="0" class="delete-flag">
-                                        <div class="col-md-12 text-end me-3">
-                                            <!-- X button for existing rows -->
-                                            <button type="button" class="btn btn-danger remove-existing-crop-btn" data-row-id="{{ crop.id }}">X</button>
-                                        </div>
-                        
                                     </div>
                                 </div>
                                 {% endfor %}
@@ -212,7 +220,7 @@
                         </div>
                         <div id="add-crop-btn-container" class="text-end" style="display: none;">
                             <!-- + button for adding new rows -->
-                            <button type="button" id="add-crop-btn" class="btn btn-primary">+</button>
+                            <button type="button" id="add-crop-btn" class="btn btn-primary" style="width: 41px; height: 24px; padding: 0; display: inline-flex; justify-content: center; align-items: center; font-size: 19px;">+</button>
                         </div>  
                         <div class="col-md-6">
                             <div class="form-group">
@@ -409,7 +417,7 @@
                 </div>
                 <div class="col-md-12 text-end me-3">
                     <!-- - button for newly added rows -->
-                    <button type="button" class="btn btn-danger remove-crop-btn">-</button>
+                    <button type="button" class="btn btn-danger remove-crop-btn" style="width: 41px; height: 24px; padding: 0; display: inline-flex; justify-content: center; align-items: center; font-size: 19px;">-</button>
                 </div>
             </div>
         `;
@@ -435,8 +443,6 @@
     // Run the function on page load to check initial state and existing rows
     window.addEventListener('load', toggleAddCropButton);
 </script>
-
-
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {

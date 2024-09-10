@@ -83,7 +83,10 @@ def add_distributor(request):
                         contact_name = request.POST.get('contact_name{}'.format(i))
 
                         contact_email = request.POST.get('contact_email{}'.format(i))
-                        contact_phone = request.POST.get('contact_phone{}'.format(i))
+                        country_code = request.POST.get('country_code{}'.format(i))
+                        phone_number = request.POST.get('phone_number{}'.format(i))
+                        contact_phone = country_code + phone_number
+                        print(contact_phone)
                         contact_fax = request.POST.get('contact_fax{}'.format(i))
                         if User.objects.filter(email=contact_email).exists():
                             messages.error(request,'email already exists')
@@ -149,7 +152,10 @@ def add_distributor_user(request,pk):
                         contact_name = request.POST.get('contact_name{}'.format(i))
 
                         contact_email = request.POST.get('contact_email{}'.format(i))
-                        contact_phone = request.POST.get('contact_phone{}'.format(i))
+                        country_code = request.POST.get('country_code{}'.format(i))
+                        phone_number = request.POST.get('phone_number{}'.format(i))
+                        contact_phone = country_code + phone_number
+                        print(contact_phone)
                         contact_fax = request.POST.get('contact_fax{}'.format(i))
 
                         # print('contact_name',contact_name,'contact_email',contact_email,'contact_phone',contact_phone,'contact_fax',contact_fax)
@@ -206,7 +212,10 @@ def add_distributor_user(request,pk):
                         contact_name = request.POST.get('contact_name{}'.format(i))
 
                         contact_email = request.POST.get('contact_email{}'.format(i))
-                        contact_phone = request.POST.get('contact_phone{}'.format(i))
+                        country_code = request.POST.get('country_code{}'.format(i))
+                        phone_number = request.POST.get('phone_number{}'.format(i))
+                        contact_phone = country_code + phone_number
+                        print(contact_phone)
                         contact_fax = request.POST.get('contact_fax{}'.format(i))
 
                         # print('contact_name',contact_name,'contact_email',contact_email,'contact_phone',contact_phone,'contact_fax',contact_fax)
@@ -321,7 +330,9 @@ def distributor_update(request,pk):
                     if form.is_valid():                       
                         email_update = request.POST.get('contact_email1')
                         name_update = request.POST.get('contact_name1')
-                        phone_update = request.POST.get('contact_phone1')
+                        country_code = request.POST.get('country_code1')
+                        phone_number = request.POST.get('phone_number1')
+                        phone_update = country_code + phone_number
                         fax_update = request.POST.get('contact_fax1')
                         
                         obj_id.contact_name = name_update
@@ -379,7 +390,9 @@ def distributor_update(request,pk):
                     if form.is_valid():
                         email_update = request.POST.get('contact_email1')
                         name_update = request.POST.get('contact_name1')
-                        phone_update = request.POST.get('contact_phone1')
+                        country_code = request.POST.get('country_code1')
+                        phone_number = request.POST.get('phone_number1')
+                        phone_update = country_code + phone_number
                         fax_update = request.POST.get('contact_fax1')
                         obj_id.contact_name = name_update
                         obj_id.contact_email = email_update
@@ -577,7 +590,9 @@ def add_warehouse(request):
                         # Add the single warehouse user
                         user_name = request.POST.get('user_name')
                         user_email = request.POST.get('user_email')
-                        user_phone = request.POST.get('user_phone')
+                        country_code = request.POST.get('country_code')
+                        phone_number = request.POST.get('phone_number')
+                        user_phone = country_code + phone_number
                         user_fax = request.POST.get('user_fax')
                         print(user_name, user_email, user_phone, user_fax)
 
@@ -711,8 +726,10 @@ def warehouse_update(request,pk):
                         distributor = request.POST.get('distributor')                       
                                             
                         email_update = request.POST.get('contact_email1')
-                        name_update = request.POST.get('contact_name1')
-                        phone_update = request.POST.get('contact_phone1')
+                        name_update = request.POST.get('contact_name1')                        
+                        country_code = request.POST.get('country_code1')
+                        phone_number = request.POST.get('phone_number1')
+                        phone_update = country_code + phone_number
                         fax_update = request.POST.get('contact_fax1')
                         
                         obj_id.contact_name = name_update
@@ -777,7 +794,9 @@ def warehouse_update(request,pk):
                                            
                         email_update = request.POST.get('contact_email1')
                         name_update = request.POST.get('contact_name1')
-                        phone_update = request.POST.get('contact_phone1')
+                        country_code = request.POST.get('country_code1')
+                        phone_number = request.POST.get('phone_number1')
+                        phone_update = country_code + phone_number
                         fax_update = request.POST.get('contact_fax1')
                         
                         obj_id.contact_name = name_update
@@ -955,6 +974,15 @@ def add_customer(request):
                             tax_percentage=tax_percentage
                         )
 
+                        document_names = request.POST.getlist('document_name[]')                   
+                    
+                        for name in document_names:
+                            document = CustomerDocuments(
+                                customer=customer,
+                                document_name=name                          
+                            )
+                            document.save()
+
                         # Log the action
                         log_type, log_status, log_device = "Customer", "Added", "Web"
                         log_idd, log_name = customer.id, name
@@ -977,8 +1005,11 @@ def add_customer(request):
                         logtable.save()
 
                         user_name = request.POST.get('user_name')
-                        user_email = request.POST.get('user_email')
-                        user_phone = request.POST.get('user_phone')
+                        user_email = request.POST.get('user_email')                       
+                        country_code = request.POST.get('country_code')
+                        phone_number = request.POST.get('phone_number')
+                        user_phone = country_code + phone_number
+                       
                         user_fax = request.POST.get('user_fax')
 
                         if CustomerUser.objects.filter(customer=customer).exists():                       
@@ -1101,7 +1132,9 @@ def customer_update(request,pk):
                                            
                         email_update = request.POST.get('contact_email1')
                         name_update = request.POST.get('contact_name1')
-                        phone_update = request.POST.get('contact_phone1')
+                        country_code = request.POST.get('country_code1')
+                        phone_number = request.POST.get('phone_number1')
+                        phone_update = country_code + phone_number
                         fax_update = request.POST.get('contact_fax1')
                         
                         obj_id.contact_name = name_update
@@ -1126,6 +1159,7 @@ def customer_update(request,pk):
                             form.save()
                             log_email = obj_id.contact_email
                         form.save()
+                        
                         # 07-04-23 Log Table
                         log_type, log_status, log_device = "CustomerUser", "Edited", "Web"
                         log_idd, log_name = obj_id.id, name_update
@@ -1160,7 +1194,9 @@ def customer_update(request,pk):
                     if form.is_valid():
                         email_update = request.POST.get('contact_email1')
                         name_update = request.POST.get('contact_name1')
-                        phone_update = request.POST.get('contact_phone1')
+                        country_code = request.POST.get('country_code1')
+                        phone_number = request.POST.get('phone_number1')
+                        phone_update = country_code + phone_number
                         fax_update = request.POST.get('contact_fax1')
                         obj_id.contact_name = name_update
                         obj_id.contact_email = email_update
@@ -1298,6 +1334,80 @@ def customer_change_password(request,pk):
         return render (request, 'distributor/customer_change_password.html', context)
 
 
+def customer_upload_documents(request, pk):
+    context = {}
+    try:
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role() :            
+            customer = Customer.objects.filter(id=pk).first()
+            documents = CustomerDocuments.objects.filter(customer=customer)
+            context["documents"] = documents
+            print(customer)
+            if request.method == "POST":    
+                delete_document_ids = request.POST.getlist('delete_document_ids[]')
+                print(delete_document_ids)
+                for document_id in delete_document_ids:
+                    try:
+                        document = CustomerDocuments.objects.get(id=document_id)
+                        document.delete()  # Delete the document from the database
+                    except CustomerDocuments.DoesNotExist:
+                        pass
+
+                document_ids =  request.POST.getlist('document_ids')
+                for document_id in document_ids:
+                    document_status = f'document_status_{document_id}'
+                    if document_status in request.POST:                            
+                        document_stat = request.POST.get(document_status)                         
+                        
+                        document = CustomerDocuments.objects.filter(id=document_id).first()
+                        document.document_status = document_stat  # Assign the file to the FileField
+                        document.save()                                
+                         
+                document_names = request.POST.getlist('document_name[]')  
+                if document_names:                     
+                    for i, name in enumerate(document_names):
+                        # Check if there's a corresponding document ID
+                        if i < len(document_ids):
+                            document_id = document_ids[i]
+                            # Update existing document
+                            document = CustomerDocuments.objects.filter(id=document_id).first()
+                            if document:
+                                document.document_name = name  # Update the name
+                                document.save()
+                        else:
+                            # Create new document if the document ID does not exist
+                            CustomerDocuments.objects.create(customer=customer, document_name=name)
+
+                return redirect('list-customer')
+            return render(request, 'distributor/customer_document_upload.html', context)
+        elif request.user.is_customer :  
+            customer = Customer.objects.filter(id=pk).first()
+            documents = CustomerDocuments.objects.filter(customer=customer)
+            context["documents"] = documents
+            print(customer)
+            if request.method == "POST": 
+                document_ids = request.POST.getlist('document_ids')        
+                for document_id in document_ids:
+                    file_field_name = f'document_file_{document_id}'
+                    
+                    if file_field_name in request.FILES:
+                        uploaded_file = request.FILES[file_field_name]  
+                        try:
+                            document = CustomerDocuments.objects.get(id=document_id)
+                            document.file = uploaded_file  
+                            document.save()
+                            
+                        except CustomerDocuments.DoesNotExist:
+                            
+                            pass
+                return redirect('list-customer')
+            return render(request, 'distributor/customer_document_upload.html', context)
+        else:
+            return redirect('dashboard')
+    except Exception as e:
+        context["error_messages"] = str(e)
+        return render(request, 'distributor/customer_document_upload.html', context)  
+
+
 @login_required()
 def create_processor_shipment(request):
     context = {}
@@ -1341,7 +1451,7 @@ def create_processor_shipment(request):
                         "selected_destination": destination_type,
                         "weight":data.get('weight'),
                         "gross_weight":data.get('gross_weight'),
-                        "ship_weight":data.get('ship_Weight'),
+                        "ship_weight":data.get('ship_weight'),
                         "ship_quantity":data.get('ship_quantity'),
                         "status":data.get('status'),
                         "amount_unit":data.get('amount_unit') , 
@@ -1514,7 +1624,7 @@ def create_processor_shipment(request):
                         "selected_destination": destination_type,
                         "weight":data.get('weight'),
                         "gross_weight":data.get('gross_weight'),
-                        "ship_weight":data.get('ship_Weight'),
+                        "ship_weight":data.get('ship_weight'),
                         "ship_quantity":data.get('ship_quantity'),
                         "status":data.get('status'),
                         "amount_unit":data.get('amount_unit') , 
@@ -1686,7 +1796,7 @@ def create_processor_shipment(request):
                         "selected_destination": destination_type,
                         "weight":data.get('weight'),
                         "gross_weight":data.get('gross_weight'),
-                        "ship_weight":data.get('ship_Weight'),
+                        "ship_weight":data.get('ship_weight'),
                         "ship_quantity":data.get('ship_quantity'),
                         "status":data.get('status'),
                         "amount_unit":data.get('amount_unit') , 
@@ -2017,87 +2127,106 @@ def processor_shipment_view(request, pk):
 
 
 def find_changes(context, shipment):
-    changes = []
+    changes = []    
     
-    # Track changes for Carrier ID
     carrier_id = context.get("carrier_id")
     if carrier_id:
         carrier = CarrierDetails.objects.filter(shipment=shipment).first()
         if carrier and carrier.carrier_id != carrier_id:
             changes.append({"field": "Carrier ID", "old": carrier.carrier_id, "new": carrier_id})
-
-    # Track changes for Purchase Order Name
+   
     purchase_order_name = context.get("purchase_order_name")
     if purchase_order_name and shipment.purchase_order_name != purchase_order_name:
         changes.append({"field": "Purchase Order Name", "old": shipment.purchase_order_name, "new": purchase_order_name})
-
-    # Track changes for Purchase Order Number
+    
     purchase_order_number = context.get("purchase_order_number")
     if purchase_order_number and shipment.purchase_order_number != purchase_order_number:
         changes.append({"field": "Purchase Order Number", "old": shipment.purchase_order_number, "new": purchase_order_number})
-
-    # Track changes for Lot Number
+    
     lot_number = context.get("lot_number")
     if lot_number and shipment.lot_number != lot_number:
         changes.append({"field": "Lot Number", "old": shipment.lot_number, "new": lot_number})
 
-    # Track changes for Gross Weight
+    net_weight = context.get("net_weight")
+    if net_weight and shipment.net_weight:
+        if shipment.net_weight and float(shipment.net_weight) != float(net_weight):
+            changes.append({"field": "Net Weight", "old": shipment.net_weight, "new": net_weight})
+
+    weight = context.get("weight")
+    if weight and shipment.net_weight:
+        if shipment.net_weight and float(shipment.net_weight) != float(weight):
+            changes.append({"field": "Net Weight", "old": shipment.net_weight, "new": weight})
+    
     gross_weight = context.get("gross_weight")
     if gross_weight and shipment.gross_weight:
         if shipment.gross_weight and float(shipment.gross_weight) != float(gross_weight):
             changes.append({"field": "Gross Weight", "old": shipment.gross_weight, "new": gross_weight})
-
-    # Track changes for Ship Weight
+   
     ship_weight = context.get("ship_weight")
-    if ship_weight and shipment.ship_weight != float(ship_weight):
-        changes.append({"field": "Ship Weight", "old": shipment.ship_weight, "new": ship_weight})
-
-    # Track changes for Ship Quantity
+    if ship_weight is not None:  
+        if shipment.ship_weight is not None: 
+            if float(shipment.ship_weight) != float(ship_weight):
+                changes.append({"field": "Ship Weight", "old": shipment.ship_weight, "new": ship_weight})
+        else:            
+            changes.append({"field": "Ship Weight","old": None, "new": ship_weight})
+    
     ship_quantity = context.get("ship_quantity")
-    if ship_quantity and shipment.ship_quantity != int(ship_quantity):
+    if ship_quantity and int(shipment.ship_quantity) != int(ship_quantity):
         changes.append({"field": "Ship Quantity", "old": shipment.ship_quantity, "new": ship_quantity})
-
-    # Track changes for Status
+   
     status = context.get("status")
     if status and shipment.status != status:
         changes.append({"field": "Status", "old": shipment.status, "new": status})
-
-    # Track changes for Border Receive Date
+   
     border_receive_date = context.get("border_receive_date")
-    if border_receive_date and str(shipment.border_receive_date) != border_receive_date:
-        changes.append({"field": "Border Receive Date", "old": str(shipment.border_receive_date), "new": str(border_receive_date)})
-
-    # Track changes for Border Leaving Date
+    if border_receive_date:
+        border_receive_date_parsed = datetime.strptime(border_receive_date, '%Y-%m-%d').date()
+        stored_border_receive_date = shipment.border_receive_date.date() if shipment.border_receive_date else None
+        if stored_border_receive_date != border_receive_date_parsed:
+            changes.append({"field": "Border Receive Date", "old": str(stored_border_receive_date), "new": str(border_receive_date_parsed)})
+    
     border_leaving_date = context.get("border_leaving_date")
-    if border_leaving_date and str(shipment.border_leaving_date) != border_leaving_date:
-        changes.append({"field": "Border Leaving Date", "old": str(shipment.border_leaving_date), "new": str(border_leaving_date)})
-
-    # Track changes for Warehouse/Customer Receive Date
+    if border_leaving_date:
+        border_leaving_date_parsed = datetime.strptime(border_leaving_date, '%Y-%m-%d').date()
+        stored_border_leaving_date = shipment.border_leaving_date.date() if shipment.border_leaving_date else None
+        if stored_border_leaving_date != border_leaving_date_parsed:
+            changes.append({"field": "Border Leaving Date", "old": str(stored_border_leaving_date), "new": str(border_leaving_date_parsed)})
+    
     final_receive_date = context.get("final_receive_date")
-    if final_receive_date and str(shipment.distributor_receive_date) != final_receive_date:
-        changes.append({"field": "Warehouse/Customer Receive Date", "old": str(shipment.distributor_receive_date), "new": str(final_receive_date)})
-
-    # Track changes for Warehouse/Customer Leaving Date
+    if final_receive_date:
+        final_receive_date_parsed = datetime.strptime(final_receive_date, '%Y-%m-%d').date()
+        stored_receive_date = shipment.distributor_receive_date.date() if shipment.distributor_receive_date else None
+        if stored_receive_date != final_receive_date_parsed:
+            changes.append({"field": "Warehouse/Customer Receive Date", "old": str(stored_receive_date), "new": str(final_receive_date_parsed)})
+   
     final_leaving_date = context.get("final_leaving_date")
-    if final_leaving_date and str(shipment.distributor_leaving_date) != final_leaving_date:
-        changes.append({"field": "Warehouse/Customer Leaving Date", "old": str(shipment.distributor_leaving_date), "new": str(final_leaving_date)})
-
-    # Track changes for Border Receive Date Back
+    if final_leaving_date:
+        final_leaving_date_parsed = datetime.strptime(final_leaving_date, '%Y-%m-%d').date()
+        stored_leaving_date = shipment.distributor_leaving_date.date() if shipment.distributor_leaving_date else None
+        if stored_leaving_date != final_leaving_date_parsed:
+            changes.append({"field": "Warehouse/Customer Leaving Date", "old": str(stored_leaving_date), "new": str(final_leaving_date_parsed)})
+    
     border_receive_date2 = context.get("border_receive_date2")
-    if border_receive_date2 and str(shipment.border_back_receive_date) != border_receive_date2:
-        changes.append({"field": "Border Receive Date Back", "old": str(shipment.border_back_receive_date), "new": str(border_receive_date2)})
-
-    # Track changes for Border Leaving Date Back
+    if border_receive_date2:
+        border_receive_date2_parsed = datetime.strptime(border_receive_date2, '%Y-%m-%d').date()
+        stored_border_receive_date2 = shipment.border_back_receive_date.date() if shipment.border_back_receive_date else None
+        if stored_border_receive_date2 != border_receive_date2_parsed:
+            changes.append({"field": "Border Receive Date Back", "old": str(stored_border_receive_date2), "new": str(border_receive_date2_parsed)})
+  
     border_leaving_date2 = context.get("border_leaving_date2")
-    if border_leaving_date2 and str(shipment.border_back_leaving_date) != border_leaving_date2:
-        changes.append({"field": "Border Leaving Date Back", "old": str(shipment.border_back_leaving_date), "new": str(border_leaving_date2)})
-
-    # Track changes for Processor Receive Date
+    if border_leaving_date2:
+        border_leaving_date2_parsed = datetime.strptime(border_leaving_date2, '%Y-%m-%d').date()
+        stored_border_leaving_date2 = shipment.border_back_leaving_date.date() if shipment.border_back_leaving_date else None
+        if stored_border_leaving_date2 != border_leaving_date2_parsed:
+            changes.append({"field": "Border Leaving Date Back", "old": str(stored_border_leaving_date2), "new": str(border_leaving_date2_parsed)})
+   
     processor_receive_date = context.get("processor_receive_date")
-    if processor_receive_date and str(shipment.processor_receive_date) != processor_receive_date:
-        changes.append({"field": "Processor Receive Date", "old": str(shipment.processor_receive_date), "new": str(processor_receive_date)})
-
-    # Track changes for Uploaded Files (if file changes need to be tracked)
+    if processor_receive_date:
+        processor_receive_date_parsed = datetime.strptime(processor_receive_date, '%Y-%m-%d').date()
+        stored_processor_receive_date = shipment.processor_receive_date.date() if shipment.processor_receive_date else None
+        if stored_processor_receive_date != processor_receive_date_parsed:
+            changes.append({"field": "Processor Receive Date", "old": str(stored_processor_receive_date), "new": str(processor_receive_date_parsed)})
+    
     if context.get("files"):
         existing_files = [
             file.document_file.name.split("/")[-1]
@@ -2178,7 +2307,7 @@ def edit_processor_shipment(request, pk):
                     "selected_destination": destination_type,
                     "weight":data.get('weight'),
                     "gross_weight":data.get('gross_weight'),
-                    "ship_weight":data.get('ship_Weight'),
+                    "ship_weight":data.get('ship_weight'),
                     "ship_quantity":data.get('ship_quantity'),
                     "status":data.get('status'),
                     "amount_unit":data.get('amount_unit') , 
@@ -2205,7 +2334,7 @@ def edit_processor_shipment(request, pk):
                         context['destination_list'] = Warehouse.objects.all().values('id','name')
                     if destination_type == 'customer':
                         context['destination_list'] = Customer.objects.all().values('id','name')
-                    return render(request, 'distributor/create_outbound.html', context)
+                    return render(request, 'distributor/edit_outbound.html', context)
                 else:
                     if destination_type == 'warehouse':
                         warehouse_id = Warehouse.objects.get(id=int(context.get('destination_id'))).id
@@ -2227,7 +2356,7 @@ def edit_processor_shipment(request, pk):
                             net_weight = gross_weight - (ship_weight * ship_quantity)
                         else:
                             context["error_messages"] = "Please provide Gross weight, Ship weight and Ship quantity."
-                            return render(request, 'distributor/create_outbound.html', context)
+                            return render(request, 'distributor/edit_outbound.html', context)
                                 
                     elif data.get('carrier_type') == 'Rail Car':
                         
@@ -2238,7 +2367,7 @@ def edit_processor_shipment(request, pk):
                             net_weight = float(data.get('weight'))
                         else:
                             context["error_messages"] = "Please provide Weight."
-                            return render(request, 'distributor/create_outbound.html', context)
+                            return render(request, 'distributor/edit_outbound.html', context)
                     crop = CropDetails.objects.filter(id=int(data.get('crop_id')), contract=shipment.contract).first()
                     crop_name = crop.crop
                     if crop.amount_unit == context.get('amount_unit'):
@@ -2329,7 +2458,7 @@ def edit_processor_shipment(request, pk):
                         else:
                             context["error_messages"] = f'PLease give description'
                             return render(request, 'distributor/edit_outbound.html', context)
-                return redirect('list-processor-shipment')
+                return redirect('view-processor-shipment', pk=pk)
             
             return render(request, 'distributor/edit_outbound.html', context)
                         
@@ -2373,7 +2502,7 @@ def create_warehouse_shipment(request):
                             "lot_number": data.get('lot_number'),                        
                             "weight":data.get('weight'),
                             "gross_weight":data.get('gross_weight'),
-                            "ship_weight":data.get('ship_Weight'),
+                            "ship_weight":data.get('ship_weight'),
                             "ship_quantity":data.get('ship_quantity'),
                             "status":data.get('status'),
                             "amount_unit":data.get('amount_unit') , 
@@ -2395,7 +2524,7 @@ def create_warehouse_shipment(request):
                                 net_weight = gross_weight - (ship_weight * ship_quantity)
                             else:
                                 context["error_messages"] = "Please provide Gross weight, Ship weight and Ship quantity."
-                                return render(request, 'distributor/create_outbound.html', context)
+                                return render(request, 'distributor/create_warehouse_outbound.html', context)
                             
                         elif data.get('carrier_type') == 'Rail Car':
                             
@@ -2406,7 +2535,7 @@ def create_warehouse_shipment(request):
                                 net_weight = float(data.get('weight'))
                             else:
                                 context["error_messages"] = "Please provide Weight."
-                                return render(request, 'distributor/create_outbound.html', context)
+                                return render(request, 'distributor/create_warehouse_outbound.html', context)
                         
                         crop = CustomerContractCropDetails.objects.filter(id=int(selected_crop), contract=contract).first()
                         crop_name = crop.crop
@@ -2502,7 +2631,7 @@ def create_warehouse_shipment(request):
                             "lot_number": data.get('lot_number'),                        
                             "weight":data.get('weight'),
                             "gross_weight":data.get('gross_weight'),
-                            "ship_weight":data.get('ship_Weight'),
+                            "ship_weight":data.get('ship_weight'),
                             "ship_quantity":data.get('ship_quantity'),
                             "status":data.get('status'),
                             "amount_unit":data.get('amount_unit') , 
@@ -2631,7 +2760,7 @@ def create_warehouse_shipment(request):
                             "lot_number": data.get('lot_number'),                        
                             "weight":data.get('weight'),
                             "gross_weight":data.get('gross_weight'),
-                            "ship_weight":data.get('ship_Weight'),
+                            "ship_weight":data.get('ship_weight'),
                             "ship_quantity":data.get('ship_quantity'),
                             "status":data.get('status'),
                             "amount_unit":data.get('amount_unit') , 
@@ -2870,88 +2999,109 @@ def warehouse_shipment_view(request, pk):
         context["error_messages"] = str(e)
         return render(request, 'distributor/view_warehouse_outbound.html', context)
 
+
 def find_changes_for_customer_shipment(context, shipment):
     changes = []
     print(context)
-    # Track changes for Carrier ID
+   
     carrier_id = context.get("carrier_id")
     if carrier_id:
         carrier = CarrierDetails2.objects.filter(shipment=shipment).first()
         if carrier and carrier.carrier_id != carrier_id:
             changes.append({"field": "Carrier ID", "old": carrier.carrier_id, "new": carrier_id})
 
-    # Track changes for Purchase Order Name
     purchase_order_name = context.get("purchase_order_name")
     if purchase_order_name and shipment.purchase_order_name != purchase_order_name:
         changes.append({"field": "Purchase Order Name", "old": shipment.purchase_order_name, "new": purchase_order_name})
 
-    # Track changes for Purchase Order Number
     purchase_order_number = context.get("purchase_order_number")
     if purchase_order_number and shipment.purchase_order_number != purchase_order_number:
         changes.append({"field": "Purchase Order Number", "old": shipment.purchase_order_number, "new": purchase_order_number})
-
-    # Track changes for Lot Number
+   
     lot_number = context.get("lot_number")
     if lot_number and shipment.lot_number != lot_number:
         changes.append({"field": "Lot Number", "old": shipment.lot_number, "new": lot_number})
 
-    # Track changes for Gross Weight
+    net_weight = context.get("net_weight")
+    if net_weight and shipment.net_weight:
+        if shipment.net_weight and float(shipment.net_weight) != float(net_weight):
+            changes.append({"field": "Net Weight", "old": shipment.net_weight, "new": net_weight})
+
+    weight = context.get("weight")
+    if weight and shipment.net_weight:
+        if shipment.net_weight and float(shipment.net_weight) != float(weight):
+            changes.append({"field": "Net Weight", "old": shipment.net_weight, "new": weight})
+   
     gross_weight = context.get("gross_weight")
     if gross_weight and shipment.gross_weight:
         if shipment.gross_weight and float(shipment.gross_weight) != float(gross_weight):
             changes.append({"field": "Gross Weight", "old": shipment.gross_weight, "new": gross_weight})
-
-    # Track changes for Ship Weight
+    
     ship_weight = context.get("ship_weight")
-    if ship_weight and shipment.ship_weight != float(ship_weight):
-        changes.append({"field": "Ship Weight", "old": shipment.ship_weight, "new": ship_weight})
-
-    # Track changes for Ship Quantity
+    if ship_weight is not None:  
+        if shipment.ship_weight is not None: 
+            if float(shipment.ship_weight) != float(ship_weight):
+                changes.append({"field": "Ship Weight", "old": shipment.ship_weight, "new": ship_weight})
+        else:            
+            changes.append({"field": "Ship Weight","old": None, "new": ship_weight})
+    
     ship_quantity = context.get("ship_quantity")
-    if ship_quantity and shipment.ship_quantity != int(ship_quantity):
+    if ship_quantity and int(shipment.ship_quantity) != int(ship_quantity):
         changes.append({"field": "Ship Quantity", "old": shipment.ship_quantity, "new": ship_quantity})
-
-    # Track changes for Status
+    
     status = context.get("status")
     if status and shipment.status != status:
         changes.append({"field": "Status", "old": shipment.status, "new": status})
-
-    # Track changes for Border Receive Date
+    
     border_receive_date = context.get("border_receive_date")
-    if border_receive_date and str(shipment.border_receive_date) != border_receive_date:
-        changes.append({"field": "Border Receive Date", "old": str(shipment.border_receive_date), "new": str(border_receive_date)})
-
-    # Track changes for Border Leaving Date
+    if border_receive_date:
+        border_receive_date_parsed = datetime.strptime(border_receive_date, '%Y-%m-%d').date()
+        stored_border_receive_date = shipment.border_receive_date.date() if shipment.border_receive_date else None
+        if stored_border_receive_date != border_receive_date_parsed:
+            changes.append({"field": "Border Receive Date", "old": str(stored_border_receive_date), "new": str(border_receive_date_parsed)})
+   
     border_leaving_date = context.get("border_leaving_date")
-    if border_leaving_date and str(shipment.border_leaving_date) != border_leaving_date:
-        changes.append({"field": "Border Leaving Date", "old": str(shipment.border_leaving_date), "new": str(border_leaving_date)})
-
-    # Track changes for Warehouse/Customer Receive Date
+    if border_leaving_date:
+        border_leaving_date_parsed = datetime.strptime(border_leaving_date, '%Y-%m-%d').date()
+        stored_border_leaving_date = shipment.border_leaving_date.date() if shipment.border_leaving_date else None
+        if stored_border_leaving_date != border_leaving_date_parsed:
+            changes.append({"field": "Border Leaving Date", "old": str(stored_border_leaving_date), "new": str(border_leaving_date_parsed)})
+    
     final_receive_date = context.get("final_receive_date")
-    if final_receive_date and str(shipment.customer_receive_date) != final_receive_date:
-        changes.append({"field": "Customer Receive Date", "old": str(shipment.customer_receive_date), "new": str(final_receive_date)})
-
-    # Track changes for Warehouse/Customer Leaving Date
+    if final_receive_date:
+        final_receive_date_parsed = datetime.strptime(final_receive_date, '%Y-%m-%d').date()
+        stored_receive_date = shipment.customer_receive_date.date() if shipment.customer_receive_date else None
+        if stored_receive_date != final_receive_date_parsed:
+            changes.append({"field": "Customer Receive Date", "old": str(stored_receive_date), "new": str(final_receive_date_parsed)})
+   
     final_leaving_date = context.get("final_leaving_date")
-    if final_leaving_date and str(shipment.customer_leaving_date) != final_leaving_date:
-        changes.append({"field": "Customer Leaving Date", "old": str(shipment.customer_leaving_date), "new": str(final_leaving_date)})
-
-    # Track changes for Border Receive Date Back
+    if final_leaving_date:
+        final_leaving_date_parsed = datetime.strptime(final_leaving_date, '%Y-%m-%d').date()
+        stored_leaving_date = shipment.customer_leaving_date.date() if shipment.customer_leaving_date else None
+        if stored_leaving_date != final_leaving_date_parsed:
+            changes.append({"field": "Customer Leaving Date", "old": str(stored_leaving_date), "new": str(final_leaving_date_parsed)})
+    
     border_receive_date2 = context.get("border_receive_date2")
-    if border_receive_date2 and str(shipment.border_back_receive_date) != border_receive_date2:
-        changes.append({"field": "Border Receive Date Back", "old": str(shipment.border_back_receive_date), "new": str(border_receive_date2)})
-
-    # Track changes for Border Leaving Date Back
+    if border_receive_date2:
+        border_receive_date2_parsed = datetime.strptime(border_receive_date2, '%Y-%m-%d').date()
+        stored_border_receive_date2 = shipment.border_back_receive_date.date() if shipment.border_back_receive_date else None
+        if stored_border_receive_date2 != border_receive_date2_parsed:
+            changes.append({"field": "Border Receive Date Back", "old": str(stored_border_receive_date2), "new": str(border_receive_date2_parsed)})
+    
     border_leaving_date2 = context.get("border_leaving_date2")
-    if border_leaving_date2 and str(shipment.border_back_leaving_date) != border_leaving_date2:
-        changes.append({"field": "Border Leaving Date Back", "old": str(shipment.border_back_leaving_date), "new": str(border_leaving_date2)})
-
-    # Track changes for Processor Receive Date
+    if border_leaving_date2:
+        border_leaving_date2_parsed = datetime.strptime(border_leaving_date2, '%Y-%m-%d').date()
+        stored_border_leaving_date2 = shipment.border_back_leaving_date.date() if shipment.border_back_leaving_date else None
+        if stored_border_leaving_date2 != border_leaving_date2_parsed:
+            changes.append({"field": "Border Leaving Date Back", "old": str(stored_border_leaving_date2), "new": str(border_leaving_date2_parsed)})
+   
     processor_receive_date = context.get("processor_receive_date")
-    if processor_receive_date and str(shipment.warehouse_receive_date) != processor_receive_date:
-        changes.append({"field": "Warehouse Receive Date", "old": str(shipment.processor_receive_date), "new": str(processor_receive_date)})
-
-    # Track changes for Uploaded Files (if file changes need to be tracked)
+    if processor_receive_date:
+        processor_receive_date_parsed = datetime.strptime(processor_receive_date, '%Y-%m-%d').date()
+        stored_processor_receive_date = shipment.warehouse_receive_date.date() if shipment.warehouse_receive_date else None
+        if stored_processor_receive_date != processor_receive_date_parsed:
+            changes.append({"field": "Warehouse Receive Date", "old": str(stored_processor_receive_date), "new": str(processor_receive_date_parsed)})
+    
     if context.get("files"):
         existing_files = [
             file.document_file.name.split("/")[-1]
@@ -2962,6 +3112,7 @@ def find_changes_for_customer_shipment(context, shipment):
             changes.append({"field": "Upload File", "old": existing_files, "new": uploaded_files})
 
     return changes
+
 
 def edit_warehouse_shipment(request, pk):
     context = {}
@@ -3011,138 +3162,138 @@ def edit_warehouse_shipment(request, pk):
                         file_obj.delete()
                     except WarehouseCustomerShipmentDocuments.DoesNotExist:
                         pass          
-            if not data.get('save'):
-                context.update({                    
-                    "carrier_type": data.get('carrier_type'),                    
-                    "outbound_type": data.get('outbound_type'),
-                    "purchase_order_name":data.get('purchase_order_name'),
-                    "purchase_order_number": data.get('purchase_order_number'),
-                    "lot_number": data.get('lot_number'),                
-                    "weight":data.get('weight'),
-                    "gross_weight":data.get('gross_weight'),
-                    "ship_weight":data.get('ship_weight'),
-                    "ship_quantity":data.get('ship_quantity'),
-                    "status":data.get('status'),
-                    "amount_unit":data.get('amount_unit') ,   
-                    "final_receive_date": data.get('final_receive_date'),
-                    "border_receive_date" : data.get('border_receive_date'),
-                    "border_leaving_date": data.get('border_leaving_date'),
-                    "final_leaving_date" : data.get('final_leaving_date'),
-                    "border_receive_date2": data.get('border_receive_date2'),
-                    "border_leaving_date2" : data.get('border_leaving_date2'),
-                    "processor_receive_date": data.get('processor_receive_date'),
-                    'selected_crop':data.get('crop_id'),             
-                    
-                })
+            
+            context.update({                    
+                "carrier_type": data.get('carrier_type'),                    
+                "outbound_type": data.get('outbound_type'),
+                "purchase_order_name":data.get('purchase_order_name'),
+                "purchase_order_number": data.get('purchase_order_number'),
+                "lot_number": data.get('lot_number'),                
+                "weight":data.get('weight'),
+                "gross_weight":data.get('gross_weight'),
+                "ship_weight":data.get('ship_weight'),
+                "ship_quantity":data.get('ship_quantity'),
+                "status":data.get('status'),
+                "amount_unit":data.get('amount_unit') ,   
+                "final_receive_date": data.get('final_receive_date'),
+                "border_receive_date" : data.get('border_receive_date'),
+                "border_leaving_date": data.get('border_leaving_date'),
+                "final_leaving_date" : data.get('final_leaving_date'),
+                "border_receive_date2": data.get('border_receive_date2'),
+                "border_leaving_date2" : data.get('border_leaving_date2'),
+                "processor_receive_date": data.get('processor_receive_date'),
+                'selected_crop':data.get('crop_id'),             
                 
-            else:           
-                selected_crop = data.get('crop_id')
-                if data.get('carrier_type') == 'Truck/Trailer':
-                    if data.get('gross_weight') not in [None, 'null', ' ', ''] and data.get('ship_weight') not in [None, 'null', ' ', ''] and data.get('ship_quantity') not in [None, 'null', ' ', '']:
-                        ship_quantity = int(data.get('ship_quantity'))
-                        gross_weight = float(data.get('gross_weight'))
-                        ship_weight = float(data.get('ship_weight'))                                    
-                        net_weight = gross_weight - (ship_weight * ship_quantity)
-                    else:
-                        context["error_messages"] = "Please provide Gross weight, Ship weight and Ship quantity."
-                        return render(request, 'distributor/create_outbound.html', context)
+            })            
                     
-                elif data.get('carrier_type') == 'Rail Car':
-                    
-                    gross_weight = 0
-                    ship_quantity = 1
-                    ship_weight = 0
-                    if data.get('weight') not in [None, 'null', ' ', '']:
-                        net_weight = float(data.get('weight'))
-                    else:
-                        context["error_messages"] = "Please provide Weight."
-                        return render(request, 'distributor/create_outbound.html', context)
-                
-                crop = CustomerContractCropDetails.objects.filter(id=int(selected_crop), contract=shipment.contract).first()
-                crop_name = crop.crop
-                
-                if crop.amount_unit == context.get('amount_unit'):
-                    contract_weight_left = float(crop.left_amount) - float(net_weight)
+            selected_crop = data.get('crop_id')
+            if data.get('carrier_type') == 'Truck/Trailer':
+                if data.get('gross_weight') not in [None, 'null', ' ', ''] and data.get('ship_weight') not in [None, 'null', ' ', ''] and data.get('ship_quantity') not in [None, 'null', ' ', '']:
+                    ship_quantity = int(data.get('ship_quantity'))
+                    gross_weight = float(data.get('gross_weight'))
+                    ship_weight = float(data.get('ship_weight'))                                    
+                    net_weight = gross_weight - (ship_weight * ship_quantity)
                 else:
-                    if crop.amount_unit == "LBS" and context.get('amount_unit') == "MT":
-                        net_weight_lbs = float(net_weight) * 2204.62
-                        contract_weight_left = float(crop.left_amount) - net_weight_lbs 
-                    else:
-                        net_weight_mt = float(net_weight) * 0.000453592
-                        contract_weight_left = float(crop.left_amount) - net_weight_mt
-                changes = find_changes_for_customer_shipment(context, shipment)
-                shipment.contract=shipment.contract                
-                shipment.carrier_type=data.get('carrier_type')
-                shipment.outbound_type=data.get('outbound_type')
-                shipment.crop_id= crop.id
-                shipment.crop = crop_name
-                shipment.purchase_order_name=data.get('purchase_order_name')
-                shipment.purchase_order_number=data.get('purchase_order_number')
-                shipment.lot_number=data.get('lot_number')
-                shipment.gross_weight=gross_weight
-                shipment.net_weight=net_weight
-                shipment.weight_unit=data.get('amount_unit')
-                shipment.ship_quantity=ship_quantity
-                shipment.ship_weight=ship_weight
-                shipment.contract_weight_left=contract_weight_left
-                shipment.status= data.get('status')
-                shipment.customer_id=shipment.contract.customer_id
-                shipment.warehouse_id=warehouse_id
-                shipment.customer_name=shipment.customer_name
-                shipment.warehouse_name=shipment.warehouse_name
-                                                                        
-                shipment.save()
-                if data.get('border_receive_date') not in [None, '', ' ', 'null']:
-                    border_receive_date = data.get('border_receive_date')
-                    shipment.border_receive_date= border_receive_date
-                if data.get('border_leaving_date') not in [None, '', ' ', 'null']:
-                    border_leaving_date = data.get('border_leaving_date')
-                    shipment.border_leaving_date=border_leaving_date
-                if data.get('final_receive_date') not in [None, '', ' ', 'null']:
-                    final_receive_date = data.get('final_receive_date')
-                    shipment.distributor_receive_date=final_receive_date
-                if data.get('final_leaving_date') not in [None, '', ' ', 'null']:
-                    final_leaving_date = data.get('final_leaving_date')
-                    shipment.distributor_leaving_date=final_leaving_date
-                if data.get('border_receive_date2') not in [None, '', ' ', 'null']:
-                    border_receive_date2 = data.get('border_receive_date2')
-                    shipment.border_back_receive_date=border_receive_date2
-                if data.get('border_leaving_date2') not in [None, '', ' ', 'null']:
-                    border_leaving_date2 = data.get('border_leaving_date2')                    
-                    shipment.border_back_leaving_date= border_leaving_date2
-                if data.get('processor_receive_date') not in [None, '', ' ', 'null']:
-                    processor_receive_date = data.get('processor_receive_date')
-                    shipment.processor_receive_date=processor_receive_date
+                    context["error_messages"] = "Please provide Gross weight, Ship weight and Ship quantity."
+                    return render(request, 'distributor/edit_warehouse_outbound.html', context)
                 
-                shipment.save()
-                carrier_id = data.get('carrier_id')
-                if carrier_id:
-                    # Get or create carrier details
-                    carrier_details, created = CarrierDetails2.objects.update_or_create(
-                        shipment=shipment,
-                        defaults={'carrier_id': carrier_id}
+            elif data.get('carrier_type') == 'Rail Car':
+                
+                gross_weight = 0
+                ship_quantity = 1
+                ship_weight = 0
+                if data.get('weight') not in [None, 'null', ' ', '']:
+                    net_weight = float(data.get('weight'))
+                else:
+                    context["error_messages"] = "Please provide Weight."
+                    return render(request, 'distributor/edit_warehouse_outbound.html', context)
+            
+            crop = CustomerContractCropDetails.objects.filter(id=int(selected_crop), contract=shipment.contract).first()
+            crop_name = crop.crop
+            
+            if crop.amount_unit == context.get('amount_unit'):
+                contract_weight_left = float(crop.left_amount) - float(net_weight)
+            else:
+                if crop.amount_unit == "LBS" and context.get('amount_unit') == "MT":
+                    net_weight_lbs = float(net_weight) * 2204.62
+                    contract_weight_left = float(crop.left_amount) - net_weight_lbs 
+                else:
+                    net_weight_mt = float(net_weight) * 0.000453592
+                    contract_weight_left = float(crop.left_amount) - net_weight_mt
+            changes = find_changes_for_customer_shipment(context, shipment)
+            print(changes)
+            shipment.contract=shipment.contract                
+            shipment.carrier_type=data.get('carrier_type')
+            shipment.outbound_type=data.get('outbound_type')
+            shipment.crop_id= crop.id
+            shipment.crop = crop_name
+            shipment.purchase_order_name=data.get('purchase_order_name')
+            shipment.purchase_order_number=data.get('purchase_order_number')
+            shipment.lot_number=data.get('lot_number')
+            shipment.gross_weight=gross_weight
+            shipment.net_weight=net_weight
+            shipment.weight_unit=data.get('amount_unit')
+            shipment.ship_quantity=ship_quantity
+            shipment.ship_weight=ship_weight
+            shipment.contract_weight_left=contract_weight_left
+            shipment.status= data.get('status')
+            shipment.customer_id=shipment.contract.customer_id
+            shipment.warehouse_id=warehouse_id
+            shipment.customer_name=shipment.customer_name
+            shipment.warehouse_name=shipment.warehouse_name
+                                                                    
+            shipment.save()
+            if data.get('border_receive_date') not in [None, '', ' ', 'null']:
+                border_receive_date = data.get('border_receive_date')
+                shipment.border_receive_date= border_receive_date
+            if data.get('border_leaving_date') not in [None, '', ' ', 'null']:
+                border_leaving_date = data.get('border_leaving_date')
+                shipment.border_leaving_date=border_leaving_date
+            if data.get('final_receive_date') not in [None, '', ' ', 'null']:
+                final_receive_date = data.get('final_receive_date')
+                shipment.customer_receive_date=final_receive_date
+            if data.get('final_leaving_date') not in [None, '', ' ', 'null']:
+                final_leaving_date = data.get('final_leaving_date')
+                shipment.customer_leaving_date=final_leaving_date
+            if data.get('border_receive_date2') not in [None, '', ' ', 'null']:
+                border_receive_date2 = data.get('border_receive_date2')
+                shipment.border_back_receive_date=border_receive_date2
+            if data.get('border_leaving_date2') not in [None, '', ' ', 'null']:
+                border_leaving_date2 = data.get('border_leaving_date2')                    
+                shipment.border_back_leaving_date= border_leaving_date2
+            if data.get('processor_receive_date') not in [None, '', ' ', 'null']:
+                processor_receive_date = data.get('processor_receive_date')
+                shipment.warehouse_receive_date=processor_receive_date
+            
+            shipment.save()
+            carrier_id = data.get('carrier_id')
+            if carrier_id:
+                # Get or create carrier details
+                carrier_details, created = CarrierDetails2.objects.update_or_create(
+                    shipment=shipment,
+                    defaults={'carrier_id': carrier_id}
+                )
+            else:
+                # Ensure that carrier details are not deleted if no carrier_id is provided
+                CarrierDetails2.objects.filter(shipment=shipment).delete()
+            
+            files = request.FILES.getlist('files')
+            for file in files:
+                WarehouseCustomerShipmentDocuments.objects.create(shipment=shipment, document_file=file)                
+            descriptions = request.POST.getlist('description')
+            
+            for  description in  descriptions:
+                if  description:
+                    
+                    WarehouseShipmentLog.objects.create(
+                        shipment=shipment,                           
+                        description=description,
+                        changes = {'changes':changes},
+                        updated_by = request.user
                     )
                 else:
-                    # Ensure that carrier details are not deleted if no carrier_id is provided
-                    CarrierDetails2.objects.filter(shipment=shipment).delete()
-                
-                files = request.FILES.getlist('files')
-                for file in files:
-                    WarehouseCustomerShipmentDocuments.objects.create(shipment=shipment, document_file=file)                
-                descriptions = request.POST.getlist('description')
-                
-                for  description in  descriptions:
-                    if  description:
-                        
-                        WarehouseShipmentLog.objects.create(
-                            shipment=shipment,                           
-                            description=description,
-                            changes = {'changes':changes},
-                            updated_by = request.user
-                        )
-                    else:
-                        context["error_messages"] = f'PLease give description'
-                        return render(request, 'distributor/edit_warehouse_outbound.html', context)
+                    context["error_messages"] = f'PLease give description'
+                    return render(request, 'distributor/edit_warehouse_outbound.html', context)
             return redirect('warehouse-shipment-view', pk=pk)
             
         return render(request, 'distributor/edit_warehouse_outbound.html', context)
@@ -3152,15 +3303,20 @@ def generate_invoice(request, pk):
     try:
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role() or request.user.is_distributor or request.user.is_warehouse_manager:
             shipment = WarehouseCustomerShipment.objects.filter(id=pk).first()
+            print(shipment)
+            print(shipment.invoice_approval)
             shipment.invoice_approval = True
             shipment.approval_time = timezone.now()
             shipment.save()
+            return redirect('list-warehouse-shipment')
         else:
             return redirect('dashboard')        
     except Exception as e:
-        print(str(e))     
-            
+        print(str(e))   
+        return redirect('list-warehouse-shipment')  
 
+
+from datetime import timedelta
 @login_required()
 def warehouse_shipment_invoice(request, pk):
     context = {}
@@ -3172,9 +3328,13 @@ def warehouse_shipment_invoice(request, pk):
         context["shipment"] = shipment
         context["payment"] = payment_details       
         context['customer'] = customer
-        context['total_amount'] = float(shipment.total_payment) + float(shipment.tax_amount)
+        context['total_amount'] = (float(shipment.total_payment) + float(shipment.tax_amount)) if customer.is_tax_payable else float(shipment.total_payment)
         context['customer_user'] = customer_user
-        context['due_date'] = shipment.date_pulled + datetime.timedelta(days=customer.credit_limit)
+        context["crop"] = CustomerContractCropDetails.objects.filter(id=shipment.crop_id).first()
+        
+        due_date = shipment.approval_time + timedelta(days=int(customer.credit_terms))
+        context['due_date'] = due_date
+       
         return render (request, 'distributor/warehouse_shipment_invoice.html', context)
     except (ValueError, AttributeError, AdminProcessorContract.DoesNotExist) as e:
         context["error_messages"] = str(e)
@@ -3280,5 +3440,16 @@ def checkout_success(request,pk,type,checkout_session_id):
         payment.save()  
         message = f"Payment failed: {payment_intent.last_payment_error.message}" if payment_intent.last_payment_error else "Payment failed"
         return render(request, "distributor/failed_payment.html", {'error_message': message})
-
     
+ 
+def customer_view(request, pk):
+    context = {}
+    try:
+        customer_user = CustomerUser.objects.filter(id=pk).first()
+        context['customer_user'] = customer_user
+        context['customer'] = customer_user.customer
+        context['documents'] = CustomerDocuments.objects.filter(customer=customer_user.customer)
+        return render(request, 'distributor/customer_view.html', context)
+    except Exception as e:
+        context["error_messages"] = str(e)
+        return render(request, 'distributor/customer_view.html', context) 

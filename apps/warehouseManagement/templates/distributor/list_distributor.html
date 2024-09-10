@@ -73,7 +73,8 @@
                                 <td>{{i.contact_name}}</td>
                                 <td>{{i.contact_email}}</td>
                                 <td>{{i.p_password_raw}}</td>
-                                <td>{{i.contact_phone}}</td>
+                                <td><a href="tel:{{i.contact_phone}}" title="{{i.contact_phone}}"><span class="fas fa-phone"></span></a></td>
+                                
                                 <td class="backk action-td">
                                     <li>
                                         <a href="{% url 'add-distributor-user' i.pk %}" class="map-icon-link" alt="add user" title="add user"><span class="fas fa-user-plus"></span></a>

@@ -43,7 +43,15 @@
 <div class="main-content">
     {% include 'header.html' %} {% load crispy_forms_tags %}
     <main>
-        <span class="farm headingtop">Edit Shipment</span>
+        <div class="page-title-with-or-without-btn">
+            <span class="farm headingtop">Warehouse Contract Shipment Edit</span>
+            <!-- Create button for add-processor-->
+            {% if not shipment.invoice_approval %}
+            <div class="flex-header-btn">
+                <a href="{% url 'generate_invoice' shipment.id %}" class="btn-close-cancel">Generate Invoice</a>
+            </div>
+            {% endif %}
+        </div>
         <div class="card farm-fields-container">
             {% include '_alerts.html' %}
             <nav aria-label="breadcrumb m-5">
@@ -60,6 +68,7 @@
                     }, 5000);
                 </script>                          
                   {% endif %}
+                  
             </nav>
             <div class="container-fluid">
                 <form method="post" class="farm-fields-form" enctype="multipart/form-data">
@@ -225,13 +234,13 @@
                         <div class="col-md-4 ">
                             <div class="form-group">
                                 <label for="final_receive_date">Customer Receive Date</label>
-                                <input type="date" name="final_receive_date" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{shipment.distributor_receive_date|date:'Y-m-d'}}">
+                                <input type="date" name="final_receive_date" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{shipment.customer_receive_date|date:'Y-m-d'}}">
                             </div>
                         </div>
                         <div class="col-md-4 international">
                             <div class="form-group">
                                 <label for="final_leaving_date">Customer Leaving Date</label>
-                                <input type="date" name="final_leaving_date" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{shipment.distributor_leaving_date|date:'Y-m-d'}}">
+                                <input type="date" name="final_leaving_date" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{shipment.customer_leaving_date|date:'Y-m-d'}}">
                             </div>
                         </div>
                         <div class="col-md-4 international">
@@ -250,7 +259,7 @@
                         <div class="col-md-4 international">
                             <div class="form-group">
                                 <label for="processor_receive_date">Warehouse Receive Date</label>
-                                <input type="date" name="processor_receive_date" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{shipment.processor_receive_date|date:'Y-m-d'}}">
+                                <input type="date" name="processor_receive_date" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{shipment.warehouse_receive_date|date:'Y-m-d'}}">
                             </div>
                         </div>
                         <div class="col-md-6 mb-2">
@@ -268,7 +277,7 @@
                                                 <input type="hidden" name="existing_files" value="{{ file.id }}">
                                                 <span>{{file.name }}</span>
                                             </div>
-                                            <button type="button" class="remove-file btn-danger" data-file-id="{{ file.id }}"><span style="width: 25px;height: 18px;padding: 0;display: inline-flex;justify-content: center;align-items: center;font-size: 10px;"><b>X</b></span></button>
+                                            <button type="button" class="remove-file btn-danger" data-file-id="{{ file.id }}"><span style="width: 20px;height: 10px;padding: 0;display: inline-flex;justify-content: center;align-items: center;font-size: 10px;"><b>X</b></span></button>
                                         </div>
                                         {% endfor %}
                                     </div>    
@@ -283,7 +292,7 @@
                             <!-- Initial field_name and description fields -->                            
                             <div class="col-md-12 mb-2">
                                 <div class="form-group">
-                                    <label for="description_1">NOTES:</label>
+                                    <label for="description_1">**NOTES:</label>
                                     <textarea id="description_1" name="description" class="form-control" placeholder="Notes"></textarea>
                                 </div>
                             </div>                            
@@ -365,61 +374,7 @@
 {% block jquery %}
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
-<script>
-    $(document).ready(function() {
-        let skuCount = 1;
 
-        // Event listener for the + button
-        $('#add_sku_button').on('click', function() {
-            skuCount++;
-
-            // Create a new sender_sku_id input field
-            let newSkuField = `
-                <div class="col-md-4 mb-2 sender_sku_item">
-                    <div class='d-flex align-items-end'>
-                        <div class='w-100'>
-                            <label for="sender_sku_id_${skuCount}">Sender Storage Bin ID (SKU ID) <span class="asteriskField">*</span></label>
-                            <input type="text" id="sender_sku_id_${skuCount}" name="sender_sku_id" class="textinput textInput form-control" list="suggestions_${skuCount}" autocomplete="off" placeholder="Sender SKU ID">
-                            <datalist id="suggestions_${skuCount}">
-                                {% for data in sender_sku_id_list %}
-                                <option value="{{ data }}">
-                                {% endfor %}
-                            </datalist>
-                        </div>
-                        <div>
-                            <!-- Add - button for removing this field -->
-                            <button type="button" class="btn btn-danger remove_sku_button ms-2 mb-2">-</button>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            // Append the new field to the container
-            $('#sender_sku_container').append(newSkuField);
-        });
-
-        // Event listener for the - button to remove the sender_sku_id field
-        $('#sender_sku_container').on('click', '.remove_sku_button', function() {
-            $(this).closest('.sender_sku_item').remove();
-        });
-
-        // Show the remove button for the first input if more than one exists
-        $('#sender_sku_container').on('DOMNodeInserted', function() {
-            if ($('.sender_sku_item').length > 1) {
-                $('.remove_sku_button').show();
-            } else {
-                $('.remove_sku_button').hide();
-            }
-        });
-
-        // Hide the remove button if only one input exists
-        $('#sender_sku_container').on('DOMNodeRemoved', function() {
-            if ($('.sender_sku_item').length === 1) {
-                $('.remove_sku_button').hide();
-            }
-        });
-    });
-</script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         var statusSelect = document.getElementById('outbound_type');
