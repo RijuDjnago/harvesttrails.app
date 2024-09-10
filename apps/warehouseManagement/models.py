@@ -86,6 +86,18 @@ class CustomerUser(models.Model):
 
     def __str__(self):
         return self.contact_email
+    
+
+from django.utils import timezone
+class CustomerDocuments(models.Model):
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
+    document_name = models.CharField(max_length=255, null=True, blank=True)
+    file = models.FileField(upload_to='customer_documents/', null=True, blank=True)
+    document_status = models.CharField(max_length=255, null=True, blank=True)
+    uploaded_at = models.DateTimeField( default=timezone.now)
+
+    def __str__(self):
+        return f"Documents for customer - {self.customer.name}"
 
 
 Carrier_type = (
@@ -187,11 +199,11 @@ class ProcessorWarehouseShipment(models.Model):
     lot_number = models.CharField(max_length=255, null=True, blank=True)
 
     ship_quantity = models.PositiveIntegerField(null=True, blank=True) 
-    ship_weight = models.CharField(max_length=255, null=True, blank=True)  
-    gross_weight = models.CharField(max_length=255, null=True, blank=True)
-    net_weight = models.CharField(max_length=255, null=True, blank=True)
+    ship_weight = models.FloatField(max_length=255, null=True, blank=True)  
+    gross_weight = models.FloatField(max_length=255, null=True, blank=True)
+    net_weight = models.FloatField(max_length=255, null=True, blank=True)
     weight_unit = models.CharField(max_length=10, choices=Unit_choice)
-    contract_weight_left = models.CharField(max_length=255, null=True, blank=True)   
+    contract_weight_left = models.FloatField(max_length=255, null=True, blank=True)   
 
     border_receive_date = models.DateTimeField(null=True, blank=True)
     border_leaving_date = models.DateTimeField(null=True, blank=True)
@@ -215,7 +227,7 @@ class ProcessorWarehouseShipment(models.Model):
     warehouse_name = models.CharField(max_length=255, null=True, blank=True)
     warehouse_order_id = models.CharField(max_length=255, null=True, blank=True)
 
-    total_payment = models.CharField(max_length=255, null=True, blank=True)  
+    total_payment = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True) 
     tax_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     is_paid = models.BooleanField(default=False)
     invoice_approval = models.BooleanField(default=False)
@@ -224,53 +236,46 @@ class ProcessorWarehouseShipment(models.Model):
 
     def save(self, *args, **kwargs):
         is_new = self.pk is None
-
-        # Generate shipment and invoice IDs if this is a new shipment
+      
         if is_new:
             if not self.shipment_id:
                 self.shipment_id = generate_secret_key_shipment()
             if not self.invoice_id:
                 self.invoice_id = generate_secret_key_invoice()
-
-        # Handle weight conversion and total payment calculation
+      
         if self.contract and self.net_weight:
             contract_details = CropDetails.objects.filter(contract=self.contract).first()
 
             if contract_details:
                 contract_unit = contract_details.amount_unit
-                shipment_unit = self.weight_unit
-                
-                # Conversion between LBS and MT
+                shipment_unit = self.weight_unit                
+               
                 if contract_unit == "LBS" and shipment_unit == "MT":
                     net_weight_in_contract_unit = float(self.net_weight) * 2204.62
                 elif contract_unit == "MT" and shipment_unit == "LBS":
                     net_weight_in_contract_unit = float(self.net_weight) / 2204.62
                 else:
                     net_weight_in_contract_unit = float(self.net_weight)
-
-                # Calculate total payment based on per unit rate
+               
                 if contract_details.per_unit_rate:
                     per_unit_rate = float(contract_details.per_unit_rate)
-                    self.total_payment = str(per_unit_rate * net_weight_in_contract_unit)
-
-                # Calculate tax amount if applicable
+                    self.total_payment = (per_unit_rate * net_weight_in_contract_unit)
+                
                 if hasattr(self.contract, 'tax_percentage'):
                     tax_percentage = float(self.contract.tax_percentage)
                     total_payment_float = float(self.total_payment)
                     self.tax_amount = (total_payment_float * tax_percentage) / 100
-
-        # Save the shipment record
+       
         super().save(*args, **kwargs)
         contract_details = CropDetails.objects.filter(contract=self.contract).first()
-        # Update the left amount in the CropDetails model after a shipment
+        
         if self.contract and contract_details:
-            # Reduce the `left_amount` based on the shipment
+           
             left_amount = contract_details.left_amount if contract_details.left_amount else contract_details.contract_amount
-            left_amount -= int(self.contract_weight_left)
-            contract_details.left_amount = max(0, left_amount)  # Ensure it doesn't go negative
+            left_amount -= float(self.contract_weight_left)
+            contract_details.left_amount = max(0, left_amount)
             contract_details.save()
-
-        # Log the shipment creation
+     
         if is_new:
             log_entry = ProcessorShipmentLog(
                 shipment=self,
@@ -334,11 +339,11 @@ class WarehouseCustomerShipment(models.Model):
     lot_number = models.CharField(max_length=255, null=True, blank=True)
 
     ship_quantity = models.PositiveIntegerField(null=True, blank=True)    
-    ship_weight = models.CharField(max_length=255, null=True, blank=True) 
-    gross_weight = models.CharField(max_length=255, null=True, blank=True)
-    net_weight = models.CharField(max_length=255, null=True, blank=True)
+    ship_weight = models.FloatField(max_length=255, null=True, blank=True) 
+    gross_weight = models.FloatField(max_length=255, null=True, blank=True)
+    net_weight = models.FloatField(max_length=255, null=True, blank=True)
     weight_unit = models.CharField(max_length=10, choices=Unit_choice)
-    contract_weight_left = models.CharField(max_length=255, null=True, blank=True)   
+    contract_weight_left = models.FloatField(max_length=255, null=True, blank=True)   
 
     border_receive_date = models.DateTimeField(null=True, blank=True)
     border_leaving_date = models.DateTimeField(null=True, blank=True)
@@ -356,7 +361,7 @@ class WarehouseCustomerShipment(models.Model):
     customer_id = models.CharField(max_length=255, null=True, blank=True)
     customer_name = models.CharField(max_length=255, null=True, blank=True)
 
-    total_payment = models.CharField(max_length=255, null=True, blank=True)  
+    total_payment = models.DecimalField(max_digits=20, decimal_places=2, null=True, blank=True)  
     tax_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)  
     is_paid = models.BooleanField(default=False)
     invoice_approval = models.BooleanField(default=False)
@@ -365,36 +370,31 @@ class WarehouseCustomerShipment(models.Model):
 
     def save(self, *args, **kwargs):
         is_new = self.pk is None
-
-        # Generate shipment and invoice IDs if this is a new shipment
+      
         if is_new:
             if not self.shipment_id:
                 self.shipment_id = generate_secret_key_shipment()
             if not self.invoice_id:
                 self.invoice_id = generate_secret_key_invoice()
-
-        # Handle weight conversion and total payment calculation
+       
         if self.contract and self.net_weight:
             contract_details = CustomerContractCropDetails.objects.filter(contract=self.contract).first()
 
             if contract_details:
                 contract_unit = contract_details.amount_unit
-                shipment_unit = self.weight_unit
+                shipment_unit = self.weight_unit                
                 
-                # Conversion between LBS and MT
                 if contract_unit == "LBS" and shipment_unit == "MT":
                     net_weight_in_contract_unit = float(self.net_weight) * 2204.62
                 elif contract_unit == "MT" and shipment_unit == "LBS":
                     net_weight_in_contract_unit = float(self.net_weight) / 2204.62
                 else:
                     net_weight_in_contract_unit = float(self.net_weight)
-
-                # Calculate total payment based on per unit rate
+               
                 if contract_details.per_unit_rate:
                     per_unit_rate = float(contract_details.per_unit_rate)
-                    self.total_payment = str(per_unit_rate * net_weight_in_contract_unit)
-
-                # Calculate tax amount if applicable
+                    self.total_payment = (per_unit_rate * net_weight_in_contract_unit)
+                
                 if self.contract:
                     customer = Customer.objects.filter(id=int(self.contract.customer_id)).first()
                     if customer.is_tax_payable == True:
@@ -402,18 +402,16 @@ class WarehouseCustomerShipment(models.Model):
                         total_payment_float = float(self.total_payment)
                         self.tax_amount = (total_payment_float * tax_percentage) / 100
 
-        # Save the shipment record
+        
         super().save(*args, **kwargs)
         contract_details = CustomerContractCropDetails.objects.filter(contract=self.contract).first()
-        # Update the left amount in the CropDetails model after a shipment
-        if self.contract and contract_details:
-            # Reduce the `left_amount` based on the shipment
+        
+        if self.contract and contract_details:        
             left_amount = contract_details.left_amount if contract_details.left_amount else contract_details.contract_amount
-            left_amount -= int(self.contract_weight_left)
-            contract_details.left_amount = max(0, left_amount)  # Ensure it doesn't go negative
+            left_amount -= float(self.contract_weight_left)
+            contract_details.left_amount = max(0, left_amount) 
             contract_details.save()
 
-        # Log the shipment creation
         if is_new:
             log_entry = WarehouseShipmentLog(
                 shipment=self,
@@ -471,7 +469,7 @@ class PaymentForShipment(models.Model):
     warehouse_shipment = models.ForeignKey(WarehouseCustomerShipment, on_delete=models.CASCADE, null=True, blank=True)
     processor_shipment = models.ForeignKey(ProcessorWarehouseShipment, on_delete=models.CASCADE, null=True, blank=True)
     shipment_type = models.CharField(max_length=25, choices=shipment_type)
-    amount = models.FloatField()
+    amount = models.DecimalField(max_digits=20, decimal_places=2)
     currency = models.CharField(max_length=10)
     payment_id = models.CharField(max_length=90)
     payment_responce = models.JSONField(null=True, blank=True)
@@ -482,7 +480,7 @@ class PaymentForShipment(models.Model):
     status = models.BooleanField(default=False)
     paid_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
 
-    def _str_(self):
+    def __str__(self):
         shipment = self.warehouse_shipment.shipment_id if self.warehouse_shipment else self.processor_shipment.shipment_id
         return f"{shipment} || {self.payment_by.username}"
 

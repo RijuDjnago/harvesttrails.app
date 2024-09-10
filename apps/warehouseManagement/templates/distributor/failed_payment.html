@@ -83,7 +83,7 @@
         <h1 class="title">Payment Failed</h1>
         <p>Please try again after some time<br /></p>
         <div class="py-10 text-center">
-            {% comment %} <p class="btn-back">your subscription has expired on {{expires_time}} </p> {% endcomment %}
+            <a href="{% url 'list-warehouse-shipment' %}">Go back</a>
             
         </div>
     </div>

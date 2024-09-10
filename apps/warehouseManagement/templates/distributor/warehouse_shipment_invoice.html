@@ -170,20 +170,22 @@
                     <tbody>
                         <tr>
                             <td>{{shipment.date_pulled.date}}</td>
-                            <td>{{shipment.contract.crop_type}} {{shipment.contract.crop}}</td>
+                            <td>{{crop.crop_type}} {{crop.crop}}</td>
                             <td></td>
                             <td>{{shipment.net_weight}} {{shipment.weight_unit}}</td>
-                            <td>&#36; {{shipment.contract.per_unit_rate}}</td>
+                            <td>&#36; {{crop.per_unit_rate}}</td>
                             <td>&#36; {{shipment.total_payment}}</td>
                         </tr>
+                        {% if customer.is_tax_payable %}
                         <tr>
                             <td>{{shipment.date_pulled.date}}</td>
                             <td>Sales</td>
                             <td>Freight</td>
                             <td>1</td>
-                            <td>{{shipment.contract.tax_percentage}}</td>
+                            <td>{{customer.tax_percentage}}</td>
                             <td>&#36; {{shipment.tax_amount}}</td>
                         </tr>
+                        {% endif %}
                     </tbody>
                 </table>
         
@@ -197,10 +199,12 @@
                                         <td colspan="5" class="text-right"><strong>Subtotal:</strong></td>
                                         <td class="text-right">&#36;{{shipment.total_payment}}</td>
                                     </tr>
+                                    {% if customer.is_tax_payable %}
                                     <tr>
                                         <td colspan="5" class="text-right"><strong>Tax:</strong></td>
                                         <td class="text-right">&#36;{{shipment.tax_amount}}</td>
                                     </tr>
+                                    {% endif %}
                                     <tr>
                                         <td colspan="5" class="text-right"><strong>Total Amount:</strong></td>
                                         <td class="text-right">&#36;{{total_amount}}</td>
@@ -229,13 +233,9 @@
                 {% else %}
                 <div class="row mb-4 mx-0">
                    <i style='color:red;'>Payment is yet to be done.</i>
-                    <div class="col-md-8  p-3">
-                        <p><strong>Total Amount: </strong><br>
-                        <strong>Payment Date: </strong><br>
-                        <strong>Payment By: </strong> <br>
-                        <strong>Payment Status: </strong><br>
-                        
-                    </div>
+                   {% if request.user.is_customer %} 
+                   <i style='color:red;'>Please click on the above "Pay Now" Button To make payment.</i>
+                   {% endif %}
                 </div>
                 {% endif %}
                 <table width="100%">

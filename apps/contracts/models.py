@@ -155,10 +155,10 @@ class AdminProcessorContract(models.Model):
     processor_entity_name = models.CharField(max_length=255, null=True, blank=True)  
     contract_type = models.CharField(max_length=25, choices=contract_type, default='Single Crop')  
     total_price = models.DecimalField( max_digits=20,decimal_places=2,validators=[MinValueValidator(Decimal('0.01'))],null=True, blank=True)
-    contract_start_date = models.DateField()
+    contract_start_date = models.DateTimeField()
     contract_period = models.PositiveIntegerField(help_text="Warranty period")
     contract_period_choice = models.CharField(max_length=10, choices=contract_period_choices, default="Days" )
-    end_date = models.DateField(null=True, blank=True)
+    end_date = models.DateTimeField(null=True, blank=True)
     status = models.CharField(max_length=255, choices=contract_status)
     reason_for_rejection = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -198,10 +198,10 @@ class CropDetails(models.Model):
     contract = models.ForeignKey(AdminProcessorContract, on_delete=models.CASCADE, related_name='contractCrop')
     crop = models.CharField(max_length=10, choices=crop_choices)
     crop_type = models.CharField(max_length=255, null=True, blank=True)
-    contract_amount = models.PositiveBigIntegerField()
+    contract_amount = models.FloatField()
     amount_unit = models.CharField(max_length=10, choices=unit_choice)
-    per_unit_rate = models.CharField(max_length=255, null=True, blank=True) 
-    left_amount = models.IntegerField(null=True, blank=True)
+    per_unit_rate = models.DecimalField(max_digits=10, decimal_places=3) 
+    left_amount = models.FloatField(null=True, blank=True)
 
     def save(self, *args, **kwargs):
         if self._state.adding and self.left_amount is None:
@@ -239,17 +239,17 @@ class AdminCustomerContract(models.Model):
     customer_name = models.CharField(max_length=255)   
     contract_type = models.CharField(max_length=25, choices=contract_type, default='Single Crop') 
     total_price = models.DecimalField( max_digits=20,decimal_places=2,validators=[MinValueValidator(Decimal('0.01'))],null=True, blank=True)
-    contract_start_date = models.DateField()
+    contract_start_date = models.DateTimeField()
     contract_period = models.PositiveIntegerField(help_text="Warranty period")
     contract_period_choice = models.CharField(max_length=10, choices=contract_period_choices, default="Days" )
-    end_date = models.DateField(null=True, blank=True)
+    end_date = models.DateTimeField(null=True, blank=True)
     status = models.CharField(max_length=255, choices=contract_status)
     reason_for_rejection = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='contractUSer')  
     is_signed = models.BooleanField(default=False)
-    left_amount = models.PositiveBigIntegerField(null=True, blank=True)
+    
 
     def save(self, *args, **kwargs):
         if not self.secret_key:  # Generate a new key only if it does not already exist
@@ -280,10 +280,10 @@ class CustomerContractCropDetails(models.Model):
     contract = models.ForeignKey(AdminCustomerContract, on_delete=models.CASCADE, related_name='customerContractCrop')
     crop = models.CharField(max_length=10, choices=crop_choices)
     crop_type = models.CharField(max_length=255, null=True, blank=True)
-    contract_amount = models.PositiveBigIntegerField()
+    contract_amount = models.FloatField()
     amount_unit = models.CharField(max_length=10, choices=unit_choice)
-    per_unit_rate = models.CharField(max_length=255, null=True, blank=True) 
-    left_amount = models.IntegerField(null=True, blank=True)
+    per_unit_rate = models.DecimalField(max_digits=10, decimal_places=3) 
+    left_amount = models.FloatField(null=True, blank=True)
 
     def save(self, *args, **kwargs):
         if self._state.adding and self.left_amount is None:

@@ -100,14 +100,16 @@
                                                 <td>{{item.customer_name}}</td>
                                                 
                                                 <td>{{item.status}}</td>
-                                                <td>{{item.is_paid}}</td>
+                                                <td>{%if item.is_paid %} Paid {% else %} Pending {% endif %}</td>
                                                 <td class="backk action-td rmv-bd">
                                                     <ul>
                                                         <li><a href="{% url 'warehouse-shipment-view' item.id %}" class="update-btn-link" alt="view shipment details" title="view shipment details"> <span class="fas fa-eye"></span></a></li>
                                                         {%if request.user.is_superuser or request.user.is_distributor or request.user.is_warehouse_manager %}
                                                        <li><a href="{% url 'edit-warehouse-shipment' item.id %}" class="update-btn-link" alt="update shipment details" title=""><span class="fas fa-edit"></span></a></li>
                                                        {% endif %}
+                                                       {% if item.invoice_approval %}
                                                        <li><a href="{% url 'warehouse-shipment-invoice' item.id %}" class="update-btn-link" alt="view invoice details" title="view invoice details"> <span class="fas fa-file-invoice"></span></a></li>
+                                                       {% endif %}
                                                     </ul>
                                                 </td>
                                             </tr>

@@ -112,6 +112,9 @@
                                 </select>
                             </div>
                         </div>
+                        <div id="add-crop-btn-container" class="text-end" style="display: none;">
+                            <button type="button" id="add-crop-btn" class="btn btn-primary" style="width: 41px; height: 24px; padding: 0; display: inline-flex; justify-content: center; align-items: center; font-size: 19px;">+</button>
+                        </div> 
                         <div id="crop-fields-container">                           
                             <div class="crop-fields-row">
                                 <div class="row">
@@ -153,9 +156,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div id="add-crop-btn-container" class="text-end" style="display: none;">
-                            <button type="button" id="add-crop-btn" class="btn btn-primary">+</button>
-                        </div>                        
+                                               
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label for="contract_start_date">Contract Start Date</label>
@@ -248,6 +249,9 @@
         newCropRow.classList.add('crop-fields-row');
         newCropRow.innerHTML = `
             <div class="row">
+                <div class="col-md-12 text-end me-3">
+                    <button type="button" class="btn btn-danger remove-crop-btn" style="width: 41px; height: 24px; padding: 0; display: inline-flex; justify-content: center; align-items: center; font-size: 19px;">-</button>
+                </div>
                 <div class="col-md-6">
                     <div class="form-group">
                         <label for="crop">Crop</label>
@@ -283,9 +287,7 @@
                         <input type="number" step="0.01" name="per_unit_rate[]" class="form-control" required>
                     </div>
                 </div>
-                <div class="col-md-12 text-end me-3">
-                    <button type="button" class="btn btn-danger remove-crop-btn">-</button>
-                </div>
+                
             </div>
         `;
 
