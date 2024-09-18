@@ -20,7 +20,7 @@
         <div class="page-title-with-or-without-btn">
             <span class="farm headingtop">Processor Contract Shipment Management</span>
             <!-- Create button for add-processor-->
-            {% if request.user.is_superuser or request.user.is_processor or request.user.is_processor2 %}
+            {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role or request.user.is_processor or request.user.is_processor2 %}
             <div class="flex-header-btn">
                 <a href="{% url 'add-processor-shipment' %}" class="btn-close-cancel">Send Shipment</a>
             </div>
@@ -29,10 +29,10 @@
         <div class="card farm-fields-container">
             <form method="GET">
                 <div class="card card-padding">
-                    <div class="main-simple-table-with-search col-12">
-                        {% if request.user.is_superuser %}
+                    <div class="main-simple-table-with-search col-12">                        
                         <div class="row d-flex">
-                            <div class="col-4">
+                            {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
+                            <div class="col-3">
                                                             
                                 <select name="selected_processor" id="processor_id" class="form-control select2" onchange="this.form.submit();" required>
                                     <option value="All">Select Processor</option>
@@ -85,11 +85,10 @@
                                 </select>
                             </div>
                             <input style="display : none;" id="submitBtn" type="submit"
-                                class="apply-filter-btn primary-btn" value="Apply Filter" />
-                           <div class="col-4"></div>
-    
+                                class="apply-filter-btn primary-btn" value="Apply Filter" />                           
+                            {% endif %}
                             <!-- Search section on the right side -->
-                            <div class="col-4">
+                            <div class="col-3">
                                 <div class="row justify-content-end">
                                     <div class="col-8">
                                         <input class="form-control" name="search_name" type="search" placeholder="Search.." autocomplete="off" aria-label="Search" id="search_name" {% if search_name %}value="{{search_name}}"{% else %}{% endif %}>
@@ -99,10 +98,17 @@
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                        {% endif %}
-                        <br>
-    
+                            <div class="col-6">                            
+                                <label for="start_date">Start Date:</label>
+                                <input type="date" id="start_date" name="start_date" value="{{ start_date|date:'Y-m-d' }}">
+
+                                <label for="end_date">End Date:</label>
+                                <input type="date" id="end_date" name="end_date" value="{{ end_date|date:'Y-m-d' }}">
+
+                                <button type="submit" class="btn btn-outline-success">Filter</button>                              
+                           </div>
+                        </div>                       
+                        <br>    
                         <div class="both-data-in" style="display: inherit;">
                             <div class="table-responsive">
                                 <table id="" class="table table-striped dt-responsive nowrap"
@@ -145,7 +151,19 @@
                                                 <td class="backk action-td rmv-bd">
                                                     <ul>
                                                         <li><a href="{% url 'view-processor-shipment' item.id %}" class="update-btn-link" alt="view contract details" title="view contract details"> <span class="fas fa-eye"></span></a></li>
-                                                        <li><a href="{% url 'edit-processor-shipment' item.id %}" class="update-btn-link" alt="update contract details" title="{%  if request.user.is_superuser %}update contract details {% endif %} {% if request.user.is_processor or request.user.is_processor2 %} upload documents {% endif %}">{% if request.user.is_superuser %}<span class="fas fa-edit">{% endif %}{% if request.user.is_processor or request.user.is_processor2 %}<span class="fas fa-file-upload">{% endif %}</span></a></li>
+                                                        <a href="{% url 'edit-processor-shipment' item.id %}" class="update-btn-link" alt="update contract details" 
+                                                               title="{% if request.user.is_superuser  %}update contract details{% endif %}
+                                                                      {% if request.user.is_processor or request.user.is_processor2 %} upload documents{% endif %}">
+                                                               
+                                                               {% if request.user.is_superuser  %}
+                                                                   <span class="fas fa-edit"></span>
+                                                               {% endif %}
+                                                               
+                                                               {% if request.user.is_processor or request.user.is_processor2 %}
+                                                                   <span class="fas fa-file-upload"></span>
+                                                               {% endif %}
+                                                               
+                                                        </a>
                                                     </ul>
                                                 </td>
                                             </tr>
@@ -160,29 +178,29 @@
                             </div>
     
                             <div class="row align-items-center">
-                                    <div class="col-md-12 col-sm-12 col-12 text-center">
-                                        {% if contracts.has_other_pages %}
-                                            <ul class="pagination" id="nav_1">
-                                                {% if contracts.has_previous %}
-                                                    <li><a href="?selected_processor={{ selected_processor_id }}&search_name={{ search_name }}&page={{ contracts.previous_page_number }}">&laquo;</a></li>
+                                <div class="col-md-12 col-sm-12 col-12 text-center">
+                                    {% if contracts.has_other_pages %}
+                                        <ul class="pagination" id="nav_1">
+                                            {% if contracts.has_previous %}
+                                                <li><a href="?selected_processor={{ selected_processor_id }}&search_name={{ search_name }}&page={{ contracts.previous_page_number }}">&laquo;</a></li>
+                                            {% else %}
+                                                <li class="disabled"><span>&laquo;</span></li>
+                                            {% endif %}
+                                            {% for i in contracts.paginator.page_range %}
+                                                {% if contracts.number == i %}
+                                                    <li class="active"><span>{{ i }} <span class="sr-only">(current)</span></span></li>
                                                 {% else %}
-                                                    <li class="disabled"><span>&laquo;</span></li>
+                                                    <li><a href="?selected_processor={{ selected_processor_id }}&search_name={{ search_name }}&page={{ i }}">{{ i }}</a></li>
                                                 {% endif %}
-                                                {% for i in contracts.paginator.page_range %}
-                                                    {% if contracts.number == i %}
-                                                        <li class="active"><span>{{ i }} <span class="sr-only">(current)</span></span></li>
-                                                    {% else %}
-                                                        <li><a href="?selected_processor={{ selected_processor_id }}&search_name={{ search_name }}&page={{ i }}">{{ i }}</a></li>
-                                                    {% endif %}
-                                                {% endfor %}
-                                                {% if contracts.has_next %}
-                                                    <li><a href="?selected_processor={{ selected_processor_id }}&search_name={{ search_name }}&page={{ contracts.next_page_number }}">&raquo;</a></li>
-                                                {% else %}
-                                                    <li class="disabled"><span>&raquo;</span></li>
-                                                {% endif %}
-                                            </ul>
-                                        {% endif %}
-                                    </div>
+                                            {% endfor %}
+                                            {% if contracts.has_next %}
+                                                <li><a href="?selected_processor={{ selected_processor_id }}&search_name={{ search_name }}&page={{ contracts.next_page_number }}">&raquo;</a></li>
+                                            {% else %}
+                                                <li class="disabled"><span>&raquo;</span></li>
+                                            {% endif %}
+                                        </ul>
+                                    {% endif %}
+                                </div>
                                 <div class="col-md-12 col-sm-12 col-12 text-center mt-2" style="text-align:right">
                                     <span>Showing  {{ contracts.start_index }} - {{ contracts.end_index }} of {{ contracts.paginator.count }} entries
                                     </span>

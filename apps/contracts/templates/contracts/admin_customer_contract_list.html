@@ -18,17 +18,32 @@
         {% include '_alerts.html' %}
         <div class="page-title-with-or-without-btn">
         <span class="farm headingtop">Admin Customer Contract List</span>
-        {% if request.user.is_superuser or request.user.is_distributor %}
+        {% if request.user.is_superuser or request.user.is_distributor or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
             <div class="flex-header-btn">
                 <a href="{% url 'add-admin-customer-contract' %}" class="btn-close-cancel">Create Contract</a>
             </div>
             {% endif %}
         </div>
         <div class="card farm-fields-container">
+            <nav aria-label="breadcrumb m-5">
+                {% if error_messages %}
+                <div id="alertMessage" class="alert alert-warning alert-dismissible fade show" role="alert">
+                    <strong>{{error_messages}}</strong>  
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>                         
+                  </div> 
+                  <script>                            
+                    setTimeout(function() {
+                        document.getElementById('alertMessage').style.display = 'none';
+                    }, 5000);
+                </script>                          
+                  {% endif %}
+            </nav>
             <form action="" method="get" class="">
                 <div class="card card-padding">
                     <div class="main-simple-table-with-search col-12">
-                        {% if request.user.is_superuser %}
+                        {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
                         <div class="row d-flex">
                             <div class="col-3">                            
                                 <select name="selected_customer" id="processor_id" class="form-control" data-live-search="true" onchange="this.form.submit();" required>
@@ -93,7 +108,7 @@
                                                 <td class="backk action-td rmv-bd">
                                                     <ul>
                                                         <li><a href="{% url 'admin-customer-contract-view' contract.pk %}" class="update-btn-link" alt="view contract details" title="view contract details"> <span class="fas fa-eye"></span></a></li>
-                                                        <li><a href="{% url 'edit-admin-customer-contract' contract.pk %}" class="update-btn-link" alt="update contract details" title="{%  if request.user.is_superuser %}update contract details {% endif %} {% if request.user.is_customer %} upload documents {% endif %}">{% if request.user.is_superuser %}<span class="fas fa-edit">{% endif %}{% if request.user.is_customer %}<span class="fas fa-file-upload">{% endif %}</span></a></li>
+                                                        <li><a href="{% url 'edit-admin-customer-contract' contract.pk %}" class="update-btn-link" alt="update contract details" title="{%  if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}update contract details {% endif %} {% if request.user.is_customer %} upload documents {% endif %}">{% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role%}<span class="fas fa-edit">{% endif %}{% if request.user.is_customer %}<span class="fas fa-file-upload">{% endif %}</span></a></li>
                                                     </ul>
                                                 </td>
                                             </tr>

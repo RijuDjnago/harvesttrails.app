@@ -58,11 +58,10 @@
                             </div>
                         </div>
                         <div class="col-md-6">                          
-                            <div class="row">
-                                <label for="user_phone">User Phone</label>                                   
-                                <div class="col-6">
-                                    <select name="country_code" id="country_code" class="form-control" required>                    
-                                        <option value="" selected disabled>Select Country Code</option>
+                            <label for="user_phone">User Phone</label>                                   
+                                <div class="d-flex">
+                                    <select name="country_code" id="country_code" class="form-control" style="border-top-left-radius:0 !important; border-bottom-left-radius:0 !important; width:135px;" required>                    
+                                        <option value="" selected disabled>Country Code</option>
                                         <option value="+93">+93 (Afghanistan)</option>
                                         <option value="+355">+355 (Albania)</option>
                                         <option value="+213">+213 (Algeria)</option>
@@ -296,11 +295,9 @@
                                         <option value="+260">+260 (Zambia)</option>
                                         <option value="+263">+263 (Zimbabwe)</option>
                                     </select>
-                                </div>
-                                <div class="col-6">
-                                <input type="number" name="phone_number" id="phone_number" class="textinput textInput form-control" placeholder="Phone Number">                                   
-                                </div>  
-                            </div>                         
+                                
+                                    <input type="number" name="phone_number" id="phone_number" class="textinput textInput form-control" style="margin-top:0; border-top-right-radius:0 !important; border-bottom-right-radius:0 !important" placeholder="Phone Number">                                   
+                                </div>                         
                         </div>
                         <div class="col-md-6">
                             <div>

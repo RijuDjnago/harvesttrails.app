@@ -18,7 +18,7 @@
         {% include '_alerts.html' %}
         <div class="page-title-with-or-without-btn">
         <span class="farm headingtop">Admin Processor Contract List</span>
-        {% if request.user.is_superuser %}
+        {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role%}
             <div class="flex-header-btn">
                 <a href="{% url 'add-contract' %}" class="btn-close-cancel">Create Contract</a>
             </div>
@@ -28,7 +28,7 @@
             <form action="" method="get" class="">
                 <div class="card card-padding">
                     <div class="main-simple-table-with-search col-12">
-                        {% if request.user.is_superuser %}
+                        {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
                         <div class="row d-flex">
                             <div class="col-3">                            
                                 <select name="selected_processor" id="processor_id" class="form-control" onchange="this.form.submit();" required>
@@ -136,7 +136,7 @@
                                                 <td class="backk action-td rmv-bd">
                                                     <ul>
                                                         <li><a href="{% url 'contract-view' contract.pk %}" class="update-btn-link" alt="view contract details" title="view contract details"> <span class="fas fa-eye"></span></a></li>
-                                                        <li><a href="{% url 'edit-admin-processor-contract' contract.pk %}" class="update-btn-link" alt="update contract details" title="{%  if request.user.is_superuser %}update contract details {% endif %} {% if request.user.is_processor or request.user.is_processor2 %} upload documents {% endif %}">{% if request.user.is_superuser %}<span class="fas fa-edit">{% endif %}{% if request.user.is_processor or request.user.is_processor2 %}<span class="fas fa-file-upload">{% endif %}</span></a></li>
+                                                        <li><a href="{% url 'edit-admin-processor-contract' contract.pk %}" class="update-btn-link" alt="update contract details" title="{%  if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}update contract details {% endif %} {% if request.user.is_processor or request.user.is_processor2 %} upload documents {% endif %}">{% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role%}<span class="fas fa-edit">{% endif %}{% if request.user.is_processor or request.user.is_processor2 %}<span class="fas fa-file-upload">{% endif %}</span></a></li>
                                                     </ul>
                                                 </td>
                                             </tr>

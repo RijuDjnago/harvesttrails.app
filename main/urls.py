@@ -77,6 +77,7 @@ urlpatterns = [
     path('assistantapp/', include('apps.assistantapp.urls')),
     path('tracemodule/', include('apps.tracemodule.urls')),
     path('warehouse/', include('apps.warehouseManagement.urls')),
+    path('quickbooks/', include('apps.quickbooks_integration.urls')),
 ]
 
 

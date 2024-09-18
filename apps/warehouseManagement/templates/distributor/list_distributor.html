@@ -33,7 +33,7 @@
         <div class="page-title-with-or-without-btn">
             <span class="farm headingtop">Distributor Management</span>
             <!-- Create button for add-processor-->
-            {% if request.user.is_superuser %}
+            {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
             <div class="flex-header-btn">
                 <a href="{% url 'add-distributor' %}" class="btn-close-cancel">Create Distributor</a>
             </div>
@@ -85,7 +85,7 @@
                                     <li>
                                         <a href="{% url 'distributor-change-password' i.pk %}" alt="change password" title="change password"><span class="fas fa-key" data-mdb-toggle="modal" data-mdb-target="#exampleModal"></span></a>
                                     </li> 
-                                    {% if request.user.is_superuser %}
+                                    {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
                                     {% comment %} <li>
                                         <a href="{% url 'add-location' %}" class="map-icon-link" alt="add location" title="add location"><span class="fas fa-globe-americas"></span></a>
                                     </li> {% endcomment %}

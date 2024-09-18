@@ -19,7 +19,7 @@
         <div class="page-title-with-or-without-btn">
             <span class="farm headingtop">Warehouse Customer Shipment Management</span>
             <!-- Create button for add-processor-->
-            {% if request.user.is_superuser or request.user.is_distributor or request.user.is_warehouse_manager %}
+            {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role or request.user.is_distributor or request.user.is_warehouse_manager %}
             <div class="flex-header-btn">
                 <a href="{% url 'add-warehouse-shipment' %}" class="btn-close-cancel">Send Shipment</a>
             </div>
@@ -29,8 +29,9 @@
             <form method="GET">
                 <div class="card card-padding">
                     <div class="main-simple-table-with-search col-12">
-                        {% if request.user.is_superuser %}
+                        
                         <div class="row d-flex">
+                            {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
                             <div class="col-3">                            
                                 <select name="selected_customer" id="processor_id" class="form-control" onchange="this.form.submit();" required>
                                     <option value="All">Select Customer</option>
@@ -42,10 +43,10 @@
                             </div>
                             <input style="display : none;" id="submitBtn" type="submit"
                                 class="apply-filter-btn primary-btn" value="Apply Filter" />
-                           <div class="col-5"></div>
-    
+                           
+                            {% endif %}
                             <!-- Search section on the right side -->
-                            <div class="col-4">
+                            <div class="col-3">
                                 <div class="row justify-content-end">
                                     <div class="col-8">
                                         <input class="form-control" name="search_name" type="search" placeholder="Search.." autocomplete="off" aria-label="Search" id="search_name" {% if search_name %}value="{{search_name}}"{% else %}{% endif %}>
@@ -55,8 +56,16 @@
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                        {% endif %}
+                            <div class="col-6">
+                                <label for="start_date">Start Date:</label>
+                                    <input type="date" id="start_date" name="start_date" value="{{ start_date|date:'Y-m-d' }}">
+    
+                                    <label for="end_date">End Date:</label>
+                                    <input type="date" id="end_date" name="end_date" value="{{ end_date|date:'Y-m-d' }}">
+    
+                                    <button type="submit" class="btn btn-outline-success ml-2">Filter</button>
+                               </div>
+                        </div>                        
                         <br>
     
                         <div class="both-data-in" style="display: inherit;">
@@ -104,7 +113,7 @@
                                                 <td class="backk action-td rmv-bd">
                                                     <ul>
                                                         <li><a href="{% url 'warehouse-shipment-view' item.id %}" class="update-btn-link" alt="view shipment details" title="view shipment details"> <span class="fas fa-eye"></span></a></li>
-                                                        {%if request.user.is_superuser or request.user.is_distributor or request.user.is_warehouse_manager %}
+                                                        {%if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role or request.user.is_distributor or request.user.is_warehouse_manager %}
                                                        <li><a href="{% url 'edit-warehouse-shipment' item.id %}" class="update-btn-link" alt="update shipment details" title=""><span class="fas fa-edit"></span></a></li>
                                                        {% endif %}
                                                        {% if item.invoice_approval %}
@@ -121,8 +130,7 @@
                                         {% endif %} 
                                     </tbody>
                                 </table>
-                            </div>
-    
+                            </div>    
                             <div class="row align-items-center">
                                     <div class="col-md-12 col-sm-12 col-12 text-center">
                                         {% if contracts.has_other_pages %}
@@ -176,7 +184,6 @@
     $('#Warehouse-down').addClass('down');
     $('#Warehouse-sub_unic').show();
   
-    $('#Warehouse-Shipment').addClass('activeLink active-nav');
-  
+    $('#Warehouse-Shipment').addClass('activeLink active-nav');  
 </script>
 {% endblock jquery %}

@@ -20,6 +20,17 @@ from django.conf import settings
 protocol = 'http'
 import datetime
 from apps.contracts.models import *
+import csv
+from io import StringIO
+from django.utils.dateparse import parse_date
+from datetime import timedelta
+import csv
+from django.http import HttpResponse
+from django.utils.dateparse import parse_date
+from django.contrib.auth.decorators import login_required
+from collections import defaultdict
+stripe.api_key = settings.STRIPE_SECRET_KEY
+
 # Create your views here.
 
 characters = list(string.ascii_letters + string.digits + "@#$%")
@@ -330,9 +341,9 @@ def distributor_update(request,pk):
                     if form.is_valid():                       
                         email_update = request.POST.get('contact_email1')
                         name_update = request.POST.get('contact_name1')
-                        country_code = request.POST.get('country_code1')
+                        # country_code = request.POST.get('country_code1')
                         phone_number = request.POST.get('phone_number1')
-                        phone_update = country_code + phone_number
+                        phone_update = phone_number
                         fax_update = request.POST.get('contact_fax1')
                         
                         obj_id.contact_name = name_update
@@ -390,9 +401,9 @@ def distributor_update(request,pk):
                     if form.is_valid():
                         email_update = request.POST.get('contact_email1')
                         name_update = request.POST.get('contact_name1')
-                        country_code = request.POST.get('country_code1')
+                        # country_code = request.POST.get('country_code1')
                         phone_number = request.POST.get('phone_number1')
-                        phone_update = country_code + phone_number
+                        phone_update = phone_number
                         fax_update = request.POST.get('contact_fax1')
                         obj_id.contact_name = name_update
                         obj_id.contact_email = email_update
@@ -726,10 +737,10 @@ def warehouse_update(request,pk):
                         distributor = request.POST.get('distributor')                       
                                             
                         email_update = request.POST.get('contact_email1')
-                        name_update = request.POST.get('contact_name1')                        
-                        country_code = request.POST.get('country_code1')
+                        name_update = request.POST.get('contact_name1')
+                        # country_code = request.POST.get('country_code1')
                         phone_number = request.POST.get('phone_number1')
-                        phone_update = country_code + phone_number
+                        phone_update = phone_number
                         fax_update = request.POST.get('contact_fax1')
                         
                         obj_id.contact_name = name_update
@@ -794,9 +805,9 @@ def warehouse_update(request,pk):
                                            
                         email_update = request.POST.get('contact_email1')
                         name_update = request.POST.get('contact_name1')
-                        country_code = request.POST.get('country_code1')
+                        # country_code = request.POST.get('country_code1')
                         phone_number = request.POST.get('phone_number1')
-                        phone_update = country_code + phone_number
+                        phone_update = phone_number
                         fax_update = request.POST.get('contact_fax1')
                         
                         obj_id.contact_name = name_update
@@ -952,6 +963,8 @@ def add_customer(request):
                         location = form.cleaned_data.get('location')
                         latitude = form.cleaned_data.get('latitude')
                         longitude = form.cleaned_data.get('longitude')
+                        billing_address = form.cleaned_data.get('billing_address')
+                        shipping_address = form.cleaned_data.get('shipping_address')
                         credit_terms = form.cleaned_data.get('credit_terms')
                         is_tax_payable = form.cleaned_data.get('is_tax_payable')
                         tax_percentage = form.cleaned_data.get('tax_percentage')
@@ -969,6 +982,8 @@ def add_customer(request):
                             location=location,
                             latitude=latitude,
                             longitude=longitude,
+                            billing_address=billing_address,
+                            shipping_address=shipping_address,
                             credit_terms=credit_terms,
                             is_tax_payable=is_tax_payable,
                             tax_percentage=tax_percentage
@@ -1132,9 +1147,9 @@ def customer_update(request,pk):
                                            
                         email_update = request.POST.get('contact_email1')
                         name_update = request.POST.get('contact_name1')
-                        country_code = request.POST.get('country_code1')
+                        # country_code = request.POST.get('country_code1')
                         phone_number = request.POST.get('phone_number1')
-                        phone_update = country_code + phone_number
+                        phone_update = phone_number
                         fax_update = request.POST.get('contact_fax1')
                         
                         obj_id.contact_name = name_update
@@ -1194,9 +1209,9 @@ def customer_update(request,pk):
                     if form.is_valid():
                         email_update = request.POST.get('contact_email1')
                         name_update = request.POST.get('contact_name1')
-                        country_code = request.POST.get('country_code1')
+                        # country_code = request.POST.get('country_code1')
                         phone_number = request.POST.get('phone_number1')
-                        phone_update = country_code + phone_number
+                        phone_update = phone_number
                         fax_update = request.POST.get('contact_fax1')
                         obj_id.contact_name = name_update
                         obj_id.contact_email = email_update
@@ -1218,6 +1233,7 @@ def customer_update(request,pk):
                             user.save()
                             form.save()
                             log_email = obj_id.contact_email
+                        form.save()
                         # 07-04-23 Log Table
                         log_type, log_status, log_device = "CustomerUser", "Edited", "Web"
                         log_idd, log_name = obj_id.id, name_update
@@ -1334,6 +1350,7 @@ def customer_change_password(request,pk):
         return render (request, 'distributor/customer_change_password.html', context)
 
 
+@login_required()
 def customer_upload_documents(request, pk):
     context = {}
     try:
@@ -1985,7 +2002,29 @@ def list_processor_shipment(request):
                                              Q(purchase_order_number__icontains=search_name))
                 context['search_name'] = search_name
             else:
-                context['search_name'] = None            
+                context['search_name'] = None
+
+            start_date = request.GET.get('start_date', '')
+            end_date = request.GET.get('end_date', '')
+            
+            if start_date or end_date:
+                if start_date:
+                    start_date = parse_date(start_date)
+                if end_date:
+                    end_date = parse_date(end_date)
+
+                if start_date and end_date:
+                    shipments = shipments.filter(date_pulled__range=[start_date, end_date])
+                elif start_date:
+                    shipments = shipments.filter(date_pulled__gte=start_date)
+                elif end_date:
+                    shipments = shipments.filter(date_pulled__lte=end_date)
+
+                context['start_date'] = start_date
+                context['end_date'] = end_date
+            else:
+                context['start_date'] = None
+                context['end_date'] = None            
             
             shipments = shipments.order_by('-id')
             paginator = Paginator(shipments, 100)
@@ -2006,6 +2045,44 @@ def list_processor_shipment(request):
             processor_type = "T1"
 
             shipments = ProcessorWarehouseShipment.objects.filter(processor_id=processor_id, processor_type=processor_type)
+            search_name = request.GET.get('search_name', '')
+
+            if search_name and search_name is not None:
+                shipments = shipments.filter(Q(warehouse_name__icontains=search_name) |
+                                             Q(customer_name__icontains=search_name) |
+                                             Q(crop__icontains=search_name) |
+                                             Q(contract__secret_key__icontains=search_name) |
+                                             Q(outbound_type__icontains=search_name) |
+                                             Q(carrier_type__icontains=search_name) |
+                                             Q(status__icontains=search_name) |
+                                             Q(purchase_order_name__icontains=search_name) |
+                                             Q(lot_number__icontains=search_name) |
+                                             Q(purchase_order_number__icontains=search_name))
+                context['search_name'] = search_name
+            else:
+                context['search_name'] = None
+
+            start_date = request.GET.get('start_date', '')
+            end_date = request.GET.get('end_date', '')
+            
+            if start_date or end_date:
+                if start_date:
+                    start_date = parse_date(start_date)
+                if end_date:
+                    end_date = parse_date(end_date)
+
+                if start_date and end_date:
+                    shipments = shipments.filter(date_pulled__range=[start_date, end_date])
+                elif start_date:
+                    shipments = shipments.filter(date_pulled__gte=start_date)
+                elif end_date:
+                    shipments = shipments.filter(date_pulled__lte=end_date)
+
+                context['start_date'] = start_date
+                context['end_date'] = end_date
+            else:
+                context['start_date'] = None
+                context['end_date'] = None
             shipments = shipments.order_by('-id')
             paginator = Paginator(shipments, 100)
             page = request.GET.get('page')
@@ -2025,6 +2102,46 @@ def list_processor_shipment(request):
             processor_type = Processor2.objects.get(id=p.processor2.id).processor_type.all().first().type_name
 
             shipments = ProcessorWarehouseShipment.objects.filter(processor_id=processor_id, processor_type=processor_type)
+
+            search_name = request.GET.get('search_name', '')
+
+            if search_name and search_name is not None:
+                shipments = shipments.filter(Q(warehouse_name__icontains=search_name) |
+                                             Q(customer_name__icontains=search_name) |
+                                             Q(crop__icontains=search_name) |
+                                             Q(contract__secret_key__icontains=search_name) |
+                                             Q(outbound_type__icontains=search_name) |
+                                             Q(carrier_type__icontains=search_name) |
+                                             Q(status__icontains=search_name) |
+                                             Q(purchase_order_name__icontains=search_name) |
+                                             Q(lot_number__icontains=search_name) |
+                                             Q(purchase_order_number__icontains=search_name))
+                context['search_name'] = search_name
+            else:
+                context['search_name'] = None
+
+            start_date = request.GET.get('start_date', '')
+            end_date = request.GET.get('end_date', '')
+            
+            if start_date or end_date:
+                if start_date:
+                    start_date = parse_date(start_date)
+                if end_date:
+                    end_date = parse_date(end_date)
+
+                if start_date and end_date:
+                    shipments = shipments.filter(date_pulled__range=[start_date, end_date])
+                elif start_date:
+                    shipments = shipments.filter(date_pulled__gte=start_date)
+                elif end_date:
+                    shipments = shipments.filter(date_pulled__lte=end_date)
+
+                context['start_date'] = start_date
+                context['end_date'] = end_date
+            else:
+                context['start_date'] = None
+                context['end_date'] = None
+
             shipments = shipments.order_by('-id')
             paginator = Paginator(shipments, 100)
             page = request.GET.get('page')
@@ -2048,6 +2165,45 @@ def list_processor_shipment(request):
                 check_shipment = ProcessorWarehouseShipment.objects.filter(warehouse_id=warehouse_id).order_by('-id')
                 if check_shipment:
                     shipments = shipments+list(check_shipment)
+            search_name = request.GET.get('search_name', '')
+
+            if search_name and search_name is not None:
+                shipments = shipments.filter(Q(warehouse_name__icontains=search_name) |
+                                             Q(customer_name__icontains=search_name) |
+                                             Q(crop__icontains=search_name) |
+                                             Q(contract__secret_key__icontains=search_name) |
+                                             Q(outbound_type__icontains=search_name) |
+                                             Q(carrier_type__icontains=search_name) |
+                                             Q(status__icontains=search_name) |
+                                             Q(purchase_order_name__icontains=search_name) |
+                                             Q(lot_number__icontains=search_name) |
+                                             Q(purchase_order_number__icontains=search_name))
+                context['search_name'] = search_name
+            else:
+                context['search_name'] = None
+
+            start_date = request.GET.get('start_date', '')
+            end_date = request.GET.get('end_date', '')
+            
+            if start_date or end_date:
+                if start_date:
+                    start_date = parse_date(start_date)
+                if end_date:
+                    end_date = parse_date(end_date)
+
+                if start_date and end_date:
+                    shipments = shipments.filter(date_pulled__range=[start_date, end_date])
+                elif start_date:
+                    shipments = shipments.filter(date_pulled__gte=start_date)
+                elif end_date:
+                    shipments = shipments.filter(date_pulled__lte=end_date)
+
+                context['start_date'] = start_date
+                context['end_date'] = end_date
+            else:
+                context['start_date'] = None
+                context['end_date'] = None
+
             paginator = Paginator(shipments, 100)
             print(paginator)
             page = request.GET.get('page')
@@ -2066,6 +2222,46 @@ def list_processor_shipment(request):
             w = WarehouseUser.objects.get(contact_email=user_email)
             warehouse_id = Warehouse.objects.get(id=w.warehouse.id).id
             shipments = ProcessorWarehouseShipment.objects.filter(warehouse_id=warehouse_id)
+
+            search_name = request.GET.get('search_name', '')
+
+            if search_name and search_name is not None:
+                shipments = shipments.filter(Q(warehouse_name__icontains=search_name) |
+                                             Q(customer_name__icontains=search_name) |
+                                             Q(crop__icontains=search_name) |
+                                             Q(contract__secret_key__icontains=search_name) |
+                                             Q(outbound_type__icontains=search_name) |
+                                             Q(carrier_type__icontains=search_name) |
+                                             Q(status__icontains=search_name) |
+                                             Q(purchase_order_name__icontains=search_name) |
+                                             Q(lot_number__icontains=search_name) |
+                                             Q(purchase_order_number__icontains=search_name))
+                context['search_name'] = search_name
+            else:
+                context['search_name'] = None
+
+            start_date = request.GET.get('start_date', '')
+            end_date = request.GET.get('end_date', '')
+            
+            if start_date or end_date:
+                if start_date:
+                    start_date = parse_date(start_date)
+                if end_date:
+                    end_date = parse_date(end_date)
+
+                if start_date and end_date:
+                    shipments = shipments.filter(date_pulled__range=[start_date, end_date])
+                elif start_date:
+                    shipments = shipments.filter(date_pulled__gte=start_date)
+                elif end_date:
+                    shipments = shipments.filter(date_pulled__lte=end_date)
+
+                context['start_date'] = start_date
+                context['end_date'] = end_date
+            else:
+                context['start_date'] = None
+                context['end_date'] = None
+
             shipments = shipments.order_by('-id')
             paginator = Paginator(shipments, 100)
             page = request.GET.get('page')
@@ -2083,6 +2279,46 @@ def list_processor_shipment(request):
             c = CustomerUser.objects.get(contact_email=user_email)
             customer_id = Customer.objects.get(id=c.customer.id).id
             shipments = ProcessorWarehouseShipment.objects.filter(customer_id=customer_id)
+
+            search_name = request.GET.get('search_name', '')
+
+            if search_name and search_name is not None:
+                shipments = shipments.filter(Q(warehouse_name__icontains=search_name) |
+                                             Q(customer_name__icontains=search_name) |
+                                             Q(crop__icontains=search_name) |
+                                             Q(contract__secret_key__icontains=search_name) |
+                                             Q(outbound_type__icontains=search_name) |
+                                             Q(carrier_type__icontains=search_name) |
+                                             Q(status__icontains=search_name) |
+                                             Q(purchase_order_name__icontains=search_name) |
+                                             Q(lot_number__icontains=search_name) |
+                                             Q(purchase_order_number__icontains=search_name))
+                context['search_name'] = search_name
+            else:
+                context['search_name'] = None
+
+            start_date = request.GET.get('start_date', '')
+            end_date = request.GET.get('end_date', '')
+            
+            if start_date or end_date:
+                if start_date:
+                    start_date = parse_date(start_date)
+                if end_date:
+                    end_date = parse_date(end_date)
+
+                if start_date and end_date:
+                    shipments = shipments.filter(date_pulled__range=[start_date, end_date])
+                elif start_date:
+                    shipments = shipments.filter(date_pulled__gte=start_date)
+                elif end_date:
+                    shipments = shipments.filter(date_pulled__lte=end_date)
+
+                context['start_date'] = start_date
+                context['end_date'] = end_date
+            else:
+                context['start_date'] = None
+                context['end_date'] = None
+                
             shipments = shipments.order_by('-id')
             paginator = Paginator(shipments, 100)
             page = request.GET.get('page')
@@ -2467,6 +2703,7 @@ def edit_processor_shipment(request, pk):
         return render(request, 'distributor/edit_outbound.html', context)
 
 
+@login_required()
 def create_warehouse_shipment(request):
     context = {}
     try:
@@ -2863,6 +3100,7 @@ def create_warehouse_shipment(request):
         return render(request, 'distributor/create_warehouse_outbound.html', context)  
 
 
+@login_required()
 def warehouse_shipment_list(request):
     context = {}
     try:
@@ -2898,7 +3136,29 @@ def warehouse_shipment_list(request):
                                              Q(purchase_order_number__icontains=search_name))
                 context['search_name'] = search_name
             else:
-                context['search_name'] = None            
+                context['search_name'] = None  
+
+            start_date = request.GET.get('start_date', '')
+            end_date = request.GET.get('end_date', '')
+            
+            if start_date or end_date:
+                if start_date:
+                    start_date = parse_date(start_date)
+                if end_date:
+                    end_date = parse_date(end_date)
+
+                if start_date and end_date:
+                    shipments = shipments.filter(date_pulled__range=[start_date, end_date])
+                elif start_date:
+                    shipments = shipments.filter(date_pulled__gte=start_date)
+                elif end_date:
+                    shipments = shipments.filter(date_pulled__lte=end_date)
+
+                context['start_date'] = start_date
+                context['end_date'] = end_date
+            else:
+                context['start_date'] = None
+                context['end_date'] = None          
             
             shipments = shipments.order_by('-id')
             paginator = Paginator(shipments, 100)
@@ -2913,7 +3173,7 @@ def warehouse_shipment_list(request):
             return render(request, 'distributor/list_warehouse_outbound.html', context)
       
         elif request.user.is_distributor:
-            print('0000000000')
+        
             user_email = request.user.email
             d = DistributorUser.objects.get(contact_email=user_email)
             distributor = Distributor.objects.get(id=d.distributor.id)
@@ -2923,6 +3183,44 @@ def warehouse_shipment_list(request):
                 check_shipment = WarehouseCustomerShipment.objects.filter(warehouse_id=warehouse_id).order_by('-id')
                 if check_shipment:
                     shipments = shipments+list(check_shipment)
+            search_name = request.GET.get('search_name', '')
+
+            if search_name and search_name is not None:
+                shipments = shipments.filter(Q(warehouse_name__icontains=search_name) |
+                                             Q(customer_name__icontains=search_name) |
+                                             Q(contract__secret_key__icontains=search_name) |
+                                             Q(outbound_type__icontains=search_name) |
+                                             Q(carrier_type__icontains=search_name) |
+                                             Q(status__icontains=search_name) |
+                                             Q(purchase_order_name__icontains=search_name) |
+                                             Q(lot_number__icontains=search_name) |
+                                             Q(purchase_order_number__icontains=search_name))
+                context['search_name'] = search_name
+            else:
+                context['search_name'] = None  
+
+            start_date = request.GET.get('start_date', '')
+            end_date = request.GET.get('end_date', '')
+            
+            if start_date or end_date:
+                if start_date:
+                    start_date = parse_date(start_date)
+                if end_date:
+                    end_date = parse_date(end_date)
+
+                if start_date and end_date:
+                    shipments = shipments.filter(date_pulled__range=[start_date, end_date])
+                elif start_date:
+                    shipments = shipments.filter(date_pulled__gte=start_date)
+                elif end_date:
+                    shipments = shipments.filter(date_pulled__lte=end_date)
+
+                context['start_date'] = start_date
+                context['end_date'] = end_date
+            else:
+                context['start_date'] = None
+                context['end_date'] = None    
+
             paginator = Paginator(shipments, 100)
             print(paginator)
             page = request.GET.get('page')
@@ -2941,6 +3239,44 @@ def warehouse_shipment_list(request):
             w = WarehouseUser.objects.get(contact_email=user_email)
             warehouse_id = Warehouse.objects.get(id=w.warehouse.id).id
             shipments = WarehouseCustomerShipment.objects.filter(warehouse_id=warehouse_id)
+            search_name = request.GET.get('search_name', '')
+
+            if search_name and search_name is not None:
+                shipments = shipments.filter(Q(warehouse_name__icontains=search_name) |
+                                             Q(customer_name__icontains=search_name) |
+                                             Q(contract__secret_key__icontains=search_name) |
+                                             Q(outbound_type__icontains=search_name) |
+                                             Q(carrier_type__icontains=search_name) |
+                                             Q(status__icontains=search_name) |
+                                             Q(purchase_order_name__icontains=search_name) |
+                                             Q(lot_number__icontains=search_name) |
+                                             Q(purchase_order_number__icontains=search_name))
+                context['search_name'] = search_name
+            else:
+                context['search_name'] = None  
+
+            start_date = request.GET.get('start_date', '')
+            end_date = request.GET.get('end_date', '')
+            
+            if start_date or end_date:
+                if start_date:
+                    start_date = parse_date(start_date)
+                if end_date:
+                    end_date = parse_date(end_date)
+
+                if start_date and end_date:
+                    shipments = shipments.filter(date_pulled__range=[start_date, end_date])
+                elif start_date:
+                    shipments = shipments.filter(date_pulled__gte=start_date)
+                elif end_date:
+                    shipments = shipments.filter(date_pulled__lte=end_date)
+
+                context['start_date'] = start_date
+                context['end_date'] = end_date
+            else:
+                context['start_date'] = None
+                context['end_date'] = None    
+
             shipments = shipments.order_by('-id')
             paginator = Paginator(shipments, 100)
             page = request.GET.get('page')
@@ -2958,6 +3294,44 @@ def warehouse_shipment_list(request):
             c = CustomerUser.objects.get(contact_email=user_email)
             customer_id = Customer.objects.get(id=c.customer.id).id
             shipments = WarehouseCustomerShipment.objects.filter(customer_id=customer_id)
+            search_name = request.GET.get('search_name', '')
+
+            if search_name and search_name is not None:
+                shipments = shipments.filter(Q(warehouse_name__icontains=search_name) |
+                                             Q(customer_name__icontains=search_name) |
+                                             Q(contract__secret_key__icontains=search_name) |
+                                             Q(outbound_type__icontains=search_name) |
+                                             Q(carrier_type__icontains=search_name) |
+                                             Q(status__icontains=search_name) |
+                                             Q(purchase_order_name__icontains=search_name) |
+                                             Q(lot_number__icontains=search_name) |
+                                             Q(purchase_order_number__icontains=search_name))
+                context['search_name'] = search_name
+            else:
+                context['search_name'] = None  
+
+            start_date = request.GET.get('start_date', '')
+            end_date = request.GET.get('end_date', '')
+            
+            if start_date or end_date:
+                if start_date:
+                    start_date = parse_date(start_date)
+                if end_date:
+                    end_date = parse_date(end_date)
+
+                if start_date and end_date:
+                    shipments = shipments.filter(date_pulled__range=[start_date, end_date])
+                elif start_date:
+                    shipments = shipments.filter(date_pulled__gte=start_date)
+                elif end_date:
+                    shipments = shipments.filter(date_pulled__lte=end_date)
+
+                context['start_date'] = start_date
+                context['end_date'] = end_date
+            else:
+                context['start_date'] = None
+                context['end_date'] = None    
+
             shipments = shipments.order_by('-id')
             paginator = Paginator(shipments, 100)
             page = request.GET.get('page')
@@ -2977,6 +3351,7 @@ def warehouse_shipment_list(request):
         return render(request, 'distributor/list_warehouse_outbound.html', context)
     
 
+@login_required()
 def warehouse_shipment_view(request, pk):
     context = {}
     try:
@@ -3114,6 +3489,7 @@ def find_changes_for_customer_shipment(context, shipment):
     return changes
 
 
+@login_required()
 def edit_warehouse_shipment(request, pk):
     context = {}
     # try:
@@ -3299,6 +3675,7 @@ def edit_warehouse_shipment(request, pk):
         return render(request, 'distributor/edit_warehouse_outbound.html', context)
 
 
+@login_required()
 def generate_invoice(request, pk):    
     try:
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role() or request.user.is_distributor or request.user.is_warehouse_manager:
@@ -3316,7 +3693,6 @@ def generate_invoice(request, pk):
         return redirect('list-warehouse-shipment')  
 
 
-from datetime import timedelta
 @login_required()
 def warehouse_shipment_invoice(request, pk):
     context = {}
@@ -3340,9 +3716,8 @@ def warehouse_shipment_invoice(request, pk):
         context["error_messages"] = str(e)
         return render(request, 'distributor/warehouse_shipment_invoice.html', context)
 
-stripe.api_key = settings.STRIPE_SECRET_KEY
 
-
+@login_required()
 def create_payment_for_shipment(request, pk, type):
     if type == 'warehouse':
         warehouse_shipment = WarehouseCustomerShipment.objects.get(id=pk)        
@@ -3389,6 +3764,7 @@ def create_payment_for_shipment(request, pk, type):
     return HttpResponseRedirect(session.url)
 
 
+@login_required()
 def checkout_success(request,pk,type,checkout_session_id):
     """
     This view handles the creation of a PaymentForShipment instance once the payment has been completed.
@@ -3441,7 +3817,8 @@ def checkout_success(request,pk,type,checkout_session_id):
         message = f"Payment failed: {payment_intent.last_payment_error.message}" if payment_intent.last_payment_error else "Payment failed"
         return render(request, "distributor/failed_payment.html", {'error_message': message})
     
- 
+
+@login_required() 
 def customer_view(request, pk):
     context = {}
     try:
@@ -3453,3 +3830,323 @@ def customer_view(request, pk):
     except Exception as e:
         context["error_messages"] = str(e)
         return render(request, 'distributor/customer_view.html', context) 
+
+
+@login_required()
+def processor_shipment_generate_report(request):
+    context = {}
+    shipment_logs = ProcessorShipmentLog.objects.all()
+    
+    if request.method == "POST":
+        date_choice = request.POST.get('date_choice')
+        single_date = request.POST.get('single_date')
+        start_date = request.POST.get('start_date')
+        end_date = request.POST.get('end_date')
+        start_date = request.POST.get('start_date')
+        if date_choice == 'single_date' and single_date:        
+            single_date_obj = parse_date(single_date)
+            shipment_logs = shipment_logs.filter(updated_at__date=single_date_obj)
+        elif date_choice == 'date_range' and start_date and end_date:        
+            start_date_obj = parse_date(start_date)
+            end_date_obj = parse_date(end_date)
+            shipment_logs = shipment_logs.filter(updated_at__date__range=[start_date_obj, end_date_obj])
+        changes_dict = {}
+
+        for log in shipment_logs:
+            if log.changes:
+                shipment_id = log.shipment.shipment_id
+                description = log.description
+                if shipment_id not in changes_dict:
+                    changes_dict[shipment_id] = {}
+                if description not in changes_dict[shipment_id]:
+                    changes_dict[shipment_id][description] = []
+                
+                for change in log.changes.get('changes', []):
+                    changes_dict[shipment_id][description].append({
+                        'field': change.get('field'),
+                        'old': change.get('old'),
+                        'new': change.get('new'),
+                        'updated_at': log.updated_at.strftime('%Y-%m-%d %H:%M:%S'),
+                        'updated_by': log.updated_by.username if log.updated_by else 'Unknown'
+                    })
+        
+        context["date_choice"] = date_choice
+        context["single_date"] = single_date
+        context["start_date"] = start_date
+        context["end_date"] = end_date
+        context['changes_dict'] = dict(changes_dict)
+        print(context['changes_dict'])
+
+    return render(request, 'report/processor_shipment_report_list.html', context)
+
+
+@login_required
+def processor_shipment_export_csv(request):
+    date_choice = request.GET.get('date_choice')
+    single_date = request.GET.get('single_date')
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+
+    shipment_logs = ProcessorShipmentLog.objects.all()
+
+    if date_choice == 'single_date' and single_date:
+        single_date_obj = parse_date(single_date)
+        shipment_logs = shipment_logs.filter(updated_at__date=single_date_obj)
+    elif date_choice == 'date_range' and start_date and end_date:
+        start_date_obj = parse_date(start_date)
+        end_date_obj = parse_date(end_date)
+        shipment_logs = shipment_logs.filter(updated_at__date__range=[start_date_obj, end_date_obj])
+
+    changes_dict = defaultdict(lambda: defaultdict(list))
+
+    for log in shipment_logs:
+        if log.changes:
+            shipment_id = log.shipment.shipment_id
+            description = log.description
+            for change in log.changes.get('changes', []):
+                changes_dict[shipment_id][description].append({
+                    'field': change.get('field'),
+                    'old': change.get('old'),
+                    'new': change.get('new'),
+                    'updated_at': log.updated_at.strftime('%Y-%m-%d %H:%M:%S'),
+                    'updated_by': log.updated_by.username if log.updated_by else 'Unknown'
+                })
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="shipment_changes_report.csv"'
+    writer = csv.writer(response)
+
+    writer.writerow(['Shipment ID', 'Description', 'Field', 'Old Value', 'New Value', 'Updated At', 'Updated By'])
+
+    for shipment_id, descriptions in changes_dict.items():
+        for description, changes in descriptions.items():
+            for change in changes:
+                writer.writerow([
+                    shipment_id,
+                    description,
+                    change['field'],
+                    change['old'],
+                    change['new'],
+                    change['updated_at'],
+                    change['updated_by']
+                ])
+    
+    return response
+
+
+@login_required
+def processor_shipment_csv_single_shipment(request,shipment_id):  
+    date_choice = request.GET.get('date_choice')
+    single_date = request.GET.get('single_date')
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    
+    shipment_logs = ProcessorShipmentLog.objects.all()
+
+    if shipment_id:
+
+        shipment_logs = shipment_logs.filter(shipment__shipment_id=shipment_id)
+
+    if date_choice == 'single_date' and single_date:
+        single_date_obj = parse_date(single_date)
+        shipment_logs = shipment_logs.filter(updated_at__date=single_date_obj)
+    elif date_choice == 'date_range' and start_date and end_date:
+        start_date_obj = parse_date(start_date)
+        end_date_obj = parse_date(end_date)
+        shipment_logs = shipment_logs.filter(updated_at__date__range=[start_date_obj, end_date_obj])
+
+    changes_dict = defaultdict(lambda: defaultdict(list))
+
+    for log in shipment_logs:
+        if log.changes:
+            description = log.description
+            for change in log.changes.get('changes', []):
+                changes_dict[log.shipment.shipment_id][description].append({
+                    'field': change.get('field'),
+                    'old': change.get('old'),
+                    'new': change.get('new'),
+                    'updated_at': log.updated_at.strftime('%Y-%m-%d %H:%M:%S'),
+                    'updated_by': log.updated_by.username if log.updated_by else 'Unknown'
+                })
+
+    response = HttpResponse(content_type='text/csv')
+    filename = f"shipment_{shipment_id}_changes_report.csv" if shipment_id else "shipment_changes_report.csv"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    writer = csv.writer(response)
+
+    writer.writerow(['Shipment ID', 'Description', 'Field', 'Old Value', 'New Value', 'Updated At', 'Updated By'])
+
+    for shipment_id, descriptions in changes_dict.items():
+        for description, changes in descriptions.items():
+            for change in changes:
+                writer.writerow([
+                    shipment_id,
+                    description,
+                    change['field'],
+                    change['old'],
+                    change['new'],
+                    change['updated_at'],
+                    change['updated_by']
+                ])
+    
+    return response
+
+
+@login_required()
+def warehouse_shipment_generate_report(request):
+    context = {}
+    shipment_logs = WarehouseShipmentLog.objects.all()
+    
+    if request.method == "POST":
+        date_choice = request.POST.get('date_choice')
+        single_date = request.POST.get('single_date')
+        start_date = request.POST.get('start_date')
+        end_date = request.POST.get('end_date')
+        start_date = request.POST.get('start_date')
+        if date_choice == 'single_date' and single_date:        
+            single_date_obj = parse_date(single_date)
+            shipment_logs = shipment_logs.filter(updated_at__date=single_date_obj)
+        elif date_choice == 'date_range' and start_date and end_date:        
+            start_date_obj = parse_date(start_date)
+            end_date_obj = parse_date(end_date)
+            shipment_logs = shipment_logs.filter(updated_at__date__range=[start_date_obj, end_date_obj])
+        changes_dict = {}
+
+        for log in shipment_logs:
+            if log.changes:
+                shipment_id = log.shipment.shipment_id
+                description = log.description
+                if shipment_id not in changes_dict:
+                    changes_dict[shipment_id] = {}
+                if description not in changes_dict[shipment_id]:
+                    changes_dict[shipment_id][description] = []
+                
+                for change in log.changes.get('changes', []):
+                    changes_dict[shipment_id][description].append({
+                        'field': change.get('field'),
+                        'old': change.get('old'),
+                        'new': change.get('new'),
+                        'updated_at': log.updated_at.strftime('%Y-%m-%d %H:%M:%S'),
+                        'updated_by': log.updated_by.username if log.updated_by else 'Unknown'
+                    })
+        
+        context["date_choice"] = date_choice
+        context["single_date"] = single_date
+        context["start_date"] = start_date
+        context["end_date"] = end_date
+        context['changes_dict'] = dict(changes_dict)
+        print(context['changes_dict'])
+
+    return render(request, 'report/warehouse_shipment_report_list.html', context)
+
+
+@login_required
+def warehouse_shipment_export_csv(request):
+    date_choice = request.GET.get('date_choice')
+    single_date = request.GET.get('single_date')
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+
+    shipment_logs = WarehouseShipmentLog.objects.all()
+
+    if date_choice == 'single_date' and single_date:
+        single_date_obj = parse_date(single_date)
+        shipment_logs = shipment_logs.filter(updated_at__date=single_date_obj)
+    elif date_choice == 'date_range' and start_date and end_date:
+        start_date_obj = parse_date(start_date)
+        end_date_obj = parse_date(end_date)
+        shipment_logs = shipment_logs.filter(updated_at__date__range=[start_date_obj, end_date_obj])
+
+    changes_dict = defaultdict(lambda: defaultdict(list))
+
+    for log in shipment_logs:
+        if log.changes:
+            shipment_id = log.shipment.shipment_id
+            description = log.description
+            for change in log.changes.get('changes', []):
+                changes_dict[shipment_id][description].append({
+                    'field': change.get('field'),
+                    'old': change.get('old'),
+                    'new': change.get('new'),
+                    'updated_at': log.updated_at.strftime('%Y-%m-%d %H:%M:%S'),
+                    'updated_by': log.updated_by.username if log.updated_by else 'Unknown'
+                })
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="shipment_changes_report.csv"'
+    writer = csv.writer(response)
+
+    writer.writerow(['Shipment ID', 'Description', 'Field', 'Old Value', 'New Value', 'Updated At', 'Updated By'])
+
+    for shipment_id, descriptions in changes_dict.items():
+        for description, changes in descriptions.items():
+            for change in changes:
+                writer.writerow([
+                    shipment_id,
+                    description,
+                    change['field'],
+                    change['old'],
+                    change['new'],
+                    change['updated_at'],
+                    change['updated_by']
+                ])
+    
+    return response
+
+
+@login_required
+def warehouse_shipment_csv_single_shipment(request,shipment_id):  
+    date_choice = request.GET.get('date_choice')
+    single_date = request.GET.get('single_date')
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    
+    shipment_logs = WarehouseShipmentLog.objects.all()
+
+    if shipment_id:
+
+        shipment_logs = shipment_logs.filter(shipment__shipment_id=shipment_id)
+
+    if date_choice == 'single_date' and single_date:
+        single_date_obj = parse_date(single_date)
+        shipment_logs = shipment_logs.filter(updated_at__date=single_date_obj)
+    elif date_choice == 'date_range' and start_date and end_date:
+        start_date_obj = parse_date(start_date)
+        end_date_obj = parse_date(end_date)
+        shipment_logs = shipment_logs.filter(updated_at__date__range=[start_date_obj, end_date_obj])
+
+    changes_dict = defaultdict(lambda: defaultdict(list))
+
+    for log in shipment_logs:
+        if log.changes:
+            description = log.description
+            for change in log.changes.get('changes', []):
+                changes_dict[log.shipment.shipment_id][description].append({
+                    'field': change.get('field'),
+                    'old': change.get('old'),
+                    'new': change.get('new'),
+                    'updated_at': log.updated_at.strftime('%Y-%m-%d %H:%M:%S'),
+                    'updated_by': log.updated_by.username if log.updated_by else 'Unknown'
+                })
+
+    response = HttpResponse(content_type='text/csv')
+    filename = f"shipment_{shipment_id}_changes_report.csv" if shipment_id else "shipment_changes_report.csv"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    writer = csv.writer(response)
+
+    writer.writerow(['Shipment ID', 'Description', 'Field', 'Old Value', 'New Value', 'Updated At', 'Updated By'])
+
+    for shipment_id, descriptions in changes_dict.items():
+        for description, changes in descriptions.items():
+            for change in changes:
+                writer.writerow([
+                    shipment_id,
+                    description,
+                    change['field'],
+                    change['old'],
+                    change['new'],
+                    change['updated_at'],
+                    change['updated_by']
+                ])
+    
+    return response

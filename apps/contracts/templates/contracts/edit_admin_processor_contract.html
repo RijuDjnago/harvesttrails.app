@@ -156,8 +156,8 @@
                                             <div class="form-group">
                                                 <label for="contract_amount">Contract Amount</label>
                                                 <div class="d-flex">
-                                                    <input type="number" name="contract_amount[]" id="contract_amount" class="form-control" value="{{ crop.contract_amount }}" required>
-                                                    <select name="amount_unit[]" class="form-select" required>
+                                                    <input type="number" name="contract_amount[]" id="contract_amount" class="form-control" value="{{ crop.contract_amount }}" style="margin-top:0; border-top-right-radius:0 !important; border-bottom-right-radius:0 !important" required>
+                                                    <select name="amount_unit[]" class="form-select" style="border-top-left-radius:0 !important; border-bottom-left-radius:0 !important; border-left:0; width:100px;" required>
                                                         <option value="LBS" {% if crop.amount_unit == 'LBS' %}selected{% endif %}>LBS</option>
                                                         <option value="MT" {% if crop.amount_unit == 'MT' %}selected{% endif %}>MT</option>
                                                     </select>
@@ -200,8 +200,8 @@
                                             <div class="form-group">
                                                 <label for="contract_amount">Contract Amount</label>
                                                 <div class="d-flex">
-                                                    <input type="number" name="contract_amount[]" id="contract_amount" class="form-control" required>
-                                                    <select name="amount_unit[]" class="form-select" required>
+                                                    <input type="number" name="contract_amount[]" id="contract_amount" class="form-control" style="margin-top:0; border-top-right-radius:0 !important; border-bottom-right-radius:0 !important" required>
+                                                    <select name="amount_unit[]" class="form-select" style="border-top-left-radius:0 !important; border-bottom-left-radius:0 !important; border-left:0; width:100px;" required>
                                                         <option value="LBS">LBS</option>
                                                         <option value="MT">MT</option>
                                                     </select>
@@ -263,7 +263,7 @@
                             <div class="form-group d-flex align-items-center justify-content-center">
                                 <label for="required_documents" class="mb-0">Required Documents:</label>
                                 <!-- Admin can add document names -->
-                                {% if request.user.is_superuser %}
+                                {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
                                     <button type="button" class="btn btn-primary font-weight-bold btn-lg ms-2" id="add-document" style="width: 41px;height: 24px;padding: 0;display: inline-flex;justify-content: center;align-items: center;font-size: 19px;">+</button>
                                 {% endif %}
                                 <div class="flex-grow-1"></div>
@@ -283,7 +283,7 @@
                                     {% if request.user.is_processor or request.user.is_processor2 %}
                                         <input type="file" name="document_file_{{ document.id }}" class="form-control me-3" value="{{document.document.name}}">
                                     {% endif %}
-                                    {% if request.user.is_superuser %}
+                                    {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
                                         <!-- Delete button for admins -->
                                         <button type="button" class="btn btn-danger btn-remove-document" data-document-id="{{ document.id }}" style="width: 41px;height: 24px;padding: 0;display: inline-flex;justify-content: center;align-items: center;font-size: 10px;">x</button>
                                     {% endif %}
@@ -300,7 +300,7 @@
                     <div class="row">
                         <div class="form-btn-row text-center text-md-end">
                             <a href="{% url 'list-contract' %}" class="btn-close-cancel">Cancel</a>
-                            <button type="submit" class="btn-save-submit">{% if request.user.is_superuser %}Save{%endif %}{% if request.user.is_processor or request.user.is_processor2 %}Submit{% endif %}</button>
+                            <button type="submit" class="btn-save-submit">{% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}Save{%endif %}{% if request.user.is_processor or request.user.is_processor2 %}Submit{% endif %}</button>
                         </div>
                     </div>
                 </form>

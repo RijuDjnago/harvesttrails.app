@@ -853,21 +853,18 @@ def admin_processor_contract_create(request):
                 processors.append({
                     "id": pro2["id"],
                     "entity_name": pro2["entity_name"],
-                    "type": pro2["processor_type__type_name"]  # Reduced query redundancy
-                })
-            
+                    "type": pro2["processor_type__type_name"] 
+                })            
             context["processor"] = processors
             
             if request.method == "POST":
-                print("post method is hit")
-                # Extract data from the POST request
+                print("post method is hit")               
                 selected_processor = request.POST.get('selected_processor') 
                 contract_type = request.POST.get('contract_type')               
                 contract_start_date = request.POST.get('contract_start_date')
                 contract_period = request.POST.get('contract_period')
                 status = request.POST.get('status')                
-                print(selected_processor)
-                # Ensure selected_processor is not empty and correctly formatted
+               
                 if selected_processor:
                     try:
                         processor_id, processor_type = selected_processor.split("_")
@@ -875,7 +872,6 @@ def admin_processor_contract_create(request):
                         context["error_messages"] = "Invalid processor selection."
                         return render(request, 'contracts/create_admin_processor_contract.html', context)
                     
-                    print(processor_id, processor_type)
                     # Retrieve the processor object
                     if processor_type == "T1":
                         processor = Processor.objects.filter(id=processor_id).first()
@@ -886,7 +882,7 @@ def admin_processor_contract_create(request):
                     if not processor:
                         context["error_messages"] = "Selected processor does not exist."
                         return render(request, 'contracts/create_admin_processor_contract.html', context)
-                    print(processor)
+
                     contract = AdminProcessorContract.objects.create(                        
                         processor_id=processor_id, 
                         processor_type=processor_type,
@@ -897,13 +893,13 @@ def admin_processor_contract_create(request):
                         status=status, 
                         created_by_id=request.user.id
                     )
-                    print(contract)
+
                     crop_names = request.POST.getlist('crop[]')
                     crop_types = request.POST.getlist('crop_type[]')
                     contract_amounts = request.POST.getlist('contract_amount[]')
                     amount_units = request.POST.getlist('amount_unit[]')
                     per_unit_rates = request.POST.getlist('per_unit_rate[]')
-                    print(crop_names, crop_types, contract_amounts, amount_units, )
+
                     for crop_name, crop_type, contract_amount, amount_unit, per_unit_rate in zip(
                             crop_names, crop_types, contract_amounts, amount_units, per_unit_rates):
                         
@@ -972,7 +968,7 @@ def admin_processor_contract_list(request):
                 processors.append({
                     "id": pro2["id"],
                     "entity_name": pro2["entity_name"],
-                    "type": pro2["processor_type__type_name"]  # Reduced query redundancy
+                    "type": pro2["processor_type__type_name"] 
                 })
             
             context["processor"] = processors
@@ -1090,12 +1086,10 @@ def edit_admin_processor_contract(request, pk):
     try:
         contract = get_object_or_404(AdminProcessorContract, id=pk)       
 
-        # Retrieve processors
         processors = []
         processor1 = Processor.objects.all().values('id', 'entity_name').order_by('entity_name')
         processor2 = Processor2.objects.all().values('id', 'entity_name', 'processor_type__type_name').order_by('entity_name')
         
-
         for pro1 in processor1:
             processors.append({
                 "id": pro1["id"],
@@ -1110,7 +1104,6 @@ def edit_admin_processor_contract(request, pk):
                 "type": pro2["processor_type__type_name"]
             })
 
-        # Retrieve the documents associated with this contract
         documents = AdminProcessorContractDocuments.objects.filter(contract=contract)        
         crops = CropDetails.objects.filter(contract=contract)
         context = {
@@ -1128,7 +1121,7 @@ def edit_admin_processor_contract(request, pk):
 
         if request.method == "POST":
             if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
-                # Handle updates by admin or superuser
+
                 selected_processor = request.POST.get('selected_processor')
                 selected_contract_type = request.POST.get('contract_type')
                 contract_start_date = request.POST.get('contract_start_date')
@@ -1151,7 +1144,6 @@ def edit_admin_processor_contract(request, pk):
                         context["error_messages"] = "Selected processor does not exist."
                         return render(request, 'contracts/edit_admin_processor_contract.html', context)
 
-                    # Update contract details
                     contract.processor_id = processor_id
                     contract.processor_type = processor_type
                     contract.processor_entity_name = processor.entity_name
@@ -1161,7 +1153,6 @@ def edit_admin_processor_contract(request, pk):
                     contract.status = status
                     contract.save()
 
-                    print(contract)
                     crop_ids = request.POST.getlist("crop_id[]")
                     crops = request.POST.getlist("crop[]")
                     crop_types = request.POST.getlist("crop_type[]")
@@ -1170,13 +1161,9 @@ def edit_admin_processor_contract(request, pk):
                     per_unit_rates = request.POST.getlist("per_unit_rate[]")
                     delete_flags = request.POST.getlist("delete_flag[]") 
 
-                    print(crop_ids, crops, crop_types, contract_amounts, amount_units, per_unit_rates)
-                    print("Length of crop_ids:", len(crop_ids))
-                    print("Length of crops:", len(crops))
-
                     with transaction.atomic():
                         for idx, crop_id in enumerate(crop_ids):
-                            # Ensure crop_id is a valid integer and check the delete flag
+
                             if crop_id.isdigit() and delete_flags[idx] == "1":
                                 try:
                                     CropDetails.objects.get(id=int(crop_id)).delete()
@@ -1186,16 +1173,12 @@ def edit_admin_processor_contract(request, pk):
                             else:
                                 print(f"Skipping crop with id {crop_id}, not marked for deletion.")
 
-
-                        # Create or update crops based on the form data
                         for idx in range(len(crops)):
                             crop_id = crop_ids[idx] if idx < len(crop_ids) else None
 
-                            # Ensure crop_id is a valid integer or handle creation
                             if crop_id and crop_id.isdigit():
                                 try:
                                     crop_detail = CropDetails.objects.get(id=int(crop_id))
-                                    # Update existing crop
                                     crop_detail.crop = crops[idx]
                                     crop_detail.crop_type = crop_types[idx]
                                     crop_detail.contract_amount = contract_amounts[idx]
@@ -1205,7 +1188,6 @@ def edit_admin_processor_contract(request, pk):
                                 except CropDetails.DoesNotExist:
                                     print(f"Crop with id {crop_id} not found.")
                             else:
-                                # Create new crop if crop_id is empty or None
                                 CropDetails.objects.create(
                                     contract=contract,
                                     crop=crops[idx],
@@ -1219,10 +1201,9 @@ def edit_admin_processor_contract(request, pk):
                     for document_id in delete_document_ids:
                         try:
                             document = AdminProcessorContractDocuments.objects.get(id=document_id)
-                            document.delete()  # Delete the document from the database
+                            document.delete()  
                         except AdminProcessorContractDocuments.DoesNotExist:
                             pass
-
                     document_ids =  request.POST.getlist('document_ids')
                     for document_id in document_ids:
                         document_status = f'document_status_{document_id}'
@@ -1230,25 +1211,22 @@ def edit_admin_processor_contract(request, pk):
                             document_stat = request.POST.get(document_status)                         
                             
                             document = AdminProcessorContractDocuments.objects.filter(id=document_id).first()
-                            document.document_status = document_stat  # Assign the file to the FileField
+                            document.document_status = document_stat 
                             document.save()                                
                             
                     document_names = request.POST.getlist('document_name[]')  
                     if document_names:                      
                     
                         for i, name in enumerate(document_names):
-                            # Check if there's a corresponding document ID
                             if i < len(document_ids):
                                 document_id = document_ids[i]
-                                # Update existing document
+
                                 document = AdminProcessorContractDocuments.objects.filter(id=document_id).first()
                                 if document:
-                                    document.name = name  # Update the name
+                                    document.name = name 
                                     document.save()
                             else:
-                                # Create new document if the document ID does not exist
                                 AdminProcessorContractDocuments.objects.create(contract=contract, name=name)
-
                 return redirect('list-contract')
             
             elif request.user.is_processor or request.user.is_processor2:
@@ -1258,15 +1236,14 @@ def edit_admin_processor_contract(request, pk):
                     
                     if file_field_name in request.FILES:
                         uploaded_file = request.FILES[file_field_name]                        
-                        
-                        # Handle the uploaded file
+
                         try:
                             document = AdminProcessorContractDocuments.objects.get(id=document_id)
-                            document.document = uploaded_file  # Assign the file to the FileField
+                            document.document = uploaded_file  
                             document.save()
                             
                         except AdminProcessorContractDocuments.DoesNotExist:
-                            # Handle the case where the document does not exist
+
                             pass
                 contract.status = "Under Review"
                 contract.save()
@@ -1283,19 +1260,16 @@ def admin_customer_contract_create(request):
     context = {}
     try:
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role() or request.user.is_distributor or request.user.warehouse_manager:
-            # Get customers and add to context
             customers = Customer.objects.all().values('id', 'name').order_by('name')          
             context["customers"] = customers
             
             if request.method == "POST":
-                print("post method is hit")
-                # Extract data from the POST request
+
                 selected_customer = request.POST.get('selected_customer')                
                 contract_start_date = request.POST.get('contract_start_date')
                 contract_period = request.POST.get('contract_period')
                 status = request.POST.get('status')                
-                print(selected_customer)
-                # Ensure selected_customer is not empty and correctly formatted
+
                 if selected_customer:
                     customer = Customer.objects.filter(id=selected_customer).first()  
                     customer_name = customer.name                 
@@ -1312,18 +1286,16 @@ def admin_customer_contract_create(request):
                         status=status, 
                         created_by_id=request.user.id
                     )
-
                     crop_names = request.POST.getlist('crop[]')
                     crop_types = request.POST.getlist('crop_type[]')
                     contract_amounts = request.POST.getlist('contract_amount[]')
                     amount_units = request.POST.getlist('amount_unit[]')
                     per_unit_rates = request.POST.getlist('per_unit_rate[]')
-                    print(crop_names, crop_types, contract_amounts, amount_units, )
+                    
                     for crop_name, crop_type, contract_amount, amount_unit, per_unit_rate in zip(
                             crop_names, crop_types, contract_amounts, amount_units, per_unit_rates):
                         
-                        # Create crop details for each crop entry
-                        CropDetails.objects.create(
+                        CustomerContractCropDetails.objects.create(
                             contract=contract,
                             crop=crop_name,
                             crop_type=crop_type,
@@ -1331,9 +1303,7 @@ def admin_customer_contract_create(request):
                             amount_unit=amount_unit,
                             per_unit_rate=per_unit_rate
                         )
-
-
-                    ## Send notification to the customer.                    
+                  
                     all_customer_user = CustomerUser.objects.filter(customer_id=customer.id)
                     
                     for user in all_customer_user :
@@ -1500,10 +1470,10 @@ def admin_customer_contract_view(request, pk):
 def edit_admin_customer_contract(request, pk):
     context = {}
     try:
-        contract = get_object_or_404(AdminCustomerContract, id=pk)      
-        # Retrieve customers
-        customers = Customer.objects.all().values('id', 'name').order_by('name')        
-        # Retrieve the documents associated with this contract
+        contract = get_object_or_404(AdminCustomerContract, id=pk)     
+
+        customers = Customer.objects.all().values('id', 'name').order_by('name')       
+
         documents = AdminCustomerContractDocuments.objects.filter(contract=contract)        
         crops = CustomerContractCropDetails.objects.filter(contract=contract)
         context = {
@@ -1519,8 +1489,8 @@ def edit_admin_customer_contract(request, pk):
         }
 
         if request.method == "POST":
-            if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role() or request.user.is_distributor or request.user.warehouse_manager:
-                # Handle updates by admin or superuser
+            if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role() or request.user.is_distributor or request.user.is_warehouse_manager:
+
                 selected_customer = request.POST.get('selected_customer') 
                 selected_contract_type = request.POST.get('contract_type')               
                 contract_start_date = request.POST.get('contract_start_date')
@@ -1535,7 +1505,6 @@ def edit_admin_customer_contract(request, pk):
                         context["error_messages"] = "Selected customer does not exist."
                         return render(request, 'contracts/edit_admin_customer_contract.html', context)
 
-                    # Update contract details
                     contract.customer_id = customer.id  
                     contract.customer_name = customer_name  
                     contract.contract_type = selected_contract_type                
@@ -1559,7 +1528,6 @@ def edit_admin_customer_contract(request, pk):
 
                     with transaction.atomic():
                         for idx, crop_id in enumerate(crop_ids):
-                            # Ensure crop_id is a valid integer and check the delete flag
                             if crop_id.isdigit() and delete_flags[idx] == "1":
                                 try:
                                     CustomerContractCropDetails.objects.get(id=int(crop_id)).delete()
@@ -1569,16 +1537,13 @@ def edit_admin_customer_contract(request, pk):
                             else:
                                 print(f"Skipping crop with id {crop_id}, not marked for deletion.")
 
-
-                        # Create or update crops based on the form data
                         for idx in range(len(crops)):
                             crop_id = crop_ids[idx] if idx < len(crop_ids) else None
 
-                            # Ensure crop_id is a valid integer or handle creation
                             if crop_id and crop_id.isdigit():
                                 try:
                                     crop_detail = CustomerContractCropDetails.objects.get(id=int(crop_id))
-                                    # Update existing crop
+                                  
                                     crop_detail.crop = crops[idx]
                                     crop_detail.crop_type = crop_types[idx]
                                     crop_detail.contract_amount = contract_amounts[idx]
@@ -1588,7 +1553,7 @@ def edit_admin_customer_contract(request, pk):
                                 except CustomerContractCropDetails.DoesNotExist:
                                     print(f"Crop with id {crop_id} not found.")
                             else:
-                                # Create new crop if crop_id is empty or None
+                               
                                 CustomerContractCropDetails.objects.create(
                                     contract=contract,
                                     crop=crops[idx],
@@ -1603,7 +1568,7 @@ def edit_admin_customer_contract(request, pk):
                     for document_id in delete_document_ids:
                         try:
                             document = AdminCustomerContractDocuments.objects.get(id=document_id)
-                            document.delete()  # Delete the document from the database
+                            document.delete() 
                         except AdminCustomerContractDocuments.DoesNotExist:
                             pass
 
@@ -1614,22 +1579,22 @@ def edit_admin_customer_contract(request, pk):
                             document_stat = request.POST.get(document_status)                         
                             
                             document = AdminCustomerContractDocuments.objects.filter(id=document_id).first()
-                            document.document_status = document_stat  # Assign the file to the FileField
+                            document.document_status = document_stat  
                             document.save()                                
                             
                     document_names = request.POST.getlist('document_name[]')  
                     if document_names:                     
                         for i, name in enumerate(document_names):
-                            # Check if there's a corresponding document ID
+                           
                             if i < len(document_ids):
                                 document_id = document_ids[i]
-                                # Update existing document
+                                
                                 document = AdminCustomerContractDocuments.objects.filter(id=document_id).first()
                                 if document:
-                                    document.name = name  # Update the name
+                                    document.name = name 
                                     document.save()
                             else:
-                                # Create new document if the document ID does not exist
+                               
                                 AdminCustomerContractDocuments.objects.create(contract=contract, name=name)
                     
                 return redirect('admin-customer-contract-list')
@@ -1642,14 +1607,13 @@ def edit_admin_customer_contract(request, pk):
                     if file_field_name in request.FILES:
                         uploaded_file = request.FILES[file_field_name]                       
                         
-                        # Handle the uploaded file
                         try:
                             document = AdminCustomerContractDocuments.objects.get(id=document_id)
-                            document.document = uploaded_file  # Assign the file to the FileField
+                            document.document = uploaded_file  
                             document.save()
                             
                         except AdminCustomerContractDocuments.DoesNotExist:
-                            # Handle the case where the document does not exist
+                            
                             pass
                 contract.status = "Under Review"
                 contract.save()
