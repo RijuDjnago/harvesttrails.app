@@ -30,6 +30,12 @@ urlpatterns = [
     path('warehouse-shipment-invoice/<int:pk>/', warehouse_shipment_invoice, name='warehouse-shipment-invoice'),
     path('create-payment/<int:pk>/<str:type>/', create_payment_for_shipment, name='create_payment_for_shipment'),
     path('checkout-success/<int:pk>/<str:type>/<str:checkout_session_id>/', checkout_success, name='checkout-success'),
-    path('generate_invoice/<int:pk>/', generate_invoice, name='generate_invoice'),
+    path('generate_invoice/<int:pk>/', generate_invoice, name='generate_invoice'),   
+    path('processor_shipment_generate_report/', processor_shipment_generate_report, name='processor_shipment_generate_report'),
+    path('processor_shipment_export_csv/', processor_shipment_export_csv, name='processor_shipment_export_csv'),
+    path('export_csv_for_single_shipment_processor/<str:shipment_id>', processor_shipment_csv_single_shipment, name='export_csv_for_single_shipment_processor'),
+    path('warehouse_shipment_generate_report/', warehouse_shipment_generate_report, name='warehouse_shipment_generate_report'),
+    path('warehouse_shipment_export_csv/', warehouse_shipment_export_csv, name='warehouse_shipment_export_csv'),
+    path('export_csv_for_single_shipment_warehouse/<str:shipment_id>', warehouse_shipment_csv_single_shipment, name='export_csv_for_single_shipment_warehouse'),
     
 ]

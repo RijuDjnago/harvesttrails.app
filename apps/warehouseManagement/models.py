@@ -66,6 +66,8 @@ class Customer(models.Model):
     location = models.TextField(null=True,blank=True)
     latitude = models.CharField(max_length=255, null=True, blank=True)
     longitude = models.CharField(max_length=255, null=True, blank=True)
+    billing_address = models.TextField(null=True, blank=True,verbose_name='Billing Address')
+    shipping_address = models.TextField(null=True, blank=True,verbose_name='Shipping Address')
     credit_terms = models.IntegerField(choices=credit_term_choice, default=30)
     is_tax_payable = models.BooleanField(default=False)
     tax_percentage = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
@@ -280,6 +282,7 @@ class ProcessorWarehouseShipment(models.Model):
             log_entry = ProcessorShipmentLog(
                 shipment=self,
                 description=f"A new shipment was created from processor '{self.processor_entity_name}' of {self.net_weight}{self.weight_unit} {self.crop} under contract '{self.contract}'."
+                
             )
             log_entry.save()
 
@@ -432,6 +435,7 @@ class WarehouseCustomerShipmentDocuments(models.Model):
     def __str__(self):
         return f'Shipment documents for {self.shipment.id}'
 
+
 class CarrierDetails2(models.Model):
     shipment = models.ForeignKey(WarehouseCustomerShipment, on_delete=models.CASCADE, related_name='customer_shipment_carrier')
     carrier_id = models.CharField(max_length=255, null=True, blank=True)
@@ -439,6 +443,7 @@ class CarrierDetails2(models.Model):
 
     def __str__(self):
         return self.shipment.carrier_type
+
 
 class WarehouseShipmentLog(models.Model):
     shipment = models.ForeignKey(WarehouseCustomerShipment, on_delete=models.CASCADE, related_name='shipmentLog')    

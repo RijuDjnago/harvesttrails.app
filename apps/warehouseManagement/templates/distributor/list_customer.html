@@ -33,7 +33,7 @@
         <div class="page-title-with-or-without-btn">
             <span class="farm headingtop">Customer Management</span>
             <!-- Create button for add-processor-->
-            {% if request.user.is_superuser %}
+            {% if request.user.is_superuser or request.user.is_distributor or request.user.is_warehouse_manager or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
             <div class="flex-header-btn">
                 <a href="{% url 'add-customer' %}" class="btn-close-cancel">Create Customer</a>
             </div>
@@ -76,7 +76,7 @@
                                     <li>
                                         <a href="{% url 'customer_view' i.pk %}" class="map-icon-link" alt="view customer" title="view customer"><span class="fas fa-eye"></span></a>
                                     </li>
-                                    {% if request.user.is_superuser or request.user.is_distributor or request.user.is_warehouse_manager %}
+                                    {% if request.user.is_superuser or request.user.is_distributor or request.user.is_warehouse_manager or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
                                     <li>
                                         <a href="{% url 'update-customer' i.pk %}" class="update-btn-link" alt="edit customer" title="edit customer"> <span class="fas fa-edit"></span> </a>
                                     </li>
@@ -86,7 +86,7 @@
                                     {% endif %}
                                     
                                      <li>
-                                        <a href="{% url 'customer_upload_documents' i.pk %}" class="map-icon-link" alt="upload documents" title="{% if request.user.is_superuser or request.user.is_distributor or request.user.is_warehouse_manager %}add required document {% endif %}{% if request.user.is_customer%}upload documents{% endif %}"><span class="fas fa-file-upload"></span></a>
+                                        <a href="{% url 'customer_upload_documents' i.pk %}" class="map-icon-link" alt="upload documents" title="{% if request.user.is_superuser or request.user.is_distributor or request.user.is_warehouse_manager or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role%}add required document {% endif %}{% if request.user.is_customer%}upload documents{% endif %}"><span class="fas fa-file-upload"></span></a>
                                     </li> 
                                   
                                     {% comment %} <li>

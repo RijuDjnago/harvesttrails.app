@@ -435,8 +435,13 @@
             <li><a id="customer-management" href="{% url 'list-customer' %}">Customer Management</a></li>
              {% endif %}             
              <li><a id="Processor-Shipment" href="{% url 'list-processor-shipment' %}">Processor Shipment</a></li>
+             {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or request.user.is_customer or request.user.is_distributor or request.user.is_warehouse_manager %}
              <li><a id="Warehouse-Shipment" href="{% url 'list-warehouse-shipment' %}">Warehouse Shipment</a></li>
-             
+             {% endif %}
+             {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role %}
+             <li><a id="Processor-Shipment-Report" href="{% url 'processor_shipment_generate_report' %}">Processor Shipment Report</a></li>
+             <li><a id="Warehouse-Shipment-Report" href="{% url 'warehouse_shipment_generate_report' %}">Warehouse Shipment Report</a></li>
+             {% endif %}
          </ul>
      </li>
       {% endif %}
@@ -606,7 +611,7 @@
    } else {
       warehouseSubUnic.style.display = 'block';
    }
-});
+   });
 
 
 </script>
