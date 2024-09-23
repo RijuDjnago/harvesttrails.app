@@ -1111,6 +1111,18 @@ def list_customer(request):
             else:
                 messages.error(request, "Not a valid request")
                 return redirect("dashboard")
+            
+            customers_with_unpaid_shipments = {}
+            for cust in customer:                
+                unpaid_shipments = WarehouseCustomerShipment.objects.filter(
+                    customer_id=cust.customer.id,
+                    is_paid=False
+                ).exists()
+                print(unpaid_shipments)
+                customers_with_unpaid_shipments[cust.id] = unpaid_shipments
+
+            context['customers_with_unpaid_shipments'] = customers_with_unpaid_shipments
+            print(context)
 
             # Pagination
             customer = customer.order_by("-id")
@@ -3720,8 +3732,9 @@ def warehouse_shipment_invoice(request, pk):
 @login_required()
 def create_payment_for_shipment(request, pk, type):
     if type == 'warehouse':
-        warehouse_shipment = WarehouseCustomerShipment.objects.get(id=pk)        
-        amount = float(warehouse_shipment.total_payment) + float(warehouse_shipment.tax_amount)
+        warehouse_shipment = WarehouseCustomerShipment.objects.get(id=pk)   
+        customer = Customer.objects.get(id=int(warehouse_shipment.customer_id))     
+        amount = (float(warehouse_shipment.total_payment) + float(warehouse_shipment.tax_amount)) if customer.is_tax_payable else float(warehouse_shipment.total_payment)
         currency = 'USD'          
     else:
         processor_shipment = ProcessorWarehouseShipment.objects.get(id=pk)       

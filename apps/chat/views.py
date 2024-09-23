@@ -1,5 +1,7 @@
 from django.shortcuts import render, HttpResponse, redirect
-from apps.processor.models import Processor,ProcessorUser, LinkGrowerToProcessor
+from apps.processor.models import *
+from apps.processor2.models import *
+from apps.warehouseManagement.models import *
 from apps.grower.models import *
 from apps.chat.models import ProcessorMsgboard, ProcessorMessage
 from apps.accounts.models import User
@@ -644,6 +646,42 @@ def notification_chat_msg(request,user_id):
     processor_id = processor.id
     get_msg = ProcessorMessage.objects.filter(receiver_id=processor_id,read_status="UNREAD")
     unread_count = get_msg.count()
+  
+  elif request.user.is_processor2 :
+    # user_email = request.user.email
+    # p = ProcessorUser2.objects.get(contact_email=user_email)
+    # processor = Processor.objects.get(id=p.processor_id)
+    # processor_id = processor.id
+    # get_msg = ProcessorMessage.objects.filter(receiver_id=processor_id,read_status="UNREAD")
+    # unread_count = get_msg.count()
+    unread_count = 0
+  
+  elif request.user.is_distributor :
+    # user_email = request.user.email
+    # p = ProcessorUser.objects.get(contact_email=user_email)
+    # processor = Processor.objects.get(id=p.processor_id)
+    # processor_id = processor.id
+    # get_msg = ProcessorMessage.objects.filter(receiver_id=processor_id,read_status="UNREAD")
+    # unread_count = get_msg.count()
+    unread_count = 0
+  
+  elif request.user.is_warehouse_manager :
+    # user_email = request.user.email
+    # p = ProcessorUser.objects.get(contact_email=user_email)
+    # processor = Processor.objects.get(id=p.processor_id)
+    # processor_id = processor.id
+    # get_msg = ProcessorMessage.objects.filter(receiver_id=processor_id,read_status="UNREAD")
+    # unread_count = get_msg.count()
+    unread_count = 0
+  
+  elif request.user.is_customer :
+    # user_email = request.user.email
+    # p = ProcessorUser.objects.get(contact_email=user_email)
+    # processor = Processor.objects.get(id=p.processor_id)
+    # processor_id = processor.id
+    # get_msg = ProcessorMessage.objects.filter(receiver_id=processor_id,read_status="UNREAD")
+    # unread_count = get_msg.count()
+    unread_count = 0
         
   elif request.user.is_consultant :
     user_email = request.user.email
@@ -659,6 +697,7 @@ def notification_chat_msg(request,user_id):
     get_msg = ProcessorMessage.objects.filter(receiver_id=user_id,read_status="UNREAD")
     unread_count = get_msg.count()
   return HttpResponse (unread_count)
+
 
 login_required()
 def chat_ag0(request):

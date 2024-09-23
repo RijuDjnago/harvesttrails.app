@@ -1,0 +1,22 @@
+{% extends "base.html" %} {% load static %} {% block title %} Home {% endblock%}
+{% block extrahead %}
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-Y3EWVPF7PQ"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-Y3EWVPF7PQ');
+</script>
+{% endblock extrahead %}
+ {% block content %}
+ {% include 'navbar.html' %}
+<div class="main-content">
+  {% include 'header.html' %}
+  <main>
+    <p>{{company_info}}</p>
+  </main>
+  {% include 'footer.html' %}
+</div>
+{% endblock content %}
