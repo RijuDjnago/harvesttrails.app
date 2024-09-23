@@ -57,12 +57,13 @@
                                 <th width="">Password</th>
                                 <th width="">Phone</th>
                                 <th width="">Credit Terms</th>
-                                <th width="">Tax Status</th>
+                                <th width="">Tax Status</th>                                
                                 <th width="">Action</th>
                             </tr>
                         </thead>
+                       
                         <tbody>
-                            {% for i in page_obj %}
+                            {% for i in page_obj %}                                                  
                             <tr>                               
                                 <td>{{i.customer.name}}</td>                                                         
                                 <td>{{i.customer.location}}</td>
@@ -71,7 +72,7 @@
                                 <td>{{i.p_password_raw}}</td>
                                 <td><a href="tel:{{i.contact_phone}}" title="{{i.contact_phone}}"><span class="fas fa-phone"></span></a></td>
                                 <td>{{i.customer.credit_terms}} Days</td>
-                                <td>{% if i.customer.is_tax_payable %} Payable {% else %}Non Payable {%endif %}</td>
+                                <td>{% if i.customer.is_tax_payable %} Payable {% else %}Non Payable {% endif %}</td>                                
                                 <td class="backk action-td">
                                     <li>
                                         <a href="{% url 'customer_view' i.pk %}" class="map-icon-link" alt="view customer" title="view customer"><span class="fas fa-eye"></span></a>
@@ -83,8 +84,7 @@
                                     <li>
                                         <a href="{% url 'customer-change-password' i.pk %}" alt="change password" title="change password"><span class="fas fa-key" data-mdb-toggle="modal" data-mdb-target="#exampleModal"></span></a>
                                     </li>
-                                    {% endif %}
-                                    
+                                    {% endif %}                                    
                                      <li>
                                         <a href="{% url 'customer_upload_documents' i.pk %}" class="map-icon-link" alt="upload documents" title="{% if request.user.is_superuser or request.user.is_distributor or request.user.is_warehouse_manager or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role%}add required document {% endif %}{% if request.user.is_customer%}upload documents{% endif %}"><span class="fas fa-file-upload"></span></a>
                                     </li> 
@@ -108,8 +108,7 @@
                                                 </div>
                                             </div>
                                         </div>
-                                    </div> {% endcomment %}
-                                    
+                                    </div> {% endcomment %}                                    
                                 </td>
                             </tr>
                             {% endfor %}

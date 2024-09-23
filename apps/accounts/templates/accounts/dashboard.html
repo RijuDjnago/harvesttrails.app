@@ -10,7 +10,7 @@
   gtag('config', 'G-Y3EWVPF7PQ');
 </script>
 {% endblock extrahead %}
-title %} {% block content %} {% include 'navbar.html' %}
+ {% block content %} {% include 'navbar.html' %}
 <div class="main-content">
   {% include 'header.html' %}
   
@@ -120,42 +120,7 @@ border-radius: 0;
     <h3 class="headingtop">Hi, {{user.username}}</h3>
     <p class="dashboard-subtitle">Welcome to your dashboard</p>
     {% if request.user.is_processor or request.user.is_processor2 or request.user.is_distributor or request.user.is_customer or request.user.is_warehouse_manager %}
-      <!-- showing progress with grower payments on the main dashboard. By crop.  -->
-      <!-- {% if request.user.is_processor %}
-        <div class="cards-2columns">
-            <div class="min1">
-              <a href="#" target="_blank">
-                <h3>Cotton - 2022 Crop Year</h3>
-                <div class="row">
-                  <div class="col-6 pe-4 border-end">
-                    <p>{{pp_grower_payment_paid_cotton}}</p>
-                    <p>Grower Payments Paid</p>
-                  </div>
-                  <div class="col-6">
-                    <p>{{pp_premium_paid_cotton}}</p>
-                    <p>Premium Paid</p>
-                  </div>
-                </div>
-              </a>
-            </div>
-            <div class="min2">
-              <a href="#" target="_blank">
-                <h3>Rice - 2022 Crop Year</h3>
-                <div class="row">
-                  <div class="col-6 pe-4 border-end">
-                    <p>{{pp_grower_payment_paid_rice}}</p>
-                    <p>Grower Payments Paid</p>
-                  </div>
-                  <div class="col-6">
-                    <p>{{pp_premium_paid_rice}}</p>
-                    <p>Premium Paid</p>
-                  </div>
-                </div>
-              </a>
-            </div>
-        </div>  
-      {% endif %} -->
-
+      
     {% else %}
     <div>
       <div class="cards">
@@ -426,41 +391,100 @@ border-radius: 0;
           </div>
         </div>        
         {% elif request.user.is_customer %}
-        <div class="col-md-9 col-12">
-          <div class="card card-padding">
-            <h2 class="user-detls">Your Details</h2>
-              <div class="row">
-                <div class="col-4"><strong>Entity Name : </strong>
-                  <div>{{customer.name}}</div>
+        <div class="col-md-9 col-sm-9">
+          <div class="row">
+            <div class="card card-padding">
+                <h2 class="user-detls">Your Details</h2>
+                <div class="row">
+                    <div class="col-4"><strong>Entity Name : </strong>
+                        <div>{{customer.name}}</div>
+                    </div>
+                    <div class="col-4"><strong>Location : </strong>
+                        <div>{{customer.location}}</div>
+                    </div>
+                    <div class="col-4"><strong>Latitude : </strong>
+                        <div>{{customer.latitude}}</div>
+                    </div>
                 </div>
-                <div class="col-4"><strong>Location : </strong>
-                  <div>{{customer.location}}</div>
+                <div class="row">
+                    <div class="col-4"><strong>Longitude : </strong>
+                        <div>{{customer.longitude}}</div>
+                    </div>
                 </div>
-                <div class="col-4"><strong>Latitude : </strong>
-                  <div>{{customer.latitude}}</div>
+                <div class="row">
+                    <div class="col-3"><strong>Contact Name : </strong>
+                        <div>{{customer_user.contact_name}}</div>
+                    </div>
+                    <div class="col-3"><strong>Contact Email : </strong>
+                        <div>{{customer_user.contact_email}}</div>
+                    </div>
+                    <div class="col-3"><strong>Contact Phone : </strong>
+                        <div>{{customer_user.contact_phone}}</div>
+                    </div>
+                    <div class="col-3"><strong>Contact Fax : </strong>
+                        <div>{{customer_user.contact_fax}}</div>
+                    </div>
                 </div>
-              </div>
-              <div class="row">
-                <div class="col-4"><strong>Longitude : </strong>
-                  <div>{{customer.longitude}}</div>
-                </div>                
-              </div>
-              <div class="row">
-                <div class="col-3"><strong>Contact Name : </strong>
-                  <div>{{customer_user.contact_name}}</div>
-                </div>
-                <div class="col-3"><strong>Contact Email : </strong>
-                  <div>{{customer_user.contact_email}}</div>
-                </div>
-                <div class="col-3"><strong>Contact Phone : </strong>
-                  <div>{{customer_user.contact_phone}}</div>
-                </div>
-                <div class="col-3"><strong>Contact Fax : </strong>
-                  <div>{{customer_user.contact_fax}}</div>
-                </div>
-              </div>
+            </div>
           </div>
-        </div>        
+          <div class="row">
+            <div class="card card-padding mt-3">
+                <h2 class="user-detls">Unpaid Shipments</h2>
+        
+                {% if unpaid_shipments %}
+                <!-- If there are unpaid shipments, display the table -->
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Shipment</th>
+                            <th>Total Amount</th>
+                            <th>Due Date</th>
+                            <th>Invoice</th>
+                            <th>Pay Now</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for shipment in unpaid_shipments %}
+                        <tr>
+                            <td>{{ shipment }}</td>
+                            <td>&#36; {{ shipment.amount }}</td>
+                            <td>{{ shipment.due_date }}</td>
+                            <td>
+                                {% if shipment.invoice_approval %}
+                                <a href="{% url 'warehouse-shipment-invoice' shipment.id %}" class="update-btn-link" alt="view invoice details" title="view invoice details">
+                                    <span class="fas fa-file-invoice"></span>
+                                </a>
+                                {% else %}
+                                <span>No Invoice</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <form action="{% url 'create_payment_for_shipment' shipment.id 'warehouse' %}" method="POST">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm me-3 text-white" style="background-color: #549874;">
+                                        <span class="fas fa-credit-card"></span>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <table class="table">
+                  <tfoot>
+                      <tr>
+                          <td colspan="4" class="text-end"><strong>Total Amount:</strong></td> <!-- Align the text to the right -->
+                          <td class="text-end">&#36;{{ total_amount }}</td> <!-- Align the total amount to the right -->
+                      </tr>
+                  </tfoot>
+                </table>
+                {% else %}                
+                <p>No unpaid shipments</p>
+                {% endif %}
+            </div>
+          </div>             
+        </div>
+
         {% elif request.user.is_warehouse_manager %}
         <div class="col-md-9 col-12">
           <div class="card card-padding">
@@ -540,7 +564,7 @@ border-radius: 0;
         </div>
         {% endif %}
         
-        <div class="col-md-3 col-12">
+        <div class="col-md-3 col-sm-3">
           <div class="customers">
             
             <div class="card card-padding">

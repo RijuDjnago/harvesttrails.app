@@ -817,6 +817,8 @@ def dashboard(request):
     contract_count = None
     warehouse_count = None
     distributor_warehouses = None
+    unpaid_shipments = None
+    total_amount = None
     # recent_users = User.objects.all().order_by('-id')[:10]
     
     
@@ -890,6 +892,12 @@ def dashboard(request):
         customer = Customer.objects.get(id=customer_user.customer_id)
         contract_count = AdminProcessorContract.objects.all().count()
         warehouse_count = Warehouse.objects.all().count()
+        unpaid_shipments = WarehouseCustomerShipment.objects.filter(customer_id=customer.id, is_paid=False, invoice_approval=True)
+        total_amount = 0
+        for shipment in unpaid_shipments:
+            shipment.amount = (float(shipment.total_payment) + float(shipment.tax_amount)) if customer.is_tax_payable else float(shipment.total_payment)
+            shipment.due_date = shipment.approval_time + timedelta(days=int(customer.credit_terms))
+            total_amount += shipment.amount
 
     if request.user.is_consultant:
         consultant_id = Consultant.objects.get(
@@ -1328,6 +1336,8 @@ def dashboard(request):
         'contract_count': contract_count,
         'warehouse_count': warehouse_count,
         'distributor_warehouses':distributor_warehouses,
+        'unpaid_shipments':unpaid_shipments,
+        "total_amount":total_amount
     })
 
 
@@ -1358,6 +1368,38 @@ def change_password(request):
             if password1 != None and password2 != None and password1 == password2 :
                 if user.is_processor:
                     p_user = ProcessorUser.objects.get(contact_email=user.email)
+                    password = make_password(password1)
+                    user.password = password
+                    user.password_raw = password1
+                    user.save()
+                    p_user.p_password_raw = password1
+                    p_user.save()
+                elif user.is_processor2:
+                    p_user = ProcessorUser2.objects.get(contact_email=user.email)
+                    password = make_password(password1)
+                    user.password = password
+                    user.password_raw = password1
+                    user.save()
+                    p_user.p_password_raw = password1
+                    p_user.save()
+                elif user.is_distributor:
+                    p_user = DistributorUser.objects.get(contact_email=user.email)
+                    password = make_password(password1)
+                    user.password = password
+                    user.password_raw = password1
+                    user.save()
+                    p_user.p_password_raw = password1
+                    p_user.save()
+                elif user.is_warehouse_manager:
+                    p_user = WarehouseUser.objects.get(contact_email=user.email)
+                    password = make_password(password1)
+                    user.password = password
+                    user.password_raw = password1
+                    user.save()
+                    p_user.p_password_raw = password1
+                    p_user.save()
+                elif user.is_customer:
+                    p_user = CustomerUser.objects.get(contact_email=user.email)
                     password = make_password(password1)
                     user.password = password
                     user.password_raw = password1
