@@ -1,11 +1,4 @@
-class CHOICE:
-    CROP_CHOICES = (
-                ('RICE', 'Rice'),
-                ('COTTON', 'Cotton'),
-                ('WHEAT', 'Wheat'),
-                ('PEANUT', 'Peanut'),
-                ('BEANS', 'Beans'),
-            )
+class CHOICE:    
     # VARIETY_CHOICES = (
     #             ('CL_XL745', 'CL XL745'),
     #             ('CL111', 'CL111'),

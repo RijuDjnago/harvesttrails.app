@@ -91,16 +91,10 @@
                             <label for="grower_crop">Crop<span class="asteriskField">*</span></label>
                             <select id="grower_crop" name="grower_crop" class="form-control selectpicker" data-live-search="true">
                                 <option value='' selected disabled> Select Crop </option>
-                                {% if selectedCrop == 'COTTON' %}
-                                <option value='COTTON' selected> COTTON </option>
-                                <option value='RICE'> RICE </option>
-                                {% elif selectedCrop == 'RICE' %}
-                                <option value='COTTON'> COTTON </option>
-                                <option value='RICE' selected> RICE </option>
-                                {% else %}
-                                <option value='COTTON'> COTTON </option>
-                                <option value='RICE'> RICE </option>
-                                {% endif %}
+                                {% for crop in crops %}
+                                <option value='{{crop.code}}' {% if selectedCrop == crop.code %}selected {% endif %}> {{crop.code}} </option>
+                                {% endfor %}
+                                
                             </select>
                             <p id="p2" style="color: red;"></p>
                         </div>

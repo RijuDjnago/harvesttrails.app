@@ -2,10 +2,11 @@ from pyexpat import model
 from django import forms
 from . import models
 
-CROP_CHOICES = (
-                ('RICE', 'Rice'),
-                ('COTTON', 'Cotton'),
-            )
+def crop_choices():
+    from apps.field.models import Crop
+    crops = Crop.objects.all()
+    return [(crop.code, crop.name) for crop in crops]
+
 VARIETY_CHOICES = (
                 ('DG-263L', 'DG-263L'),
                 ('DG 2425 XF', 'DG 2425 XF'),
@@ -88,6 +89,6 @@ class LocationForm(forms.ModelForm):
         }
 
 class GrowerShipmentForm(forms.Form):
-    crop = forms.ChoiceField(choices=CROP_CHOICES,widget=forms.Select(attrs={'class': 'form-control'}),required=True)
+    crop = forms.ChoiceField(choices=crop_choices(),widget=forms.Select(attrs={'class': 'form-control'}),required=True)
     variety = forms.ChoiceField(choices=VARIETY_CHOICES,widget=forms.Select(attrs={'class': 'form-control'}),required=True)
     

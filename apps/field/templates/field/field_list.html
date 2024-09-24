@@ -322,16 +322,9 @@
                             <!-- <input class="form-control" name="crop_name" type="text" placeholder="Crop Search" aria-label="Search" id="id_crop_name" autocomplete="off"> -->
                             <select id="" name="crop_name" class="form-control selectpicker " data-live-search="true">
                               <option value='all' selected> Select Crop *</option>
-                              {% if crop_name == 'RICE' %}
-                              <option value='RICE' selected>RICE</option>
-                              <option value='COTTON' >COTTON</option>
-                              {% elif crop_name == 'COTTON' %}
-                              <option value='RICE' >RICE</option>
-                              <option value='COTTON' selected>COTTON</option>
-                              {% else %}
-                              <option value='RICE'>RICE</option>
-                              <option value='COTTON' >COTTON</option>
-                              {% endif %}
+                              {% for crop in crops %}
+                              <option value='{{crop.code}}'{% if crop_name == crop.code %}selected {% endif %}>{{crop.code}}</option>
+                              {% endfor %}                              
                           </select>
                         </div>
                         <div class="col-md-3 col-sm-6">

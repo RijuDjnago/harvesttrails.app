@@ -35,17 +35,11 @@ def StorageCreateView(request):
             grower_id = request.user.grower.id
             grower = Grower.objects.filter(id=int(grower_id))
             context['grower'] = grower
-            field = Field.objects.all().values('crop')  #crop
-            crop=[] 
-            crop_list = [i["crop"] for i in field]
-            if "RICE" in crop_list:
-                crop.append("RICE")
-            if "COTTON" in crop_list:
-                crop.append("COTTON")
-            if "WHEAT" in crop_list:
-                crop.append("WHEAT")
-            if "PEANUTS" in crop_list:
-                crop.append("PEANUTS")
+            field = Field.objects.values_list('crop', flat=True)
+            crop_list = set(field) 
+            available_crops = set(Crop.objects.values_list('code', flat=True)) 
+
+            crop = list(crop_list.intersection(available_crops))
             context["crop"] = crop
 
             if request.method == 'POST':
@@ -63,17 +57,11 @@ def StorageCreateView(request):
                     grower = Grower.objects.filter(id=int(grower_id))
                     grower_crop = request.POST.get('grower_crop') # grower-crop
                     context['grower'] = grower
-                    field = Field.objects.all().values('crop')  #crop
-                    crop=[] 
-                    crop_list = [i["crop"] for i in field]
-                    if "RICE" in crop_list:
-                        crop.append("RICE")
-                    if "COTTON" in crop_list:
-                        crop.append("COTTON")
-                    if "WHEAT" in crop_list:
-                        crop.append("WHEAT")
-                    if "PEANUTS" in crop_list:
-                        crop.append("PEANUTS")
+                    field = Field.objects.values_list('crop', flat=True)
+                    crop_list = set(field) 
+                    available_crops = set(Crop.objects.values_list('code', flat=True)) 
+
+                    crop = list(crop_list.intersection(available_crops))
                     context["crop"] = crop
 
                     storage_uniqueid = request.POST.get('storage_uniqueid')
@@ -126,17 +114,11 @@ def StorageCreateView(request):
                     context = {'form': form}
                     grower = Grower.objects.filter(id=int(grower_id))
                     context['grower'] = grower
-                    field = Field.objects.all().values('crop')  #crop
-                    crop=[] 
-                    crop_list = [i["crop"] for i in field]
-                    if "RICE" in crop_list:
-                        crop.append("RICE")
-                    if "COTTON" in crop_list:
-                        crop.append("COTTON")
-                    if "WHEAT" in crop_list:
-                        crop.append("WHEAT")
-                    if "PEANUTS" in crop_list:
-                        crop.append("PEANUTS")
+                    field = Field.objects.values_list('crop', flat=True)
+                    crop_list = set(field) 
+                    available_crops = set(Crop.objects.values_list('code', flat=True)) 
+
+                    crop = list(crop_list.intersection(available_crops))
                     context["crop"] = crop
 
                     latitude = request.POST.get('latitude')
@@ -180,17 +162,11 @@ def StorageCreateView(request):
             consultant_id = Consultant.objects.get(email=request.user.email).id
             grower = Grower.objects.filter(consultant=consultant_id)
             context['grower'] = grower
-            field = Field.objects.all().values('crop')  #crop
-            crop=[] 
-            crop_list = [i["crop"] for i in field]
-            if "RICE" in crop_list:
-                crop.append("RICE")
-            if "COTTON" in crop_list:
-                crop.append("COTTON")
-            if "WHEAT" in crop_list:
-                crop.append("WHEAT")
-            if "PEANUTS" in crop_list:
-                crop.append("PEANUTS")
+            field = Field.objects.values_list('crop', flat=True)
+            crop_list = set(field) 
+            available_crops = set(Crop.objects.values_list('code', flat=True)) 
+
+            crop = list(crop_list.intersection(available_crops))
             context["crop"] = crop
 
             if request.method == 'POST':
@@ -211,17 +187,11 @@ def StorageCreateView(request):
                     grower_id = int(request.POST.get('grower_id'))
                     grower_crop = request.POST.get('grower_crop')
                     zip_file = request.FILES.get('zip_file')
-                    field = Field.objects.all().values('crop')  #crop
-                    crop=[] 
-                    crop_list = [i["crop"] for i in field]
-                    if "RICE" in crop_list:
-                        crop.append("RICE")
-                    if "COTTON" in crop_list:
-                        crop.append("COTTON")
-                    if "WHEAT" in crop_list:
-                        crop.append("WHEAT")
-                    if "PEANUTS" in crop_list:
-                        crop.append("PEANUTS")
+                    field = Field.objects.values_list('crop', flat=True)
+                    crop_list = set(field) 
+                    available_crops = set(Crop.objects.values_list('code', flat=True)) 
+
+                    crop = list(crop_list.intersection(available_crops))
                     context["crop"] = crop
                     
                     Storage(storage_name=name, storage_uniqueid=storage_uniqueid,
@@ -270,17 +240,11 @@ def StorageCreateView(request):
                     context = {'form': form}
                     grower = Grower.objects.filter(consultant=consultant_id)
                     context['grower'] = grower
-                    field = Field.objects.all().values('crop')  #crop
-                    crop=[] 
-                    crop_list = [i["crop"] for i in field]
-                    if "RICE" in crop_list:
-                        crop.append("RICE")
-                    if "COTTON" in crop_list:
-                        crop.append("COTTON")
-                    if "WHEAT" in crop_list:
-                        crop.append("WHEAT")
-                    if "PEANUTS" in crop_list:
-                        crop.append("PEANUTS")
+                    field = Field.objects.values_list('crop', flat=True)
+                    crop_list = set(field) 
+                    available_crops = set(Crop.objects.values_list('code', flat=True)) 
+
+                    crop = list(crop_list.intersection(available_crops))
                     context["crop"] = crop
                     latitude = request.POST.get('latitude')
                     longitude = request.POST.get('longitude')
@@ -324,17 +288,11 @@ def StorageCreateView(request):
             context = {'form': form}
             grower = Grower.objects.all().order_by('name')
             context['grower'] = grower
-            field = Field.objects.all().values('crop')  #crop
-            crop=[] 
-            crop_list = [i["crop"] for i in field]
-            if "RICE" in crop_list:
-                crop.append("RICE")
-            if "COTTON" in crop_list:
-                crop.append("COTTON")
-            if "WHEAT" in crop_list:
-                crop.append("WHEAT")
-            if "PEANUTS" in crop_list:
-                crop.append("PEANUTS")
+            field = Field.objects.values_list('crop', flat=True)
+            crop_list = set(field) 
+            available_crops = set(Crop.objects.values_list('code', flat=True)) 
+
+            crop = list(crop_list.intersection(available_crops))
             context["crop"] = crop
 
             if request.method == 'POST':
@@ -351,17 +309,11 @@ def StorageCreateView(request):
                     name = request.POST.get('storage_name')
                     grower = Grower.objects.all().order_by('name')
                     context['grower'] = grower
-                    field = Field.objects.all().values('crop')   #crop
-                    crop=[]
-                    crop_list = [i["crop"] for i in field]
-                    if "RICE" in crop_list:
-                        crop.append("RICE")
-                    if "COTTON" in crop_list:
-                        crop.append("COTTON")
-                    if "WHEAT" in crop_list:
-                        crop.append("WHEAT")
-                    if "PEANUTS" in crop_list:
-                        crop.append("PEANUTS")
+                    field = Field.objects.values_list('crop', flat=True)
+                    crop_list = set(field) 
+                    available_crops = set(Crop.objects.values_list('code', flat=True)) 
+
+                    crop = list(crop_list.intersection(available_crops))
                     context["crop"] = crop
             
                     storage_uniqueid = request.POST.get('storage_uniqueid')
@@ -415,17 +367,11 @@ def StorageCreateView(request):
                     context = {'form': form}
                     grower = Grower.objects.all().order_by('name')
                     context['grower'] = grower
-                    field = Field.objects.all().values('crop')    #crop
-                    crop=[]
-                    crop_list = [i["crop"] for i in field]
-                    if "RICE" in crop_list:
-                        crop.append("RICE")
-                    if "COTTON" in crop_list:
-                        crop.append("COTTON")
-                    if "WHEAT" in crop_list:
-                        crop.append("WHEAT")
-                    if "PEANUTS" in crop_list:
-                        crop.append("PEANUTS")
+                    field = Field.objects.values_list('crop', flat=True)
+                    crop_list = set(field) 
+                    available_crops = set(Crop.objects.values_list('code', flat=True)) 
+
+                    crop = list(crop_list.intersection(available_crops))
                     context["crop"] = crop
                     
                     latitude = request.POST.get('latitude')
@@ -467,6 +413,7 @@ def StorageCreateView(request):
             return redirect('login')  
     else:
         return redirect('login')
+
 
 def StorageListView(request):
     if request.user.is_authenticated:
@@ -592,6 +539,7 @@ def StorageListView(request):
             return redirect('login')
     else:
         return redirect('login')
+
 
 def StorageUpdateView(request, pk):
     if request.user.is_authenticated:
@@ -943,6 +891,7 @@ def StorageUpdateView(request, pk):
     else:
         return redirect('login')
 
+
 def storageDeleteView(request,pk):
     if request.user.is_authenticated:
         storage = Storage.objects.get(id=pk)
@@ -983,7 +932,8 @@ def storage_feed_list(request):
                 grower_id = request.user.grower.id
                 if grower_id:
                     storage_feed_data = StorageFeed.objects.filter(grower_id = grower_id ).order_by('-id')
-                    context = {'storage_feed_data': storage_feed_data}
+                    crops = Crop.objects.all()
+                    context = {'storage_feed_data': storage_feed_data, 'crops':crops}
                 
                 return render(request,"storage/storage_feed_list.html",context)
 
@@ -1001,6 +951,8 @@ def storage_feed_list(request):
                 context['field_name'] = field_name.order_by('name')
                 storage_feed_data = StorageFeed.objects.filter(grower_id__in=grower_ids ).order_by('-id')
                 # context['storage_feed_data'] = storage_feed_data
+                crops = Crop.objects.all()
+                context['crops'] = crops
                 if request.method == "GET":
                     grower_id = request.GET.get("grower_id")
                     storage_id = request.GET.get("storage_id")
@@ -1031,6 +983,7 @@ def storage_feed_list(request):
                     storage_page = paginator.page(paginator.num_pages)
                 storage_feed_data = storage_page
                 context['storage_feed_data'] = storage_feed_data  
+                
                 return render(request,"storage/storage_feed_list.html",context)
                 
             elif request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
@@ -1041,6 +994,8 @@ def storage_feed_list(request):
                 storage_feed_data = StorageFeed.objects.all().order_by('-id')
                 grower = Grower.objects.all().order_by('name')
                 context['growers'] = grower
+                crops = Crop.objects.all()
+                context['crops'] = crops
 
                 if request.method == "GET":
                     grower_id = request.GET.get("grower_id")
@@ -1072,7 +1027,7 @@ def storage_feed_list(request):
                     storage_page = paginator.page(paginator.num_pages)
                 storage_feed_data = storage_page
                 context['storage_feed_data'] = storage_feed_data  
-                      
+                
                 return render(request,"storage/storage_feed_list.html",context)
             else:
                 return redirect('login')
@@ -1081,7 +1036,8 @@ def storage_feed_list(request):
     except Exception as e:
         messages = str(e)
         return render(request,"storage/storage_feed_list.html",{"messages":messages})
-        
+
+
 @login_required
 def storage_feed_add(request):
     try:
@@ -1109,16 +1065,11 @@ def storage_feed_add(request):
                         context['storage_name'] = storage_name
                         field_name = Field.objects.filter(grower_id=grower_id).order_by('id')
                         context['field_name'] = field_name
-                        field = Field.objects.filter(grower_id = grower_id)
-                        crop_list = [i.crop for i in field]
-                        if "COTTON" in crop_list:
-                            crop.append("COTTON")
-                        if "RICE" in crop_list:
-                            crop.append("RICE")
-                        if "WHEAT" in crop_list:
-                            crop.append("WHEAT")
-                        if "PEANUTS" in crop_list:
-                            crop.append("PEANUTS")
+                        field = Field.objects.filter(grower_id=grower_id).values_list('crop', flat=True)
+
+                        available_crops = set(Crop.objects.values_list('code', flat=True))
+                        crop = list(set(field).intersection(available_crops))
+
                         context["crop"] = crop
                         
                     else:
@@ -1183,16 +1134,11 @@ def storage_feed_add(request):
                         context['storage_name'] = storage_name
                         field_name = Field.objects.filter(grower_id=grower_id).order_by('id')
                         context['field_name'] = field_name
-                        field = Field.objects.filter(grower_id = grower_id)
-                        crop_list = [i.crop for i in field]
-                        if "COTTON" in crop_list:
-                            crop.append("COTTON")
-                        if "RICE" in crop_list:
-                            crop.append("RICE")
-                        if "WHEAT" in crop_list:
-                            crop.append("WHEAT")
-                        if "PEANUTS" in crop_list:
-                            crop.append("PEANUTS")
+                        field = Field.objects.filter(grower_id=grower_id).values_list('crop', flat=True)
+
+                        available_crops = set(Crop.objects.values_list('code', flat=True))
+                        crop = list(set(field).intersection(available_crops))
+
                         context["crop"] = crop
                     else:
                         if grower_id and grower_id != "all" and mainSave == "Save" :
@@ -1260,16 +1206,11 @@ def storage_feed_add(request):
                         context['storage_name'] = storage_name
                         field_name = Field.objects.filter(grower_id=grower_id).order_by('id')
                         context['field_name'] = field_name
-                        field = Field.objects.filter(grower_id = grower_id)
-                        crop_list = [i.crop for i in field]
-                        if "COTTON" in crop_list:
-                            crop.append("COTTON")
-                        if "RICE" in crop_list:
-                            crop.append("RICE")
-                        if "WHEAT" in crop_list:
-                            crop.append("WHEAT")
-                        if "PEANUTS" in crop_list:
-                            crop.append("PEANUTS")
+                        field = Field.objects.filter(grower_id=grower_id).values_list('crop', flat=True)
+
+                        available_crops = set(Crop.objects.values_list('code', flat=True))
+                        crop = list(set(field).intersection(available_crops))
+
                         context["crop"] = crop
             
                     else:
@@ -1359,17 +1300,11 @@ def storage_feed_remove_update(request):
                             context["raw_val"] = f"0"
                     field_name = Field.objects.filter(grower_id=grower_id).order_by('id')
                     context['field_name'] = field_name
-                    field = Field.objects.filter(grower_id = grower_id)
-                    crop_list = [i.crop for i in field]
-                    
-                    if "COTTON" in crop_list:
-                        crop.append("COTTON")
-                    if "RICE" in crop_list:
-                        crop.append("RICE")
-                    if "WHEAT" in crop_list:
-                        crop.append("WHEAT")
-                    if "PEANUTS" in crop_list:
-                        crop.append("PEANUTS")
+                    field = Field.objects.filter(grower_id=grower_id).values_list('crop', flat=True)
+
+                    available_crops = set(Crop.objects.values_list('code', flat=True))
+                    crop = list(set(field).intersection(available_crops))
+
                     context["crop"] = crop
   
                 else:
@@ -1447,17 +1382,11 @@ def storage_feed_remove_update(request):
                             context["raw_val"] = f"0"
                     field_name = Field.objects.filter(grower_id=grower_id).order_by('id')
                     context['field_name'] = field_name
-                    field = Field.objects.filter(grower_id = grower_id)
-                    crop_list = [i.crop for i in field]
-                    
-                    if "COTTON" in crop_list:
-                        crop.append("COTTON")
-                    if "RICE" in crop_list:
-                        crop.append("RICE")
-                    if "WHEAT" in crop_list:
-                        crop.append("WHEAT")
-                    if "PEANUTS" in crop_list:
-                        crop.append("PEANUTS")
+                    field = Field.objects.filter(grower_id=grower_id).values_list('crop', flat=True)
+
+                    available_crops = set(Crop.objects.values_list('code', flat=True))
+                    crop = list(set(field).intersection(available_crops))
+
                     context["crop"] = crop
                     
                 else:
@@ -1533,17 +1462,11 @@ def storage_feed_remove_update(request):
                             context["raw_val"] = f"0"
                     field_name = Field.objects.filter(grower_id=grower_id).order_by('id')
                     context['field_name'] = field_name
-                    field = Field.objects.filter(grower_id = grower_id)
-                    crop_list = [i.crop for i in field]
-                    
-                    if "COTTON" in crop_list:
-                        crop.append("COTTON")
-                    if "RICE" in crop_list:
-                        crop.append("RICE")
-                    if "WHEAT" in crop_list:
-                        crop.append("WHEAT")
-                    if "PEANUTS" in crop_list:
-                        crop.append("PEANUTS")
+                    field = Field.objects.filter(grower_id=grower_id).values_list('crop', flat=True)
+
+                    available_crops = set(Crop.objects.values_list('code', flat=True))
+                    crop = list(set(field).intersection(available_crops))
+
                     context["crop"] = crop
   
                 else:

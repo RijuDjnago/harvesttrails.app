@@ -254,16 +254,9 @@
                                     <label for="">Crop<span class="asteriskField">*</span></label>
                                     <select id="cropSelction" name="crop_id" class="form-control selectpicker " data-live-search="true">
                                         <option value='all' selected> Select Crop </option>
-                                        {% if selectedCrop == 'RICE' %}
-                                        <option value='RICE' selected>RICE</option>
-                                        <option value='COTTON' >COTTON</option>
-                                        {% elif selectedCrop == 'COTTON' %}
-                                        <option value='RICE' >RICE</option>
-                                        <option value='COTTON' selected>COTTON</option>
-                                        {% else %}
-                                        <option value='RICE'>RICE</option>
-                                        <option value='COTTON' >COTTON</option>
-                                        {% endif %}
+                                        {% for crop in crops %}
+                                        <option value='{{crop.code}}' {% if selectedCrop == crop.code %}selected {% endif %}>{{crop.code}}</option>
+                                        {% endfor %}
                                     </select>
                                 </div>
                                 <input style="display: none;" id="submitBtn2" type="submit" class="btn-save-submit" value="Save"> 

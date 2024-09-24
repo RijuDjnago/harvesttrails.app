@@ -12,8 +12,26 @@ from apps.documents.models import DocumentFile, DocumentFolder
 from .choices import CHOICE
 from django.contrib.postgres.fields import ArrayField, JSONField
 
+class Crop(models.Model):
+    name = models.CharField(max_length=100, unique=True) 
+    code = models.CharField(max_length=10, unique=True, editable=False)  
+
+    def save(self, *args, **kwargs):        
+        if self.name:
+            self.code = self.name.upper()
+
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.name
+
 class Field(models.Model):
-    """Database model for field"""
+    """Database model for field"""  
+    @staticmethod
+    def crop_choices():
+        crops = Crop.objects.all()
+        return [(crop.code, crop.name) for crop in crops] 
+    
     name = models.CharField(unique=True, max_length=200)
     farm = models.ForeignKey(
         'farms.Farm', on_delete=models.CASCADE, related_name='fields'
@@ -33,7 +51,7 @@ class Field(models.Model):
         verbose_name='FSA Field Number')
     latitude = models.FloatField(null=True, blank=True)
     longitude = models.FloatField(null=True, blank=True)
-    crop = models.CharField(max_length=255, choices=CHOICE.CROP_CHOICES, null=True, blank=True)
+    crop = models.CharField(max_length=255, choices=[], null=True, blank=True)
     variety = models.CharField(
         max_length=255, choices=CHOICE.VARIETY_CHOICES, null=True, blank=True
     )
@@ -289,13 +307,11 @@ class Field(models.Model):
     land_use_efficiency = models.CharField(max_length=200, null=True, blank=True)
     grower_premium_percentage = models.CharField(max_length=200, null=True, blank=True)
     grower_dollar_premium = models.CharField(max_length=200, null=True, blank=True)
+            
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)    
+        self._meta.get_field('crop').choices = self.crop_choices()   
     
-
-        
-        
-    
-
-
     def __str__(self):
         """Returns string representation of farm"""
         #return f'{self.id}:{self.name}'
@@ -346,6 +362,7 @@ class Field(models.Model):
             return 'Yes'
         else:
             return 'No'
+        
     def get_storage_shapefile(self):
         field = Field.objects.get(id=self.id)
         grower_id = field.grower_id
@@ -522,7 +539,6 @@ class Field(models.Model):
         doc_file = DocumentFile.objects.filter(folder_id=doc_folder).filter(field_id=self.id).filter(grower_id=grower_id)
         return doc_file.count()
 
-    
     def get_tissue_3(self):
         field = Field.objects.get(id=self.id)
         grower_id = field.grower_id
@@ -575,6 +591,12 @@ crop_year = (
 )
 class FieldUpdated(models.Model):
     """Database model for field"""
+
+    @staticmethod
+    def crop_choices():
+        crops = Crop.objects.all()
+        return [(crop.code, crop.name) for crop in crops] 
+    
     field = models.ForeignKey(Field,on_delete=models.CASCADE,null=True,blank=True)
     name = models.CharField(max_length=200,null=True,blank=True)
     crop_year = models.CharField(max_length = 20,choices = crop_year,default = '2022',null=True,blank=True)
@@ -598,7 +620,7 @@ class FieldUpdated(models.Model):
     fsa_field_number = models.CharField(
         max_length=250,help_text="Multiple values can be Comma (,) separated", null=True, blank=True,
         verbose_name='FSA Field Number')
-    crop = models.CharField(max_length=255, choices=CHOICE.CROP_CHOICES, null=True, blank=True)
+    crop = models.CharField(max_length=255, choices=[], null=True, blank=True)
     variety = models.CharField(
         max_length=255, choices=CHOICE.VARIETY_CHOICES, null=True, blank=True
     )
@@ -627,6 +649,10 @@ class FieldUpdated(models.Model):
     land_use_efficiency = models.CharField(max_length=200, null=True, blank=True)
     grower_premium_percentage = models.CharField(max_length=200, null=True, blank=True)
     grower_dollar_premium = models.CharField(max_length=200, null=True, blank=True)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)    
+        self._meta.get_field('crop').choices = self.crop_choices()
 
 class FieldActivity(models.Model):
     field_activity = models.CharField(max_length=200, null=True, blank=True)

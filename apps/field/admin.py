@@ -17,3 +17,5 @@ class FieldResource(resources.ModelResource):
         model = models.Field
         import_id_fields = ('id',)
         exclude = ('id', 'farm', 'grower', )
+
+admin.site.register(models.Crop)

@@ -2181,7 +2181,9 @@ def processor_inbound_management(request):
                             var_id.append(var)
                     grower_shipment = GrowerShipment.objects.filter(id__in = var_id)
                     context['selectedGrower'] = Grower.objects.get(id=selectgrower_id)
-                elif search_name :
+                else:
+                    grower_shipment = grower_shipment
+                if search_name :
                     check_grower = Grower.objects.filter(name__icontains=search_name)
                     check_field = Field.objects.filter(name__icontains=search_name)
                     check_processor = Processor.objects.filter(entity_name__icontains=search_name)
@@ -2189,6 +2191,11 @@ def processor_inbound_management(request):
                     if check_grower.exists() :
                         check_grower_id = [i.id for i in check_grower]
                         grower_shipment = grower_shipment.filter(grower_id__in=check_grower_id)
+                        context['get_search_name'] = search_name
+                    
+                    elif check_crop.exists() :
+                        check_field_id = [i.id for i in check_crop]
+                        grower_shipment = grower_shipment.filter(field_id__in=check_field_id)
                         context['get_search_name'] = search_name
 
                     elif check_field.exists() :
@@ -2274,10 +2281,13 @@ def processor_inbound_management(request):
                             var_id.append(var)
                     grower_shipment = GrowerShipment.objects.filter(id__in = var_id)
                     context['selectedGrower'] = Grower.objects.get(id=selectgrower_id)
+                else:
+                    grower_shipment = grower_shipment
                 
                 if search_name :
                     check_grower = Grower.objects.filter(name__icontains=search_name)
                     check_field = Field.objects.filter(name__icontains=search_name)
+                    check_crop = Field.objects.filter(crop__icontains=search_name)
                     check_processor = Processor.objects.filter(entity_name__icontains=search_name)
 
                     if check_grower.exists() :
@@ -2285,11 +2295,16 @@ def processor_inbound_management(request):
                         grower_shipment = grower_shipment.filter(grower_id__in=check_grower_id)
                         context['get_search_name'] = search_name
 
-                    elif check_field.exists() :
-                        check_field_id = [i.id for i in check_field]
+                    elif check_crop.exists() :
+                        check_field_id = [i.id for i in check_crop]
                         grower_shipment = grower_shipment.filter(field_id__in=check_field_id)
                         context['get_search_name'] = search_name
 
+                    elif check_field.exists() :
+                        check_field_id = [i.id for i in check_field]
+                        grower_shipment = grower_shipment.filter(field_id__in=check_field_id)
+                        context['get_search_name'] = search_name                  
+                    
                     elif check_processor.exists() :
                         check_processor_id = [i.id for i in check_processor]
                         grower_shipment = grower_shipment.filter(processor_id__in=check_processor_id)
