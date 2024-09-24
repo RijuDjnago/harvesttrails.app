@@ -10,6 +10,7 @@ class FarmForm(forms.ModelForm):
         # first call parent's constructor
         super(FarmForm, self).__init__(*args, **kwargs)
         # there's a `fields` property now
+        self.fields['crop'].choices = [(crop.code, crop.code) for crop in models.Crop.objects.all()]
         self.fields['crop'].required = True
         self.fields['fsa_farm_number'].required = True
         self.fields['fsa_tract_number'].required = True

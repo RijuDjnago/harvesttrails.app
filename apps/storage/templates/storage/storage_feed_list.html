@@ -181,32 +181,9 @@
                     <div class="col-lg-2 col-md-2 col-sm-6 col-12">
                         <select onchange="checkcotton()" id="grower_crop" name="grower_crop"  class="form-control selectpicker" data-live-search="true">
                             <option value='all' > Select Crop </option>
-                            {% if selectedCrop == "RICE" %}
-                            <option value="RICE" selected> RICE </option>
-                            <option value="COTTON"> COTTON </option>
-                            <option value="WHEAT"> WHEAT </option>
-                            <option value="PEANUTS"> PEANUTS </option>
-                            {% elif selectedCrop == "COTTON" %}
-                            <option value="RICE"> RICE </option>
-                            <option value="COTTON" selected> COTTON </option>
-                            <option value="WHEAT"> WHEAT </option>
-                            <option value="PEANUTS"> PEANUTS </option>
-                            {% elif selectedCrop == "WHEAT" %}
-                            <option value="RICE"> RICE </option>
-                            <option value="COTTON"> COTTON </option>
-                            <option value="WHEAT" selected> WHEAT </option>
-                            <option value="PEANUTS"> PEANUTS </option>
-                            {% elif selectedCrop == "PEANUTS" %}
-                            <option value="RICE"> RICE </option>
-                            <option value="COTTON"> COTTON </option>
-                            <option value="WHEAT"> WHEAT </option>
-                            <option value="PEANUTS" selected> PEANUTS </option>
-                            {% else %}
-                            <option value="RICE"> RICE </option>
-                            <option value="COTTON"> COTTON </option>
-                            <option value="WHEAT"> WHEAT </option>
-                            <option value="PEANUTS"> PEANUTS </option>
-                            {% endif %}
+                            {% for crop in crops %}
+                            <option value="{{crop.code}}" {% if selectedCrop == crop.code %} selected {% endif %}> {{crop.code}} </option>
+                            {% endfor %}                           
                             
                         </select>
                     </div>

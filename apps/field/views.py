@@ -21,7 +21,7 @@ import csv
 from apps.field.models import CsvToField, ShapeFileDataCo, FieldActivity, FieldUpdated
 from apps.accounts.models import User, LogTable
 from apps.farms.models import Farm
-from apps.field.models import Field
+from apps.field.models import Field, Crop
 from apps.grower.models import Consultant, Grower
 from . import forms
 import shapefile
@@ -293,6 +293,7 @@ class FieldListView(LoginRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
         # Grower ....
         if 'Grower' in self.request.user.get_role() and not self.request.user.is_superuser:
+            context['crops'] = Crop.objects.all()
             context['object_list'] = self.model.objects.filter(grower_id=self.request.user.grower.id).order_by('-created_date')
             return context
         
@@ -304,6 +305,7 @@ class FieldListView(LoginRequiredMixin, ListView):
             object_list = self.model.objects.filter(grower__in=get_growers).order_by('-created_date')
             # context['object_list'] = object_list     
             context['growers'] = get_growers
+            context['crops'] = Crop.objects.all()
             context['field_data'] = object_list.only('name')
             farm_data=Farm.objects.filter(grower__in=get_growers).only('name').order_by('name')
             context['farm_data'] = farm_data
@@ -367,6 +369,7 @@ class FieldListView(LoginRequiredMixin, ListView):
             growers = Grower.objects.all().order_by('name')
             field_data = Field.objects.only('name').order_by('name')           
             context['field_data'] = field_data
+            context['crops'] = Crop.objects.all()
             farm_data=Farm.objects.only('name').order_by('name')
             context['farm_data'] = farm_data
             context['growers'] = growers

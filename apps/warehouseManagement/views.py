@@ -1455,7 +1455,7 @@ def create_processor_shipment(request):
                     "warehouse_name" : None,
                     "customer_name": None               
                 })
-              
+                
                 if request.method == "POST":
                     data = request.POST
                     selected_contract = request.POST.get('selected_contract') 
@@ -1539,7 +1539,7 @@ def create_processor_shipment(request):
                             
                         crop = CropDetails.objects.filter(id=int(selected_crop), contract=contract).first()
                         crop_name = crop.crop
-                       
+                        
                         if crop.amount_unit == context.get('amount_unit'):
                             contract_weight_left = float(crop.left_amount) - float(net_weight)
                         else:
@@ -1589,9 +1589,9 @@ def create_processor_shipment(request):
                         ## Send notification to the Destination.
                         if outbound.warehouse_id not in [None, 'null', ' ', '']:                            
                             all_user = WarehouseUser.objects.filter(warehouse_id=outbound.warehouse_id)                           
-                           
+                            
                             distributors = Distributor.objects.filter(warehouse__id=outbound.warehouse_id)                           
-                         
+                            
                             distributor_users = DistributorUser.objects.filter(distributor__in=distributors)
                         else:                            
                             all_user = CustomerUser.objects.filter(customer_id=outbound.customer_id)
@@ -1611,12 +1611,12 @@ def create_processor_shipment(request):
                 return render(request, 'distributor/create_outbound.html', context)    
             elif request.user.is_processor:
                 user = request.user
-                processor_user = ProcessorUser.objects.filter(contact_email=user.email)
+                processor_user = ProcessorUser.objects.filter(contact_email=user.email).first()
                 processor =  Processor.objects.filter(id=processor_user.processor.id).first()
                 processor_id =processor.id
                 processor_type = 'T1'
                 processor_entity_name = processor.entity_name
-                contracts = AdminProcessorContract.objects.filter(processor_id=processor_id, processor_type=processor_type).values('id','secret_key','processor_id','processor_type','processor_entity_name','crop').order_by('-id')
+                contracts = AdminProcessorContract.objects.filter(processor_id=processor_id, processor_type=processor_type).values('id','secret_key','processor_id','processor_type','processor_entity_name').order_by('-id')
                 
                 context["contracts"] = contracts
                 context.update({
@@ -1628,7 +1628,7 @@ def create_processor_shipment(request):
                     "warehouse_name" : None,
                     "customer_name": None               
                 })
-              
+                
                 if request.method == "POST":
                     data = request.POST
                     selected_contract = request.POST.get('selected_contract') 
@@ -1712,7 +1712,7 @@ def create_processor_shipment(request):
                             
                         crop = CropDetails.objects.filter(id=int(selected_crop), contract=contract).first()
                         crop_name = crop.crop
-                       
+                        
                         if crop.amount_unit == context.get('amount_unit'):
                             contract_weight_left = float(crop.left_amount) - float(net_weight)
                         else:
@@ -1761,9 +1761,9 @@ def create_processor_shipment(request):
                         ## Send notification to the Destination.
                         if outbound.warehouse_id not in [None, 'null', ' ', '']:                            
                             all_user = WarehouseUser.objects.filter(warehouse_id=outbound.warehouse_id)                           
-                           
+                            
                             distributors = Distributor.objects.filter(warehouse__id=outbound.warehouse_id)                           
-                         
+                            
                             distributor_users = DistributorUser.objects.filter(distributor__in=distributors)
                         else:                            
                             all_user = CustomerUser.objects.filter(customer_id=outbound.customer_id)
@@ -1783,12 +1783,12 @@ def create_processor_shipment(request):
                 return render(request, 'distributor/create_outbound.html', context) 
             elif request.user.is_processor2:
                 user = request.user
-                processor_user = ProcessorUser2.objects.filter(contact_email=user.email)
+                processor_user = ProcessorUser2.objects.filter(contact_email=user.email).first()
                 processor =  Processor2.objects.filter(id=processor_user.processor2.id).first()
                 processor_id = processor.id
                 processor_type = processor.processor_type.first().type_name
                 processor_entity_name = processor.entity_name
-                contracts = AdminProcessorContract.objects.filter(processor_type=processor_type, processor_id=processor_id).values('id','secret_key','processor_id','processor_type','processor_entity_name','crop').order_by('-id')
+                contracts = AdminProcessorContract.objects.filter(processor_type=processor_type, processor_id=processor_id).values('id','secret_key','processor_id','processor_type','processor_entity_name').order_by('-id')
                 
                 context["contracts"] = contracts
                 context.update({
@@ -1800,7 +1800,7 @@ def create_processor_shipment(request):
                     "warehouse_name" : None,
                     "customer_name": None               
                 })
-              
+                
                 if request.method == "POST":
                     data = request.POST
                     selected_contract = request.POST.get('selected_contract') 
@@ -1884,7 +1884,7 @@ def create_processor_shipment(request):
                             
                         crop = CropDetails.objects.filter(id=int(selected_crop), contract=contract).first()
                         crop_name = crop.crop
-                       
+                        
                         if crop.amount_unit == context.get('amount_unit'):
                             contract_weight_left = float(crop.left_amount) - float(net_weight)
                         else:
@@ -1933,9 +1933,9 @@ def create_processor_shipment(request):
                         ## Send notification to the Destination.
                         if outbound.warehouse_id not in [None, 'null', ' ', '']:                            
                             all_user = WarehouseUser.objects.filter(warehouse_id=outbound.warehouse_id)                           
-                           
+                            
                             distributors = Distributor.objects.filter(warehouse__id=outbound.warehouse_id)                           
-                         
+                            
                             distributor_users = DistributorUser.objects.filter(distributor__in=distributors)
                         else:                            
                             all_user = CustomerUser.objects.filter(customer_id=outbound.customer_id)

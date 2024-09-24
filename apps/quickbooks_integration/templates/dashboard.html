@@ -16,6 +16,9 @@
   {% include 'header.html' %}
   <main>
     <p>{{company_info}}</p>
+    {% for customer in customers %}
+    {{customer}}- {{customer.Id}}<br>
+    {% endfor %}
   </main>
   {% include 'footer.html' %}
 </div>

@@ -9,6 +9,7 @@ from decimal import Decimal
 from django.core.validators import MinValueValidator
 
 
+
 class Contracts(models.Model):
     """Database model for field"""
     name = models.CharField(unique=True, max_length=200)
@@ -109,12 +110,6 @@ unit_choice = (
     ("LBS","LBS"),
     ("MT","MT"),
 )
-crop_choices = (
-    ('RICE', 'Rice'),
-    ('WHEAT', 'Wheat'),
-    ('PEANUT', 'Peanut'),
-    ('BEANS', 'Beans'),
-)
 processor_type = (
     ("T1","T1"),
     ("T2","T2"),
@@ -195,13 +190,23 @@ class AdminProcessorContract(models.Model):
 
 
 class CropDetails(models.Model):
+    @staticmethod
+    def crop_choices():
+        from apps.field.models import Crop
+        crops = Crop.objects.all()
+        return [(crop.code, crop.name) for crop in crops] 
+    
     contract = models.ForeignKey(AdminProcessorContract, on_delete=models.CASCADE, related_name='contractCrop')
-    crop = models.CharField(max_length=10, choices=crop_choices)
+    crop = models.CharField(max_length=255, choices=[], null=True, blank=True)
     crop_type = models.CharField(max_length=255, null=True, blank=True)
     contract_amount = models.FloatField()
     amount_unit = models.CharField(max_length=10, choices=unit_choice)
     per_unit_rate = models.DecimalField(max_digits=10, decimal_places=3) 
     left_amount = models.FloatField(null=True, blank=True)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)    
+        self._meta.get_field('crop').choices = self.crop_choices() 
 
     def save(self, *args, **kwargs):
         if self._state.adding and self.left_amount is None:
@@ -276,14 +281,25 @@ class AdminCustomerContract(models.Model):
     def __str__(self):
         return f'Contract ID - {self.secret_key} || {self.customer_name}'
 
+
 class CustomerContractCropDetails(models.Model):
+    @staticmethod
+    def crop_choices():
+        from apps.field.models import Crop
+        crops = Crop.objects.all()
+        return [(crop.code, crop.name) for crop in crops] 
+    
     contract = models.ForeignKey(AdminCustomerContract, on_delete=models.CASCADE, related_name='customerContractCrop')
-    crop = models.CharField(max_length=10, choices=crop_choices)
+    crop = models.CharField(max_length=255, choices=[], null=True, blank=True)
     crop_type = models.CharField(max_length=255, null=True, blank=True)
     contract_amount = models.FloatField()
     amount_unit = models.CharField(max_length=10, choices=unit_choice)
     per_unit_rate = models.DecimalField(max_digits=10, decimal_places=3) 
     left_amount = models.FloatField(null=True, blank=True)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)    
+        self._meta.get_field('crop').choices = self.crop_choices() 
 
     def save(self, *args, **kwargs):
         if self._state.adding and self.left_amount is None:
@@ -302,6 +318,7 @@ class AdminCustomerContractSignature(models.Model):
 
     def __str__(self):
         return f'Signature of Contract id - {self.contract.id}'
+
     
 class AdminCustomerContractDocuments(models.Model):
     contract = models.ForeignKey(AdminCustomerContract, on_delete=models.CASCADE, related_name='customerContractDocuments')

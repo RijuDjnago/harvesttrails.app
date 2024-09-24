@@ -42,12 +42,14 @@ STRIPE_SECRET_KEY = 'sk_test_Uw0pOrG2d2LwQT18Ielu6Gqk'
 # STRIPE_PUBLIC_KEY = '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'
 # STRIPE_SECRET_KEY ='pk_live_51PsUqzBODua7a1xietkmsrmP7zEXLJ35LG6eftcjJ00jphFiYyaXsd0wUQ0ytAoC5FvhXMAkxSTEB0GKZoqK3tH500d1IhTedk'
 
-
+os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
 QUICKBOOKS_CLIENT_ID = "ABPRBiMNdM2uQjtIOhbYJ1SipuZNBOYkEOFvExdiCvz1phGysJ"
-QUICKBOOKS_CLIENT_SECRET = "HoTZo0vpzMMZQGzrDhTyK8j28kq8wFrJSkeCCwtN"
+QUICKBOOKS_CLIENT_SECRET = "pFc5iMKnfCsX4sgf5DllQkrKS6L4TpaUoAjHob7N"
 QUICKBOOKS_REDIRECT_URI = 'http://localhost:8000/quickbooks/callback'
 QUICKBOOKS_ENVIRONMENT = 'sandbox'  
 QUICKBOOKS_SCOPES = ['com.intuit.quickbooks.accounting', 'openid', 'profile', 'email']
+
+
 
 # Application definition
 

@@ -42,15 +42,11 @@ def entry_feeds_add(request):
         if request.method == "POST":
             grower_id = request.POST.get("grower_id")
             if grower_id != "all":
-                field = Field.objects.filter(grower_id = grower_id)
-                crop_list = [i.crop for i in field]
-                crop = []
-                if "COTTON" in crop_list:
-                    crop.append("COTTON")
-                if "RICE" in crop_list:
-                    crop.append("RICE")
-                if "WHEAT" in crop_list:
-                    crop.append("WHEAT")
+                field = Field.objects.filter(grower_id=grower_id).values_list('crop', flat=True)
+
+                available_crops = set(Crop.objects.values_list('code', flat=True))
+                crop = list(set(field).intersection(available_crops))
+
                 context["crop"] = crop
                 context["selectedGrower"] = Grower.objects.get(id=grower_id)
                 show_entry = EntryFeeds.objects.filter(grower_id=grower_id).order_by('-id')
@@ -778,7 +774,9 @@ def grower_payments_table(request):
         context['grower_payment'] = report
         context['temp_grower_payment_count'] = total_obj_qury
         context['range'] = range(tem_total_no_page)
+        context['crops'] = Crop.objects.all()
         return render(request, "growerpayments/grower_payments_table.html",context)
+
 
 @login_required()
 def grower_payments_table_csv_download(request):
@@ -1020,6 +1018,8 @@ def grower_payments_table_csv_download(request):
         #     i["classs"], i["cpb_lbs"], i["sp_lbs"],i["qp_lbs"], i["total_price"], i["delivered_value"],i["payment_due_date"]])
            
         return response
+    
+
 @login_required()
 def grower_payments_list_not_paid_csv_download(request):
     context = {}
@@ -2038,6 +2038,7 @@ def grower_payments_list(request):
         context['temp_grower_payment_count'] = total_obj_qury
       
         context['grower_payment'] = grower_payment
+        context['crops'] = Crop.objects.all()
         # context['total_deliverd_lbs'] = total_deliverd_lbs
         # context['count'] = count
         # context['total_deliverd_values'] = "${0:.2f} USD".format(total_deliverd_values)
@@ -2346,6 +2347,7 @@ def grower_payments_list(request):
             context['temp_grower_payment_count'] = count
             context['temp_grower_payment_start_index'] = 1
             context['temp_grower_payment_end_index'] = count
+            context['crops'] = Crop.objects.all()
 
             return render(request, "growerpayments/grower_payments_list.html",context)
         else:
@@ -3764,6 +3766,7 @@ def grower_split_payee_list(request):
         gg_id = [i.grower_idd for i in grower_payee]
         growers = Grower.objects.filter(id__in=gg_id).order_by('name')
         context['growers'] = growers
+        context['crops'] = Crop.objects.all()
         if request.method == 'POST':
             grower_id = request.POST.get('grower_id')
             field_id = request.POST.get('field_id')
@@ -4111,6 +4114,7 @@ def grower_split_payee_list(request):
                         context['payment_splits_phone'] = grower_payee.payee_phone
                         context['payment_splits_email'] = grower_payee.payee_email
                         context['lien_status'] = grower_payee.lien_holder_status
+                        
                         
                         # Payment Splits .......
                         net_pay = 0
