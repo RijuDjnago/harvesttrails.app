@@ -28,34 +28,7 @@ class CHOICE:
     #             ('XP753', 'XP753'),
     #         )
 
-    VARIETY_CHOICES = (
-                ('DG-263L', 'DG-263L'),
-                ('DG-Wheat', 'DG-Wheat'),
-                ('DG3605', 'DG3605'),
-                ('DG 1464', 'DG 1464'),
-                ('DG 2425 XF', 'DG 2425 XF'),
-                ('DG 3215 B3XF', 'DG 3215 B3XF'),
-                ('DG 3450 B2XF', 'DG 3450 B2XF'),
-                ('DG 3470 B3XF', 'DG 3470 B3XF'),
-                ('DG 3570 B3XF', 'DG 3570 B3XF'),
-                ('DG 3635 B2XF', 'DG 3635 B2XF'),
-                ('DG 3544 B2XF', 'DG 3544 B2XF'),
-                ('DG 3651NR B2XF', 'DG 3651NR B2XF'),
-                ('DG 3109 B2XF', 'DG 3109 B2XF'),
-                ('DG 3387 B3XF', 'DG 3387 B3XF'),
-                ('DG 3421 B3XF', 'DG 3421 B3XF'),
-                ('DG H929 B3XF', 'DG H929 B3XF'),
-                ('DG 3555 B3XF', 'DG 3555 B3XF'),
-                ('DG 3402 B3XF', 'DG 3402 B3XF'),
-                ('DG H959 B3XF', 'DG H959 B3XF'),
-                ('DG 3469 B3XF', 'DG 3469 B3XF'),
-                ('DG 3615 B3XF', 'DG 3615 B3XF'),
-                ('DG P224 B3XF', 'DG P224 B3XF'),
-                ('DG 3385 B2XF', 'DG 3385 B2XF'),
-                ('DG 3422 B3XF', 'DG 3422 B3XF'),
-                ('DG 3799 B3XF', 'DG 3799 B3XF'),
-                
-            )
+    
 
     FERT_PRODUCT_CHOICES = (
                 ('DAP', 'lb (18-46-0) DAP'),

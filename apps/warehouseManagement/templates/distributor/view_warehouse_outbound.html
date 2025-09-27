@@ -155,6 +155,74 @@
         .accordion-item.active .accordion-content{
             display: block;
         }
+
+        .uploaded-files-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-top: 10px;
+}
+
+.file-card {
+    width: 140px;
+    height: 180px; /* fixed height */
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    text-align: center;
+    padding: 8px;
+    background: #fafafa;
+    box-shadow: 2px 2px 6px rgba(0,0,0,0.05);
+}
+
+.file-type {
+    font-size: 12px;
+    font-weight: bold;
+    color: #444;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+}
+
+.file-preview {
+    flex-grow: 1; /* take middle space */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    max-height: 100px;
+}
+
+.file-preview img {
+    max-width: 100%;
+    max-height: 100px;
+    border-radius: 4px;
+    object-fit: cover;
+}
+
+.file-link {
+    font-size: 30px;
+    text-decoration: none;
+    color: #007bff;
+}
+
+.file-link:hover {
+    text-decoration: underline;
+}
+
+.file-name {
+    font-size: 12px;
+    margin-top: 5px;
+    word-break: break-word;
+    color: #333;
+}
+
+.not-uploaded {
+    color: red;
+    font-size: 12px;
+}
+
     </style>
 
     <main>
@@ -162,12 +230,54 @@
         <div class="page-title-with-or-without-btn">
             <span class="farm headingtop">Shipment Details</span>
             <!-- Create button for Account-->
+            {% if lot_entries%}
+            <div class="flex-header-btn">
+                <button type="button" class=" btn-close-cancel" data-toggle="modal" data-target="#lotEntriesModal">
+                    View Waybill/BOL Entries
+                </button>
+            </div>
+            {% endif %}
+            <!-- Lot Entries Modal -->
+            <div class="modal fade" id="lotEntriesModal" tabindex="-1" aria-labelledby="lotEntriesModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="lotEntriesModalLabel">Waybill/BOL Entries</h5>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            {% if lot_entries %}
+                                <ul class="list-group">
+                                    {% for entry in lot_entries %}
+                                        <li class="list-group-item">
+                                            <strong>Waybill/BOL Number:</strong> {{ entry.waybill_number }} <br>
+                                            <strong>Address:</strong> {{ entry.address }} <br>
+                                            <strong>Description:</strong> {{ entry.description }} <br>                                            
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            {% else %}
+                                <p>No Waybill/BOL entries available.</p>
+                            {% endif %}
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
             
         </div>
 
         <div class="card farm-fields-container">
             <div class="container-fluid">                
                     <div class="row" style="margin-bottom: 20px;">
+                        <div class="col-md-4 " style="margin-bottom: 10px;">
+                            <label for="shipment" style="font-weight:bold;">Shipment Id</label>
+                            <p>{{shipment.shipment_id}}</p>                            
+                        </div>
                         <div class="col-md-4 " style="margin-bottom: 10px;">
                             <label for="shipment" style="font-weight:bold;">Contract Id</label>
                             <p>{{shipment.contract.secret_key}}</p>                            
@@ -179,15 +289,29 @@
                         <div class="col-md-4 " style="margin-bottom: 10px;">
                             <label for="shipment"style="font-weight:bold;">Warehouse Name</label>
                             <p>{{shipment.warehouse_name}}</p>                            
-                        </div>                                               
+                        </div>   
+                        <div class="col-md-4" style="margin-bottom: 10px;">
+                            <label for="shipment"style="font-weight:bold;">Destination</label>
+                            <p>{{shipment.destination}}</p>                            
+                        </div> 
+                        <div class="col-md-4" style="margin-bottom: 10px;">
+                            <label for="shipment"style="font-weight:bold;">Processor Invoice date</label>
+                            <p>{{shipment.processor_invoice_date}}</p>                            
+                        </div> 
+                        <div class="col-md-4" style="margin-bottom: 10px;">
+                            <label for="shipment"style="font-weight:bold;">Processor Invoice Number</label>
+                            <p>{{shipment.processor_invoice_number}}</p>                            
+                        </div>                                             
                         <div class="col-md-4 " style="margin-bottom: 10px;">
-                            <label for="shipment"style="font-weight:bold;">Crop</label>
-                            <p>{{shipment.crop}}</p>                            
-                        </div>
-                        <div class="col-md-4 " style="margin-bottom: 10px;">
-                            <label for="shipment"style="font-weight:bold;">Carrier</label>
+                            <label for="shipment"style="font-weight:bold;">Carrier Type</label>
                             <p>{{shipment.carrier_type}}</p>                            
                         </div>
+                        {% if shipment.additional_equipment_type and shipment.additional_equipment_type != "None" %}
+                        <div class="col-md-4 " style="margin-bottom: 10px;">
+                            <label for="shipment"style="font-weight:bold;">Additional Equipment Type</label>
+                            <p>{{shipment.additional_equipment_type}}</p>                            
+                        </div>
+                        {% endif %}
                         <div class="col-md-4 " style="margin-bottom: 10px;">
                             <label for="shipment"style="font-weight:bold;">Outbound type</label>
                             <p>{{shipment.outbound_type}}</p>                            
@@ -197,6 +321,30 @@
                             <p>{{shipment.date_pulled}}</p>                            
                         </div>
                         <div class="col-md-4 " style="margin-bottom: 10px;">
+                            <label for="Balance"style="font-weight:bold;">Placed At Industry Processor</label>
+                            <p>{{shipment.placed_at_industry_processor}}</p>                            
+                        </div>
+                         <div class="col-md-4 " style="margin-bottom: 10px;">
+                            <label for="Balance"style="font-weight:bold;">Rail car Loaded</label>
+                            <p>{{shipment.railcar_loaded}}</p>                            
+                        </div>
+                         <div class="col-md-4 " style="margin-bottom: 10px;">
+                            <label for="Balance"style="font-weight:bold;">USDA Inspected</label>
+                            <p>{{shipment.USDA_inspected}}</p>                            
+                        </div>
+                         <div class="col-md-4 " style="margin-bottom: 10px;">
+                            <label for="Balance"style="font-weight:bold;">Phyto Certificate Received</label>
+                            <p>{{shipment.phyto_cert_received}}</p>                            
+                        </div>
+                         <div class="col-md-4 " style="margin-bottom: 10px;">
+                            <label for="Balance"style="font-weight:bold;">Waybill/BOL Submitted</label>
+                            <p>{{shipment.waybill_submitted}}</p>                            
+                        </div>
+                         <div class="col-md-4 " style="margin-bottom: 10px;">
+                            <label for="Balance"style="font-weight:bold;">Released From Industry</label>
+                            <p>{{shipment.released_from_industry}}</p>                            
+                        </div>
+                        <div class="col-md-4 " style="margin-bottom: 10px;">
                             <label for="shipment"style="font-weight:bold;">Purchase Order Name</label>
                             <p>{{shipment.purchase_order_name}}</p>                            
                         </div>                        
@@ -204,58 +352,55 @@
                             <label for="shipment"style="font-weight:bold;">Purchase Order Number</label>
                             <p>{{shipment.purchase_order_number}}</p>                           
                         </div>                         
+                        {% if shipment.departed_lacassine%}
                         <div class="col-md-4 " style="margin-bottom: 10px;">
-                            <label for="shipment"style="font-weight:bold;">Lot Number</label>
-                            <p>{{shipment.lot_number}}</p>                            
-                        </div>
-                                                
-                        <div class="col-md-4 " style="margin-bottom: 10px;">
-                            <label for="shipment"style="font-weight:bold;">Weight</label>
-                            <p>{{shipment.net_weight}} {{shipment.weight_unit}}</p>                            
-                        </div> 
-                        {% if shipment.border_receive_date%}
-                        <div class="col-md-4 " style="margin-bottom: 10px;">
-                            <label for="shipment"style="font-weight:bold;">Border Receive Date</label>
-                            <p>{{shipment.border_receive_date}}</p>                            
+                            <label for="shipment"style="font-weight:bold;">Departed Facility</label>
+                            <p>{{shipment.departed_lacassine}}</p>                            
                         </div>
                         {% endif %}
-                        {% if shipment.border_leaving_date%}
+                        {% if shipment.border_exchange%}
                         <div class="col-md-4 " style="margin-bottom: 10px;">
-                            <label for="shipment"style="font-weight:bold;">Border Leaving Date</label>
-                            <p>{{shipment.border_leaving_date}}</p>                            
+                            <label for="shipment"style="font-weight:bold;">Border Exchange Date</label>
+                            <p>{{shipment.border_exchange}}</p>                            
                         </div>
                         {% endif %}
-                        {% if shipment.customer_receive_date%}
+                        {% if shipment.placed_at_industry_client%}
                         <div class="col-md-4 " style="margin-bottom: 10px;">
-                            <label for="shipment"style="font-weight:bold;">Customer Receive Date</label>
-                            <p>{{shipment.customer_receive_date}}</p>                            
+                            <label for="shipment"style="font-weight:bold;">Placed At Industry (Client)</label>
+                            <p>{{shipment.placed_at_industry_client}}</p>                            
                         </div>
                         {% endif %}
-                        {% if shipment.customer_leaving_date%}
+                        {% if shipment.discharged%}
                         <div class="col-md-4 " style="margin-bottom: 10px;">
-                            <label for="shipment"style="font-weight:bold;">Customer Leaving Date</label>
-                            <p>{{shipment.customer_leaving_date}}</p>                            
+                            <label for="shipment"style="font-weight:bold;">Discharged</label>
+                            <p>{{shipment.discharged}}</p>                            
                         </div>
                         {% endif %}
-                        {% if shipment.border_back_receive_date%}
-                        <div class="col-md-4 " style="margin-bottom: 10px;">
-                            <label for="shipment"style="font-weight:bold;">Border Receive Date Back</label>
-                            <p>{{shipment.border_back_receive_date}}</p>                            
+                        {% if shipment.returned_to_border_exchange%}
+                        <div class="col-md-4" style="margin-bottom: 10px;">
+                            <label for="shipment"style="font-weight:bold;">Returned To Border Exchange</label>
+                            <p>{{shipment.returned_to_border_exchange}}</p>                            
                         </div>
                         {% endif %}
-                        {% if shipment.border_back_leaving_date%}
+                        {% if shipment.returned_date%}
                         <div class="col-md-4 " style="margin-bottom: 10px;">
-                            <label for="shipment"style="font-weight:bold;">Border Leaving Date Back</label>
-                            <p>{{shipment.border_back_leaving_date}}</p>                            
+                            <label for="shipment"style="font-weight:bold;">Returned Date</label>
+                            <p>{{shipment.returned_date}}</p>                            
                         </div>
                         {% endif %}
-                        {% if shipment.warehouse_receive_date%}
-                        <div class="col-md-4 " style="margin-bottom: 10px;">
-                            <label for="shipment"style="font-weight:bold;">Warehouse Receive Date </label>
-                            <p>{{shipment.warehouse_receive_date}}</p>                            
+                        {% if shipment.added_to_the_pool%}
+                        <div class="col-md-4" style="margin-bottom: 10px;">
+                            <label for="shipment"style="font-weight:bold;">Added to the Pool</label>
+                            <p>{{shipment.added_to_the_pool}}</p>                            
                         </div>
                         {% endif %}
+                        {% if shipment.released_from_the_pool%}
                         <div class="col-md-4 " style="margin-bottom: 10px;">
+                            <label for="shipment"style="font-weight:bold;">Released from the Pool </label>
+                            <p>{{shipment.released_from_the_pool}}</p>                            
+                        </div>
+                        {% endif %}
+                        <div class="col-md-4" style="margin-bottom: 10px;">
                             <label for="shipment"style="font-weight:bold;">Status</label>
                             <p>{{shipment.status}}</p>                            
                         </div>
@@ -269,20 +414,192 @@
                             <p>{{shipment.customer_name}}</p>                            
                         </div>
                       
-                        <div class="col-md-4 " >
-                            <label for="UploadedFiles" style="font-weight:bold;">Uploaded Documents</label>
-                            {% for document in documents %}
-                            <div class="row mt-3">
-                            {%  if document.file %}                        
-                            <span> <a href="{{ document.document_file }}" class="" target="_blank">{{ document.name }}</a></span>
-                               
-                            {% else %}
-                            <span>Not uploaded yet.</span>
-                            {% endif %}
-                            </div>
-                            {% endfor %}
-                        </div>                                        
+                    
+                        {% if shipment.comments %}
+                        <div class="col-md-4" style="margin-bottom: 10px;">
+                            <label for="shipment"style="font-weight:bold;">Comments</label>
+                            <p>{{shipment.comments}}</p>                            
+                        </div>
+                        {% endif %}                                             
                     </div>
+                    <div class="row">
+                        
+                        <hr style="margin-right:50px;">
+                        <div class="col-md-6">                                
+                            <label for="qr_code" style="font-weight:bold;">QR CODE</label>
+                            <div>
+                                <img src="/media/{{img_name}}" alt="qr code" style="max-width: 350px;">
+                            </div>                               
+                             
+                        </div> 
+                        <div class="col-md-6">
+                            <label for="UploadedFiles" style="font-weight:bold;">Uploaded Documents</label>
+                            {% if documents %}
+                            <div class="uploaded-files-container">
+                                {% for document in documents %}
+                                    <div class="file-card">
+                                        <!-- Top: File Type -->
+                                        <div class="file-type">
+                                            {% if document.file %}
+                                                {% with document.file|lower as file_url %}
+                                                    {% if ".jpg" in file_url or ".jpeg" in file_url %}
+                                                        JPG
+                                                    {% elif ".png" in file_url %}
+                                                        PNG
+                                                    {% elif ".pdf" in file_url %}
+                                                        PDF
+                                                    {% elif ".csv" in file_url %}
+                                                        CSV
+                                                    {% elif ".docx" in file_url or ".doc" in file_url %}
+                                                        WORD
+                                                    {% elif ".xlsx" in file_url or ".xls" in file_url %}
+                                                        EXCEL
+                                                    {% else %}
+                                                        FILE
+                                                    {% endif %}
+                                                {% endwith %}
+                                            {% else %}
+                                                NOT UPLOADED
+                                            {% endif %}
+                                        </div>
+
+                                        <!-- Middle: Preview -->
+                                        <div class="file-preview">
+                                            {% if document.file %}
+                                                {% if ".jpg" in document.file|lower or ".jpeg" in document.file|lower or ".png" in document.file|lower %}
+                                                    <a href="{{ document.file }}" target="_blank">
+                                                        <img src="{{ document.file }}" alt="{{ document.name }}">
+                                                    </a>
+                                                {% else %}
+                                                    <a href="{{ document.file }}" target="_blank" class="file-link">
+                                                        📄
+                                                    </a>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="not-uploaded">Not uploaded yet.</span>
+                                            {% endif %}
+                                        </div>
+
+                                        <!-- Bottom: Name -->
+                                        <div class="file-name">
+                                            {{ document.name }}
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <p>No document available</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class='row'>
+                        <h2 style="background-color: #d7d5d5;color: #0b6c39;font-size: 22px;font-weight: 600;margin: 20px 0;padding: 12px 0;text-align: center">Crops</h2>
+                        <div class="col-md-12">
+                            <div class="table-responsive">
+                                <table class="table table-bordered">
+                                    <thead>
+                                        <tr>
+                                            <th>Crop</th>
+                                            <th>Weight</th>   
+                                            <th>Waybill/BOL Number</th>                                     
+                                            <th>Lot Number</th>
+                                            <th>Carrier Name</th>
+                                            <th>Carrier ID</th>
+                                            {% if shipment.additional_equipment_type and shipment.additional_equipment_type != "None" %}
+                                            <th>Additional Equipment Name</th>
+                                            <th>Additional Equipment ID</th>
+                                            {% endif %}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for crop in shipment.warehouse_shipment_crop.all %}
+                                        <tr>
+                                            <td>{{ crop.item_name }}</td>
+                                            
+                                            <td>{{ crop.net_weight }} {{ crop.weight_unit }}</td>
+                                            <td>{{ crop.waybill_number }}</td>
+                                            <td>{{ crop.lot_number }}</td>
+                                            <td>
+                                                {% for carrier in crop.warehouse_shipment_item.all %}
+                                                    {{ carrier.carrier_name }}<br>
+                                                {% empty %}
+                                                    -
+                                                {% endfor %}
+                                            </td>
+                                            <td>
+                                                {% for carrier in crop.warehouse_shipment_item.all %}
+                                                    {{ carrier.carrier_id }}<br>
+                                                {% empty %}
+                                                    -
+                                                {% endfor %}
+                                            </td>
+                                            {% if shipment.additional_equipment_type and shipment.additional_equipment_type != "None" %}
+                                            <td>
+                                                {% for carrier in crop.warehouse_customer_shipment_item.all %}
+                                                    {{ carrier.additional_equipment_name }}<br>
+                                                {% empty %}
+                                                    -
+                                                {% endfor %}
+                                            </td>
+                                            <td>
+                                                {% for carrier in crop.warehouse_customer_shipment_item.all %}
+                                                    {{ carrier.additional_equipment_id }}<br>
+                                                {% empty %}
+                                                    -
+                                                {% endfor %}
+                                            </td>
+                                            {% endif %}
+                                        </tr>
+                                        {% empty %}
+                                        <tr class='text-center'>
+                                            <td colspan="4">No crop details available.</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                    </div>
+                    {% if lot_entries %}
+                    <div class='row mt-4'>
+                        <h2 style="background-color: #d7d5d5;color: #0b6c39;font-size: 20px;font-weight: 600;margin: 20px 0;padding: 12px 0;text-align: center">Diversions</h2>
+                        <div class="col-md-12">
+                            <div style="overflow-x: auto;">
+                                <table class="table table-bordered">
+                                    <thead>
+                                        <tr>
+                                            <th>Crop</th>
+                                            <th>Weight</th>   
+                                            <th>Previous Waybill/BOL Number</th>                                     
+                                            <th>New Waybill/BOL Number</th>
+                                            <th>Address</th>
+                                            <th>Diversion Date</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for diversion in lot_entries %}
+                                        <tr>
+                                            <td>{{ diversion.crop.item_name }}</td>
+                                            
+                                            <td>{{ diversion.net_weight }} {{ diversion.weight_unit }}</td>
+                                            <td>{{ diversion.prev_waybill_number }}</td>
+                                            <td>{{ diversion.waybill_number }}</td>
+                                            <td>{{ diversion.address }}</td>
+                                            <td>{{ diversion.diversion_date.date }}</td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr class='text-center'>
+                                            <td colspan="6">No diversions happened.</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                    </div>
+                    {% endif %}
                     <div class="row" style="margin-bottom: 20px;">
                         <div class="col-md-12 p-5" >
                             <h5 class="font-weight-bold">Shipment Tracking Logs</h5>

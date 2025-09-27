@@ -146,13 +146,17 @@
                             padding-bottom: 4px !important;
                             padding-right: 8x !important;
                             font-size: 16px !important;
-                            background: #00b258 !important;
+                            
                             border: 0 !important
                         }
         
         .dropdown.bootstrap-select.form-control .btn {
                             border-radius: 6px;
-                          }        
+                          } 
+        .bootstrap-select .dropdown-menu li.disabled.selected{display: none;}
+        .dropdown.bootstrap-select.form-control .btn{border: 1px solid; padding: 8px 8px;}
+        .bootstrap-select .dropdown-menu{max-width: 280px;}
+        .bootstrap-select .dropdown-menu li.selected.active .dropdown-item.active.selected{margin-left: 0;padding: 0;}       
     </style>
     <main>
         <div class="page-title-with-or-without-btn">

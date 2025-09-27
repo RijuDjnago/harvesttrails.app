@@ -19,8 +19,8 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponse, HttpResponseRedirect
 from django.db.utils import IntegrityError
 from django.db.models import Q, Count
-import re
-from apps.field.models import CsvToField, ShapeFileDataCo
+import re, csv
+from apps.field.models import CsvToField, ShapeFileDataCo, Crop, CropType, CropVariety
 # from apps.grower.models import Grower
 from apps.farms.models import Farm
 from apps.contracts.models import Contracts, SignedContracts, ContractsVerifiers, VerifiedSignedContracts, \
@@ -37,9 +37,10 @@ from datetime import date, timedelta, datetime
 from django.utils.dateformat import DateFormat
 from django.utils.formats import get_format
 from urllib.parse import urlparse
-import geojson
+from django.utils.http import urlencode
+# import geojson
 import numpy as np
-import geopandas as gpd
+# import geopandas as gpd
 from apps.grower.signals import send_contract_verification_email
 from apps.growersurvey.views import render_to_pdf
 from docusign_esign import EnvelopesApi
@@ -67,6 +68,8 @@ from apps.contracts.models import *
 from django.db.models import Prefetch
 from apps.warehouseManagement.models import Customer, CustomerUser, Distributor, DistributorUser, Warehouse, WarehouseUser
 from django.db import transaction
+from django.utils.dateparse import parse_date
+from django.views.decorators.http import require_GET
 
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -805,7 +808,7 @@ class ContractPdfView(LoginRequiredMixin, ListView):
         contract_signers = []
         signed_contracts = SignedContracts.objects.get(id=pk)
         contract_title = signed_contracts.contract.name
-        contract_details = signed_contracts.contract.contract
+        contract_details = signed_contracts.contract
         grower_data = {
             "name": signed_contracts.grower.name,
             "signature": signed_contracts.signature,
@@ -830,32 +833,286 @@ class ContractPdfView(LoginRequiredMixin, ListView):
                 "contract_signers": contract_signers,
             }
         )
-  
 
+
+@require_GET
+def get_crop_types(request):
+    crop_code = request.GET.get('crop_code')
+    if crop_code:        
+        crop_types = ShipmentItem.objects.filter(item=crop_code).values("item_type", "per_unit_price")
+        return JsonResponse({'crop_types': list(crop_types)})
+    return JsonResponse({'crop_types': []})
+
+def get_crops(request):
+    crops = list(ShipmentItem.objects.values_list('item', flat=True))  # Get only the crop names
+    return JsonResponse({'crops': crops})
+
+
+# @login_required()
+# def admin_processor_contract_create(request):
+#     context = {}
+#     try:
+#         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+#             processor1 = list(Processor.objects.all().values("id", "entity_name"))
+#             processor2 = list(Processor2.objects.filter(processor_type__type_name="T2").values("id", "entity_name"))
+#             processor3 = list(Processor2.objects.filter(processor_type__type_name="T3").values("id", "entity_name"))
+#             processor4 = list(Processor2.objects.filter(processor_type__type_name="T4").values("id", "entity_name"))
+#             processor = []
+#             crops = ShipmentItem.objects.all()
+#             context["crops"] = crops
+#             for i in processor1:
+#                 my_dict = {"id":None, "entity_name":None, "type":None}
+#                 my_dict["id"] = i["id"]
+#                 my_dict["entity_name"] = i["entity_name"]
+#                 my_dict["type"] = "T1"
+#                 processor.append(my_dict)
+
+#             for i in processor2:
+#                 my_dict = {"id":None, "entity_name":None, "type":None}
+#                 my_dict["id"] = i["id"]
+#                 my_dict["entity_name"] = i["entity_name"]
+#                 my_dict["type"] = "T2"
+#                 processor.append(my_dict)
+
+#             for i in processor3:
+#                 my_dict = {"id":None, "entity_name":None, "type":None}
+#                 my_dict["id"] = i["id"]
+#                 my_dict["entity_name"] = i["entity_name"]
+#                 my_dict["type"] = "T3"
+#                 processor.append(my_dict)
+
+#             for i in processor4:
+#                 my_dict = {"id":None, "entity_name":None, "type":None}
+#                 my_dict["id"] = i["id"]
+#                 my_dict["entity_name"] = i["entity_name"]
+#                 my_dict["type"] = "T4"
+#                 processor.append(my_dict)
+
+#             context["processor"] = processor
+
+#             try:
+#                 from apps.quickbooks_integration.views import create_item, refresh_quickbooks_token, get_quickbooks_accounts
+#                 from apps.quickbooks_integration.models import QuickBooksToken                
+#                 token_instance = QuickBooksToken.objects.first()
+#                 if not token_instance:
+#                     return redirect(f"{reverse('quickbooks_login')}?next=add-contract")
+                                                
+#                 if token_instance.is_token_expired():
+#                     print("Token expired, refreshing...")
+#                     new_access_token = refresh_quickbooks_token(token_instance.refresh_token)
+#                     if not new_access_token:
+#                         return redirect(f"{reverse('quickbooks_login')}?next=add-contract")
+                    
+#                     token_instance.access_token = new_access_token
+#                     token_instance.expires_at = timezone.now() + timedelta(seconds=settings.SESSION_COOKIE_AGE)
+#                     token_instance.save()
+#             except QuickBooksToken.DoesNotExist:
+#                 return redirect(f"{reverse('quickbooks_login')}?next=add-contract")
+#             # Get processors and add to context
+            
+#             if request.method == "POST":
+#                 print("post method is hit")               
+#                 selected_processor = request.POST.get('selected_processor') 
+#                 contract_type = request.POST.get('contract_type')               
+#                 contract_start_date = request.POST.get('contract_start_date')
+#                 contract_period = request.POST.get('contract_period')
+#                 status = request.POST.get('status')                
+               
+#                 if selected_processor:
+#                     try:
+#                         processor_id, processor_type = selected_processor.split("_")
+#                     except ValueError:
+#                         context["error_messages"] = "Invalid processor selection."
+#                         return render(request, 'contracts/create_admin_processor_contract.html', context)
+                    
+#                     # Retrieve the processor object
+#                     if processor_type == "T1":
+#                         processor = Processor.objects.filter(id=processor_id).first()
+#                     else:
+#                         processor = Processor2.objects.filter(id=processor_id).first()
+                    
+#                     # Check if the processor exists
+#                     if not processor:
+#                         context["error_messages"] = "Selected processor does not exist."
+#                         return render(request, 'contracts/create_admin_processor_contract.html', context)
+
+#                     contract = AdminProcessorContract.objects.create(                        
+#                         processor_id=processor_id, 
+#                         processor_type=processor_type,
+#                         processor_entity_name=processor.entity_name, 
+#                         contract_type=contract_type,                        
+#                         contract_start_date=contract_start_date, 
+#                         contract_period=contract_period,
+#                         status=status, 
+#                         created_by_id=request.user.id
+#                     )
+
+#                     crop_names = request.POST.getlist('crop[]')
+#                     crop_types = request.POST.getlist('crop_type[]')
+#                     contract_amounts = request.POST.getlist('contract_amount[]')
+#                     amount_units = request.POST.getlist('amount_unit[]')
+#                     per_unit_rates = request.POST.getlist('per_unit_rate[]')
+
+#                     for crop_name, crop_type, contract_amount, amount_unit, per_unit_rate in zip(
+#                             crop_names, crop_types, contract_amounts, amount_units, per_unit_rates):
+                        
+#                         # Create crop details for each crop entry
+#                         item_name = ShipmentItem.objects.filter(item=crop_name).first().item_name
+#                         crop = CropDetails.objects.create(
+#                             contract=contract,
+#                             crop=item_name,
+#                             crop_type=crop_type,
+#                             contract_amount=contract_amount,
+#                             amount_unit=amount_unit,
+#                             per_unit_rate=per_unit_rate
+#                         )
+#                         item_name = f"{crop.crop}"
+#                         item_type = f"{crop.crop_type}"
+#                         description = f"Crop: {crop.crop}, Type: {crop.crop_type}, Rate: {crop.per_unit_rate} per unit"
+                        
+#                         item, created = ShipmentItem.objects.update_or_create(
+#                             item_name=item_name,
+#                             item_type=item_type,
+#                             per_unit_price=crop.per_unit_rate,
+#                             defaults={
+#                                 "description": description,
+#                                 "type": "Inventory",
+#                                 "is_active": True,
+#                             }
+#                         )
+#                         if created:
+#                             try:                                
+#                                 accounts = get_quickbooks_accounts(token_instance.realm_id, token_instance.access_token)
+                                
+#                                 income_account_id = None
+#                                 expense_account_id = None
+#                                 asset_account_id = None
+
+#                                 for account in accounts:
+#                                     if account.get("AccountType") == "Income" and account.get("AccountSubType") == "SalesOfProductIncome" and income_account_id is None:
+#                                         income_account_id = account.get("Id")
+#                                     elif (account.get("AccountType") == "Cost of Goods Sold" and account.get("AccountSubType") == "SuppliesMaterialsCogs" and expense_account_id is None):
+#                                         expense_account_id = account.get("Id")
+#                                     elif account.get("AccountType") in ["Other Current Asset", "Inventory Asset"] and account.get("AccountSubType") == "Inventory" and asset_account_id is None:
+#                                         asset_account_id = account.get("Id")
+
+#                                     if income_account_id and expense_account_id and asset_account_id:
+#                                         break
+
+#                                 item_data = {
+#                                     "Name": f"{item.item_name}-{item.item_type}-{item.per_unit_price}",
+#                                     "Type": item.type,
+#                                     "UnitPrice": str(item.per_unit_price),
+#                                     "IncomeAccountRef": {
+#                                         "value": income_account_id,
+#                                     },
+#                                     "ExpenseAccountRef": {
+#                                         "value": expense_account_id,
+#                                     },
+#                                     "AssetAccountRef": {
+#                                         "value": asset_account_id,
+#                                     },
+#                                     "Description": item.description or "",
+#                                     "Active": item.is_active,
+#                                     "QtyOnHand":float(crop.contract_amount),
+#                                     "TrackQtyOnHand":True,
+#                                     "InvStartDate": datetime.now().strftime('%Y-%m-%d')
+#                                 }                               
+                               
+#                                 created_item = create_item(token_instance.realm_id, token_instance.access_token, item_data)                               
+#                                 if created_item:
+#                                     print("Item added successfully and synced with QuickBooks.")
+#                                     messages.success(request, "Item added successfully and synced with QuickBooks.")
+#                                 else:
+#                                     print("Failed to sync with QuickBooks.")
+#                                     messages.error(request, "Failed to add Item in QuickBooks.")
+
+#                             except ImproperlyConfigured as e:
+#                                 print(str(e))
+
+#                     ## Send notification to the processor.
+#                     if processor_type == "T1":
+#                         all_processor_user = ProcessorUser.objects.filter(processor_id=processor_id)
+#                     else:
+#                         all_processor_user = ProcessorUser2.objects.filter(processor2_id=processor_id)
+#                     for user in all_processor_user :
+#                         msg = 'A new Contract has been initiated between Admin and you.'
+#                         get_user = User.objects.get(username=user.contact_email)
+#                         notification_reason = 'New Contract Assigned.'
+#                         redirect_url = "/contracts/admin-processor-contract-list/"
+#                         save_notification = ShowNotification(user_id_to_show=get_user.id,msg=msg,status="UNREAD",redirect_url=redirect_url,
+#                             notification_reason=notification_reason)
+#                         save_notification.save()
+
+#                     document_names = request.POST.getlist('document_name[]')                   
+                    
+#                     for name in document_names:
+#                         AdminProcessorContractDocuments.objects.create(
+#                             contract=contract,
+#                             name=name                            
+#                         )                    
+#                     return redirect('list-contract')
+#                 else:
+#                     context["error_messages"] = "Processor must be selected."
+            
+#             return render(request, 'contracts/create_admin_processor_contract.html', context)
+#         else:
+#             messages.error(request, "Not a valid request.")
+#             return redirect("dashboard")                                  
+#     except (ValueError, AttributeError, AdminProcessorContract.DoesNotExist) as e:
+#         context["error_messages"] = str(e)
+#     return render(request, 'contracts/create_admin_processor_contract.html', context)
+
+from django.utils.safestring import mark_safe
 @login_required()
 def admin_processor_contract_create(request):
     context = {}
     try:
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
-            # Get processors and add to context
-            processors = []
-            processor1 = Processor.objects.all().values('id', 'entity_name').order_by('entity_name')
-            processor2 = Processor2.objects.all().values('id', 'entity_name', 'processor_type__type_name').order_by('entity_name')
+            processor1 = list(Processor.objects.all().values("id", "entity_name"))
+            processor2 = list(Processor2.objects.filter(processor_type__type_name="T2").values("id", "entity_name"))
+            processor3 = list(Processor2.objects.filter(processor_type__type_name="T3").values("id", "entity_name"))
+            processor4 = list(Processor2.objects.filter(processor_type__type_name="T4").values("id", "entity_name"))
+            processor = []
+
+            crops = list(ShipmentItem.objects.all().values("item", "item_number"))
+            context["crops"] = crops
+            filtered_spices = list(ShipmentItem.objects.filter(item_category="Spices").values("item", "item_number"))
+            filtered_crops = list(ShipmentItem.objects.filter(item_category="Crop").values("item", "item_number"))
+            context["filtered_spices"] = filtered_spices
+            context["filtered_crops"] = filtered_crops
             
-            for pro1 in processor1:
-                processors.append({
-                    "id": pro1["id"],
-                    "entity_name": pro1["entity_name"],
-                    "type": "T1"
-                })
-                
-            for pro2 in processor2:
-                processors.append({
-                    "id": pro2["id"],
-                    "entity_name": pro2["entity_name"],
-                    "type": pro2["processor_type__type_name"] 
-                })            
-            context["processor"] = processors
+            for i in processor1:
+                my_dict = {"id":None, "entity_name":None, "type":None}
+                my_dict["id"] = i["id"]
+                my_dict["entity_name"] = i["entity_name"]
+                my_dict["type"] = "T1"
+                processor.append(my_dict)
+
+            for i in processor2:
+                my_dict = {"id":None, "entity_name":None, "type":None}
+                my_dict["id"] = i["id"]
+                my_dict["entity_name"] = i["entity_name"]
+                my_dict["type"] = "T2"
+                processor.append(my_dict)
+
+            for i in processor3:
+                my_dict = {"id":None, "entity_name":None, "type":None}
+                my_dict["id"] = i["id"]
+                my_dict["entity_name"] = i["entity_name"]
+                my_dict["type"] = "T3"
+                processor.append(my_dict)
+
+            for i in processor4:
+                my_dict = {"id":None, "entity_name":None, "type":None}
+                my_dict["id"] = i["id"]
+                my_dict["entity_name"] = i["entity_name"]
+                my_dict["type"] = "T4"
+                processor.append(my_dict)
+
+            context["processor"] = processor
+            
+            # Get processors and add to context
             
             if request.method == "POST":
                 print("post method is hit")               
@@ -863,7 +1120,7 @@ def admin_processor_contract_create(request):
                 contract_type = request.POST.get('contract_type')               
                 contract_start_date = request.POST.get('contract_start_date')
                 contract_period = request.POST.get('contract_period')
-                status = request.POST.get('status')                
+                status = request.POST.get('status')               
                
                 if selected_processor:
                     try:
@@ -895,24 +1152,36 @@ def admin_processor_contract_create(request):
                     )
 
                     crop_names = request.POST.getlist('crop[]')
-                    crop_types = request.POST.getlist('crop_type[]')
+                    item_numbers = request.POST.getlist('item_number[]')
+                    item_descriptions = request.POST.getlist('item_description[]')
                     contract_amounts = request.POST.getlist('contract_amount[]')
                     amount_units = request.POST.getlist('amount_unit[]')
                     per_unit_rates = request.POST.getlist('per_unit_rate[]')
-
-                    for crop_name, crop_type, contract_amount, amount_unit, per_unit_rate in zip(
-                            crop_names, crop_types, contract_amounts, amount_units, per_unit_rates):
+                    item_type_ = request.POST.getlist("item_type[]")
+                    
+                    for i, crop_name in enumerate(crop_names):
+                        item_number = item_numbers[i]
+                        contract_amount = contract_amounts[i]
+                        amount_unit = amount_units[i]
+                        per_unit_rate = per_unit_rates[i]
+                        item_type = item_type_[i]
+                        item_description = item_descriptions[i] if i < len(item_descriptions) else None
                         
                         # Create crop details for each crop entry
-                        CropDetails.objects.create(
+                        item = ShipmentItem.objects.filter(item=crop_name).first()
+                        item_name = item.item_name
+                        crop = CropDetails.objects.create(
                             contract=contract,
-                            crop=crop_name,
-                            crop_type=crop_type,
+                            item=item,
+                            item_type=item_type,
+                            crop=item_name,
+                            item_number=item_number,
+                            item_description=item_description,
                             contract_amount=contract_amount,
                             amount_unit=amount_unit,
                             per_unit_rate=per_unit_rate
-                        )
-
+                        ) 
+                                         
                     ## Send notification to the processor.
                     if processor_type == "T1":
                         all_processor_user = ProcessorUser.objects.filter(processor_id=processor_id)
@@ -926,15 +1195,22 @@ def admin_processor_contract_create(request):
                         save_notification = ShowNotification(user_id_to_show=get_user.id,msg=msg,status="UNREAD",redirect_url=redirect_url,
                             notification_reason=notification_reason)
                         save_notification.save()
-
-                    document_names = request.POST.getlist('document_name[]')                   
+                    
+                    files = request.FILES.getlist('files') 
+                    for file in files:
+                        AdminProcessorContractDocuments.objects.create(
+                            contract=contract,
+                            document=file,
+                            uploaded_by="admin"                           
+                        )
+                    document_names = request.POST.getlist('document_name[]')                
                     
                     for name in document_names:
                         AdminProcessorContractDocuments.objects.create(
                             contract=contract,
-                            name=name                            
-                        )
-                    
+                            name=name,
+                            uploaded_by="processor"                           
+                        )                    
                     return redirect('list-contract')
                 else:
                     context["error_messages"] = "Processor must be selected."
@@ -953,29 +1229,46 @@ def admin_processor_contract_list(request):
     context = {}
     try:
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
-            processors = []
-            processor1 = Processor.objects.all().values('id', 'entity_name').order_by('entity_name')
-            processor2 = Processor2.objects.all().values('id', 'entity_name', 'processor_type__type_name').order_by('entity_name')
+            processor1 = list(Processor.objects.all().values("id", "entity_name"))
+            processor2 = list(Processor2.objects.filter(processor_type__type_name="T2").values("id", "entity_name"))
+            processor3 = list(Processor2.objects.filter(processor_type__type_name="T3").values("id", "entity_name"))
+            processor4 = list(Processor2.objects.filter(processor_type__type_name="T4").values("id", "entity_name"))
+            processor = []
             
-            for pro1 in processor1:
-                processors.append({
-                    "id": pro1["id"],
-                    "entity_name": pro1["entity_name"],
-                    "type": "T1"
-                })
-                
-            for pro2 in processor2:
-                processors.append({
-                    "id": pro2["id"],
-                    "entity_name": pro2["entity_name"],
-                    "type": pro2["processor_type__type_name"] 
-                })
-            
-            context["processor"] = processors
+            for i in processor1:
+                my_dict = {"id":None, "entity_name":None, "type":None}
+                my_dict["id"] = i["id"]
+                my_dict["entity_name"] = i["entity_name"]
+                my_dict["type"] = "T1"
+                processor.append(my_dict)
+
+            for i in processor2:
+                my_dict = {"id":None, "entity_name":None, "type":None}
+                my_dict["id"] = i["id"]
+                my_dict["entity_name"] = i["entity_name"]
+                my_dict["type"] = "T2"
+                processor.append(my_dict)
+
+            for i in processor3:
+                my_dict = {"id":None, "entity_name":None, "type":None}
+                my_dict["id"] = i["id"]
+                my_dict["entity_name"] = i["entity_name"]
+                my_dict["type"] = "T3"
+                processor.append(my_dict)
+
+            for i in processor4:
+                my_dict = {"id":None, "entity_name":None, "type":None}
+                my_dict["id"] = i["id"]
+                my_dict["entity_name"] = i["entity_name"]
+                my_dict["type"] = "T4"
+                processor.append(my_dict)
+
+            context["processor"] = processor
             
             contracts = AdminProcessorContract.objects.prefetch_related(
                     Prefetch('contractCrop', queryset=CropDetails.objects.all())
                 ).all()
+            
             selected_processor = request.GET.get('selected_processor','All')
             
             if selected_processor != 'All':
@@ -988,12 +1281,41 @@ def admin_processor_contract_list(request):
                 context['selected_processor_type'] = None
             if selected_processor and selected_processor != 'All':                
                 contracts = contracts.filter(processor_id=int(processor_id))
+
+
             search_name = request.GET.get('search_name', '')   
             if search_name and search_name is not None:
-                contracts = contracts.filter(Q(secret_key__icontains=search_name)| Q(crop__icontains=search_name))
+                contracts = contracts.filter(Q(secret_key__icontains=search_name)| Q(contractCrop__crop__icontains=search_name) | Q(contractCrop__crop_type__icontains=search_name))
                 context['search_name'] = search_name
             else:
-                context['search_name'] = None            
+                context['search_name'] = None 
+            start_date = request.GET.get('start_date', '')
+            end_date = request.GET.get('end_date', '')
+            
+            if start_date or end_date:
+                if start_date:
+                    start_date = parse_date(start_date)
+                if end_date:
+                    end_date = parse_date(end_date)
+
+                if start_date and end_date:
+                    contracts = contracts.filter(
+                        Q(contract_start_date__lte=end_date) & 
+                        (
+                            Q(contract_start_date__lte=start_date) |  
+                            Q(contract_start_date__range=(start_date, end_date))
+                        ) &
+                        (
+                            Q(end_date__range=(start_date, end_date)) |
+                            Q(end_date__gte=end_date)  
+                        )
+                    )               
+
+                context['start_date'] = start_date
+                context['end_date'] = end_date
+            else:
+                context['start_date'] = None
+                context['end_date'] = None           
             
             contracts = contracts.order_by('-id')
             paginator = Paginator(contracts, 100)
@@ -1017,6 +1339,40 @@ def admin_processor_contract_list(request):
                     Prefetch('contractCrop', queryset=CropDetails.objects.all())
                 ).filter(processor_id=processor_id, processor_type=processor_type)
             
+            search_name = request.GET.get('search_name', '')   
+            if search_name and search_name is not None:
+                contracts = contracts.filter(Q(secret_key__icontains=search_name)| Q(contractCrop__crop__icontains=search_name) | Q(contractCrop__crop_type__icontains=search_name))
+                context['search_name'] = search_name
+            else:
+                context['search_name'] = None 
+            start_date = request.GET.get('start_date', '')
+            end_date = request.GET.get('end_date', '')
+            
+            if start_date or end_date:
+                if start_date:
+                    start_date = parse_date(start_date)
+                if end_date:
+                    end_date = parse_date(end_date)
+
+                if start_date and end_date:
+                    contracts = contracts.filter(
+                        Q(contract_start_date__lte=end_date) & 
+                        (
+                            Q(contract_start_date__lte=start_date) |  
+                            Q(contract_start_date__range=(start_date, end_date))
+                        ) &
+                        (
+                            Q(end_date__range=(start_date, end_date)) |
+                            Q(end_date__gte=end_date)  
+                        )
+                    )               
+
+                context['start_date'] = start_date
+                context['end_date'] = end_date
+            else:
+                context['start_date'] = None
+                context['end_date'] = None
+            
             contracts = contracts.order_by('-id')
             paginator = Paginator(contracts, 100)
             page = request.GET.get('page')
@@ -1038,6 +1394,40 @@ def admin_processor_contract_list(request):
             contracts = AdminProcessorContract.objects.prefetch_related(
                     Prefetch('contractCrop', queryset=CropDetails.objects.all())
                 ).filter(processor_id=processor_id, processor_type=processor_type)
+            
+            search_name = request.GET.get('search_name', '')   
+            if search_name and search_name is not None:
+                contracts = contracts.filter(Q(secret_key__icontains=search_name)| Q(contractCrop__crop__icontains=search_name) | Q(contractCrop__crop_type__icontains=search_name))
+                context['search_name'] = search_name
+            else:
+                context['search_name'] = None 
+            start_date = request.GET.get('start_date', '')
+            end_date = request.GET.get('end_date', '')
+            
+            if start_date or end_date:
+                if start_date:
+                    start_date = parse_date(start_date)
+                if end_date:
+                    end_date = parse_date(end_date)
+
+                if start_date and end_date:
+                    contracts = contracts.filter(
+                        Q(contract_start_date__lte=end_date) & 
+                        (
+                            Q(contract_start_date__lte=start_date) |  
+                            Q(contract_start_date__range=(start_date, end_date))
+                        ) &
+                        (
+                            Q(end_date__range=(start_date, end_date)) |
+                            Q(end_date__gte=end_date)  
+                        )
+                    )               
+
+                context['start_date'] = start_date
+                context['end_date'] = end_date
+            else:
+                context['start_date'] = None
+                context['end_date'] = None
             
             contracts = contracts.order_by('-id')
             paginator = Paginator(contracts, 100)
@@ -1068,10 +1458,19 @@ def admin_processor_contract_view(request, pk):
             contract = AdminProcessorContract.objects.prefetch_related(
                     Prefetch('contractCrop', queryset=CropDetails.objects.all())
                 ).filter(id=pk).first()
-            documents = AdminProcessorContractDocuments.objects.filter(contract=contract)
+            admin_uploaded_documents = [
+                {
+                    "id": file.id,
+                    "document": file.document.url if file.document else None,
+                    "name": file.document.name.split("/")[-1] if file.document else None
+                }
+                for file in AdminProcessorContractDocuments.objects.filter(contract=contract, uploaded_by="admin")
+            ]
+            processor_uploaded_documents = AdminProcessorContractDocuments.objects.filter(contract=contract, uploaded_by="processor")
             context["contract"] = contract
             
-            context["documents"] = documents
+            context["admin_documents"] = admin_uploaded_documents
+            context["processor_documents"] = processor_uploaded_documents
             return render (request, 'contracts/admin_processor_contract_view.html', context)
         else:
             return redirect('login') 
@@ -1080,46 +1479,428 @@ def admin_processor_contract_view(request, pk):
         return render (request, 'contracts/admin_processor_contract_view.html', context)
 
 
+# @login_required()
+# def edit_admin_processor_contract(request, pk):
+#     context = {}
+#     try:
+#         from apps.quickbooks_integration.views import create_item, get_item_data, update_item,refresh_quickbooks_token, get_quickbooks_accounts
+#         from apps.quickbooks_integration.models import QuickBooksToken
+
+#         success_url = reverse('edit-admin-processor-contract', kwargs={'pk': pk})
+#         next_url = f"{success_url}"
+#         redirect_url = f"{reverse('quickbooks_login')}?{urlencode({'next': next_url})}"
+        
+#         token_instance = QuickBooksToken.objects.first()
+#         if not token_instance:
+#             return redirect(redirect_url)
+                                        
+#         if token_instance.is_token_expired():
+#             print("Token expired, refreshing...")
+#             new_access_token = refresh_quickbooks_token(token_instance.refresh_token)
+#             if not new_access_token:
+#                 return redirect(redirect_url)
+            
+#             token_instance.access_token = new_access_token
+#             token_instance.expires_at = timezone.now() + timedelta(seconds=settings.SESSION_COOKIE_AGE)
+#             token_instance.save()
+#     except QuickBooksToken.DoesNotExist:
+#         return redirect(redirect_url)
+#     try:
+#         contract = get_object_or_404(AdminProcessorContract, id=pk)       
+
+#         processor1 = list(Processor.objects.all().values("id", "entity_name"))
+#         processor2 = list(Processor2.objects.filter(processor_type__type_name="T2").values("id", "entity_name"))
+#         processor3 = list(Processor2.objects.filter(processor_type__type_name="T3").values("id", "entity_name"))
+#         processor4 = list(Processor2.objects.filter(processor_type__type_name="T4").values("id", "entity_name"))
+#         processor = []
+        
+#         for i in processor1:
+#             my_dict = {"id":None, "entity_name":None, "type":None}
+#             my_dict["id"] = i["id"]
+#             my_dict["entity_name"] = i["entity_name"]
+#             my_dict["type"] = "T1"
+#             processor.append(my_dict)
+
+#         for i in processor2:
+#             my_dict = {"id":None, "entity_name":None, "type":None}
+#             my_dict["id"] = i["id"]
+#             my_dict["entity_name"] = i["entity_name"]
+#             my_dict["type"] = "T2"
+#             processor.append(my_dict)
+
+#         for i in processor3:
+#             my_dict = {"id":None, "entity_name":None, "type":None}
+#             my_dict["id"] = i["id"]
+#             my_dict["entity_name"] = i["entity_name"]
+#             my_dict["type"] = "T3"
+#             processor.append(my_dict)
+
+#         for i in processor4:
+#             my_dict = {"id":None, "entity_name":None, "type":None}
+#             my_dict["id"] = i["id"]
+#             my_dict["entity_name"] = i["entity_name"]
+#             my_dict["type"] = "T4"
+#             processor.append(my_dict)       
+
+#         documents = AdminProcessorContractDocuments.objects.filter(contract=contract)     
+#         crop_names = Crop.objects.all()   
+        
+#         crops = CropDetails.objects.filter(contract=contract)
+#         context = {
+#             "contract": contract,
+#             "processor": processor,
+#             'selected_processor_id': contract.processor_id,
+#             'selected_processor_type': contract.processor_type,
+#             'selected_contract_type':contract.contract_type,
+#             'crops': crops,
+#             "crop_names":crop_names,
+#             "contract_start_date": contract.contract_start_date,
+#             "contract_period": contract.contract_period,
+#             "status": contract.status,
+#             "documents": documents,
+#         }
+
+#         if request.method == "POST":
+#             if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+
+#                 selected_processor = request.POST.get('selected_processor')
+#                 selected_contract_type = request.POST.get('contract_type')
+#                 contract_start_date = request.POST.get('contract_start_date')
+#                 contract_period = request.POST.get('contract_period')
+#                 status = request.POST.get('status')
+                
+#                 if selected_processor:
+#                     try:
+#                         processor_id, processor_type = selected_processor.split("_")
+#                     except ValueError:
+#                         context["error_messages"] = "Invalid processor selection."
+#                         return render(request, 'contracts/edit_admin_processor_contract.html', context)
+
+#                     if processor_type == "T1":
+#                         processor = Processor.objects.filter(id=processor_id).first()
+#                     else:
+#                         processor = Processor2.objects.filter(id=processor_id).first()
+
+#                     if not processor:
+#                         context["error_messages"] = "Selected processor does not exist."
+#                         return render(request, 'contracts/edit_admin_processor_contract.html', context)
+
+#                     contract.processor_id = processor_id
+#                     contract.processor_type = processor_type
+#                     contract.processor_entity_name = processor.entity_name
+#                     contract.contract_type = selected_contract_type                    
+#                     contract.contract_start_date = contract_start_date
+#                     contract.contract_period = contract_period
+#                     contract.status = status
+#                     contract.save()
+
+#                     crop_ids = request.POST.getlist("crop_id[]")
+#                     crops = request.POST.getlist("crop[]")
+#                     crop_types = request.POST.getlist("crop_type[]")
+#                     contract_amounts = request.POST.getlist("contract_amount[]")
+#                     amount_units = request.POST.getlist("amount_unit[]")
+#                     per_unit_rates = request.POST.getlist("per_unit_rate[]")
+#                     delete_flags = request.POST.getlist("delete_flag[]") 
+
+#                     with transaction.atomic():
+#                         for idx, crop_id in enumerate(crop_ids):
+
+#                             if crop_id.isdigit() and delete_flags[idx] == "1":
+#                                 try:
+#                                     CropDetails.objects.get(id=int(crop_id)).delete()
+#                                     print(f"Deleted crop with id {crop_id}")
+#                                 except CropDetails.DoesNotExist:
+#                                     print(f"Crop with id {crop_id} not found.")
+#                             else:
+#                                 print(f"Skipping crop with id {crop_id}, not marked for deletion.")
+
+#                         for idx in range(len(crops)):
+#                             crop_id = crop_ids[idx] if idx < len(crop_ids) else None
+
+#                             if crop_id and crop_id.isdigit():
+#                                 try:
+#                                     crop_detail = CropDetails.objects.get(id=int(crop_id))
+#                                     item = ShipmentItem.objects.filter(item_name=crop_detail.crop,item_type=crop_detail.crop_type,per_unit_price=crop_detail.per_unit_rate,type="Inventory").first()
+#                                     crop_detail.crop = crops[idx]
+#                                     crop_detail.crop_type = crop_types[idx]
+#                                     crop_detail.contract_amount = contract_amounts[idx]
+#                                     crop_detail.amount_unit = amount_units[idx]
+#                                     crop_detail.per_unit_rate = per_unit_rates[idx]
+#                                     crop_detail.save()
+
+#                                     if crop_detail.crop_type != item.item_type or float(crop_detail.per_unit_rate) != float(item.per_unit_price):
+#                                         item_name = f"{crop_detail.crop}"
+#                                         item_type = f"{crop_detail.crop_type}"
+#                                         description = f"Crop: {crop_detail.crop}, Type: {crop_detail.crop_type}, Rate: {crop_detail.per_unit_rate} per unit"
+#                                         item.item_name = item_name
+#                                         item.item_type = item_type
+#                                         item.per_unit_price = crop_detail.per_unit_rate
+#                                         item.description = description
+#                                         item.save()
+#                                         try:                                      
+#                                             accounts = get_quickbooks_accounts(token_instance.realm_id, token_instance.access_token)                                        
+#                                             income_account_id = None
+#                                             expense_account_id = None
+#                                             asset_account_id = None
+
+#                                             for account in accounts:
+#                                                 if account.get("AccountType") == "Income" and account.get("AccountSubType") == "SalesOfProductIncome" and income_account_id is None:
+#                                                     income_account_id = account.get("Id")
+#                                                 elif (account.get("AccountType") == "Cost of Goods Sold" and account.get("AccountSubType") == "SuppliesMaterialsCogs" and expense_account_id is None):
+#                                                     expense_account_id = account.get("Id")
+#                                                 elif account.get("AccountType") in ["Other Current Asset", "Inventory Asset"] and account.get("AccountSubType") == "Inventory" and asset_account_id is None:
+#                                                     asset_account_id = account.get("Id")
+
+#                                                 if income_account_id and expense_account_id and asset_account_id:
+#                                                     break
+
+#                                             item_data = {
+#                                                 "Name": f"{item.item_name}-{item.item_type}-{item.per_unit_price}",
+#                                                 "Type": item.type,
+#                                                 "UnitPrice": str(item.per_unit_price),
+#                                                 "IncomeAccountRef": {
+#                                                     "value": income_account_id,
+#                                                 },
+#                                                 "ExpenseAccountRef": {
+#                                                     "value": expense_account_id,
+#                                                 },
+#                                                 "AssetAccountRef": {
+#                                                     "value": asset_account_id,
+#                                                 },
+#                                                 "Description": item.description or "",
+#                                                 "Active": item.is_active,
+#                                                 "QtyOnHand":float(crop_detail.contract_amount),
+#                                                 "TrackQtyOnHand":True,
+#                                                 "InvStartDate": datetime.now().strftime('%Y-%m-%d')
+#                                             }
+                                            
+#                                             item_id = item.quickbooks_id
+#                                             item_details = get_item_data(item_id)
+#                                             sync_token = item_details.get('Item', {}).get('SyncToken', '')
+#                                             updated_item = update_item(token_instance.realm_id, token_instance.access_token, item_id, sync_token, item_data)                               
+#                                             if updated_item:
+#                                                 print("Item updated successfully and synced with QuickBooks.")
+#                                                 messages.success(request, "Item updated successfully and synced with QuickBooks.")
+#                                             else:
+#                                                 print("Failed to update Item in QuickBooks.")
+#                                                 messages.error(request, "Failed to update Item in QuickBooks.")
+
+#                                         except ImproperlyConfigured as e:
+#                                             print(str(e))
+#                                     else:
+#                                         pass
+                                    
+                                    
+#                                 except CropDetails.DoesNotExist:
+#                                     print(f"Crop with id {crop_id} not found.")
+#                             else:
+#                                 crop = CropDetails.objects.create(
+#                                     contract=contract,
+#                                     crop=crops[idx],
+#                                     crop_type=crop_types[idx],
+#                                     contract_amount=contract_amounts[idx],
+#                                     amount_unit=amount_units[idx],
+#                                     per_unit_rate=per_unit_rates[idx]
+#                                 )
+#                                 item_name = f"{crop.crop}"
+#                                 item_type = f"{crop.crop_type}"
+#                                 description = f"Crop: {crop.crop}, Type: {crop.crop_type}, Rate: {crop.per_unit_rate} per unit"
+                                
+#                                 item, created = ShipmentItem.objects.update_or_create(
+#                                     item_name=item_name,
+#                                     item_type=item_type,
+#                                     per_unit_price=crop.per_unit_rate,
+#                                     defaults={
+#                                         "description": description,
+#                                         "type": "Inventory",
+#                                         "is_active": True,
+#                                     }
+#                                 )
+#                                 if created:
+#                                     try:                                      
+#                                         accounts = get_quickbooks_accounts(token_instance.realm_id, token_instance.access_token)
+                                        
+#                                         income_account_id = None
+#                                         expense_account_id = None
+#                                         asset_account_id = None
+
+#                                         for account in accounts:
+#                                             if account.get("AccountType") == "Income" and account.get("AccountSubType") == "SalesOfProductIncome" and income_account_id is None:
+#                                                 income_account_id = account.get("Id")
+#                                             elif (account.get("AccountType") == "Cost of Goods Sold" and account.get("AccountSubType") == "SuppliesMaterialsCogs" and expense_account_id is None):
+#                                                 expense_account_id = account.get("Id")
+#                                             elif account.get("AccountType") in ["Other Current Asset", "Inventory Asset"] and account.get("AccountSubType") == "Inventory" and asset_account_id is None:
+#                                                 asset_account_id = account.get("Id")
+
+#                                             if income_account_id and expense_account_id and asset_account_id:
+#                                                 break
+
+#                                         item_data = {
+#                                             "Name": f"{item.item_name}-{item.item_type}-{item.per_unit_price}",
+#                                             "Type": item.type,
+#                                             "UnitPrice": str(item.per_unit_price),
+#                                             "IncomeAccountRef": {
+#                                                 "value": income_account_id,
+#                                             },
+#                                             "ExpenseAccountRef": {
+#                                                 "value": expense_account_id,
+#                                             },
+#                                             "AssetAccountRef": {
+#                                                 "value": asset_account_id,
+#                                             },
+#                                             "Description": item.description or "",
+#                                             "Active": item.is_active,
+#                                             "QtyOnHand":float(crop.contract_amount),
+#                                             "TrackQtyOnHand":True,
+#                                             "InvStartDate": datetime.now().strftime('%Y-%m-%d')
+#                                         }
+                               
+#                                         created_item = create_item(token_instance.realm_id, token_instance.access_token, item_data)                               
+#                                         if created_item:
+#                                             print("Item added successfully and synced with QuickBooks.")
+#                                             messages.success(request, "Item added successfully and synced with QuickBooks.")
+#                                         else:
+#                                             print("Failed to sync with QuickBooks.")
+#                                             messages.error(request, "Failed to add item in QuickBooks.")
+
+#                                     except ImproperlyConfigured as e:
+#                                         print(str(e))
+
+
+#                     delete_document_ids = request.POST.getlist('delete_document_ids[]')                    
+#                     for document_id in delete_document_ids:
+#                         try:
+#                             document = AdminProcessorContractDocuments.objects.get(id=document_id)
+#                             document.delete()  
+#                         except AdminProcessorContractDocuments.DoesNotExist:
+#                             pass
+#                     document_ids =  request.POST.getlist('document_ids')
+#                     for document_id in document_ids:
+#                         document_status = f'document_status_{document_id}'
+#                         if document_status in request.POST:                            
+#                             document_stat = request.POST.get(document_status)                         
+                            
+#                             document = AdminProcessorContractDocuments.objects.filter(id=document_id).first()
+#                             document.document_status = document_stat 
+#                             document.save()                                
+                            
+#                     document_names = request.POST.getlist('document_name[]')  
+#                     if document_names:                      
+                    
+#                         for i, name in enumerate(document_names):
+#                             if i < len(document_ids):
+#                                 document_id = document_ids[i]
+
+#                                 document = AdminProcessorContractDocuments.objects.filter(id=document_id).first()
+#                                 if document:
+#                                     document.name = name 
+#                                     document.save()
+#                             else:
+#                                 AdminProcessorContractDocuments.objects.create(contract=contract, name=name)
+#                 return redirect('list-contract')
+            
+#             elif request.user.is_processor or request.user.is_processor2:
+#                 document_ids = request.POST.getlist('document_ids')        
+#                 for document_id in document_ids:
+#                     file_field_name = f'document_file_{document_id}'
+                    
+#                     if file_field_name in request.FILES:
+#                         uploaded_file = request.FILES[file_field_name]                        
+
+#                         try:
+#                             document = AdminProcessorContractDocuments.objects.get(id=document_id)
+#                             document.document = uploaded_file  
+#                             document.save()
+                            
+#                         except AdminProcessorContractDocuments.DoesNotExist:
+
+#                             pass
+#                 contract.status = "Under Review"
+#                 contract.save()
+#                 return redirect('list-contract')
+#         return render(request, 'contracts/edit_admin_processor_contract.html', context)
+#     except Exception as e:
+#         print(f"Exception occurred: {str(e)}")
+#         context["error_messages"] = str(e)
+#         return render(request, 'contracts/edit_admin_processor_contract.html', context)
+
+
 @login_required()
 def edit_admin_processor_contract(request, pk):
-    context = {}
+    context = {}    
     try:
         contract = get_object_or_404(AdminProcessorContract, id=pk)       
 
-        processors = []
-        processor1 = Processor.objects.all().values('id', 'entity_name').order_by('entity_name')
-        processor2 = Processor2.objects.all().values('id', 'entity_name', 'processor_type__type_name').order_by('entity_name')
+        processor1 = list(Processor.objects.all().values("id", "entity_name"))
+        processor2 = list(Processor2.objects.filter(processor_type__type_name="T2").values("id", "entity_name"))
+        processor3 = list(Processor2.objects.filter(processor_type__type_name="T3").values("id", "entity_name"))
+        processor4 = list(Processor2.objects.filter(processor_type__type_name="T4").values("id", "entity_name"))
+        processor = []
         
-        for pro1 in processor1:
-            processors.append({
-                "id": pro1["id"],
-                "entity_name": pro1["entity_name"],
-                "type": "T1"
-            })
+        for i in processor1:
+            my_dict = {"id":None, "entity_name":None, "type":None}
+            my_dict["id"] = i["id"]
+            my_dict["entity_name"] = i["entity_name"]
+            my_dict["type"] = "T1"
+            processor.append(my_dict)
 
-        for pro2 in processor2:
-            processors.append({
-                "id": pro2["id"],
-                "entity_name": pro2["entity_name"],
-                "type": pro2["processor_type__type_name"]
-            })
+        for i in processor2:
+            my_dict = {"id":None, "entity_name":None, "type":None}
+            my_dict["id"] = i["id"]
+            my_dict["entity_name"] = i["entity_name"]
+            my_dict["type"] = "T2"
+            processor.append(my_dict)
 
-        documents = AdminProcessorContractDocuments.objects.filter(contract=contract)        
+        for i in processor3:
+            my_dict = {"id":None, "entity_name":None, "type":None}
+            my_dict["id"] = i["id"]
+            my_dict["entity_name"] = i["entity_name"]
+            my_dict["type"] = "T3"
+            processor.append(my_dict)
+
+        for i in processor4:
+            my_dict = {"id":None, "entity_name":None, "type":None}
+            my_dict["id"] = i["id"]
+            my_dict["entity_name"] = i["entity_name"]
+            my_dict["type"] = "T4"
+            processor.append(my_dict)       
+
+        admin_documents = [
+            {
+                "id": file.id,
+                "name": file.document.name.split("/")[-1] if file.document else None
+            }
+            for file in AdminProcessorContractDocuments.objects.filter(contract=contract, uploaded_by="admin")
+        ]  
+        processor_documents = AdminProcessorContractDocuments.objects.filter(contract=contract, uploaded_by="processor")  
+        
+        crop_names = list(ShipmentItem.objects.all().values("item", "id", "item_number"))
+        
+        filtered_spices = list(ShipmentItem.objects.filter(item_category="Spices").values("item", "id", "item_number"))
+        filtered_crops = list(ShipmentItem.objects.filter(item_category="Crop").values("item", "id", "item_number"))
+        
+        
         crops = CropDetails.objects.filter(contract=contract)
+        
         context = {
             "contract": contract,
-            "processor": processors,
+            "processor": processor,
             'selected_processor_id': contract.processor_id,
             'selected_processor_type': contract.processor_type,
             'selected_contract_type':contract.contract_type,
             'crops': crops,
+            "crop_names":crop_names,
+            "filtered_spices": filtered_spices,
+            "filtered_crops": filtered_crops,
             "contract_start_date": contract.contract_start_date,
             "contract_period": contract.contract_period,
             "status": contract.status,
-            "documents": documents,
+            "admin_documents": admin_documents,
+            "processor_documents":processor_documents
         }
 
         if request.method == "POST":
+            print(request.POST)
             if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
 
                 selected_processor = request.POST.get('selected_processor')
@@ -1155,55 +1936,75 @@ def edit_admin_processor_contract(request, pk):
 
                     crop_ids = request.POST.getlist("crop_id[]")
                     crops = request.POST.getlist("crop[]")
-                    crop_types = request.POST.getlist("crop_type[]")
+                    item_numbers = request.POST.getlist("item_number[]")
+                    item_descriptions = request.POST.getlist("item_description[]")
                     contract_amounts = request.POST.getlist("contract_amount[]")
                     amount_units = request.POST.getlist("amount_unit[]")
                     per_unit_rates = request.POST.getlist("per_unit_rate[]")
                     delete_flags = request.POST.getlist("delete_flag[]") 
+                    item_type_ = request.POST.getlist("item_type[]")                    
 
                     with transaction.atomic():
-                        for idx, crop_id in enumerate(crop_ids):
-
-                            if crop_id.isdigit() and delete_flags[idx] == "1":
+                        for i, crop_id in enumerate(crop_ids):
+                            if crop_id.isdigit() and delete_flags[i] == "1":
                                 try:
-                                    CropDetails.objects.get(id=int(crop_id)).delete()
+                                    crop = CropDetails.objects.get(id=int(crop_id))
+                                    crop.delete()
                                     print(f"Deleted crop with id {crop_id}")
                                 except CropDetails.DoesNotExist:
                                     print(f"Crop with id {crop_id} not found.")
                             else:
                                 print(f"Skipping crop with id {crop_id}, not marked for deletion.")
 
-                        for idx in range(len(crops)):
-                            crop_id = crop_ids[idx] if idx < len(crop_ids) else None
+                        for i in range(len(crops)):
+
+                            crop_id = crop_ids[i] if i < len(crop_ids) else None
+
+                            item_type = item_type_[i]
+                            item_description = item_descriptions[i] if i < len(item_descriptions) else None
 
                             if crop_id and crop_id.isdigit():
                                 try:
-                                    crop_detail = CropDetails.objects.get(id=int(crop_id))
-                                    crop_detail.crop = crops[idx]
-                                    crop_detail.crop_type = crop_types[idx]
-                                    crop_detail.contract_amount = contract_amounts[idx]
-                                    crop_detail.amount_unit = amount_units[idx]
-                                    crop_detail.per_unit_rate = per_unit_rates[idx]
-                                    crop_detail.save()
+                                    item = ShipmentItem.objects.filter(item=crops[i]).first()
+                                    item_name = item.item_name
+                                    crop_detail = CropDetails.objects.get(id=int(crop_id))   
+                                    crop_detail.item=item   
+                                    crop_detail.item_type=item_type                              
+                                    crop_detail.crop = item_name
+                                    crop_detail.item_number = item_numbers[i]
+                                    crop_detail.item_description = item_description
+                                    crop_detail.contract_amount = contract_amounts[i]
+                                    crop_detail.amount_unit = amount_units[i]
+                                    crop_detail.per_unit_rate = per_unit_rates[i]                                    
+                                    crop_detail.save()  
+                                    
                                 except CropDetails.DoesNotExist:
                                     print(f"Crop with id {crop_id} not found.")
                             else:
-                                CropDetails.objects.create(
-                                    contract=contract,
-                                    crop=crops[idx],
-                                    crop_type=crop_types[idx],
-                                    contract_amount=contract_amounts[idx],
-                                    amount_unit=amount_units[idx],
-                                    per_unit_rate=per_unit_rates[idx]
-                                )
+                                item = ShipmentItem.objects.filter(item=crops[i]).first()
 
-                    delete_document_ids = request.POST.getlist('delete_document_ids[]')                    
+                                item_name = item.item_name
+                                crop = CropDetails.objects.create(
+                                    contract=contract,
+                                    item=item,
+                                    item_type=item_type,
+                                    crop=item_name,
+                                    item_number=item_numbers[i],
+                                    item_description = item_description,
+                                    contract_amount=contract_amounts[i],
+                                    amount_unit=amount_units[i],
+                                    per_unit_rate=per_unit_rates[i]
+                                )
+                                
+                                
+                    delete_document_ids = request.POST.getlist('delete_document_ids[]')
                     for document_id in delete_document_ids:
                         try:
                             document = AdminProcessorContractDocuments.objects.get(id=document_id)
-                            document.delete()  
+                            document.delete() 
                         except AdminProcessorContractDocuments.DoesNotExist:
                             pass
+
                     document_ids =  request.POST.getlist('document_ids')
                     for document_id in document_ids:
                         document_status = f'document_status_{document_id}'
@@ -1211,22 +2012,33 @@ def edit_admin_processor_contract(request, pk):
                             document_stat = request.POST.get(document_status)                         
                             
                             document = AdminProcessorContractDocuments.objects.filter(id=document_id).first()
-                            document.document_status = document_stat 
+                            document.document_status = document_stat  
                             document.save()                                
                             
                     document_names = request.POST.getlist('document_name[]')  
-                    if document_names:                      
-                    
-                        for i, name in enumerate(document_names):
+                    if document_names:                     
+                        for i, name in enumerate(document_names):                           
                             if i < len(document_ids):
                                 document_id = document_ids[i]
-
+                                
                                 document = AdminProcessorContractDocuments.objects.filter(id=document_id).first()
                                 if document:
                                     document.name = name 
                                     document.save()
-                            else:
-                                AdminProcessorContractDocuments.objects.create(contract=contract, name=name)
+                            else:                               
+                                AdminProcessorContractDocuments.objects.create(contract=contract, name=name, uploaded_by='processor')
+                    
+                    button_value = request.POST.getlist('remove_files')
+                    if button_value:
+                        for file_id in button_value:
+                            try:
+                                file_obj = AdminProcessorContractDocuments.objects.get(id=file_id)
+                                file_obj.delete()
+                            except AdminProcessorContractDocuments.DoesNotExist:
+                                pass  
+                    files = request.FILES.getlist('files')
+                    for file in files:
+                        AdminProcessorContractDocuments.objects.create(contract=contract, document=file, uploaded_by="admin")
                 return redirect('list-contract')
             
             elif request.user.is_processor or request.user.is_processor2:
@@ -1255,17 +2067,192 @@ def edit_admin_processor_contract(request, pk):
         return render(request, 'contracts/edit_admin_processor_contract.html', context)
 
 
+# @login_required()
+# def admin_customer_contract_create(request):
+#     context = {}
+#     try:
+#         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role() or request.user.is_distributor or request.user.warehouse_manager:
+#             from apps.quickbooks_integration.views import create_item, refresh_quickbooks_token, get_quickbooks_accounts
+#             from apps.quickbooks_integration.models import QuickBooksToken 
+#             try:         
+#                 token_instance = QuickBooksToken.objects.first()
+#                 if not token_instance:
+#                     return redirect(f"{reverse('quickbooks_login')}?next=add-admin-customer-contract")
+
+#                 # Refresh the token if it is expired
+#                 if token_instance.is_token_expired():
+#                     print("Token expired, refreshing...")
+#                     new_access_token = refresh_quickbooks_token(token_instance.refresh_token)
+#                     if not new_access_token:
+#                         return redirect(f"{reverse('quickbooks_login')}?next=add-admin-customer-contract")
+                    
+#                     token_instance.access_token = new_access_token
+#                     token_instance.expires_at = timezone.now() + timedelta(seconds=settings.SESSION_COOKIE_AGE)
+#                     token_instance.save()
+#             except QuickBooksToken.DoesNotExist:
+#                 return redirect(f"{reverse('quickbooks_login')}?next=add-admin-customer-contract")
+#             customers = Customer.objects.filter(is_active=True).values('id', 'name').order_by('name')          
+#             context["customers"] = customers
+#             crops = Crop.objects.all()
+#             context["crops"] = crops
+            
+#             if request.method == "POST":
+
+#                 selected_customer = request.POST.get('selected_customer') 
+#                 contract_type = request.POST.get('contract_type')               
+#                 contract_start_date = request.POST.get('contract_start_date')
+#                 contract_period = request.POST.get('contract_period')
+#                 status = request.POST.get('status')                
+
+#                 if selected_customer:
+#                     customer = Customer.objects.filter(id=selected_customer).first()  
+#                     customer_name = customer.name                 
+                    
+#                     if not customer:
+#                         context["error_messages"] = "Selected customer does not exist."
+#                         return render(request, 'contracts/create_admin_customer_contract.html', context)
+                    
+#                     contract = AdminCustomerContract.objects.create(                        
+#                         customer_id=customer.id,  
+#                         customer_name= customer_name, 
+#                         contract_type = contract_type,                                
+#                         contract_start_date=contract_start_date, 
+#                         contract_period=contract_period,
+#                         status=status, 
+#                         created_by_id=request.user.id
+#                     )
+#                     crop_names = request.POST.getlist('crop[]')
+#                     crop_types = request.POST.getlist('crop_type[]')
+#                     contract_amounts = request.POST.getlist('contract_amount[]')
+#                     amount_units = request.POST.getlist('amount_unit[]')
+#                     per_unit_rates = request.POST.getlist('per_unit_rate[]')
+                    
+#                     for crop_name, crop_type, contract_amount, amount_unit, per_unit_rate in zip(
+#                             crop_names, crop_types, contract_amounts, amount_units, per_unit_rates):
+                        
+#                         crop = CustomerContractCropDetails.objects.create(
+#                             contract=contract,
+#                             crop=crop_name,
+#                             crop_type=crop_type,
+#                             contract_amount=contract_amount,
+#                             amount_unit=amount_unit,
+#                             per_unit_rate=per_unit_rate
+#                         )
+#                         item_name = f"{crop.crop}"
+#                         item_type = f"{crop.crop_type}"
+#                         description = f"Crop: {crop.crop}, Type: {crop.crop_type}, Rate: {crop.per_unit_rate} per unit"
+                        
+#                         item, created = ShipmentItem.objects.update_or_create(
+#                             item_name=item_name,
+#                             item_type=item_type,
+#                             per_unit_price=crop.per_unit_rate,
+#                             defaults={
+#                                 "description": description,
+#                                 "type": "Inventory",
+#                                 "is_active": True,
+#                             }
+#                         )
+#                         if created:
+#                             try:                               
+#                                 accounts = get_quickbooks_accounts(token_instance.realm_id, token_instance.access_token)  
+                                                            
+#                                 income_account_id = None
+#                                 expense_account_id = None
+#                                 asset_account_id = None
+
+#                                 for account in accounts:
+#                                     if account.get("AccountType") == "Income" and account.get("AccountSubType") == "SalesOfProductIncome" and income_account_id is None:
+#                                         income_account_id = account.get("Id")
+#                                     elif (account.get("AccountType") == "Cost of Goods Sold" and account.get("AccountSubType") == "SuppliesMaterialsCogs" and expense_account_id is None):
+#                                         expense_account_id = account.get("Id")
+#                                     elif account.get("AccountType") in ["Other Current Asset", "Inventory Asset"] and account.get("AccountSubType") == "Inventory" and asset_account_id is None:
+#                                         asset_account_id = account.get("Id")
+
+#                                     if income_account_id and expense_account_id and asset_account_id:
+#                                         break
+
+#                                 item_data = {
+#                                     "Name": f"{item.item_name}-{item.item_type}-{item.per_unit_price}",
+#                                     "Type": item.type,
+#                                     "UnitPrice": str(item.per_unit_price),
+#                                     "IncomeAccountRef": {
+#                                         "value": income_account_id,
+#                                     },
+#                                     "ExpenseAccountRef": {
+#                                         "value": expense_account_id,
+#                                     },
+#                                     "AssetAccountRef": {
+#                                         "value": asset_account_id,
+#                                     },
+#                                     "Description": item.description or "",
+#                                     "Active": item.is_active,
+#                                     "QtyOnHand":float(crop.contract_amount),
+#                                     "TrackQtyOnHand":True,
+#                                     "InvStartDate": datetime.now().strftime('%Y-%m-%d')
+#                                 }
+                               
+#                                 created_item = create_item(token_instance.realm_id, token_instance.access_token, item_data)                               
+#                                 if created_item:
+#                                     print("Item added successfully and synced with QuickBooks.")
+#                                     messages.success(request, "Item added successfully and synced with QuickBooks.")
+#                                 else:
+#                                     print("Failed to sync with QuickBooks.")
+#                                     messages.error(request, "Failed to add item in QuickBooks.")
+
+#                             except ImproperlyConfigured as e:
+#                                 print(str(e))
+                  
+#                     all_customer_user = CustomerUser.objects.filter(customer_id=customer.id)                    
+#                     for user in all_customer_user :
+#                         msg = 'A new Contract has been initiated between Admin and you.'
+#                         get_user = User.objects.get(username=user.contact_email)
+#                         notification_reason = 'New Contract Assigned.'
+#                         redirect_url = "/contracts/admin-customer-contract-list/"
+#                         save_notification = ShowNotification(user_id_to_show=get_user.id,msg=msg,status="UNREAD",redirect_url=redirect_url,
+#                             notification_reason=notification_reason)
+#                         save_notification.save()
+
+#                     document_names = request.POST.getlist('document_name[]')                   
+                    
+#                     for name in document_names:
+#                         AdminCustomerContractDocuments.objects.create(
+#                             contract=contract,
+#                             name=name                            
+#                         )
+                    
+#                     return redirect('admin-customer-contract-list')
+#                 else:
+#                     context["error_messages"] = "Customer must be selected."
+            
+#             return render(request, 'contracts/create_admin_customer_contract.html', context)
+#         else:
+#             messages.error(request, "Not a valid request.")
+#             return redirect("dashboard")                                  
+#     except (ValueError, AttributeError, AdminCustomerContract.DoesNotExist) as e:
+#         context["error_messages"] = str(e)
+#     return render(request, 'contracts/create_admin_customer_contract.html', context)
+
+
 @login_required()
 def admin_customer_contract_create(request):
     context = {}
     try:
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role() or request.user.is_distributor or request.user.warehouse_manager:
-            customers = Customer.objects.all().values('id', 'name').order_by('name')          
+            
+            customers = Customer.objects.filter(is_active=True).values('id', 'name').order_by('name')          
             context["customers"] = customers
+
+            crops = list(ShipmentItem.objects.all().values("item", "item_number"))
+            context["crops"] = crops
+            filtered_spices = list(ShipmentItem.objects.filter(item_category="Spices").values("item", "item_number"))
+            filtered_crops = list(ShipmentItem.objects.filter(item_category="Crop").values("item", "item_number"))
+            context["filtered_spices"] = filtered_spices
+            context["filtered_crops"] = filtered_crops
             
             if request.method == "POST":
 
-                selected_customer = request.POST.get('selected_customer')                
+                selected_customer = request.POST.get('selected_customer') 
+                contract_type = request.POST.get('contract_type')               
                 contract_start_date = request.POST.get('contract_start_date')
                 contract_period = request.POST.get('contract_period')
                 status = request.POST.get('status')                
@@ -1280,32 +2267,44 @@ def admin_customer_contract_create(request):
                     
                     contract = AdminCustomerContract.objects.create(                        
                         customer_id=customer.id,  
-                        customer_name= customer_name,                                 
+                        customer_name= customer_name, 
+                        contract_type = contract_type,                                
                         contract_start_date=contract_start_date, 
                         contract_period=contract_period,
                         status=status, 
                         created_by_id=request.user.id
                     )
                     crop_names = request.POST.getlist('crop[]')
-                    crop_types = request.POST.getlist('crop_type[]')
+                    item_numbers = request.POST.getlist('item_number[]')
+                    item_descriptions = request.POST.getlist("item_description[]")
                     contract_amounts = request.POST.getlist('contract_amount[]')
                     amount_units = request.POST.getlist('amount_unit[]')
                     per_unit_rates = request.POST.getlist('per_unit_rate[]')
-                    
-                    for crop_name, crop_type, contract_amount, amount_unit, per_unit_rate in zip(
-                            crop_names, crop_types, contract_amounts, amount_units, per_unit_rates):
+                    item_type_ = request.POST.getlist("item_type[]")                    
+
+                    for i, crop_name in enumerate(crop_names):
+                        item_number = item_numbers[i]
+                        contract_amount = contract_amounts[i]
+                        amount_unit = amount_units[i]
+                        per_unit_rate = per_unit_rates[i]
+                        item_type = item_type_[i]
+                        item_description = item_descriptions[i] if i < len(item_descriptions) else None
                         
-                        CustomerContractCropDetails.objects.create(
+                        item = ShipmentItem.objects.filter(item=crop_name).first()
+                        item_name = item.item_name                        
+                        crop = CustomerContractCropDetails.objects.create(
                             contract=contract,
-                            crop=crop_name,
-                            crop_type=crop_type,
+                            item = item,
+                            item_type=item_type,
+                            crop=item_name,
+                            item_number=item_number,
+                            item_description=item_description,
                             contract_amount=contract_amount,
                             amount_unit=amount_unit,
                             per_unit_rate=per_unit_rate
                         )
-                  
-                    all_customer_user = CustomerUser.objects.filter(customer_id=customer.id)
-                    
+                        
+                    all_customer_user = CustomerUser.objects.filter(customer_id=customer.id)                    
                     for user in all_customer_user :
                         msg = 'A new Contract has been initiated between Admin and you.'
                         get_user = User.objects.get(username=user.contact_email)
@@ -1315,14 +2314,22 @@ def admin_customer_contract_create(request):
                             notification_reason=notification_reason)
                         save_notification.save()
 
+                    files = request.FILES.getlist('files') 
+                    for file in files:
+                        AdminCustomerContractDocuments.objects.create(
+                            contract=contract,
+                            document=file,
+                            uploaded_by="admin"                           
+                        )
+
                     document_names = request.POST.getlist('document_name[]')                   
                     
                     for name in document_names:
                         AdminCustomerContractDocuments.objects.create(
                             contract=contract,
-                            name=name                            
-                        )
-                    
+                            name=name,
+                            uploaded_by="customer"                           
+                        )                    
                     return redirect('admin-customer-contract-list')
                 else:
                     context["error_messages"] = "Customer must be selected."
@@ -1341,7 +2348,7 @@ def admin_customer_contract_list(request):
     context = {}
     try:
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
-            customers = Customer.objects.all().values('id', 'name').order_by('name')           
+            customers = Customer.objects.filter(is_active=True).values('id', 'name').order_by('name')           
                     
             context["customers"] = customers          
             
@@ -1360,12 +2367,41 @@ def admin_customer_contract_list(request):
                 
             if selected_customer and selected_customer != 'All':                
                 contracts = contracts.filter(customer_id=int(customer_id))
+
             search_name = request.GET.get('search_name', '')   
             if search_name and search_name is not None:
-                contracts = contracts.filter(Q(secret_key__icontains=search_name)| Q(crop__icontains=search_name))
+                contracts = contracts.filter(Q(secret_key__icontains=search_name)| Q(customerContractCrop__crop__icontains=search_name) | Q(customerContractCrop__crop_type__icontains=search_name))
                 context['search_name'] = search_name
             else:
-                context['search_name'] = None            
+                context['search_name'] = None  
+
+            start_date = request.GET.get('start_date', '')
+            end_date = request.GET.get('end_date', '')
+            
+            if start_date or end_date:
+                if start_date:
+                    start_date = parse_date(start_date)
+                if end_date:
+                    end_date = parse_date(end_date)
+
+                if start_date and end_date:
+                    contracts = contracts.filter(
+                        Q(contract_start_date__lte=end_date) & 
+                        (
+                            Q(contract_start_date__lte=start_date) |  
+                            Q(contract_start_date__range=(start_date, end_date))
+                        ) &
+                        (
+                            Q(end_date__range=(start_date, end_date)) |
+                            Q(end_date__gte=end_date)  
+                        )
+                    )               
+
+                context['start_date'] = start_date
+                context['end_date'] = end_date
+            else:
+                context['start_date'] = None
+                context['end_date'] = None           
             
             contracts = contracts.order_by('-id')
             paginator = Paginator(contracts, 100)
@@ -1384,9 +2420,45 @@ def admin_customer_contract_list(request):
             c = CustomerUser.objects.get(contact_email=user_email)
             customer_id = Customer.objects.get(id=c.customer.id).id
 
-            contracts = contracts = AdminCustomerContract.objects.prefetch_related(
+            contracts = AdminCustomerContract.objects.prefetch_related(
                     Prefetch('customerContractCrop', queryset=CustomerContractCropDetails.objects.all())
                 ).filter(customer_id=customer_id)
+            
+            search_name = request.GET.get('search_name', '')   
+            if search_name and search_name is not None:
+                contracts = contracts.filter(Q(secret_key__icontains=search_name)| Q(customerContractCrop__crop__icontains=search_name) | Q(customerContractCrop__crop_type__icontains=search_name))
+                context['search_name'] = search_name
+            else:
+                context['search_name'] = None  
+
+            start_date = request.GET.get('start_date', '')
+            end_date = request.GET.get('end_date', '')
+            
+            if start_date or end_date:
+                if start_date:
+                    start_date = parse_date(start_date)
+                if end_date:
+                    end_date = parse_date(end_date)
+
+                if start_date and end_date:
+                    contracts = contracts.filter(
+                        Q(contract_start_date__lte=end_date) & 
+                        (
+                            Q(contract_start_date__lte=start_date) |  
+                            Q(contract_start_date__range=(start_date, end_date))
+                        ) &
+                        (
+                            Q(end_date__range=(start_date, end_date)) |
+                            Q(end_date__gte=end_date)  
+                        )
+                    )               
+
+                context['start_date'] = start_date
+                context['end_date'] = end_date
+            else:
+                context['start_date'] = None
+                context['end_date'] = None 
+                
             contracts = contracts.order_by('-id')
             paginator = Paginator(contracts, 100)
             page = request.GET.get('page')
@@ -1453,11 +2525,21 @@ def admin_customer_contract_view(request, pk):
             contract = AdminCustomerContract.objects.prefetch_related(
                     Prefetch('customerContractCrop', queryset=CustomerContractCropDetails.objects.all())
                 ).filter(id=pk).first()
-            documents = AdminCustomerContractDocuments.objects.filter(contract=contract)
             context["contract"] = contract
             context['customer'] = Customer.objects.filter(id=contract.customer_id).first().name
             
-            context["documents"] = documents
+            admin_uploaded_documents = [
+                {
+                    "id": file.id,
+                    "document": file.document.url if file.document else None,
+                    "name": file.document.name.split("/")[-1] if file.document else None
+                }
+                for file in AdminCustomerContractDocuments.objects.filter(contract=contract, uploaded_by="admin")
+            ]
+            customer_uploaded_documents = AdminCustomerContractDocuments.objects.filter(contract=contract, uploaded_by="customer")
+            
+            context["admin_documents"] = admin_uploaded_documents
+            context["customer_documents"] = customer_uploaded_documents
             return render (request, 'contracts/admin_customer_contract_view.html', context)
         else:
             return redirect('login') 
@@ -1466,26 +2548,350 @@ def admin_customer_contract_view(request, pk):
         return render (request, 'contracts/admin_customer_contract_view.html', context)
 
 
+# @login_required()
+# def edit_admin_customer_contract(request, pk):
+#     context = {}
+#     try:
+#         from apps.quickbooks_integration.views import create_item, update_item, get_item_data, refresh_quickbooks_token, get_quickbooks_accounts
+#         from apps.quickbooks_integration.models import QuickBooksToken
+#         success_url = reverse('edit-admin-customer-contract', kwargs={'pk': pk})
+#         next_url = f"{success_url}"
+#         redirect_url = f"{reverse('quickbooks_login')}?{urlencode({'next': next_url})}"
+
+#         token_instance = QuickBooksToken.objects.first()
+#         if not token_instance:
+#             return redirect(redirect_url)
+                                        
+#         if token_instance.is_token_expired():
+#             print("Token expired, refreshing...")
+#             new_access_token = refresh_quickbooks_token(token_instance.refresh_token)
+#             if not new_access_token:
+#                 return redirect(redirect_url)
+            
+#             token_instance.access_token = new_access_token
+#             token_instance.expires_at = timezone.now() + timedelta(seconds=settings.SESSION_COOKIE_AGE)
+#             token_instance.save()
+#     except QuickBooksToken.DoesNotExist:
+#         return redirect(redirect_url)
+#     try:
+#         contract = get_object_or_404(AdminCustomerContract, id=pk)     
+
+#         customers = Customer.objects.filter(is_active=True).values('id', 'name').order_by('name')       
+
+#         documents = AdminCustomerContractDocuments.objects.filter(contract=contract)        
+#         crops = CustomerContractCropDetails.objects.filter(contract=contract)
+#         crop_names = Crop.objects.all()
+#         context = {
+#             "contract": contract,
+#             "customers": customers,
+#             'selected_customer_id': contract.customer_id,  
+#             'selected_contract_type': contract.contract_type,          
+#             'crops': crops,    
+#             "crop_names":crop_names,        
+#             "contract_start_date": contract.contract_start_date,
+#             "contract_period": contract.contract_period,
+#             "status": contract.status,
+#             "documents": documents,
+#         }
+
+#         if request.method == "POST":
+#             if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role() or request.user.is_distributor or request.user.is_warehouse_manager:
+
+#                 selected_customer = request.POST.get('selected_customer') 
+#                 selected_contract_type = request.POST.get('contract_type')               
+#                 contract_start_date = request.POST.get('contract_start_date')
+#                 contract_period = request.POST.get('contract_period')
+#                 status = request.POST.get('status')
+                
+#                 if selected_customer:                    
+#                     customer = Customer.objects.filter(id=int(selected_customer)).first()  
+#                     customer_name = customer.name                 
+
+#                     if not customer:
+#                         context["error_messages"] = "Selected customer does not exist."
+#                         return render(request, 'contracts/edit_admin_customer_contract.html', context)
+
+#                     contract.customer_id = customer.id  
+#                     contract.customer_name = customer_name  
+#                     contract.contract_type = selected_contract_type                
+#                     contract.contract_start_date = contract_start_date
+#                     contract.contract_period = contract_period
+#                     contract.status = status
+#                     contract.save()
+
+#                     print(contract)
+#                     crop_ids = request.POST.getlist("crop_id[]")
+#                     crops = request.POST.getlist("crop[]")
+#                     crop_types = request.POST.getlist("crop_type[]")
+#                     contract_amounts = request.POST.getlist("contract_amount[]")
+#                     amount_units = request.POST.getlist("amount_unit[]")
+#                     per_unit_rates = request.POST.getlist("per_unit_rate[]")
+#                     delete_flags = request.POST.getlist("delete_flag[]") 
+
+#                     print(crop_ids, crops, crop_types, contract_amounts, amount_units, per_unit_rates)
+#                     print("Length of crop_ids:", len(crop_ids))
+#                     print("Length of crops:", len(crops))
+
+#                     with transaction.atomic():
+#                         for idx, crop_id in enumerate(crop_ids):
+#                             if crop_id.isdigit() and delete_flags[idx] == "1":
+#                                 try:
+#                                     CustomerContractCropDetails.objects.get(id=int(crop_id)).delete()
+#                                     print(f"Deleted crop with id {crop_id}")
+#                                 except CustomerContractCropDetails.DoesNotExist:
+#                                     print(f"Crop with id {crop_id} not found.")
+#                             else:
+#                                 print(f"Skipping crop with id {crop_id}, not marked for deletion.")
+
+#                         for idx in range(len(crops)):
+#                             crop_id = crop_ids[idx] if idx < len(crop_ids) else None
+
+#                             if crop_id and crop_id.isdigit():
+#                                 try:
+#                                     crop_detail = CustomerContractCropDetails.objects.get(id=int(crop_id))
+#                                     item = ShipmentItem.objects.filter(item_name=crop_detail.crop,item_type=crop_detail.crop_type,per_unit_price=crop_detail.per_unit_rate,type="Inventory").first()
+#                                     crop_detail.crop = crops[idx]
+#                                     crop_detail.crop_type = crop_types[idx]
+#                                     crop_detail.contract_amount = contract_amounts[idx]
+#                                     crop_detail.amount_unit = amount_units[idx]
+#                                     crop_detail.per_unit_rate = per_unit_rates[idx]
+#                                     crop_detail.save()
+
+#                                     if crop_detail.crop_type != item.item_type  or float(crop_detail.per_unit_rate) != float(item.per_unit_price):
+#                                         item_name = f"{crop_detail.crop}"
+#                                         item_type = f"{crop_detail.crop_type}"
+#                                         description = f"Crop: {crop_detail.crop}, Type: {crop_detail.crop_type}, Rate: {crop_detail.per_unit_rate} per unit"
+#                                         item.item_name = item_name
+#                                         item.item_type = item_type
+#                                         item.per_unit_price = crop_detail.per_unit_rate
+#                                         item.description = description
+#                                         item.save()
+#                                         try:                                      
+#                                             accounts = get_quickbooks_accounts(token_instance.realm_id, token_instance.access_token)                                        
+#                                             income_account_id = None
+#                                             expense_account_id = None
+#                                             asset_account_id = None
+
+#                                             for account in accounts:
+#                                                 if account.get("AccountType") == "Income" and account.get("AccountSubType") == "SalesOfProductIncome" and income_account_id is None:
+#                                                     income_account_id = account.get("Id")
+#                                                 elif (account.get("AccountType") == "Cost of Goods Sold" and account.get("AccountSubType") == "SuppliesMaterialsCogs" and expense_account_id is None):
+#                                                     expense_account_id = account.get("Id")
+#                                                 elif account.get("AccountType") in ["Other Current Asset", "Inventory Asset"] and account.get("AccountSubType") == "Inventory" and asset_account_id is None:
+#                                                     asset_account_id = account.get("Id")
+
+#                                                 if income_account_id and expense_account_id and asset_account_id:
+#                                                     break
+
+#                                             item_data = {
+#                                                 "Name": f"{item.item_name}-{item.item_type}-{item.per_unit_price}",
+#                                                 "Type": item.type,
+#                                                 "UnitPrice": str(item.per_unit_price),
+#                                                 "IncomeAccountRef": {
+#                                                     "value": income_account_id,
+#                                                 },
+#                                                 "ExpenseAccountRef": {
+#                                                     "value": expense_account_id,
+#                                                 },
+#                                                 "AssetAccountRef": {
+#                                                     "value": asset_account_id,
+#                                                 },
+#                                                 "Description": item.description or "",
+#                                                 "Active": item.is_active,
+#                                                 "QtyOnHand":float(crop_detail.contract_amount),
+#                                                 "TrackQtyOnHand":True,
+#                                                 "InvStartDate": datetime.now().strftime('%Y-%m-%d')
+#                                             }
+                                            
+#                                             item_id = item.quickbooks_id
+#                                             item_details = get_item_data(item_id)
+#                                             sync_token = item_details.get('Item', {}).get('SyncToken', '')
+#                                             updated_item = update_item(token_instance.realm_id, token_instance.access_token, item_id, sync_token, item_data)                               
+#                                             if updated_item:
+#                                                 print("Item updated successfully and synced with QuickBooks.")
+#                                                 messages.success(request, "Item updated successfully and synced with QuickBooks.")
+#                                             else:
+#                                                 print("Failed to update Item in QuickBooks.")
+#                                                 messages.error(request, "Failed to update Item in QuickBooks.")
+
+#                                         except ImproperlyConfigured as e:
+#                                             print(str(e))
+#                                     else:
+#                                         pass
+                                    
+#                                 except CustomerContractCropDetails.DoesNotExist:
+#                                     print(f"Crop with id {crop_id} not found.")
+#                             else:
+                               
+#                                 crop = CustomerContractCropDetails.objects.create(
+#                                     contract=contract,
+#                                     crop=crops[idx],
+#                                     crop_type=crop_types[idx],
+#                                     contract_amount=contract_amounts[idx],
+#                                     amount_unit=amount_units[idx],
+#                                     per_unit_rate=per_unit_rates[idx]
+#                                 )
+#                                 item_name = f"{crop.crop}"
+#                                 item_type = f"{crop.crop_type}"
+#                                 description = f"Crop: {crop.crop}, Type: {crop.crop_type}, Rate: {crop.per_unit_rate} per unit"
+                                
+#                                 item, created = ShipmentItem.objects.update_or_create(
+#                                     item_name=item_name,
+#                                     item_type=item_type,
+#                                     per_unit_price=crop.per_unit_rate,
+#                                     defaults={
+#                                         "description": description,
+#                                         "type": "Inventory",
+#                                         "is_active": True,
+#                                     }
+#                                 )
+#                                 if created:
+#                                     try:
+#                                         accounts = get_quickbooks_accounts(token_instance.realm_id, token_instance.access_token)                                        
+#                                         income_account_id = None
+#                                         expense_account_id = None
+#                                         asset_account_id = None
+
+#                                         for account in accounts:
+#                                             if account.get("AccountType") == "Income" and account.get("AccountSubType") == "SalesOfProductIncome" and income_account_id is None:
+#                                                 income_account_id = account.get("Id")
+#                                             elif (account.get("AccountType") == "Cost of Goods Sold" and account.get("AccountSubType") == "SuppliesMaterialsCogs" and expense_account_id is None):
+#                                                 expense_account_id = account.get("Id")
+#                                             elif account.get("AccountType") in ["Other Current Asset", "Inventory Asset"] and account.get("AccountSubType") == "Inventory" and asset_account_id is None:
+#                                                 asset_account_id = account.get("Id")
+
+#                                             if income_account_id and expense_account_id and asset_account_id:
+#                                                 break
+
+#                                         item_data = {
+#                                             "Name": f"{item.item_name}-{item.item_type}-{item.per_unit_price}",
+#                                             "Type": item.type,
+#                                             "UnitPrice": str(item.per_unit_price),
+#                                             "IncomeAccountRef": {
+#                                                 "value": income_account_id,
+#                                             },
+#                                             "ExpenseAccountRef": {
+#                                                 "value": expense_account_id,
+#                                             },
+#                                             "AssetAccountRef": {
+#                                                 "value": asset_account_id,
+#                                             },
+#                                             "Description": item.description or "",
+#                                             "Active": item.is_active,
+#                                             "QtyOnHand":float(crop.contract_amount),
+#                                             "TrackQtyOnHand":True,
+#                                             "InvStartDate": datetime.now().strftime('%Y-%m-%d')
+#                                         }                               
+                                    
+#                                         created_item = create_item(token_instance.realm_id, token_instance.access_token, item_data)                               
+#                                         if created_item:
+#                                             print("Item added successfully and synced with QuickBooks.")
+#                                             messages.success(request, "Item added successfully and synced with QuickBooks.")
+#                                         else:
+#                                             print("Failed to sync with QuickBooks.")
+#                                             messages.error(request, "Failed to add item in QuickBooks.")
+
+#                                     except ImproperlyConfigured as e:
+#                                         print(str(e))
+
+
+#                     delete_document_ids = request.POST.getlist('delete_document_ids[]')
+#                     print(delete_document_ids)
+#                     for document_id in delete_document_ids:
+#                         try:
+#                             document = AdminCustomerContractDocuments.objects.get(id=document_id)
+#                             document.delete() 
+#                         except AdminCustomerContractDocuments.DoesNotExist:
+#                             pass
+
+#                     document_ids =  request.POST.getlist('document_ids')
+#                     for document_id in document_ids:
+#                         document_status = f'document_status_{document_id}'
+#                         if document_status in request.POST:                            
+#                             document_stat = request.POST.get(document_status)                         
+                            
+#                             document = AdminCustomerContractDocuments.objects.filter(id=document_id).first()
+#                             document.document_status = document_stat  
+#                             document.save()                                
+                            
+#                     document_names = request.POST.getlist('document_name[]')  
+#                     if document_names:                     
+#                         for i, name in enumerate(document_names):
+                           
+#                             if i < len(document_ids):
+#                                 document_id = document_ids[i]
+                                
+#                                 document = AdminCustomerContractDocuments.objects.filter(id=document_id).first()
+#                                 if document:
+#                                     document.name = name 
+#                                     document.save()
+#                             else:
+                               
+#                                 AdminCustomerContractDocuments.objects.create(contract=contract, name=name)
+                    
+#                 return redirect('admin-customer-contract-list')
+                        
+#             elif request.user.is_customer:
+#                 document_ids = request.POST.getlist('document_ids')        
+#                 for document_id in document_ids:
+#                     file_field_name = f'document_file_{document_id}'
+                    
+#                     if file_field_name in request.FILES:
+#                         uploaded_file = request.FILES[file_field_name]                       
+                        
+#                         try:
+#                             document = AdminCustomerContractDocuments.objects.get(id=document_id)
+#                             document.document = uploaded_file  
+#                             document.save()
+                            
+#                         except AdminCustomerContractDocuments.DoesNotExist:
+                            
+#                             pass
+#                 contract.status = "Under Review"
+#                 contract.save()
+#                 return redirect('admin-customer-contract-list')
+#         return render(request, 'contracts/edit_admin_customer_contract.html', context)
+#     except Exception as e:
+#         print(f"Exception occurred: {str(e)}")
+#         context["error_messages"] = str(e)
+#         return render(request, 'contracts/edit_admin_customer_contract.html', context)
+
+
 @login_required()
 def edit_admin_customer_contract(request, pk):
     context = {}
     try:
-        contract = get_object_or_404(AdminCustomerContract, id=pk)     
+        contract = get_object_or_404(AdminCustomerContract, id=pk)    
 
-        customers = Customer.objects.all().values('id', 'name').order_by('name')       
+        customers = Customer.objects.filter(is_active=True).values('id', 'name').order_by('name')       
 
-        documents = AdminCustomerContractDocuments.objects.filter(contract=contract)        
+        admin_documents = [
+            {
+                "id": file.id,
+                "name": file.document.name.split("/")[-1] if file.document else None
+            }
+            for file in AdminCustomerContractDocuments.objects.filter(contract=contract, uploaded_by="admin")
+        ]  
+        customer_documents = AdminCustomerContractDocuments.objects.filter(contract=contract, uploaded_by="customer")      
         crops = CustomerContractCropDetails.objects.filter(contract=contract)
+        crop_names = list(ShipmentItem.objects.all().values("item", "id", "item_number"))
+        
+        filtered_spices = list(ShipmentItem.objects.filter(item_category="Spices").values("item", "id", "item_number"))
+        filtered_crops = list(ShipmentItem.objects.filter(item_category="Crop").values("item", "id", "item_number"))
         context = {
             "contract": contract,
             "customers": customers,
             'selected_customer_id': contract.customer_id,  
             'selected_contract_type': contract.contract_type,          
-            'crops': crops,            
+            'crops': crops,    
+            "crop_names":crop_names, 
+            "filtered_spices":filtered_spices,
+            "filtered_crops": filtered_crops,    
             "contract_start_date": contract.contract_start_date,
             "contract_period": contract.contract_period,
             "status": contract.status,
-            "documents": documents,
+            "admin_documents": admin_documents,
+            "customer_documents":customer_documents
         }
 
         if request.method == "POST":
@@ -1513,18 +2919,16 @@ def edit_admin_customer_contract(request, pk):
                     contract.status = status
                     contract.save()
 
-                    print(contract)
+                    # print(contract)
                     crop_ids = request.POST.getlist("crop_id[]")
                     crops = request.POST.getlist("crop[]")
-                    crop_types = request.POST.getlist("crop_type[]")
+                    item_numbers = request.POST.getlist("item_number[]")
+                    item_descriptions = request.POST.getlist("item_description[]")
                     contract_amounts = request.POST.getlist("contract_amount[]")
                     amount_units = request.POST.getlist("amount_unit[]")
                     per_unit_rates = request.POST.getlist("per_unit_rate[]")
                     delete_flags = request.POST.getlist("delete_flag[]") 
-
-                    print(crop_ids, crops, crop_types, contract_amounts, amount_units, per_unit_rates)
-                    print("Length of crop_ids:", len(crop_ids))
-                    print("Length of crops:", len(crops))
+                    item_type_ = request.POST.getlist("item_type[]")
 
                     with transaction.atomic():
                         for idx, crop_id in enumerate(crop_ids):
@@ -1537,34 +2941,44 @@ def edit_admin_customer_contract(request, pk):
                             else:
                                 print(f"Skipping crop with id {crop_id}, not marked for deletion.")
 
-                        for idx in range(len(crops)):
-                            crop_id = crop_ids[idx] if idx < len(crop_ids) else None
+                        for i in range(len(crops)):
+                            crop_id = crop_ids[i] if i < len(crop_ids) else None
+                            item_type = item_type_[i]
+                            item_description = item_descriptions[i] if i < len(item_descriptions) else None
 
                             if crop_id and crop_id.isdigit():
                                 try:
-                                    crop_detail = CustomerContractCropDetails.objects.get(id=int(crop_id))
-                                  
-                                    crop_detail.crop = crops[idx]
-                                    crop_detail.crop_type = crop_types[idx]
-                                    crop_detail.contract_amount = contract_amounts[idx]
-                                    crop_detail.amount_unit = amount_units[idx]
-                                    crop_detail.per_unit_rate = per_unit_rates[idx]
-                                    crop_detail.save()
+                                    item = ShipmentItem.objects.filter(item=crops[i]).first()
+                                    item_name = item.item_name
+                                    crop_detail = CustomerContractCropDetails.objects.get(id=int(crop_id))   
+                                    crop_detail.item=item   
+                                    crop_detail.item_type=item_type                              
+                                    crop_detail.crop = item_name
+                                    crop_detail.item_number = item_numbers[i]
+                                    crop_detail.item_description=item_description
+                                    crop_detail.contract_amount = contract_amounts[i]
+                                    crop_detail.amount_unit = amount_units[i]
+                                    crop_detail.per_unit_rate = per_unit_rates[i]                                    
+                                    crop_detail.save()                                   
+                                    
                                 except CustomerContractCropDetails.DoesNotExist:
                                     print(f"Crop with id {crop_id} not found.")
                             else:
-                               
-                                CustomerContractCropDetails.objects.create(
+                                item = ShipmentItem.objects.filter(item=crops[i]).first()
+                                item_name = item.item_name
+                                crop = CustomerContractCropDetails.objects.create(
                                     contract=contract,
-                                    crop=crops[idx],
-                                    crop_type=crop_types[idx],
-                                    contract_amount=contract_amounts[idx],
-                                    amount_unit=amount_units[idx],
-                                    per_unit_rate=per_unit_rates[idx]
+                                    item=item,
+                                    item_type=item_type,
+                                    crop=item_name,
+                                    item_number=item_numbers[i],
+                                    item_description=item_description,
+                                    contract_amount=contract_amounts[i],
+                                    amount_unit=amount_units[i],
+                                    per_unit_rate=per_unit_rates[i]
                                 )
 
                     delete_document_ids = request.POST.getlist('delete_document_ids[]')
-                    print(delete_document_ids)
                     for document_id in delete_document_ids:
                         try:
                             document = AdminCustomerContractDocuments.objects.get(id=document_id)
@@ -1584,8 +2998,7 @@ def edit_admin_customer_contract(request, pk):
                             
                     document_names = request.POST.getlist('document_name[]')  
                     if document_names:                     
-                        for i, name in enumerate(document_names):
-                           
+                        for i, name in enumerate(document_names):                           
                             if i < len(document_ids):
                                 document_id = document_ids[i]
                                 
@@ -1593,10 +3006,20 @@ def edit_admin_customer_contract(request, pk):
                                 if document:
                                     document.name = name 
                                     document.save()
-                            else:
-                               
-                                AdminCustomerContractDocuments.objects.create(contract=contract, name=name)
-                    
+                            else:                               
+                                AdminCustomerContractDocuments.objects.create(contract=contract, name=name, uploaded_by="customer")
+
+                    button_value = request.POST.getlist('remove_files')
+                    if button_value:
+                        for file_id in button_value:
+                            try:
+                                file_obj = AdminCustomerContractDocuments.objects.get(id=file_id)
+                                file_obj.delete()
+                            except AdminCustomerContractDocuments.DoesNotExist:
+                                pass  
+                    files = request.FILES.getlist('files')
+                    for file in files:
+                        AdminCustomerContractDocuments.objects.create(contract=contract, document=file, uploaded_by="admin")
                 return redirect('admin-customer-contract-list')
                         
             elif request.user.is_customer:
@@ -1623,3 +3046,599 @@ def edit_admin_customer_contract(request, pk):
         print(f"Exception occurred: {str(e)}")
         context["error_messages"] = str(e)
         return render(request, 'contracts/edit_admin_customer_contract.html', context)
+
+
+@login_required()
+def export_admin_processor_contract(request):
+    context = {}
+    try:
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+            
+            filename = 'AllProcessorContract.csv'
+            response = HttpResponse(
+                content_type='text/csv',
+                headers={'Content-Disposition': 'attachment; filename="{}"'.format(filename)},
+            )
+            writer = csv.writer(response)
+            
+            writer.writerow(['CONTRACT ID','PROCESSOR NAME', 'PROCESSOR TYPE', 'CROP', 'AMOUNT',
+                            'PER UNIT RATE', 'CONTRACT START DATE', 'CONTRACT PERIOD', 'CONTRACT END DATE','Status'])
+            
+            contracts = CropDetails.objects.all()
+            selected_processor = request.GET.get('selected_processor','All')
+            
+            if selected_processor != 'All' and '_' in selected_processor:
+                processor_id, processor_type = selected_processor.split('_')
+                context['selected_processor_id'] = int(processor_id)
+                context['selected_processor_type'] = processor_type
+            else:
+                processor_id, processor_type = None, None
+                context['selected_processor_id'] = None
+                context['selected_processor_type'] = None
+            if selected_processor and selected_processor != 'All':                
+                contracts = contracts.filter(contract__processor_id=int(processor_id))
+
+            search_name = request.GET.get('search_name', '')   
+            if search_name and search_name is not None:
+                contracts = contracts.filter(Q(contract__secret_key__icontains=search_name)| Q(contract__contractCrop__crop__icontains=search_name) | Q(contract__contractCrop__crop_type__icontains=search_name))
+                context['search_name'] = search_name
+            else:
+                context['search_name'] = None 
+            start_date = request.GET.get('start_date', '')
+            end_date = request.GET.get('end_date', '')
+            
+            if start_date or end_date:
+                if start_date:
+                    start_date = parse_date(start_date)
+                if end_date:
+                    end_date = parse_date(end_date)
+
+                if start_date and end_date:
+                    contracts = contracts.filter(
+                        Q(contract__contract_start_date__lte=end_date) & 
+                        (
+                            Q(contract__contract_start_date__lte=start_date) |  
+                            Q(contract__contract_start_date__range=(start_date, end_date))
+                        ) &
+                        (
+                            Q(contract__end_date__range=(start_date, end_date)) |
+                            Q(contract__end_date__gte=end_date)  
+                        )
+                    )               
+
+                context['start_date'] = start_date
+                context['end_date'] = end_date
+            else:
+                context['start_date'] = None
+                context['end_date'] = None
+
+            for i in contracts:
+                processor_type = i.contract.processor_type
+                processor = None
+                if processor_type == 'T1':
+                    processor = Processor.objects.get(id=int(i.contract.processor_id))
+                elif processor_type == 'T2' or processor_type == 'T3' or processor_type == 'T4':
+                    processor = Processor2.objects.get(id=int(i.contract.processor_id))
+                else:
+                    pass
+                if processor:
+                    processor_name = processor.entity_name
+                else:
+                    processor_name = None
+                writer.writerow([i.contract.secret_key, processor_name, processor_type, i.crop, i.contract_amount,
+                                 i.per_unit_rate, i.contract.contract_start_date.date(), i.contract.contract_period , i.contract.end_date.date(), i.contract.status])
+            return response
+        else:
+            messages.error(request, "Not a valid request.")
+            return redirect("dashboard")   
+    except (ValueError, AttributeError, AdminProcessorContract.DoesNotExist) as e:
+        context["error_messages"] = str(e)
+    return render(request, 'contracts/admin_processor_contract_list.html', context)
+
+
+@login_required()
+def export_admin_customer_contract(request):
+    context = {}
+    try:
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+            
+            filename = 'AllCustomerContract.csv'
+            response = HttpResponse(
+                content_type='text/csv',
+                headers={'Content-Disposition': 'attachment; filename="{}"'.format(filename)},
+            )
+            writer = csv.writer(response)
+            
+            writer.writerow(['CONTRACT ID','CUSTOMER NAME', 'CROP', 'AMOUNT',
+                            'PER UNIT RATE', 'CONTRACT START DATE', 'CONTRACT PERIOD', 'CONTRACT END DATE','Status'])
+            
+            contracts = CustomerContractCropDetails.objects.all()
+            selected_customer = request.GET.get('selected_customer','All')
+                
+            if selected_customer and selected_customer != 'All':                
+                contracts = contracts.filter(customer_id=int(selected_customer))
+
+            search_name = request.GET.get('search_name', '')   
+            if search_name and search_name is not None:
+                contracts = contracts.filter(Q(contract__secret_key__icontains=search_name)| Q(contract__customerContractCrop__crop__icontains=search_name) | Q(contract__customerContractCrop__crop_type__icontains=search_name))
+                context['search_name'] = search_name
+            else:
+                context['search_name'] = None 
+            start_date = request.GET.get('start_date', '')
+            end_date = request.GET.get('end_date', '')
+            
+            if start_date or end_date:
+                if start_date:
+                    start_date = parse_date(start_date)
+                if end_date:
+                    end_date = parse_date(end_date)
+
+                if start_date and end_date:
+                    contracts = contracts.filter(
+                        Q(contract__contract_start_date__lte=end_date) & 
+                        (
+                            Q(contract__contract_start_date__lte=start_date) |  
+                            Q(contract__contract_start_date__range=(start_date, end_date))
+                        ) &
+                        (
+                            Q(contract__end_date__range=(start_date, end_date)) |
+                            Q(contract__end_date__gte=end_date)  
+                        )
+                    )               
+
+                context['start_date'] = start_date
+                context['end_date'] = end_date
+            else:
+                context['start_date'] = None
+                context['end_date'] = None
+
+            for i in contracts:
+                writer.writerow([i.contract.secret_key, i.contract.customer_name, i.crop, i.contract_amount,
+                                 i.per_unit_rate, i.contract.contract_start_date.date(), i.contract.contract_period , i.contract.end_date.date(), i.contract.status])
+            return response
+        else:
+            messages.error(request, "Not a valid request.")
+            return redirect("dashboard")   
+    except (ValueError, AttributeError, AdminProcessorContract.DoesNotExist) as e:
+        context["error_messages"] = str(e)
+    return render(request, 'contracts/admin_processor_contract_list.html', context)
+
+
+@login_required()
+def export_open_admin_processor_contracts(request):
+    context = {}
+    try:
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+            filename = 'OpenPurchaseContracts.csv'
+            response = HttpResponse(
+                content_type='text/csv',
+                headers={'Content-Disposition': 'attachment; filename="{}"'.format(filename)},
+            )
+            writer = csv.writer(response)
+            writer.writerow(['COMMODITY','CONTRACT ID', 'PROCESSOR NAME', 'INVENTORY',
+                            'MONTH', 'RELEASED QUANTITY', 'UNIT', 'UNRELEASED QUANTITY', 'UNIT'])
+            
+            today_date = date.today()
+            active_contracts = AdminProcessorContract.objects.filter(end_date__date__gte=today_date).exclude(
+                status__in=['Completed', 'Terminated']
+            )
+            active_crops = CropDetails.objects.filter(contract__in=active_contracts)
+
+            for crop in active_crops:
+                active_months = crop.contract.get_active_months()
+
+                net_sent_weight = 0
+                is_first_row = False 
+                from apps.warehouseManagement.models import ProcessorWarehouseShipment
+                total_shipments = ProcessorWarehouseShipment.objects.filter(
+                        contract=crop.contract                        
+                    )
+                if total_shipments.exists():
+                    for shipment in total_shipments:                           
+                        matching_crops = shipment.processor_shipment_crop.filter(crop=crop.crop, item=crop.item)
+                        if matching_crops.exists(): 
+                                                      
+                            net_sent_weight += sum(matching_crop.net_weight for matching_crop in matching_crops)
+                            
+                for month in active_months:                    
+                    date_obj = datetime.strptime(month, '%B %Y')
+                    year, month_num = date_obj.year, date_obj.month
+                    
+                    shipments = ProcessorWarehouseShipment.objects.filter(
+                        contract=crop.contract, 
+                        date_pulled__year=year,
+                        date_pulled__month=month_num
+                    )
+                    total_net_weight = 0  
+                    
+                    if shipments.exists():
+                        is_first_row = True 
+                        for shipment in shipments:                           
+                            matching_crops = shipment.processor_shipment_crop.filter(crop=crop.crop, item=crop.item)
+                            if matching_crops.exists(): 
+                                                           
+                                total_net_weight += sum(matching_crop.net_weight for matching_crop in matching_crops)
+                                
+
+                    remaining_amount = float(crop.contract_amount) - float(net_sent_weight)
+                    writer.writerow([
+                        crop.crop, 
+                        crop.contract.secret_key, 
+                        crop.contract.processor_entity_name, 
+                        crop.crop_type,
+                        month, 
+                        total_net_weight, 
+                        crop.amount_unit, 
+                        remaining_amount if is_first_row else "", 
+                        crop.amount_unit
+                    ])
+                    is_first_row = False
+            return response
+
+        else:
+            messages.error(request, "Not a valid request.")
+            return redirect("dashboard")   
+
+    except (ValueError, AttributeError, AdminProcessorContract.DoesNotExist) as e:
+        context["error_messages"] = str(e)
+        return render(request, 'contracts/admin_processor_contract_list.html', context)
+
+
+@login_required()
+def export_completed_admin_processor_contracts(request):
+    context = {}
+    try:
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+            filename = 'CompletedPurchaseContracts.csv'
+            response = HttpResponse(
+                content_type='text/csv',
+                headers={'Content-Disposition': 'attachment; filename="{}"'.format(filename)},
+            )
+            writer = csv.writer(response)
+            writer.writerow(['COMMODITY','CONTRACT ID', 'PROCESSOR NAME', 'INVENTORY',
+                            'MONTH', 'RELEASED QUANTITY', 'UNIT', 'UNRELEASED QUANTITY', 'UNIT'])
+            
+            today_date = date.today()
+            completed_contracts = AdminProcessorContract.objects.filter(Q(end_date__date__lte=today_date)| Q(status__in=['Completed', 'Terminated']))
+            
+            completed_contracts_crops = CropDetails.objects.filter(contract__in=completed_contracts)
+
+            for crop in completed_contracts_crops:
+                active_months = crop.contract.get_active_months()
+
+                net_sent_weight = 0
+                is_first_row = False 
+                from apps.warehouseManagement.models import ProcessorWarehouseShipment
+                total_shipments = ProcessorWarehouseShipment.objects.filter(
+                        contract=crop.contract                        
+                    )
+                if total_shipments.exists():
+                    for shipment in total_shipments:                           
+                        matching_crops = shipment.processor_shipment_crop.filter(crop=crop.crop, item=crop.item)
+                        if matching_crops.exists(): 
+                                                      
+                            net_sent_weight += sum(matching_crop.net_weight for matching_crop in matching_crops)
+
+                for month in active_months:
+                    print(month)
+                    date_obj = datetime.strptime(month, '%B %Y')
+                    year, month_num = date_obj.year, date_obj.month
+                    
+                    shipments = ProcessorWarehouseShipment.objects.filter(
+                        contract=crop.contract, 
+                        date_pulled__year=year,
+                        date_pulled__month=month_num
+                    )
+                    total_net_weight = 0  
+                    
+                    if shipments.exists():
+                        is_first_row = True 
+                        for shipment in shipments:                           
+                            matching_crops = shipment.processor_shipment_crop.filter(crop=crop.crop, item=crop.item)
+                            if matching_crops.exists():                             
+                                total_net_weight += sum(matching_crop.net_weight for matching_crop in matching_crops)
+
+                    remaining_amount = float(crop.contract_amount) - float(net_sent_weight)
+                    writer.writerow([
+                        crop.crop, 
+                        crop.contract.secret_key, 
+                        crop.contract.processor_entity_name, 
+                        crop.crop_type,
+                        month, 
+                        total_net_weight, 
+                        crop.amount_unit, 
+                        remaining_amount if is_first_row else "", 
+                        crop.amount_unit
+                    ])
+            return response
+
+        else:
+            messages.error(request, "Not a valid request.")
+            return redirect("dashboard")   
+
+    except (ValueError, AttributeError, AdminProcessorContract.DoesNotExist) as e:
+        context["error_messages"] = str(e)
+        return render(request, 'contracts/admin_processor_contract_list.html', context) 
+
+
+@login_required()
+def export_open_admin_customer_contracts(request):
+    context = {}
+    try:
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+            filename = 'OpenSalesContracts.csv'
+            response = HttpResponse(
+                content_type='text/csv',
+                headers={'Content-Disposition': 'attachment; filename="{}"'.format(filename)},
+            )
+            writer = csv.writer(response)
+            writer.writerow(['COMMODITY','CONTRACT ID', 'CUSTOMER NAME', 'INVENTORY',
+                            'MONTH', 'RELEASED QUANTITY', 'UNIT', 'UNRELEASED QUANTITY', 'UNIT'])
+            
+            today_date = date.today()
+            active_contracts = AdminCustomerContract.objects.filter(end_date__date__gte=today_date).exclude(
+                status__in=['Completed', 'Terminated']
+            )
+            active_crops = CustomerContractCropDetails.objects.filter(contract__in=active_contracts)
+
+            for crop in active_crops:
+                active_months = crop.contract.get_active_months()
+
+                net_sent_weight = 0
+                is_first_row = False 
+                from apps.warehouseManagement.models import WarehouseCustomerShipment
+                total_shipments = WarehouseCustomerShipment.objects.filter(
+                        contract=crop.contract                        
+                    )
+                if total_shipments.exists():
+                    for shipment in total_shipments:                           
+                        matching_crops = shipment.warehouse_shipment_crop.filter(crop=crop.crop, item=crop.item)
+                        if matching_crops.exists(): 
+                                                      
+                            net_sent_weight += sum(matching_crop.net_weight for matching_crop in matching_crops)
+
+                for month in active_months:
+                    print(month)
+                    date_obj = datetime.strptime(month, '%B %Y')
+                    year, month_num = date_obj.year, date_obj.month
+
+                    shipments = WarehouseCustomerShipment.objects.filter(
+                        contract=crop.contract, 
+                        date_pulled__year=year,
+                        date_pulled__month=month_num
+                    )
+                    total_net_weight = 0  
+                    
+                    if shipments.exists():
+                        for shipment in shipments: 
+                            is_first_row = True                          
+                            matching_crops = shipment.warehouse_shipment_crop.filter(crop=crop.crop, item=crop.item)
+                            if matching_crops.exists():                             
+                                total_net_weight += sum(matching_crop.net_weight for matching_crop in matching_crops)
+
+                    remaining_amount = float(crop.contract_amount) - float(net_sent_weight)
+                    writer.writerow([
+                        crop.crop, 
+                        crop.contract.secret_key, 
+                        crop.contract.customer_name, 
+                        crop.crop_type,
+                        month, 
+                        total_net_weight, 
+                        crop.amount_unit, 
+                        remaining_amount if is_first_row else "", 
+                        crop.amount_unit
+                    ])
+            return response
+
+        else:
+            messages.error(request, "Not a valid request.")
+            return redirect("dashboard")   
+
+    except (ValueError, AttributeError, AdminCustomerContract.DoesNotExist) as e:
+        context["error_messages"] = str(e)
+        return render(request, 'contracts/admin_customer_contract_list.html', context)
+  
+
+@login_required()
+def export_completed_admin_customer_contracts(request):
+    context = {}
+    try:
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+            filename = 'CompletedSalesContracts.csv'
+            response = HttpResponse(
+                content_type='text/csv',
+                headers={'Content-Disposition': 'attachment; filename="{}"'.format(filename)},
+            )
+            writer = csv.writer(response)
+            writer.writerow(['COMMODITY','CONTRACT ID', 'CUSTOMER NAME', 'INVENTORY',
+                            'MONTH', 'RELEASED QUANTITY', 'UNIT', 'UNRELEASED QUANTITY', 'UNIT'])
+            
+            today_date = date.today()
+            completed_contracts = AdminCustomerContract.objects.filter(Q(end_date__date__lte=today_date)| Q(status__in=['Completed', 'Terminated']))
+            
+            completed_contracts_crops = CustomerContractCropDetails.objects.filter(contract__in=completed_contracts)
+
+            for crop in completed_contracts_crops:
+                active_months = crop.contract.get_active_months()
+
+                net_sent_weight = 0
+                is_first_row = False 
+                from apps.warehouseManagement.models import WarehouseCustomerShipment
+                total_shipments = WarehouseCustomerShipment.objects.filter(
+                        contract=crop.contract                        
+                    )
+                if total_shipments.exists():
+                    for shipment in total_shipments:                           
+                        matching_crops = shipment.warehouse_shipment_crop.filter(crop=crop.crop, item=crop.item)
+                        if matching_crops.exists(): 
+                                                      
+                            net_sent_weight += sum(matching_crop.net_weight for matching_crop in matching_crops)
+
+                for month in active_months:
+                    print(month)
+                    date_obj = datetime.strptime(month, '%B %Y')
+                    year, month_num = date_obj.year, date_obj.month
+
+                    shipments = WarehouseCustomerShipment.objects.filter(
+                        contract=crop.contract, 
+                        date_pulled__year=year,
+                        date_pulled__month=month_num
+                    )
+                    total_net_weight = 0  
+                    
+                    if shipments.exists():
+                        for shipment in shipments:   
+                            is_first_row = True                        
+                            matching_crops = shipment.warehouse_shipment_crop.filter(crop=crop.crop, item=crop.item)
+                            if matching_crops.exists():                             
+                                total_net_weight += sum(matching_crop.net_weight for matching_crop in matching_crops)
+
+                    remaining_amount = float(crop.contract_amount) - float(net_sent_weight)
+                    writer.writerow([
+                        crop.crop, 
+                        crop.contract.secret_key, 
+                        crop.contract.customer_name, 
+                        crop.crop_type,
+                        month, 
+                        total_net_weight, 
+                        crop.amount_unit, 
+                        remaining_amount if is_first_row else "", 
+                        crop.amount_unit
+                    ])
+            return response
+
+        else:
+            messages.error(request, "Not a valid request.")
+            return redirect("dashboard")   
+
+    except (ValueError, AttributeError, AdminCustomerContract.DoesNotExist) as e:
+        context["error_messages"] = str(e)
+        return render(request, 'contracts/admin_customer_contract_list.html', context) 
+
+
+def create_items(request):
+    crops = CropDetails.objects.all()
+    for crop in crops:
+        item_name = f"{crop.crop}"
+        item_type = f"{crop.crop_type}"
+        description = f"Crop: {crop.crop}, Type: {crop.crop_type}, Rate: {crop.per_unit_rate} per unit"
+        
+        ShipmentItem.objects.update_or_create(
+            item_name=item_name,
+            item_type=item_type,
+            per_unit_price=crop.per_unit_rate,
+            defaults={
+                "description": description,
+                "type": "Inventory",
+                "is_active": True,
+            }
+        )
+    return HttpResponse(1)
+
+
+def shipment_item_list(request):
+    if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+        context = {}
+        search_name = request.GET.get('search_name', '')
+        item_list = ShipmentItem.objects.all()   
+        if search_name:
+            item_list = item_list.filter(Q(item__icontains=search_name) | Q(item_name__icontains=search_name) | Q(item_type__icontains=search_name) | Q(description__icontains=search_name)) 
+            context["get_search_name"] = search_name  
+
+        item_list = item_list.order_by('-id')
+        paginator = Paginator(item_list, 100)
+        page = request.GET.get('page')
+        try:
+            report = paginator.page(page)
+        except PageNotAnInteger:
+            report = paginator.page(1)
+        except EmptyPage:
+            report = paginator.page(paginator.num_pages)             
+        context['items'] = report
+        return render(request, 'contracts/shipment_item_list.html', context)
+
+
+def add_edit_item_details(request, pk):
+    context = {}
+    if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+        items = ShipmentItem.objects.all()
+        context["items"] = items
+        item = ShipmentItem.objects.filter(id=int(pk)).first()
+        
+        context["selected_item"] = item
+        processor1 = list(Processor.objects.all().values("id", "entity_name"))
+        processor2 = list(Processor2.objects.filter(processor_type__type_name="T2").values("id", "entity_name"))
+        processor3 = list(Processor2.objects.filter(processor_type__type_name="T3").values("id", "entity_name"))
+        processor4 = list(Processor2.objects.filter(processor_type__type_name="T4").values("id", "entity_name"))
+        processor = []
+        for i in processor1:
+            my_dict = {"id":None, "entity_name":None, "type":None}
+            my_dict["id"] = i["id"]
+            my_dict["entity_name"] = i["entity_name"]
+            my_dict["type"] = "T1"
+            processor.append(my_dict)
+
+        for i in processor2:
+            my_dict = {"id":None, "entity_name":None, "type":None}
+            my_dict["id"] = i["id"]
+            my_dict["entity_name"] = i["entity_name"]
+            my_dict["type"] = "T2"
+            processor.append(my_dict)
+
+        for i in processor3:
+            my_dict = {"id":None, "entity_name":None, "type":None}
+            my_dict["id"] = i["id"]
+            my_dict["entity_name"] = i["entity_name"]
+            my_dict["type"] = "T3"
+            processor.append(my_dict)
+
+        for i in processor4:
+            my_dict = {"id":None, "entity_name":None, "type":None}
+            my_dict["id"] = i["id"]
+            my_dict["entity_name"] = i["entity_name"]
+            my_dict["type"] = "T4"
+            processor.append(my_dict)
+
+        context["processor"] = processor
+        context['selected_processor_id'] = int(item.supplier_id) if item.supplier_id else None
+        context['selected_processor_type'] =  item.supplier_type
+        print(context)
+
+        if request.method == "POST":
+            item_id = request.POST.get("item")
+            item_category = request.POST.get('item_category')
+            item_number = request.POST.get('item_number')
+            supplier_name = request.POST.get('supplier_name')
+            supplier_type = request.POST.get('supplier_type')
+            selected_supplier = request.POST.get('selected_supplier') 
+            if selected_supplier:
+                try:
+                    processor_id, processor_type = selected_supplier.split("_")
+                except ValueError:
+                    context["error_messages"] = "Invalid supplier selection."
+                    return render(request, 'contracts/add_item_specification.html', context)
+                
+                # Retrieve the processor object
+                if processor_type == "T1":
+                    processor = Processor.objects.filter(id=processor_id).first()
+                else:
+                    processor = Processor2.objects.filter(id=processor_id).first()
+
+            item = ShipmentItem.objects.filter(id=item_id).first()
+
+            item.item_category=item_category
+            item.item_number=item_number
+            # item.supplier_entity_name=supplier_name
+            # item.supplier_type=supplier_type
+            item.supplier_entity_name=processor.entity_name
+            item.supplier_type=processor_type
+            item.supplier_id = processor_id
+            item.save()          
+            return redirect("shipment_item_list") 
+        else:           
+        
+            return render(request, "contracts/add_item_specification.html", context)
+    else:
+        return redirect('dashboard')
+
+

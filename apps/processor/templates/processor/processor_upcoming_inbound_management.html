@@ -21,7 +21,7 @@
             </div> -->
             <a href="{% url 'processor_inbound_management' %}" class="btn-close-cancel btn-space">Back</a>
         </div>
-        {% if request.user.is_processor or request.user.is_superuser %}
+        {% if request.user.is_processor or request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role%}
         <div class="card card-padding">
             <div class="main-simple-table-with-search col-12">                
                 <form action="" method="get" class="">
@@ -277,7 +277,7 @@
                                             <li>
                                                 <a href="{% url 'processor_inbound_management_edit' shipment.id %}" class="update-btn-link" alt="edit inbound management" title="edit inbound management"> <span class="fas fa-edit"></span></a>
                                             </li>
-                                           {% if request.user.is_superuser%}
+                                           {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
                                             <li>
                                                 <a onclick="delShipment('{% url 'processor_inbound_management_delete' shipment.id %}')"
                                                     href="{% url 'processor_inbound_management_delete' shipment.id %}"

@@ -55,13 +55,15 @@
                         <table id="processorList_tbl" class="table table-striped dt-responsive nowrap" style="width:100%">
                             <thead>
                                 <tr style="border-bottom: 2px solid #e0e0e0;">
-                                    <th width="40%">Entity Name</th>
-                                    <th width="10%">FEIN</th>
-                                    <th width="10%">Name</th>
-                                    <th width="10%">Email</th>
-                                    <th width="10%">Password</th>
-                                    <th width="10%">Phone</th>
-                                    <th width="10%" >Action</th>
+                                    <th >Entity Name</th>
+                                    <th >FEIN</th>
+                                    <th >Main Email</th>
+                                    <th >Main Contact No.</th>
+                                    <th >Name</th>
+                                    <th >Email</th>
+                                    <th >Password</th>
+                                    <th >Phone</th>
+                                    <th >Action</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -70,6 +72,8 @@
                                 <tr>
                                     <td>{{i.processor2.entity_name}}</td>
                                     <td>{{i.processor2.fein}}</td>
+                                    <td>{{i.processor2.main_email}}</td>
+                                    <td>{{i.processor2.main_number}}</td>
                                     <td>{{i.contact_name}}</td>
                                     <td>{{i.contact_email}}</td>
                                     <td>{{i.p_password_raw}}</td>

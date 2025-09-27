@@ -118,7 +118,10 @@
         ul.pagination li:nth-of-type(3) {
             padding-left: 0 !important;
         }
-    
+        .bootstrap-select .dropdown-menu li.disabled.selected{display: none;}
+        .dropdown.bootstrap-select.form-control .btn{border: 1px solid #ddd; padding: 6px 8px; border-radius: 0;}
+        .bootstrap-select .dropdown-menu{max-width: 280px;}
+        .bootstrap-select .dropdown-menu li.selected.active .dropdown-item.active.selected{margin-left: 0;padding: 0;}  
     
     
     </style>
@@ -141,7 +144,7 @@
                             
                                 <div>
                                     <label for="">Processor<span class="asteriskField">*</span></label>
-                                    <select id="proSelction" name="proSelction" class="textinput textInput form-control">
+                                    <select id="proSelction" name="proSelction" class="textinput textInput form-control selectpicker" data-live-search="true">
                                         <option value='All'>All</option>
                                         {% for processor in processors %}
                                         {% if processor == selectedprocessor  %}
@@ -159,7 +162,7 @@
                         <div class="col-md-2 mb-3">
                             <div>
                                 <label for="">Grower<span class="asteriskField">*</span></label>
-                                <select id="groSelction" name="groSelction" class="textinput textInput form-control">
+                                <select id="groSelction" name="groSelction" class="textinput textInput form-control selectpicker" data-live-search="true">
                                     <option value='All'>All</option>
                                     {% for grower in growers %}
                                     {% if grower == selectedgrower  %}

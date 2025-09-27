@@ -13,6 +13,10 @@
         table.dataTable.nowrap td:nth-child(6) {
             white-space: unset !important
         }
+        .bootstrap-select .dropdown-menu li.disabled.selected{display: none;}
+        .dropdown.bootstrap-select.form-control .btn{border: 1px solid; padding: 14px 8px; border-radius: 0;}
+        .bootstrap-select .dropdown-menu{max-width: 280px;}
+        .bootstrap-select .dropdown-menu li.selected.active .dropdown-item.active.selected{margin-left: 0;padding: 0;}
     </style>
     <main>
         {% include '_alerts.html' %}
@@ -29,8 +33,8 @@
                             {% csrf_token %}
                             <div class="inline-apply-filter justify-content-center justify-content-md-end">
                                 <div class="three-fields-with-label">
-                                    <select id="growerSelction" name="grower_id" class="mb-0"
-                                        style="border-radius:0px !important">
+                                    <select id="growerSelction" name="grower_id" class="mb-0 form-control selectpicker"
+                                        style="border-radius:0px !important" data-live-search="true">
                                         <option value='all' selected> Select All Growers </option>
                                         {% for grower in growers %}
                                         {% if grower == selectedGrower %}
@@ -102,7 +106,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for field in field %}
+                            {% for field in fields %}
                             <tr>
                                 <td>{{field.grower.name}}</td>
                                 <td>{{field.farm.name}}</td>
@@ -200,38 +204,57 @@
                             {% endfor %}
                         </tbody>
                     </table>
-                    <!-- Pagination starts-->
-                    <div class="row" style="align-items: center;">
-
-                        <div class="col-8">
-                            {% if field.has_other_pages %}
-                            <ul class="pagination">
-                                {% if field.has_previous %}
-                                <li><a href="?page={{ field.previous_page_number }}">&laquo;</a></li>
+                    <!-- Pagination controls -->
+                    <div class="row d-flex justify-content-center ">
+                        <div class="col-md-12 col-sm-12 col-12 text-center mt-2">
+                            <span>Showing {{ fields.start_index }} - {{ fields.end_index }} of {{ fields.paginator.count }} entries</span>
+                        </div>
+                    </div>
+                    <div class="row d-flex justify-content-center align-items-center">
+                        {% if fields.has_other_pages %}
+                        <nav aria-label="Page navigation">
+                            <ul class="pagination justify-content-center">
+                                <!-- Previous Page -->
+                                {% if fields.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?grower_id={{ selectedGrower }}&page={{ fields.previous_page_number }}" aria-label="Previous">
+                                        <span aria-hidden="true">&laquo;</span>
+                                    </a>
+                                </li>
                                 {% else %}
-                                <li class="disabled"><span>&laquo;</span></li>
+                                <li class="page-item disabled">
+                                    <span class="page-link" aria-hidden="true">&laquo;</span>
+                                </li>
                                 {% endif %}
-                                {% for i in field.paginator.page_range %}
-                                {% if field.number == i %}
-                                <li class="active"><span>{{ i }} <span class="sr-only">(current)</span></span></li>
+                    
+                                <!-- Page Numbers -->
+                                {% for i in fields.paginator.page_range %}
+                                {% if fields.number == i %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ i }}</span>
+                                </li>
                                 {% else %}
-                                <li><a href="?page={{ i }}">{{ i }}</a></li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?grower_id={{ selectedGrower }}&page={{ i }}">{{ i }}</a>
+                                </li>
                                 {% endif %}
                                 {% endfor %}
-                                {% if field.has_next %}
-                                <li><a href="?page={{ field.next_page_number }}">&raquo;</a></li>
+                    
+                                <!-- Next Page -->
+                                {% if fields.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?grower_id={{ selectedGrower }}&page={{ fields.next_page_number }}" aria-label="Next">
+                                        <span aria-hidden="true">&raquo;</span>
+                                    </a>
+                                </li>
                                 {% else %}
-                                <li class="disabled"><span>&raquo;</span></li>
+                                <li class="page-item disabled">
+                                    <span class="page-link" aria-hidden="true">&raquo;</span>
+                                </li>
                                 {% endif %}
                             </ul>
-                            {% endif %}
-                        </div>
-                        <div class="col-4" style="text-align:right">
-                            <span>Showing {{ field.start_index }} - {{ field.end_index }} of {{field.paginator.count}}
-                                entries
-
-                            </span>
-                        </div>
+                        </nav>
+                        {% endif %}
                     </div>
                 </div>
             </div>

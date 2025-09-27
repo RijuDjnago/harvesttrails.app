@@ -74,13 +74,17 @@
                 padding-bottom: 4px !important;
                 padding-right: 8x !important;
                 font-size: 16px !important;
-                background: #00b258 !important;
+               
                 border: 0 !important
             }
 
     .dropdown.bootstrap-select.form-control .btn {
         border-radius: 6px;
       }
+    .bootstrap-select .dropdown-menu li.disabled.selected{display: none;}
+    .dropdown.bootstrap-select.form-control .btn{border: 1px solid; padding: 10px 8px; }
+    .bootstrap-select .dropdown-menu{max-width: 280px;}
+    .bootstrap-select .dropdown-menu li.selected.active .dropdown-item.active.selected{margin-left: 0;padding: 0;}
 </style>
 
 <div class="main-content">
@@ -103,7 +107,7 @@
                         <div class="col-md-3">
                             <div class="form-group">
                                 <lable>Select Growers<span class="asteriskField">*</span></lable>
-                                <select id="growerSelction" name="grower_id" class="selectpicker " data-live-search="true" >
+                                <select id="growerSelction" name="grower_id" class="selectpicker " data-live-search="true" onchange="this.form.submit()">
                                     <option value="all"> Select All Growers </option>
                                     {% for grower in growers %}
                                     {% if selectedGrower == grower %}
@@ -121,7 +125,7 @@
                                 <lable>Select Crop<span class="asteriskField">*</span></lable>
                                 <select onchange="checkcotton()" id="grower_crop" name="grower_crop" class="selectpicker " data-live-search="true" >
                                     <option value='all'> Select Crop </option>
-                                    {% for crop in crop %}
+                                    {% for crop in crops %}
                                     <option value={{crop}} >{{crop}} </option>
                                     {% endfor %}
                                 </select>
@@ -175,9 +179,13 @@
                      
                         <div class="form-btn-row text-center text-md-end">
                             <a href="{% url 'storage_feed_list' %}" class="btn-close-cancel btn-space">Cancel</a>
-                            <button id="mainSavebutton" type="button" class="btn-save-submit" value="Save" onclick="activityButton1()">Save</button>
+                            {% comment %} <button id="mainSavebutton" type="button" class="btn-save-submit" value="Save" onclick="activityButton1()">Save</button>
                             <input id="mainSave" type="submit" name="mainSave" class="btn-save-submit" value="Save" style="display:none;">
-                            <input id="submitBtn" type="submit" style="display:none;" name="submitBtn" class="btn-save-submit" value="submitBtn">
+                            <input id="submitBtn" type="submit" style="display:none;" name="submitBtn" class="btn-save-submit" value="submitBtn"> {% endcomment %}
+                            <input style="display: none;" id="hide_btn1" type="submit" class="btn-save-submit"
+                                value="Save" name="save">
+                            <!-- <input type="button" id="hide_btn2" class="btn-save-submit" value="Save" onclick="btnClick()"> -->
+                            <input type="submit" name="save" class="btn-save-submit" value="Save" onclick="activityButton1()">
                         </div>
                     </div>
                 </form>
@@ -199,7 +207,7 @@
 
 {% endblock scripts %}
 {% block jquery %}
-<script>
+{% comment %} <script>
     
     function activityButton1(){
         var growerSelction = document.getElementById("growerSelction").value;
@@ -246,7 +254,7 @@
  
         }
         
-</script>
+</script> {% endcomment %}
 <script>
     $('#Storage-Management-active').addClass('activeLink');
                     

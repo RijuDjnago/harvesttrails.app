@@ -144,6 +144,10 @@
     .dropdown.bootstrap-select.form-control .btn {
     border-radius:8px ;
     }
+    .bootstrap-select .dropdown-menu li.disabled.selected{display: none;}
+    .dropdown.bootstrap-select.form-control .btn{border: 1px solid; padding: 6px 8px;}
+    .bootstrap-select .dropdown-menu{max-width: 280px;}
+    .bootstrap-select .dropdown-menu li.selected.active .dropdown-item.active.selected{margin-left: 0;padding: 0;}
 </style>
     <!-- <style>
 
@@ -331,52 +335,52 @@
 
                     <div class="row align-items-center">
                         {% if selectedGrower %}
-                        <div class="text-center mt-1">
-                            <span>Showing  1 - {{ temp_grower_payment_count }} of {{ temp_grower_payment_count }} entries</span>
-                        </div>
+                            <div class="text-center mt-1">
+                                <span>Showing 1 - {{ temp_grower_payment_count }} of {{ temp_grower_payment_count }} entries</span>
+                            </div>
                         {% elif selectedCrop %}
-                        <div class="text-center">
-                            <ul class="pagination" >
-                                <li></li>
-                                <!-- <li><a href="#">&laquo;</a></li> -->
-                                {% for i in range %}
-                                {% if var_get_page_no_temp == forloop.counter %}  
-                                <li class="active"><a href="/growerpayments/grower_payments_table/?crop_id={{selectedCrop}}&get_page_no_temp={{forloop.counter}}">{{ forloop.counter }}</a></li>
-                                {% else %}
-                                <li><a href="/growerpayments/grower_payments_table/?crop_id={{selectedCrop}}&get_page_no_temp={{forloop.counter}}">{{ forloop.counter }}</a></li>
-                                {% endif %}
-                                {% endfor %}
-                                <!-- <li><a href="#">&raquo;</a></li> -->
-                            </ul>
-                        </div>
-                        <div class="text-center mt-1">
-                            <span>Showing  {{ temp_grower_payment_start_index }} - {{ temp_grower_payment_end_index }} of {{ temp_grower_payment_count }} entries</span>
-                        </div>
+                            <div class="text-center">
+                                <ul class="pagination">
+                                    <!-- Generate page numbers for crop-specific pagination -->
+                                    {% for i in range %}
+                                        {% if var_get_page_no_temp == forloop.counter %}
+                                            <li class="active">
+                                                <a href="?crop_id={{ selectedCrop }}&get_page_no_temp={{ forloop.counter }}">{{ forloop.counter }}</a>
+                                            </li>
+                                        {% else %}
+                                            <li>
+                                                <a href="?crop_id={{ selectedCrop }}&get_page_no_temp={{ forloop.counter }}">{{ forloop.counter }}</a>
+                                            </li>
+                                        {% endif %}
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            <div class="text-center mt-1">
+                                <span>Showing {{ temp_grower_payment_start_index }} - {{ temp_grower_payment_end_index }} of {{ temp_grower_payment_count }} entries</span>
+                            </div>
                         {% else %}
-                        <div class="text-center">
-                        <ul class="pagination" >
-                            <li></li>
-                            {% for i in range %}
-                            {% if var_get_page_no_temp == forloop.counter %} 
-                            <li class="active"><a href="/growerpayments/grower_payments_table/?get_page_no_temp={{forloop.counter}}">{{ forloop.counter }}</a>
-                            </li>
-                            {% else %}
-                            <li><a href="/growerpayments/grower_payments_table/?get_page_no_temp={{forloop.counter}}">{{ forloop.counter }}</a>
-                            </li>
-                            {% endif %}
-                            {% endfor %}
-                        </ul>
-                        </div>
-                        <div class="text-center mt-1">
-                            <span>Showing  {{ temp_grower_payment_start_index }} - {{ temp_grower_payment_end_index }} of {{ temp_grower_payment_count }} entries</span>
-                        </div>
+                            <div class="text-center">
+                                <ul class="pagination">
+                                    <!-- Generate page numbers for all growers -->
+                                    {% for i in range %}
+                                        {% if var_get_page_no_temp == forloop.counter %}
+                                            <li class="active">
+                                                <a href="?get_page_no_temp={{ forloop.counter }}">{{ forloop.counter }}</a>
+                                            </li>
+                                        {% else %}
+                                            <li>
+                                                <a href="?get_page_no_temp={{ forloop.counter }}">{{ forloop.counter }}</a>
+                                            </li>
+                                        {% endif %}
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            <div class="text-center mt-1">
+                                <span>Showing {{ temp_grower_payment_start_index }} - {{ temp_grower_payment_end_index }} of {{ temp_grower_payment_count }} entries</span>
+                            </div>
                         {% endif %}
                     </div>
-                    
-
-
-
-
+                                 
 
 
                     <!-- <div class="row align-items-center">

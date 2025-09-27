@@ -506,7 +506,7 @@ class CsvFarmMappingView(LoginRequiredMixin, View):
 class FarmLocationMap(LoginRequiredMixin, View):
     def get(self, request, pk, *args, **kwargs):
 
-        if 'Grower' in request.user.get_role() and not request.user.is_superuser:
+        if 'Grower' in request.user.get_role() and not request.user.is_superuser or not 'SubAdmin' in request.user.get_role() or not 'SuperUser' in request.user.get_role():
             # do something grower
             grower_id = request.user.grower.id
             get_growers = Grower.objects.filter(id=grower_id).order_by('name')
@@ -715,7 +715,7 @@ class AllFarmLocationMap(LoginRequiredMixin, View):
         shape_obj1 = ''
         
         
-        if 'Grower' in request.user.get_role() and not request.user.is_superuser:
+        if 'Grower' in request.user.get_role() and not request.user.is_superuser or not 'SubAdmin' in request.user.get_role() or not 'SuperUser' in request.user.get_role():
             # do something grower
             grower_id = request.user.grower.id
             get_growers = Grower.objects.filter(id=grower_id).order_by('name')

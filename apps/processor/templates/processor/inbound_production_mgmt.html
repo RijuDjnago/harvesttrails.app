@@ -134,7 +134,7 @@
         <div class="card card-padding">
             <form method="get">
                 <div class="row">
-                    {% if request.user.is_superuser %}
+                    {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role%}
                   
                     <div class="col-4">
                         <div class="inline-apply-filter">

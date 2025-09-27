@@ -52,7 +52,8 @@
                             <tr style="border-bottom: 2px solid #e0e0e0;">
                                 <th width="">Warehouse</th> 
                                 <th width="">Location</th> 
-                                <th width="">Distributor</th>                               
+                                <th width="">Distributor</th> 
+                                <th width="">Customer</th>                             
                                 <th width="">Manager Name</th>
                                 <th width="">Email</th>
                                 <th width="">Password</th>
@@ -67,6 +68,9 @@
                                 <td>{{i.warehouse.location}}</td>
                                 <td>{% for distributor in i.warehouse.distributor_set.all %}
                                     {{ distributor.entity_name }}{% if not forloop.last %}<br> {% endif %}
+                                {% endfor %}</td>
+                                <td>{% for customer in i.warehouse.customer_set.all %}
+                                    {{ customer.name }}{% if not forloop.last %}<br> {% endif %}
                                 {% endfor %}</td>
                                 <td>{{i.contact_name}}</td>
                                 <td>{{i.contact_email}}</td>

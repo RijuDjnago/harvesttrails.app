@@ -13,6 +13,12 @@
 {% endblock extrahead %}
 
 {% block content %} {% include 'navbar.html' %}
+<style>
+    .bootstrap-select .dropdown-menu li.disabled.selected{display: none;}
+    .dropdown.bootstrap-select.form-control .btn{border: 1px solid #B2BEB5; padding: 12px 8px; border-radius: 0;}
+    .bootstrap-select .dropdown-menu{max-width: 280px;}
+    .bootstrap-select .dropdown-menu li.selected.active .dropdown-item.active.selected{margin-left: 0;padding: 0;}
+</style>
 <div class="main-content">
     {% include 'header.html' %} {% load crispy_forms_tags %}
   <main>
@@ -41,10 +47,10 @@
                             <div>
                                 <select name="land_type" class="select form-control" id="id_land_type">
                                     <option value="">Select Crop</option>
-                                    <option value="Rice">Rice</option>
-                                    <option value="Cotton">Cotton</option>
-                                    <option value="Wheat">Wheat</option>
-                                    <option value="Peanut">Peanut</option>
+                                    {% for crop in crops %}
+                                    <option value="{{crop.name}}">{{crop.name}}</option>
+                                    {% endfor %}
+                                
                                 </select>
                             </div>
                         </div> 
@@ -95,9 +101,9 @@
                         Grower<span class="asteriskField">*</span>
                         </label>
                         <div>
-                        <select name="grower" class="select form-control" required="" id="id_grower">
+                        <select name="grower" class="select form-control selectpicker" required="" id="id_grower" data-live-search="true">
                             {% for gwdp in growers_dpdwn %}
-                            <option value="{{gwdp.id}}">{{gwdp.name}}-{{gwdp.id}}</option>
+                            <option value="{{gwdp.id}}">{{gwdp.name}}</option>
                             {% endfor %}
                         </select>
                         </div>

@@ -33,6 +33,7 @@ class ReleaseNotesList(LoginRequiredMixin, ListView):
             'release_notes': release_notes
         })
 
+
 class UpcomingDateList(LoginRequiredMixin, ListView):
     def get(self, request):
         '''Default function for get request'''
@@ -56,17 +57,20 @@ class UpcomingDateList(LoginRequiredMixin, ListView):
             'upcoming_dates': upcoming_dates
         })
 
+
 class ReleaseNotesCreate(LoginRequiredMixin, CreateView):
     def get(self, request):
         return render(request, 'notesandupdate/ReleaseNotesCreate.html', {
             
         })
 
+
 class UpcomingDateCreate(LoginRequiredMixin, CreateView):
     def get(self, request):
         return render(request, 'notesandupdate/UpcomingDateCreate.html', {
             
         })
+
 
 def ReleaseNotesCreateSave(request):
     note = request.POST.get('note')
@@ -76,6 +80,7 @@ def ReleaseNotesCreateSave(request):
     save_note.save()
     messages.success(request, 'Successfully saved.')
     return redirect('release-notes-list')
+
 
 def UpcomingDateCreateSave(request):
     note = request.POST.get('note')
@@ -87,6 +92,7 @@ def UpcomingDateCreateSave(request):
     messages.success(request, 'Successfully saved.')
     return redirect('upcoming-date-list')
 
+
 class ReleaseNotesUpdate(LoginRequiredMixin, UpdateView):
     def get(self, request, pk):
         release_note_data = ReleaseNote.objects.get(pk=pk)
@@ -95,6 +101,7 @@ class ReleaseNotesUpdate(LoginRequiredMixin, UpdateView):
         return render(request, 'notesandupdate/ReleaseNotesUpdate.html', {
             'release_note_data':release_note_data
         })
+
 
 def ReleaseNotesUpdateSave(request):
     note = request.POST.get('note')
@@ -118,6 +125,7 @@ def UpcomingDateUpdateSave(request):
     messages.success(request, 'Successfully saved.')
     return redirect('upcoming-date-list')
 
+
 class UpcomingDateUpdate(LoginRequiredMixin, UpdateView):
     def get(self, request, pk):
         upcoming_date_data = UpcomingDate.objects.get(pk=pk)
@@ -127,17 +135,20 @@ class UpcomingDateUpdate(LoginRequiredMixin, UpdateView):
             'upcoming_date_data':upcoming_date_data
         })
 
+
 def UpcomingDateDelete(request):
     id = request.POST.get('id')
     release_note_data = UpcomingDate.objects.get(id=id)
     release_note_data.delete()
     return HttpResponse(1)
 
+
 def ReleaseNotesDelete(request):
     id = request.POST.get('id')
     upcoming_date_data = ReleaseNote.objects.get(id=id)
     upcoming_date_data.delete()
     return HttpResponse(1)
+
 
 @login_required()
 def HelpAndGuideCreate(request):
@@ -150,6 +161,7 @@ def HelpAndGuideCreate(request):
             help_guide.save()
             return redirect ('HelpAndGuideList')
     return render(request, 'notesandupdate/HelpAndGuideCreate.html', {})
+
 
 @login_required()
 def HelpAndGuideList(request):
@@ -164,6 +176,7 @@ def HelpAndGuideList(request):
         data_text = ''
         context['data_text'] = data_text
     return render(request, 'notesandupdate/HelpAndGuideList.html', context)
+
 
 @login_required()
 def HelpAndGuideEdit(request,pk):
@@ -184,6 +197,7 @@ def HelpAndGuideEdit(request,pk):
                 help_guide.save()
         return redirect ('HelpAndGuideList')
     return render(request, 'notesandupdate/HelpAndGuideEdit.html', context)
+
 
 @login_required()
 def HelpAndGuideDelete(request):

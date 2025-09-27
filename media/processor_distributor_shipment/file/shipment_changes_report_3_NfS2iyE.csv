@@ -1,0 +1,35 @@
+Shipment ID,Date,Mill,Ship To,Destination,Item || Category || Shipped Weight || Waybill/BOL Number || Lot Number,Purchase Order Name,Purchase Order Number,Invoiced Amount,Description,Field,Old Value,New Value,Updated At,Updated By
+BC1fybCZ8504,,App Test Processor,Demo Customer,"Atlantic Avenue, Brooklyn, NY, USA","Parboiled White Rice - Tote 1MT - I24 || 9000.0 LBS || 1423135 || 2344
+RICE-LGWR 25KG 4% Packaged || 8500.0 LBS || 125657 || 78231",Demo Customer,A321672,A new shipment was created from processor 'App Test Processor' containing crops.,,,,2025-04-22 12:40:49,
+BC1fybCZ8504,,App Test Processor,Demo Customer,"Atlantic Avenue, Brooklyn, NY, USA","Parboiled White Rice - Tote 1MT - I24 || 9000.0 LBS || 1423135 || 2344
+RICE-LGWR 25KG 4% Packaged || 8500.0 LBS || 125657 || 78231",Demo Customer,A321672,Added another item,,,,2025-04-22 13:11:01,admin
+BC1fybCZ8504,2025-04-22,App Test Processor,Demo Customer,"Atlantic Avenue, Brooklyn, NY, USA","Parboiled White Rice - Tote 1MT - I24 || 9000.0 LBS || 1423135 || 2344
+RICE-LGWR 25KG 4% Packaged || 8500.0 LBS || 125657 || 78231",Demo Customer,A321672,Diversion added,Waybill/BOL Number of BC1fybCZ8504 - RICE - IMPORT/EXPORT,1423135,324232,2025-05-30 13:55:38,admin
+BC1fybCZ8504,2025-04-22,App Test Processor,Demo Customer,"Atlantic Avenue, Brooklyn, NY, USA","Parboiled White Rice - Tote 1MT - I24 || 9000.0 LBS || 1423135 || 2344
+RICE-LGWR 25KG 4% Packaged || 8500.0 LBS || 125657 || 78231",Demo Customer,A321672,Diversion added,Address,"New Hampshire, USA","Atlanta Beltline Eastside Trail, Atlanta, GA, USA",2025-05-30 13:55:38,admin
+BC1fybCZ8504,2025-04-22,App Test Processor,Demo Customer,"Atlantic Avenue, Brooklyn, NY, USA","Parboiled White Rice - Tote 1MT - I24 || 9000.0 LBS || 1423135 || 2344
+RICE-LGWR 25KG 4% Packaged || 8500.0 LBS || 125657 || 78231",Demo Customer,A321672,Diversion added,Waybill/BOL Number of BC1fybCZ8504 - RICE - IMPORT/EXPORT,1423135,53543,2025-05-30 13:55:38,admin
+BC1fybCZ8504,2025-04-22,App Test Processor,Demo Customer,"Atlantic Avenue, Brooklyn, NY, USA","Parboiled White Rice - Tote 1MT - I24 || 9000.0 LBS || 1423135 || 2344
+RICE-LGWR 25KG 4% Packaged || 8500.0 LBS || 125657 || 78231",Demo Customer,A321672,Diversion added,Address,"New Hampshire, USA","Atlanta Beltline Eastside Trail, Atlanta, GA, USA",2025-05-30 13:55:38,admin
+BC1fybCZ8504,2025-04-22,App Test Processor,Demo Customer,"Atlantic Avenue, Brooklyn, NY, USA","Parboiled White Rice - Tote 1MT - I24 || 9000.0 LBS || 1423135 || 2344
+RICE-LGWR 25KG 4% Packaged || 8500.0 LBS || 125657 || 78231",Demo Customer,A321672,file uploaded,Waybill/BOL Number of BC1fybCZ8504 - RICE - IMPORT/EXPORT,53543,324232,2025-08-22 09:47:42,admin
+BC1fybCZ8504,2025-04-22,App Test Processor,Demo Customer,"Atlantic Avenue, Brooklyn, NY, USA","Parboiled White Rice - Tote 1MT - I24 || 9000.0 LBS || 1423135 || 2344
+RICE-LGWR 25KG 4% Packaged || 8500.0 LBS || 125657 || 78231",Demo Customer,A321672,file uploaded,Waybill/BOL Number of BC1fybCZ8504 - RICE - IMPORT/EXPORT,53543,324232,2025-08-22 09:49:15,admin
+BC1fybCZ8504,2025-04-22,App Test Processor,Demo Customer,"Atlantic Avenue, Brooklyn, NY, USA","Parboiled White Rice - Tote 1MT - I24 || 9000.0 LBS || 1423135 || 2344
+RICE-LGWR 25KG 4% Packaged || 8500.0 LBS || 125657 || 78231",Demo Customer,A321672,file uploaded,Waybill/BOL Number of BC1fybCZ8504 - RICE - IMPORT/EXPORT,53543,125657,2025-08-22 10:03:18,admin
+BC1fybCZ8504,2025-04-22,App Test Processor,Demo Customer,"Atlantic Avenue, Brooklyn, NY, USA","Parboiled White Rice - Tote 1MT - I24 || 9000.0 LBS || 1423135 || 2344
+RICE-LGWR 25KG 4% Packaged || 8500.0 LBS || 125657 || 78231",Demo Customer,A321672,added departed from lacassine date,Departed Lacassine Date,None,2025-04-22,2025-08-22 10:22:44,admin
+BC1fybCZ8504,2025-04-22,App Test Processor,Demo Customer,"Atlantic Avenue, Brooklyn, NY, USA","Parboiled White Rice - Tote 1MT - I24 || 9000.0 LBS || 1423135 || 2344
+RICE-LGWR 25KG 4% Packaged || 8500.0 LBS || 125657 || 78231",Demo Customer,A321672,added departed from lacassine date,Waybill/BOL Number of BC1fybCZ8504 - RICE - IMPORT/EXPORT,53543,324232,2025-08-22 10:22:44,admin
+BC1fybCZ8504,,App Test Processor,Demo Customer,"Atlantic Avenue, Brooklyn, NY, USA","Parboiled White Rice - Tote 1MT - I24 || 9000.0 LBS || 1423135 || 2344
+RICE-LGWR 25KG 4% Packaged || 8500.0 LBS || 125657 || 78231",Demo Customer,A321672,changes done,,,,2025-08-22 10:34:21,admin
+BC1fybCZ8504,2025-04-22,App Test Processor,Demo Customer,"Atlantic Avenue, Brooklyn, NY, USA","Parboiled White Rice - Tote 1MT - I24 || 9000.0 LBS || 1423135 || 2344
+RICE-LGWR 25KG 4% Packaged || 8500.0 LBS || 125657 || 78231",Demo Customer,A321672,New diversion added for Rice LGWR 25KG,Waybill/BOL Number of BC1fybCZ8504 - RICE,125657,3546,2025-08-22 10:38:08,admin
+BC1fybCZ8504,2025-04-22,App Test Processor,Demo Customer,"Atlantic Avenue, Brooklyn, NY, USA","Parboiled White Rice - Tote 1MT - I24 || 9000.0 LBS || 1423135 || 2344
+RICE-LGWR 25KG 4% Packaged || 8500.0 LBS || 125657 || 78231",Demo Customer,A321672,New diversion added for Rice LGWR 25KG,Address,"New Hampshire, USA","Atlanta Drive, Jackson Township, NJ, USA",2025-08-22 10:38:08,admin
+BC1fybCZ8504,2025-04-22,App Test Processor,Demo Customer,"Atlantic Avenue, Brooklyn, NY, USA","Parboiled White Rice - Tote 1MT - I24 || 9000.0 LBS || 1423135 || 2344
+RICE-LGWR 25KG 4% Packaged || 8500.0 LBS || 125657 || 78231",Demo Customer,A321672,New diversion added for Rice LGWR 25KG,Waybill/BOL Number of BC1fybCZ8504 - RICE,125657,68324,2025-08-22 10:38:08,admin
+BC1fybCZ8504,2025-04-22,App Test Processor,Demo Customer,"Atlantic Avenue, Brooklyn, NY, USA","Parboiled White Rice - Tote 1MT - I24 || 9000.0 LBS || 1423135 || 2344
+RICE-LGWR 25KG 4% Packaged || 8500.0 LBS || 125657 || 78231",Demo Customer,A321672,New diversion added for Rice LGWR 25KG,Address,"New Hampshire, USA","Atlanta Drive, Jackson Township, NJ, USA",2025-08-22 10:38:08,admin
+Am29m1M2L0sV,,App Test Processor,Demo Warehouse,"Atlantic Avenue, Brooklyn, NY, USA",RICE-LGWR 25KG 4% Packaged || 5900.0 LBS || ertet43 || 5465yyth,Demo Warehouse,5353tt,A new shipment was created from processor 'App Test Processor' containing crops.,,,,2025-08-23 12:43:25,
+6jzmJzvOvIMM,,App Test Processor,Demo Warehouse,"Atlanta Beltline Eastside Trail, Atlanta, GA, USA",RICE-LGWR 25KG 8% Packaged || 2431.0 LBS || 24171 || 2341,Demo Warehouse,234134,A new shipment was created from processor 'App Test Processor' containing crops.,,,,2025-08-25 12:27:19,

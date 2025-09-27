@@ -21,7 +21,12 @@
 <div class="main-content">
     {% include 'header.html' %}
     <main>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 
+        <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
+        <!-- Include Select2 JS -->
+        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
         <style>
             .btn_remove_unic{
                 width: 41px;
@@ -32,26 +37,83 @@
                 align-items: center;
                 font-size: 19px;
             }
+            .bootstrap-select .dropdown-menu li.disabled.selected{display: none;}
+            .dropdown.bootstrap-select.form-control .btn{border: 1px solid; padding: 16px 10px; border-radius: 0;}
+            .bootstrap-select .dropdown-menu{max-width: 280px;}
+            .bootstrap-select .dropdown-menu li.selected.active .dropdown-item.active.selected{margin-left: 0;padding: 0;}
+            .select2-container--default .select2-results__option--highlighted.select2-results__option--selectable {
+                background-color:#0b6c39;
+                
+            }
+            /* Simple preview grid */
+.file-previews {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.file-card {
+  position: relative;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 8px;
+  min-height: 120px; /* a bit taller to fit name consistently */
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between; /* pushes preview top, name bottom */
+  overflow: hidden;
+}
+
+.file-card .thumb,
+.file-card .file-icon,
+.file-card .pdf-thumb {
+  width: 100%;
+  height: 50px;
+  object-fit: cover;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  border: 1px dashed #cbd5e1;
+}
+
+.file-card .file-name {
+  font-size: 12px;
+  margin-top: 6px;
+  word-break: break-all;
+  color: #374151;
+}
+
+
+.file-card .remove-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  border: none;
+  background: rgba(0,0,0,.6);
+  color: #fff;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  line-height: 20px;
+  cursor: pointer;
+}
         </style>
-        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-
-        <!-- Include Select2 CSS -->
-        <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-
-        <!-- Include Select2 JS -->
-        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+        
 
         {% include '_alerts.html' %}
         <span class="farm headingtop">Admin Processor Contract Add</span>
         <div class="card farm-fields-container">
-            <div class="container-fluid">
+            <div class="container-fluid">               
                 <form id="contractForm" method="post" class="farm-fields-form" enctype="multipart/form-data">
                     {% csrf_token %}
                     
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label for="processor_id">Select Processor<span class="asteriskField">*</span></label>
+                                <label>Select Processor<span class="asteriskField">*</span></label>
                                 <select name="selected_processor" id="processor_id" class="form-control" required >
                                     <option value="All">Select Processor</option>
                                     {% with t1_processors=processor|dictsort:"type" %}
@@ -105,39 +167,54 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label for="contract_type">Contract Type</label>
+                                <label for="contract_type">Contract Type<span class="asteriskField">*</span></label>
                                 <select name="contract_type" id="contract_type" class="form-control" required>
-                                    <option value="Single Crop">Single Crop Contract</option>
-                                    <option value="Multiple Crop">Multiple Crop Contract</option>
+                                    <option value="Single Crop">Single Item Contract</option>
+                                    <option value="Multiple Crop">Multiple Item Contract</option>
                                 </select>
                             </div>
                         </div>
                         <div id="add-crop-btn-container" class="text-end" style="display: none;">
                             <button type="button" id="add-crop-btn" class="btn btn-primary" style="width: 41px; height: 24px; padding: 0; display: inline-flex; justify-content: center; align-items: center; font-size: 19px;">+</button>
                         </div> 
+                        
                         <div id="crop-fields-container">                           
                             <div class="crop-fields-row">
+
                                 <div class="row">
-                                    <div class="col-md-6">
+                                    <div class="col-md-4">
                                         <div class="form-group">
-                                            <label for="crop">Crop</label>
-                                            <select name="crop[]" id="crop" class="form-control" required>
-                                                <option value="RICE">Rice</option>
-                                                <option value="WHEAT">Wheat</option>
-                                                <option value="PEANUT">Peanut</option>
-                                                <option value="BEANS">Beans</option>
+                                            <label for="item_type">Item Category<span class="asteriskField">*</span></label>
+                                            <select name="item_type[]" class="form-control item-category" required>
+                                                <option value="">Select Category</option>
+                                                <option value="Spices" {% if item_specification.item_type == "Spices" %}selected {% endif %}>Spices</option>
+                                                <option value="Crop" {% if item_specification.item_type == "Crop" %}selected {% endif %}>Crops</option>
                                             </select>
                                         </div>
                                     </div>
-                                    <div class="col-md-6">
+                                    <div class="col-md-4">
                                         <div class="form-group">
-                                            <label for="crop_type">Crop Type</label>
-                                            <input type="text" name="crop_type[]" id="crop_type" class="form-control" required>
+                                            <label for="crop">Item<span class="asteriskField">*</span></label>
+                                            <select name="crop[]" class="form-control crop-select" required>
+                                                
+                                            </select>
                                         </div>
                                     </div>
-                                    <div class="col-md-6">
+                                    <div class="col-md-4">
                                         <div class="form-group">
-                                            <label for="contract_amount">Contract Amount</label>
+                                            <label for="item_number">Item Number<span class="asteriskField">*</span></label>                                            
+                                            <input type="number" name="item_number[]" id="item_number" class="form-control" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label for="item_description">Item Description</label>
+                                            <textarea name="item_description[]" id="item_description" class="form-control" rows="1"></textarea>
+                                        </div>
+                                    </div>                                    
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label for="contract_amount">Contract Amount<span class="asteriskField">*</span></label>
                                             <div class="d-flex">
                                                 <input type="number" name="contract_amount[]" id="contract_amount" class="form-control" style="margin-top:0; border-top-right-radius:0 !important; border-bottom-right-radius:0 !important" required>
                                                 <select name="amount_unit[]" class="form-select" style="border-top-left-radius:0 !important; border-bottom-left-radius:0 !important; border-left:0; width:90px;" required>
@@ -147,25 +224,28 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="col-md-6">
+                                    <div class="col-md-4">
                                         <div class="form-group">
-                                            <label for="per_unit_rate">Per Unit Rate</label>
-                                            <input type="number" step="0.01" name="per_unit_rate[]" id="per_unit_rate" class="form-control" required>
+                                            <label>Per Unit Rate<span class="asteriskField">*</span></label>
+                                            <input type="number" step="0.0001" name="per_unit_rate[]" 
+                                                class="form-control per-unit-rate" required>
                                         </div>
-                                    </div>
+                                    </div>                                
+                                    
                                 </div>
                             </div>
                         </div>
-                                               
-                        <div class="col-md-6">
+                    </div>  
+                    <div class="row">                           
+                        <div class="col-md-4">
                             <div class="form-group">
-                                <label for="contract_start_date">Contract Start Date</label>
+                                <label for="contract_start_date">Contract Start Date<span class="asteriskField">*</span></label>
                                 <input type="date" name="contract_start_date" id="contract_start_date" class="form-control" required>
                             </div>
                         </div>                      
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <div class="form-group">
-                                <label for="contract_period">Contract Period</label>
+                                <label for="contract_period">Contract Period<span class="asteriskField">*</span></label>
                                 <div class="d-flex">
                                 <input type="number" name="contract_period" id="contract_amount" class="textinput textInput form-control" style="margin-top:0; border-top-right-radius:0 !important; border-bottom-right-radius:0 !important"  required>
                                 <select name="contract_period_choice" id="unitSelction" class="form-control" style="border-top-left-radius:0 !important; border-bottom-left-radius:0 !important; border-left:0; width:100px;" required>                                   
@@ -177,9 +257,9 @@
                             </div>
                         </div>
                         
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <div class="form-group">
-                                <label for="status">Status</label>
+                                <label for="status">Status<span class="asteriskField">*</span></label>
                                 <select name="status" id="status" class="form-control" required>                                   
                                     <option value="Contract Initiated">Contract Initiated</option>
                                     <option value="Under Review">Under Review</option>
@@ -190,12 +270,19 @@
                                 </select>
                             </div>
                         </div>
-                    </div>
-                    
-                    <div class="row">
+                        
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <div class="form-group">
+                                    <label for="multi_file">Admin Uploaded Documents: </label>
+                                    <input type="file" name="files" multiple accept=".jpg,.png,.xlsx,.csv,.pdf" id="multi_file" class="textinput textInput form-control" >
+                                </div>   
+                                <div id="file_previews" class="file-previews"></div>
+                            </div>
+                        </div>
                         <div class="col-md-6">
                             <div class="form-group d-flex align-items-center justify-content-center">
-                                <label for="required_documents" class="mb-0">Required Documents:</label>                               
+                                <label for="required_documents" class="mb-0">Required Documents from Processor:</label>                               
                                 {% comment %} <div class="flex-grow-1"></div> {% endcomment %}
                                 <button type="button" class="btn btn-primary font-weight-bold btn-lg ms-2" id="add-document" style="width: 41px;height: 24px;padding: 0;display: inline-flex;justify-content: center;align-items: center;font-size: 19px;">+</button>                                
                                 <div class="flex-grow-1"></div>
@@ -220,86 +307,292 @@
 </div>
 {% endblock %}
 {% block jquery %}
-<script type="text/javascript">
-    $(document).ready(function() {
+
+{{ crops|json_script:"all-items" }}
+{{ filtered_spices|json_script:"spice-items" }}
+{{ filtered_crops|json_script:"crop-items" }}
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const allItems = JSON.parse(document.getElementById('all-items').textContent);
+        const spiceItems = JSON.parse(document.getElementById('spice-items').textContent);
+        const cropItems = JSON.parse(document.getElementById('crop-items').textContent);
+
+        // Globally accessible function to populate crop dropdown
+        window.updateCropOptions = function (category, cropSelect) {
+            $(cropSelect).empty();
+            const defaultOption = new Option('Select Item', '', true, false);
+            $(cropSelect).append(defaultOption);
+
+            let itemsToUse = [];
+            if (category === 'Spices') {
+                itemsToUse = spiceItems;
+            } else if (category === 'Crop') {
+                itemsToUse = cropItems;
+            } else {
+                itemsToUse = allItems;
+            }
+
+            itemsToUse.forEach(item => {
+                const option = new Option(item.item, item.item, false, false);
+                $(cropSelect).append(option);
+            });
+
+            $(cropSelect).trigger('change.select2');
+        };
+
+        // Globally accessible function to auto-fill item number
+        window.attachItemNumberAutofill = function (row) {
+            const cropSelect = row.querySelector('.crop-select');
+            const itemNumberInput = row.querySelector('input[name="item_number[]"]');
+        
+            if (cropSelect && itemNumberInput) {
+                $(cropSelect).on('select2:select', function () {
+                    const selectedValue = cropSelect.value;
+                    const matched = allItems.find(obj => obj.item === selectedValue);
+                    itemNumberInput.value = matched?.item_number || '';
+                });
+        
+                // Trigger once for initial fill
+                $(cropSelect).trigger('select2:select');
+            }
+        };
+        
+
+        // Initialize existing rows
+        document.querySelectorAll('.crop-fields-row').forEach(row => {
+            const categorySelect = row.querySelector('.item-category');
+            const cropSelect = row.querySelector('.crop-select');
+
+            categorySelect.addEventListener('change', function () {
+                updateCropOptions(categorySelect.value, cropSelect);
+            });
+
+            updateCropOptions('', cropSelect);
+            attachItemNumberAutofill(row);
+        });
+
+        // Add new row
+        document.getElementById('add-crop-btn').addEventListener('click', function () {
+            const newCropRow = document.createElement('div');
+            newCropRow.classList.add('crop-fields-row');
+            newCropRow.innerHTML = `
+                <div class="row">
+                    <div class="col-md-12 text-end me-3">
+                        <button type="button" class="btn btn-danger remove-crop-btn" style="width: 41px; height: 24px; padding: 0; display: inline-flex; justify-content: center; align-items: center; font-size: 19px;">-</button>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="item_type">Item Category<span class="asteriskField">*</span></label>
+                            <select name="item_type[]" class="form-control item-category" required>
+                                <option value="">Select Category</option>
+                                <option value="Spices">Spices</option>
+                                <option value="Crop">Crops</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="crop">Item<span class="asteriskField">*</span></label>
+                            <select name="crop[]" class="form-control crop-select" required></select>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="item_number">Item Number<span class="asteriskField">*</span></label>
+                            <input type="number" name="item_number[]" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="item_description">Item Description</label>
+                            <textarea name="item_description[]" class="form-control" rows="1"></textarea>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="contract_amount">Contract Amount<span class="asteriskField">*</span></label>
+                            <div class="d-flex">
+                                <input type="number" name="contract_amount[]" class="form-control" required>
+                                <select name="amount_unit[]" class="form-select" style="width: 100px;" required>
+                                    <option value="LBS">LBS</option>
+                                    <option value="MT">MT</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Per Unit Rate<span class="asteriskField">*</span></label>
+                            <input type="number" step="0.0001" name="per_unit_rate[]" 
+                                class="form-control per-unit-rate" required>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Append the new row
+            document.getElementById('crop-fields-container').appendChild(newCropRow);
+
+            const cropSelect = newCropRow.querySelector('.crop-select');
+            const categorySelect = newCropRow.querySelector('.item-category');
+
+            // Initialize Select2
+            $(cropSelect).select2({
+                placeholder: "Select Item",
+                width: '100%',
+                allowClear: true
+            });
+
+            // Bind category -> crop list
+            categorySelect.addEventListener('change', function () {
+                updateCropOptions(categorySelect.value, cropSelect);
+            });
+
+            // Set default crop list and attach item number autofill
+            updateCropOptions('', cropSelect);
+            attachItemNumberAutofill(newCropRow);
+
+            // Remove row on minus button click
+            newCropRow.querySelector('.remove-crop-btn').addEventListener('click', function () {
+                newCropRow.remove();
+            });
+        });
+
+        // Contract type toggle
+        document.getElementById('contract_type').addEventListener('change', function () {
+            const type = this.value;
+            const addCropBtnContainer = document.getElementById('add-crop-btn-container');
+            addCropBtnContainer.style.display = type === 'Multiple Crop' ? 'block' : 'none';
+        });
+    });
+</script>
+
+<script>
+    $(document).ready(function () {
         $('#processor_id').select2({
             placeholder: "Select a Processor",
+            allowClear: true,
+            width: 'resolve'
+        });
+
+        $('.crop-select').select2({
+            placeholder: "Select Item",
+            width: '100%',
             allowClear: true
         });
     });
 </script>
 <script>
-    document.getElementById('contract_type').addEventListener('change', function () {
-        const contractType = this.value;
-        const cropFieldsContainer = document.getElementById('crop-fields-container');
-        const addCropBtnContainer = document.getElementById('add-crop-btn-container');
-        
-        if (contractType === 'Multiple Crop') {
-            // Show the Add Crop button if multiple crops
-            addCropBtnContainer.style.display = 'block';
-        } else {
-            // Hide the Add Crop button if single crop contract
-            addCropBtnContainer.style.display = 'none';
+    document.addEventListener("input", function(e) {
+    if (e.target.classList.contains("per-unit-rate")) {
+        let value = e.target.value;
+
+        if (value.includes('.')) {
+        let [intPart, decimalPart] = value.split('.');
+        if (decimalPart.length > 4) {
+            // trim to 4 decimals
+            e.target.value = intPart + '.' + decimalPart.slice(0, 4);
         }
-    });
-
-    document.getElementById('add-crop-btn').addEventListener('click', function () {
-        // Create a new div for the crop fields
-        var newCropRow = document.createElement('div');
-        newCropRow.classList.add('crop-fields-row');
-        newCropRow.innerHTML = `
-            <div class="row">
-                <div class="col-md-12 text-end me-3">
-                    <button type="button" class="btn btn-danger remove-crop-btn" style="width: 41px; height: 24px; padding: 0; display: inline-flex; justify-content: center; align-items: center; font-size: 19px;">-</button>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label for="crop">Crop</label>
-                        <select name="crop[]" class="form-control" required>
-                            <option value="RICE">Rice</option>
-                            <option value="WHEAT">Wheat</option>
-                            <option value="PEANUT">Peanut</option>
-                            <option value="BEANS">Beans</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label for="crop_type">Crop Type</label>
-                        <input type="text" name="crop_type[]" class="form-control" required>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label for="contract_amount">Contract Amount</label>
-                        <div class="d-flex">
-                            <input type="number" name="contract_amount[]" class="form-control" style="margin-top:0; border-top-right-radius:0 !important; border-bottom-right-radius:0 !important" required>
-                            <select name="amount_unit[]" class="form-select" style="border-top-left-radius:0 !important; border-bottom-left-radius:0 !important; border-left:0; width:100px;" required>
-                                <option value="LBS">LBS</option>
-                                <option value="MT">MT</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label for="per_unit_rate">Per Unit Rate</label>
-                        <input type="number" step="0.01" name="per_unit_rate[]" class="form-control" required>
-                    </div>
-                </div>
-                
-            </div>
-        `;
-
-        // Append the new crop row
-        document.getElementById('crop-fields-container').appendChild(newCropRow);
-
-        // Add event listener to the remove button
-        newCropRow.querySelector('.remove-crop-btn').addEventListener('click', function () {
-            newCropRow.remove();
-        });
+        }
+    }
     });
 </script>
+
+
+
+<script>
+  (function () {
+    const input = document.getElementById('multi_file');        // your file input
+    const previews = document.getElementById('file_previews');  // preview container
+    const form = input.closest('form');                         // the enclosing form
+
+    let filesBuffer = []; // Array<File>
+
+    // Build input.files from our buffer so the form submits everything
+    function syncInputFiles() {
+      // Some browsers need a fresh DataTransfer each time
+      const dt = new DataTransfer();
+      filesBuffer.forEach(f => dt.items.add(f));
+      input.files = dt.files;
+    }
+
+    // Render preview cards + remove buttons
+    function renderPreviews() {
+      previews.innerHTML = '';
+      filesBuffer.forEach((file, idx) => {
+        const card = document.createElement('div');
+        card.className = 'file-card';
+
+        // Visual
+        if (file.type.startsWith('image/')) {
+          const img = document.createElement('img');
+          img.className = 'thumb';
+          img.alt = file.name;
+          img.src = URL.createObjectURL(file);
+          img.onload = () => URL.revokeObjectURL(img.src);
+          card.appendChild(img);
+        } else if (file.type === 'application/pdf') {
+          const pdf = document.createElement('div');
+          pdf.className = 'pdf-thumb';
+          pdf.textContent = 'PDF';
+          card.appendChild(pdf);
+        } else {
+          const icon = document.createElement('div');
+          icon.className = 'file-icon';
+          icon.textContent = (file.name.split('.').pop() || 'FILE').toUpperCase();
+          card.appendChild(icon);
+        }
+
+        // Remove (×)
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'remove-btn';
+        removeBtn.innerHTML = '&times;';
+        removeBtn.addEventListener('click', () => {
+          filesBuffer.splice(idx, 1);
+          syncInputFiles();
+          renderPreviews();
+        });
+        card.appendChild(removeBtn);
+
+        // Name + size
+        const meta = document.createElement('div');
+        meta.className = 'file-name';
+        meta.textContent = `${file.name} (${(file.size/1024).toFixed(1)} KB)`;
+        card.appendChild(meta);
+
+        previews.appendChild(card);
+      });
+    }
+
+    // Handle each selection (can happen multiple times)
+    input.addEventListener('change', (e) => {
+      const picked = Array.from(e.target.files);
+
+      // Merge and avoid duplicates
+      picked.forEach(f => {
+        const exists = filesBuffer.some(x =>
+          x.name === f.name && x.size === f.size && x.lastModified === f.lastModified
+        );
+        if (!exists) filesBuffer.push(f);
+      });
+
+      // IMPORTANT: clear first, then sync, then render
+      input.value = '';     // allow picking the same file again later
+      syncInputFiles();     // now put ALL files into the real input
+      renderPreviews();     // update UI
+    });
+
+    // Safety: re-sync right before submit
+    if (form) {
+      form.addEventListener('submit', () => {
+        syncInputFiles();
+      });
+    }
+  })();
+</script>
+
 <script>
     document.getElementById('add-document').addEventListener('click', function () {
         // Create a new div to hold the document name and remove button
@@ -337,6 +630,7 @@
         this.parentElement.remove();
     });
 </script>
+
 <script>
     $('#Contracts-active').addClass('activeLink');
   

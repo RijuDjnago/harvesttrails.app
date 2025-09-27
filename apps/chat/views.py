@@ -286,7 +286,7 @@ def chatroom_ag(request,pk):
     ordered_list = sorted(sorted_data, key=lambda x: x['last_unread_msg_time'], reverse=True)
     context['receiver'] = ordered_list
     context['chat_with'] = check_room.first().chat_with
-  elif 'Grower' in request.user.get_role() and not request.user.is_superuser:
+  elif 'Grower' in request.user.get_role() and not request.user.is_superuser :
     grower_id= request.user.grower.id
     receiver = []
     # ...............................
@@ -834,7 +834,7 @@ def chatroom_ag0(request,pk):
           return render(request, 'chat/messageboard_room.html',context)
         else:
           return redirect('login')
-      if 'Grower' in request.user.get_role() and not request.user.is_superuser:
+      if 'Grower' in request.user.get_role() and not request.user.is_superuser :
         grower_id= request.user.grower.id
         pk = pk
         if grower_id == pk and LinkGrowerToProcessor.objects.filter(grower_id=pk).count() != 0:

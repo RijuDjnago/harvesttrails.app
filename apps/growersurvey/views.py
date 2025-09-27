@@ -24,7 +24,7 @@ import json
 from apps.growersurvey.models import InputSurvey
 from django.db.models import Sum
 #from .models import NameSurvey
-from django.core import serializers
+from rest_framework import serializers
 from urllib.parse import urlparse
 import datetime
 from django.db.models import Count
@@ -38,6 +38,7 @@ from xhtml2pdf import pisa
 from django.template.loader import get_template
 from django.template import Context
 from django.http import HttpResponse
+from django.core.paginator import Paginator
 
 
 def render_to_pdf(template_src, context_dict={}):
@@ -51,8 +52,6 @@ def render_to_pdf(template_src, context_dict={}):
         return HttpResponse(result.getvalue(), content_type='application/pdf')
     return HttpResponse('We had some errors')
 
-# Create your views here.
-
 
 class GrowerSurveyView(LoginRequiredMixin, CreateView):
     '''Generic Class Based view of type survey '''
@@ -63,8 +62,11 @@ class GrowerSurveyView(LoginRequiredMixin, CreateView):
 
     def get_context_data(self, **kwargs):
         #print(self.request.user.email)
-        grower_id = Grower.objects.get(email=self.request.user.email).id
-        farms_list = Farm.objects.filter(grower=grower_id)
+        if 'Grower' in self.request.user.get_role() and not self.request.user.is_superuser:
+            grower_id = Grower.objects.get(email=self.request.user.email).id
+            farms_list = Farm.objects.filter(grower=grower_id)
+        else:           
+            farms_list = Farm.objects.all()
         type_survey = TypeSurvey.objects.all()
         context = {'farms_lists': farms_list}
         # print(context)
@@ -101,6 +103,7 @@ class GetQuestion(LoginRequiredMixin, CreateView):
         return render(request, 'growersurvey/get-question.html', {
             'question_data': question_data
         })
+
 
 def change_qoestion_order(request):
     if request.POST.get('down_arrow_1'):
@@ -162,6 +165,7 @@ def change_qoestion_order(request):
         (QuestionSurvey.objects.filter(pk=pk_lst[q_pk_str_id-1])).update(questionorder=q_order)
         return redirect(request.META['HTTP_REFERER'])
     return redirect(request.META['HTTP_REFERER'])
+
 
 class CheckSurveyStatus(LoginRequiredMixin, CreateView):
 
@@ -232,9 +236,11 @@ class GetAllSurvey(LoginRequiredMixin, ListView):
     def get(self, request):
         '''Default function for get request'''
         survey_data = NameSurvey.objects.all().order_by('id')
-        # print(survey_data)
+        paginator = Paginator(survey_data, 100)  
+        page_number = request.GET.get('page')
+        page_obj = paginator.get_page(page_number)
         return render(request, 'growersurvey/survey-listing.html', {
-            'survey_data': survey_data
+            'survey_data': page_obj
         })
 
 
@@ -270,6 +276,7 @@ def CheckSurveyDb(request):
     print(chk_survey_data)
     
     return HttpResponse(chk_survey_data)
+
 
 def get_first_question(request):
     name_survey_id = int(request.GET.get('name_survey_id', 0))\
@@ -308,7 +315,6 @@ def QuestionDelete(request):
     # sdp code ..
 
 
-
 def SaveSurvey(request):
     data = json.loads(request.body)
     type_survey = int(data['type_survey'])
@@ -327,6 +333,7 @@ def SaveSurvey(request):
         getdata = None
 
     return JsonResponse({'id': getdata.id})
+
 
 def SaveSurveyEdit(request):
     data = json.loads(request.body)
@@ -512,7 +519,7 @@ class GrowerSurveyQuestionsView(LoginRequiredMixin, CreateView):
         context["question_names"] = question_names[0]
         context["option"] = options
 
-        if self.request.user.is_superuser:
+        if self.request.user.is_superuser or 'SubAdmin' in self.request.user.get_role() or 'SuperUser' in self.request.user.get_role():
             context['logged_grower_id'] = ""
         elif self.request.user.is_consultant:
             context['logged_grower_id'] = ""
@@ -730,7 +737,7 @@ class GrowerSurveyResultScore(LoginRequiredMixin, CreateView):
         context = super(GrowerSurveyResultScore,
                         self).get_context_data(**kwargs)
 
-        if self.request.user.is_superuser:
+        if self.request.user.is_superuser or 'SubAdmin' in self.request.user.get_role() or 'SuperUser' in self.request.user.get_role():
             context['logged_grower_id'] = ""
             growerId = ""
 
@@ -799,6 +806,7 @@ def SurveytypeGetfarm(request):
     # print(field_lists)
     return JsonResponse({'status': True, 'data': field_lists})
 
+
 class GetAllFarm(LoginRequiredMixin, ListView):
     def get(self, request):
         '''Default function for get request'''
@@ -808,6 +816,7 @@ class GetAllFarm(LoginRequiredMixin, ListView):
 
         return JsonResponse({'farm_list': farm_list})
 
+
 class GetAllField(LoginRequiredMixin, ListView):
     def get(self, request):
         '''Default function for get request'''
@@ -816,6 +825,7 @@ class GetAllField(LoginRequiredMixin, ListView):
         field_list = [(field.name, field.id) for field in field_data]
 
         return JsonResponse({'field_list': field_list})
+
 
 class GrowerSustainabilty(LoginRequiredMixin, ListView):
     def get(self, request):
@@ -887,13 +897,10 @@ class GrowerSustainabilty(LoginRequiredMixin, ListView):
                     # line_survey_grower_object = sustain_data.annotate(dcount=Count('grower_id')).order_by()
                     # line_survey_grower_list = [grw_data.grower.name for grw_data in line_survey_grower_object]
                     # print(line_survey_grower_list)
-
         
         # survey_type.append('')
         # survey_score_data.append(0)
         
-
-
         var = survey_score_data
         # For Rice
         r1 = var[0]
@@ -914,6 +921,7 @@ class GrowerSustainabilty(LoginRequiredMixin, ListView):
             'line_survey_grower_list': '',
             'composite_s':composite_s,
         })
+
 
 class GetSustainabilityResult(LoginRequiredMixin, ListView):
     def get(self, request):
@@ -957,6 +965,7 @@ class GetSustainabilityResult(LoginRequiredMixin, ListView):
 
         })
 
+
 class GetChartResult(LoginRequiredMixin, ListView):
     def get(self, request):
         '''Default function for get request'''
@@ -989,16 +998,6 @@ class GetChartResult(LoginRequiredMixin, ListView):
         })
 
 
-# class SetChartImage(LoginRequiredMixin, ListView):
-#     def get(self, request):
-#         '''Default function for get request'''
-#         chart_data = request.GET.get('chart_data')
-#         request.session['chart_data'] = chart_data
-#         # chart_data = request.session.get('chart_data', '')
-
-#         # print(fav_color)
-#         return HttpResponse(chart_data)
-
 def SetChartImage(request):
     '''Default function for get request'''
     chart_data = request.POST.get('chart_data')
@@ -1007,7 +1006,6 @@ def SetChartImage(request):
 
     # print(fav_color)
     return HttpResponse(chart_data)
-
 
 
 class MyView(LoginRequiredMixin, ListView):
@@ -1090,146 +1088,378 @@ class MyView(LoginRequiredMixin, ListView):
                 }
             )
 
-def pdf_dw(request):                                  
 
-    # Create the HttpResponse object 
-    response = HttpResponse(content_type='application/pdf') 
-
-    # This line force a download
-    response['Content-Disposition'] = 'attachment; filename="1.pdf"' 
-
-    # READ Optional GET param
+def pdf_dw(request):                                   
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="1.pdf"'
     get_param = request.GET.get('name', 'World')
 
-    # Generate unique timestamp
     # ts = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')
 
     p = canvas.Canvas(response)
-
-    # Write content on the PDF 
     p.drawString(100, 500, "Hello " + get_param + " (Dynamic PDF) - " ) 
-
-    # Close the PDF object. 
     p.showPage() 
-    p.save() 
-
-    # Show the result to the user    
+    p.save()    
     return response
 
-class GrowerSustainComparison(LoginRequiredMixin, ListView):
+
+class FieldSerializer(serializers.ModelSerializer):
+    name_survey_type_id = serializers.SerializerMethodField()
+    grower_name = serializers.SerializerMethodField()    
+    grower_farm = serializers.SerializerMethodField()
+    grower_field = serializers.SerializerMethodField()
+    survey_year = serializers.SerializerMethodField()    
+    grower_id = serializers.SerializerMethodField()   
+    field_id = serializers.SerializerMethodField()
+    state = serializers.SerializerMethodField()
+    crop = serializers.SerializerMethodField()
+    city = serializers.SerializerMethodField()
+    acres = serializers.SerializerMethodField()
+    farm_id = serializers.SerializerMethodField()
+    yield_var = serializers.SerializerMethodField()    
+    certificate = serializers.SerializerMethodField()
+    surveyscore1 = serializers.SerializerMethodField()
+    surveyscore2 = serializers.SerializerMethodField()
+    surveyscore3 = serializers.SerializerMethodField()
+    actual_yield = serializers.SerializerMethodField()
+    composite_score = serializers.SerializerMethodField()
+    projected_yield = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Field
+        fields = ['grower_name', 'crop', 'grower_farm', 'grower_field', 'survey_year', 'acres', 'grower_id',
+                  'name_survey_type_id', 'farm_id', 'field_id', 'state', 'city', 'projected_yield', 'actual_yield',
+                  'yield_var', 'composite_score', 'certificate','surveyscore1', 'surveyscore2', 'surveyscore3']
+        
+    def get_grower_name(self, obj):
+        return obj.grower.name
+    
+    def get_crop(self, obj):
+        return obj.crop
+    
+    def get_grower_farm(self, obj):
+        return obj.farm.name
+    
+    def get_grower_field(self, obj):
+        return obj.name
+    
+    def get_survey_year(self, obj):
+        year = 2022
+        return year
+    
+    def get_acres(self, obj):
+        return obj.acreage
+    
+    def get_grower_id(self, obj):
+        return obj.grower.id
+    
+    def get_name_survey_type_id(self, obj):
+        name_survey_type_id = 1
+        return name_survey_type_id
+    
+    def get_farm_id(self, obj):
+        return obj.farm.id
+    
+    def get_field_id(self, obj):
+        return obj.id
+    
+    def get_state(self, obj):
+        return obj.farm.state
+    
+    def get_city(self, obj):
+        return obj.farm.town
+    
+    def get_projected_yield(self, obj):
+        if obj.crop == 'COTTON':
+            projected_yield = obj.acreage * 900               
+        else:
+            projected_yield = round(obj.acreage * 8300,2)
+        return projected_yield
+    
+    def get_actual_yield(self, obj):
+        if obj.crop == 'COTTON':
+            actual_yield = 'N/A'              
+        else:
+            actual_yield = obj.total_yield
+        return actual_yield
+    
+    def get_yield_var(self, obj):
+        if obj.crop == 'COTTON':
+            yield_var = 'N/A'             
+        else:
+            projected_yield = round(obj.acreage * 8300,2)
+            actual_yield = obj.total_yield
+            if actual_yield == None:
+                yield_var = "N/A"
+            else:
+                yield_var = projected_yield - actual_yield
+        return yield_var
+    
+    def get_composite_score(self, obj):
+        surveyscore1 = obj.get_survey1()
+        surveyscore2 = obj.get_survey2()
+        surveyscore3 = obj.get_survey3()
+        if surveyscore1 not in ['', None]:
+            surveyscore1 = float(surveyscore1)
+        else:
+            surveyscore1 = 0
+        if surveyscore2 not in ['', None] :
+            surveyscore2 = float(surveyscore2)
+        else:
+            surveyscore2 = 0
+        if surveyscore3 not in ['', None] :
+            surveyscore3 = float(surveyscore3)
+        else:
+            surveyscore3 = 0
+
+        composite_score = round((surveyscore1*0.25)+(surveyscore2*0.50)+(surveyscore3*0.25),2)
+        return composite_score
+    
+    def get_certificate(self, obj):
+        surveyscore1 = obj.get_survey1()
+        surveyscore2 = obj.get_survey2()
+        surveyscore3 = obj.get_survey3()
+        if surveyscore1 not in ['', None]:
+            surveyscore1 = float(surveyscore1)
+        else:
+            surveyscore1 = 0
+        if surveyscore2 not in ['', None] :
+            surveyscore2 = float(surveyscore2)
+        else:
+            surveyscore2 = 0
+        if surveyscore3 not in ['', None] :
+            surveyscore3 = float(surveyscore3)
+        else:
+            surveyscore3 = 0
+
+        composite_score = round((surveyscore1*0.25)+(surveyscore2*0.50)+(surveyscore3*0.25),2)
+
+        certificate = (
+            "Pass" if (obj.crop == "COTTON" and composite_score >= 75) or (obj.crop != "COTTON" and composite_score >= 70) else "Fail"
+        )
+        return certificate
+    
+    def get_surveyscore1(self, obj):
+        surveyscore1 = obj.get_survey1()            
+        if surveyscore1 not in ['', None]:
+            surveyscore1 = float(surveyscore1)
+        else:
+            surveyscore1 = 0
+        return surveyscore1
+    
+    def get_surveyscore2(self, obj):
+        surveyscore2 = obj.get_survey2()            
+        if surveyscore2 not in ['', None]:
+            surveyscore2 = float(surveyscore2)
+        else:
+            surveyscore2 = 0
+        return surveyscore2
+    
+    def get_surveyscore3(self, obj):
+        surveyscore3 = obj.get_survey3()            
+        if surveyscore3 not in ['', None]:
+            surveyscore3 = float(surveyscore3)
+        else:
+            surveyscore3 = 0
+        return surveyscore3
+
+
+class GrowerSustainComparison(LoginRequiredMixin, View):
     def get(self, request):
         type_survey_data = TypeSurvey.objects.all().order_by('name')
+        
         if 'Grower' in request.user.get_role() and not request.user.is_superuser:
-            # do something grower
-            grower_id=request.user.grower.id
-            grower_obj = Grower.objects.filter(id=grower_id).order_by('name')
-            
+            # grower
+            grower_obj = Grower.objects.filter(id=request.user.grower.id).order_by('name')
         else:
             if request.user.is_consultant:
-                # do something consultant
-                consultant_id = Consultant.objects.get(email= request.user.email).id
+                consultant_id = Consultant.objects.get(email=request.user.email).id
                 grower_obj = Grower.objects.filter(consultant=consultant_id).order_by('name')
-                
             else:
-                # do something allpower
                 grower_obj = Grower.objects.all().order_by('name')
 
-        comparison_arr = []
+        grower_ids = grower_obj.values_list('id', flat=True)
 
-        grower_id = [i.id for i in grower_obj]
-        field =Field.objects.filter(grower_id__in=grower_id)
-        for i in field:
-            grower_field = i.name
-            grower_name = i.grower.name
-            grower_id = i.grower.id
-            grower_farm = i.farm.name
-            farm_id = i.farm.id
-            field_id = i.id
-            crop = i.crop
-            state = i.farm.state
-            city = i.farm.town
-            acres = i.acreage
-            if i.crop == 'RICE':
-                projected_yield = round(i.acreage * 8300,2)
-                actual_yield = i.total_yield
-                if actual_yield == None:
-                    yield_var = "N/A"
-                else:
-                    yield_var = projected_yield - actual_yield
-                
-            elif i.crop == 'COTTON':
-                projected_yield = i.acreage * 900
-                actual_yield = 'N/A'
-                yield_var = 'N/A'
-            
-            surveyscore1 = i.get_survey1()
-            surveyscore2 = i.get_survey2()
-            surveyscore3 = i.get_survey3()
-            if surveyscore1 != '' and surveyscore1 != None :
-                surveyscore1 = float(surveyscore1)
-            else:
-                surveyscore1 = 0
-            if surveyscore2 != '' and surveyscore2 != None :
-                surveyscore2 = float(surveyscore2)
-            else:
-                surveyscore2 = 0
-            if surveyscore3 != '' and surveyscore3 != None :
-                surveyscore3 = float(surveyscore3)
-            else:
-                surveyscore3 = 0
-            year = '2022'
-            sus = SustainabilitySurvey.objects.filter(grower_id=grower_id).filter(field_id=i.id)
-            
-            # name_survey_type_id = [i.namesurvey.typesurvey.id for i in sus][0]
-            name_survey_type_id = 1
-            composite_score = round((surveyscore1*0.25)+(surveyscore2*0.50)+(surveyscore3*0.25),2)
-            if crop == "RICE":
-                if composite_score >= 70:
-                    certificate = "Pass"
-                elif composite_score < 70:
-                    certificate = "Fail"
-            elif crop == "COTTON":
-                if composite_score >= 75:
-                    certificate = "Pass"
-                elif composite_score < 75:
-                    certificate = "Fail"
-            
-            else:
-                if composite_score >= 70:
-                    certificate = "Pass"
-                elif composite_score < 70:
-                    certificate = "Fail"
-            sustain_res = {
-                    'grower_name' : grower_name,
-                    'crop' : crop,
-                    'grower_farm': grower_farm,
-                    'grower_field': grower_field,
-                    'survey_year': year,
-                    'acres': acres,
-                    'grower_id': grower_id,
-                    'name_survey_type_id': name_survey_type_id,
-                    'farm_id': farm_id,
-                    'field_id': field_id,
-                    'crop': crop,
-                    'state': state,
-                    'city': city,
-                    "projected_yield":projected_yield,
-                    "actual_yield":actual_yield,
-                    "yield_var":yield_var,
-                    "composite_score":composite_score,
-                    "certificate":certificate,
-                    "surveyscore1":surveyscore1,
-                    "surveyscore2":surveyscore2,
-                    "surveyscore3":surveyscore3,
-                    
-                }
-            comparison_arr.append(sustain_res)
-                
+        selected_grower_id = request.GET.get('grower_id')  # GET param from frontend
+        field_queryset = Field.objects.filter(grower_id__in=grower_ids).select_related('grower')
+
+        if selected_grower_id:
+            try:
+                selected_grower_id = int(selected_grower_id)
+                if selected_grower_id in grower_ids:
+                    field_queryset = field_queryset.filter(grower_id=selected_grower_id)
+            except (ValueError, TypeError):
+                pass  
+
+        # Pagination at DB level
+        paginator = Paginator(field_queryset, 100)  
+        page_number = request.GET.get('page')
+        page_obj = paginator.get_page(page_number)
+
+        # Serialize only the paginated objects
+        comparison_arr = FieldSerializer(page_obj.object_list, many=True).data
+
         return render(request, 'growersurvey/grower_comparison.html', {
-                    'comparison_arr':comparison_arr,
-                    'grower_obj':grower_obj,
-                    'type_survey_data':type_survey_data,
-                })
+            'comparison_arr': comparison_arr,  
+            'page_obj':page_obj,
+            'grower_obj': grower_obj,
+            'type_survey_data': type_survey_data,
+            'selected_grower_id': selected_grower_id,
+        })
+
+# from django.db.models import F, Value, FloatField
+# from django.db.models.functions import Coalesce
+
+# class GrowerSustainComparison(LoginRequiredMixin, ListView):
+#     def get(self, request):
+#         type_survey_data = TypeSurvey.objects.all().order_by('name')
+
+#         # Fetch grower data based on the user's role
+#         if 'Grower' in request.user.get_role() and not request.user.is_superuser:
+#             grower_ids = [request.user.grower.id]
+#         elif request.user.is_consultant:
+#             consultant_id = Consultant.objects.get(email=request.user.email).id
+#             grower_ids = Grower.objects.filter(consultant=consultant_id).values_list('id', flat=True)
+#         else:
+#             grower_ids = Grower.objects.values_list('id', flat=True)
+
+#         # Optimize field query with annotations
+#         fields = (
+#             Field.objects.filter(grower_id__in=grower_ids)
+#             .select_related('grower', 'farm')
+#             .annotate(
+#                 projected_yield=F('acreage') * Value(900, output_field=FloatField()),
+#                 actual_yield=Coalesce(F('total_yield'), Value(0.0, output_field=FloatField())),
+#                 yield_var=F('acreage') * Value(900, output_field=FloatField()) - Coalesce(F('total_yield'), Value(0.0, output_field=FloatField())),
+#             )
+#             .order_by('-id')
+#         )
+
+#         comparison_arr = []
+#         for field in fields:
+#             # Calculate survey scores using model methods
+#             surveyscore1 = field.get_survey1() or 0.0
+#             surveyscore2 = field.get_survey2() or 0.0
+#             surveyscore3 = field.get_survey3() or 0.0
+
+#             composite_score = round((surveyscore1 * 0.25) + (surveyscore2 * 0.50) + (surveyscore3 * 0.25), 2)
+#             certificate = (
+#                 "Pass" if (field.crop == "COTTON" and composite_score >= 75) or (field.crop != "COTTON" and composite_score >= 70) else "Fail"
+#             )
+
+#             comparison_arr.append({
+#                 'grower_name': field.grower.name,
+#                 'crop': field.crop,
+#                 'grower_farm': field.farm.name,
+#                 'grower_field': field.name,
+#                 'survey_year': '2022',
+#                 'acres': field.acreage,
+#                 'grower_id': field.grower.id,
+#                 'name_survey_type_id': 1,
+#                 'farm_id': field.farm.id,
+#                 'field_id': field.id,
+#                 'state': field.farm.state,
+#                 'city': field.farm.town,
+#                 "projected_yield": field.projected_yield,
+#                 "actual_yield": field.actual_yield,
+#                 "yield_var": field.yield_var,
+#                 "composite_score": composite_score,
+#                 "certificate": certificate,
+#                 "surveyscore1": surveyscore1,
+#                 "surveyscore2": surveyscore2,
+#                 "surveyscore3": surveyscore3,
+#             })
+#         paginator = Paginator(comparison_arr, 100)  
+#         page_number = request.GET.get('page')
+#         page_obj = paginator.get_page(page_number)
+#         return render(
+#             request,
+#             'growersurvey/grower_comparison.html',
+#             {
+                
+#                 'comparison_arr':page_obj,                
+#                 'type_survey_data':type_survey_data,
+#             },
+#         )
+
+
+
+# class GrowerSustainComparison(LoginRequiredMixin, View):
+#     def get_certificate(self, crop, score):
+#         threshold = 75 if crop == "COTTON" else 70
+#         return "Pass" if score >= threshold else "Fail"
+
+#     def get_score(self, score):
+#         return float(score) if score and score != '' else 0
+
+#     def get(self, request):
+#         # Get type survey data
+#         type_survey_data = TypeSurvey.objects.all().order_by('name')
+
+#         # Determine grower objects based on user roles
+#         if 'Grower' in request.user.get_role() and not request.user.is_superuser:
+#             grower_obj = Grower.objects.filter(id=request.user.grower.id).order_by('name')
+#         elif request.user.is_consultant:
+#             consultant_id = Consultant.objects.get(email=request.user.email).id
+#             grower_obj = Grower.objects.filter(consultant=consultant_id).order_by('name')
+#         else:
+#             grower_obj = Grower.objects.all().order_by('name')
+
+#         # Fetch fields in bulk
+#         grower_ids = grower_obj.values_list('id', flat=True)
+#         fields = Field.objects.filter(grower_id__in=grower_ids).select_related('grower', 'farm')
+
+#         # Prepare comparison array
+#         comparison_arr = [
+#             {
+#                 'grower_name': field.grower.name,
+#                 'crop': field.crop,
+#                 'grower_farm': field.farm.name,
+#                 'grower_field': field.name,
+#                 'survey_year': '2022',
+#                 'acres': field.acreage,
+#                 'grower_id': field.grower.id,
+#                 'name_survey_type_id': 1,  # Assuming static ID
+#                 'farm_id': field.farm.id,
+#                 'field_id': field.id,
+#                 'state': field.farm.state,
+#                 'city': field.farm.town,
+#                 'projected_yield': field.acreage * (900 if field.crop == "COTTON" else 8300),
+#                 'actual_yield': field.total_yield or 'N/A',
+#                 'yield_var': (
+#                     (field.acreage * 900 - field.total_yield)
+#                     if field.crop == "COTTON" and field.total_yield else "N/A"
+#                 ),
+#                 'composite_score': round(
+#                     self.get_score(field.get_survey1()) * 0.25 +
+#                     self.get_score(field.get_survey2()) * 0.50 +
+#                     self.get_score(field.get_survey3()) * 0.25, 2
+#                 ),
+#                 'certificate': self.get_certificate(
+#                     field.crop,
+#                     round(
+#                         self.get_score(field.get_survey1()) * 0.25 +
+#                         self.get_score(field.get_survey2()) * 0.50 +
+#                         self.get_score(field.get_survey3()) * 0.25, 2
+#                     )
+#                 ),
+#                 'surveyscore1': self.get_score(field.get_survey1()),
+#                 'surveyscore2': self.get_score(field.get_survey2()),
+#                 'surveyscore3': self.get_score(field.get_survey3()),
+#             }
+#             for field in fields
+#         ]
+
+#         # Paginate the comparison data
+#         paginator = Paginator(comparison_arr, 100)  # Adjust page size as needed
+#         page_number = request.GET.get('page')
+#         page_obj = paginator.get_page(page_number)
+
+#         return render(request, 'growersurvey/grower_comparison.html', {
+#             'comparison_arr': page_obj,
+#             'grower_obj': grower_obj,
+#             'type_survey_data': type_survey_data,
+#         })
 
 
 @login_required()
@@ -1394,6 +1624,7 @@ def field_level_sustainability(request):
     else:
         return redirect ('dashboard')
 
+
 login_required()
 def field_level_sustainability_csv(request,field_id,yearid):
     if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
@@ -1508,7 +1739,7 @@ def field_level_sustainability_csv(request,field_id,yearid):
                 writer.writerow(['Bale IDs','Level'])
                 for i in get_bale:
                     writer.writerow([i['bale_id'],i['level']])
-            elif get_field.crop == 'RICE':
+            else:
                 get_shipment = GrowerShipment.objects.filter(field_id=get_field.id).values('shipment_id','status')
                 writer.writerow([''])
                 writer.writerow(['All bale/shipment IDs'])
@@ -1537,3 +1768,4 @@ def field_autocomplete_suggestions(request):
         return JsonResponse(responce)
     else:
         return redirect ('dashboard')
+    

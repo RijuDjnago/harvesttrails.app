@@ -34,7 +34,7 @@ class ShapeFileDataCo(models.Model):
     
 status_choice = [
         ("quantity_in", "Quantity In"),
-        ("quantity_out", "Quantity Out"),
+        ("quantity_edit", "Quantity Edit"),
     ]
 unit_choice = [
     ("LBS","LBS"),

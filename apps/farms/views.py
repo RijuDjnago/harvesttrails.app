@@ -2,7 +2,7 @@
 from multiprocessing import context
 from django.http.response import HttpResponse
 import pandas as pd
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.views import View
 from django.views.generic.list import ListView
 from django.views.generic.edit import CreateView, DeleteView, UpdateView
@@ -15,7 +15,7 @@ from apps.accounts.models import User, LogTable
 from apps.farms.forms import FarmForm
 from apps.grower.models import Grower, Consultant
 from apps.farms.models import Farm, FarmGrouping, CsvToFarm
-from apps.field.models import Field, ShapeFileDataCo
+from apps.field.models import Field, ShapeFileDataCo, Crop
 from apps.farms.serializers import FarmSerializer, FarmJsonList
 from apps.grower.serializers import GrowerListSerializer
 from rest_framework.decorators import api_view
@@ -24,6 +24,10 @@ from django.http import JsonResponse
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from apps.storage.models import ShapeFileDataCo as StorageShapeFileDataCo, Storage
 import json
+from django.db.models import Q
+from apps.field.models import Crop, CropVariety, CropType
+from apps.farms.forms import *
+from rest_framework import serializers
 # pylint: disable=no-member,expression-not-assigned, too-many-locals, too-many-ancestors, too-many-ancestors, bare-except
 
 
@@ -40,6 +44,7 @@ class FarmCreateView(LoginRequiredMixin, CreateView):  # pylint: disable=too-man
 
     def get_context_data(self, **kwargs):
         context = super(FarmCreateView, self).get_context_data(**kwargs)
+        context['crops'] = Crop.objects.all()
         
         if 'Grower' in self.request.user.get_role() and not self.request.user.is_superuser:
             # do something grower
@@ -93,7 +98,7 @@ class FarmCreateView(LoginRequiredMixin, CreateView):  # pylint: disable=too-man
         messages.success(self.request, f'Farm {name} Created Successfully!')
         return super().form_valid(form)
 
-from django.db.models import Q
+
 class FarmListView(LoginRequiredMixin, ListView):  # pylint: disable=too-many-ancestors
     """View to list farm"""
     model = Farm
@@ -246,6 +251,7 @@ class FarmListView(LoginRequiredMixin, ListView):  # pylint: disable=too-many-an
             context['farms'] = field_list
         return context
 
+
 def testing(request):
     return render(request, 'farms/testing.html')
 
@@ -259,6 +265,7 @@ class FarmUpdateView(LoginRequiredMixin, UpdateView):  # pylint: disable=too-man
 
     def get_context_data(self, **kwargs):
         context = super(FarmUpdateView, self).get_context_data(**kwargs)
+        context['crops'] = Crop.objects.all()
 
         pk = self.kwargs.get('pk')
 
@@ -529,7 +536,7 @@ class CsvFarmMappingView(LoginRequiredMixin, View):
 class FarmLocationMap(LoginRequiredMixin, View):
     def get(self, request, pk, *args, **kwargs):
 
-        if 'Grower' in request.user.get_role() and not request.user.is_superuser:
+        if 'Grower' in request.user.get_role() and not request.user.is_superuser :
             # do something grower
             grower_id = request.user.grower.id
             get_growers = Grower.objects.filter(id=grower_id).order_by('name')
@@ -738,7 +745,7 @@ class AllFarmLocationMap(LoginRequiredMixin, View):
         shape_obj1 = ''
         
         
-        if 'Grower' in request.user.get_role() and not request.user.is_superuser:
+        if 'Grower' in request.user.get_role() and not request.user.is_superuser :
             # do something grower
             grower_id = request.user.grower.id
             get_growers = Grower.objects.filter(id=grower_id).order_by('name')
@@ -996,3 +1003,112 @@ class AllFarmLocationMap(LoginRequiredMixin, View):
             'get_growers': get_growers,
             'selected_grower': selected_grower,
         })
+    
+
+
+class CropVarietySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CropVariety
+        fields = ['variety_name', 'variety_code']
+
+class CropTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CropType
+        fields = ['type']
+
+class CropSerializer(serializers.ModelSerializer):
+    cropVariety = CropVarietySerializer(many=True, read_only=True)  # Nested serializer
+    cropType = CropTypeSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Crop
+        fields = ['id', 'name', 'code', 'cropVariety', 'cropType']
+
+
+
+def crop_management(request):
+    crops = Crop.objects.prefetch_related('cropVariety').all()
+    if request.method == "POST":
+        search_query = request.POST.get("crop_name")
+        if search_query:
+            crops = crops.filter(name__icontains=search_query)
+    crop_serializer = CropSerializer(crops, many=True)
+    return render(request, 'farms/crop-management-list.html', {
+        'crops': crop_serializer.data,
+        'search_query': search_query if request.method == "POST" else ''
+    })
+
+
+
+def create_crop(request):
+    if request.method == 'POST':
+        crop_name = request.POST.get('name')
+        variety_names = request.POST.getlist('variety_name')
+        types = request.POST.getlist('crop_type')
+        crop = Crop.objects.create(name=crop_name)
+        for variety_name in variety_names:
+            if variety_name:  # Only save if the variety name is not empty
+                CropVariety.objects.create(crop=crop, variety_name=variety_name)
+        for type in types:
+            if type:
+                CropType.objects.create(crop=crop, type=type)
+        return redirect('crop_management_list')
+    return render(request, 'farms/create_crop.html')
+
+def edit_crop(request, crop_id):
+    crop = get_object_or_404(Crop, id=crop_id)
+    varieties = CropVariety.objects.filter(crop=crop).order_by("-id")
+    varieties = varieties.reverse
+    types = CropType.objects.filter(crop=crop).order_by("-id")
+    types = types.reverse
+    if request.method == 'POST':
+        crop_name = request.POST.get('crop_name')
+        variety_names = request.POST.getlist('variety_names')
+        types = request.POST.getlist('crop_type')
+        crop.name = crop_name
+        crop.save()
+        CropVariety.objects.filter(crop=crop).delete()
+        for variety_name in variety_names:
+            if variety_name:
+                CropVariety.objects.create(crop=crop, variety_name=variety_name)
+        CropType.objects.filter(crop=crop).delete()
+        for type in types:
+            if type:
+                CropType.objects.create(crop=crop, type=type)
+        return redirect('crop_management_list')
+
+    return render(request, 'farms/edit_crop.html', {
+        'crop': crop,
+        'varieties': varieties,
+        'types':types,
+    })
+
+def view_crop(request, crop_id):
+    crop = get_object_or_404(Crop, id=crop_id)
+    varieties = CropVariety.objects.filter(crop=crop).order_by("-id")  # Reverse order by ID
+    types = CropType.objects.filter(crop=crop).order_by("-id")
+    return render(request, 'farms/view_crop.html', {
+        'crop': crop,
+        'varieties': varieties,
+        'types':types
+    })
+
+def delete_crop(request, crop_id):
+    crop = get_object_or_404(Crop, id=crop_id)
+    
+    if request.method == 'POST':
+        # Delete related varieties first
+        varieties = CropVariety.objects.filter(crop=crop)
+        for variety in varieties:
+            variety.delete()
+        types = CropType.objects.filter(crop=crop)
+        for type in types:
+            type.delete()
+        # Delete the crop itself
+        crop.delete()
+
+        messages.success(request, 'Crop deleted successfully.')
+        return redirect('crop_management_list')  # Redirect to crop list page after deletion
+
+    # If not a POST request, simply redirect to the crop list page
+    return redirect('crop_management_list')

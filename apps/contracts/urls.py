@@ -27,4 +27,19 @@ urlpatterns = [
     path('admin-customer-contract-list/', views.admin_customer_contract_list, name='admin-customer-contract-list'),
     path('admin-customer-contract-view/<int:pk>/', views.admin_customer_contract_view, name='admin-customer-contract-view'),
     path('edit-admin-customer-contract/<int:pk>/', views.edit_admin_customer_contract, name='edit-admin-customer-contract'),
+    path('create_items/', views.create_items, name='create_items'),
+    path('shipment_item_list/', views.shipment_item_list, name='shipment_item_list'),
+    path('add_item_specification/<int:pk>/', views.add_edit_item_details, name='add_item_specification'),
+    path('get-crop-types/', views.get_crop_types, name='get_crop_types'),   
+    path('get-crops/', views.get_crops, name='get_crops'),  
+
+    path('export_admin_processor_contract/', views.export_admin_processor_contract, name='export_admin_processor_contract'),
+    path('export_admin_customer_contract/', views.export_admin_customer_contract, name='export_admin_customer_contract'),
+
+    path('export_open_admin_processor_contracts/', views.export_open_admin_processor_contracts, name='export_open_admin_processor_contracts'),
+    path('export_open_admin_customer_contracts/', views.export_open_admin_customer_contracts, name='export_open_admin_customer_contracts'),
+
+    path('export_completed_admin_processor_contracts/', views.export_completed_admin_processor_contracts, name='export_completed_admin_processor_contracts'),
+    path('export_completed_admin_customer_contracts/', views.export_completed_admin_customer_contracts, name='export_completed_admin_customer_contracts'),
+   
 ]

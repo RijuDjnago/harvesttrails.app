@@ -1,6 +1,8 @@
 """Views related to farm model"""
 from django.http.response import HttpResponse
 import pandas as pd
+from django.urls import reverse
+from django.utils.http import urlencode
 from django.shortcuts import render, redirect
 from django.views import View
 from django.views.generic.list import ListView
@@ -42,7 +44,7 @@ from django.db.models import Avg
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.hashers import make_password, check_password
 from django.utils import (dateformat, formats)
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 import csv
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db.models import Q
@@ -83,13 +85,13 @@ def generate_sku_id():
 	return "".join(sku_id)
 
 
-def calculate_milled_volume(processor_id, processor_type, sku_id):
+def calculate_milled_volume(selected_crop, processor_id, processor_type, sku_id):
     print(sku_id)
     if processor_type == "T1":
-        inbound_shipment_sum = GrowerShipment.objects.filter(crop="RICE", processor_id=processor_id,sku=sku_id, status="APPROVED").annotate(received_amount_float=Cast('received_amount', FloatField())).aggregate(
+        inbound_shipment_sum = GrowerShipment.objects.filter(crop=selected_crop, processor_id=processor_id,sku=sku_id, status="APPROVED").annotate(received_amount_float=Cast('received_amount', FloatField())).aggregate(
                 total_received_amount=Sum('received_amount_float'))['total_received_amount']
         print(inbound_shipment_sum, "inbounddddddddddd")
-        total_outbound_sum = ShipmentManagement.objects.filter(processor_idd=processor_id, sender_processor_type="T1", storage_bin_send=sku_id, status="APPROVED").annotate(shipped_amount_float=Cast("volume_shipped", FloatField())).aggregate(total_shipped_amount=Sum('shipped_amount_float'))["total_shipped_amount"]
+        total_outbound_sum = ShipmentManagement.objects.filter(crop=selected_crop,processor_idd=processor_id, sender_processor_type="T1", storage_bin_send=sku_id, status="APPROVED").annotate(shipped_amount_float=Cast("volume_shipped", FloatField())).aggregate(total_shipped_amount=Sum('shipped_amount_float'))["total_shipped_amount"]
         print(total_outbound_sum, "outboundddddddddd")
         if inbound_shipment_sum != None and total_outbound_sum != None:
             milled_volume = inbound_shipment_sum - total_outbound_sum
@@ -101,9 +103,9 @@ def calculate_milled_volume(processor_id, processor_type, sku_id):
             milled_volume = 0
 
     if processor_type in ["T2", "T3","T4"]:
-        inbound_shipment_sum = ShipmentManagement.objects.filter(processor2_idd=processor_id, storage_bin_recive=sku_id,  status="APPROVED").annotate(received_amount_float=Cast("received_weight", FloatField())).aggregate(total_received_amount=Sum('received_amount_float'))["total_received_amount"]
+        inbound_shipment_sum = ShipmentManagement.objects.filter(crop=selected_crop,processor2_idd=processor_id, storage_bin_recive=sku_id,  status="APPROVED").annotate(received_amount_float=Cast("received_weight", FloatField())).aggregate(total_received_amount=Sum('received_amount_float'))["total_received_amount"]
         print(inbound_shipment_sum, "inboundddddddddddd")
-        total_outbound_sum = ShipmentManagement.objects.filter(processor_idd=processor_id, storage_bin_send=sku_id, status="APPROVED").annotate(shipped_amount_float=Cast("volume_shipped", FloatField())).aggregate(total_shipped_amount=Sum('shipped_amount_float'))["total_shipped_amount"]
+        total_outbound_sum = ShipmentManagement.objects.filter(crop=selected_crop,processor_idd=processor_id, storage_bin_send=sku_id, status="APPROVED").annotate(shipped_amount_float=Cast("volume_shipped", FloatField())).aggregate(total_shipped_amount=Sum('shipped_amount_float'))["total_shipped_amount"]
         print(total_outbound_sum,"outboundddddddd")
         if inbound_shipment_sum != None and total_outbound_sum != None:
             milled_volume = inbound_shipment_sum - total_outbound_sum
@@ -154,6 +156,172 @@ def autocomplete_suggestions_sku(request,pro_id,pro_type):
     return JsonResponse(response)
 
 
+# @login_required()
+# def AddProcessorView(request):
+#     context = {}
+#     try:
+#         if request.user.is_authenticated:
+#             # superuser.................
+#             if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+#                 try:
+#                     from apps.quickbooks_integration.models import QuickBooksToken
+#                     from apps.quickbooks_integration.views import refresh_quickbooks_token, create_vendor, update_vendor, get_vendor_data
+#                     token_instance = QuickBooksToken.objects.first()                                    
+#                     refresh_token = token_instance.refresh_token
+#                     if token_instance.is_token_expired():
+#                         print("Token expired, refreshing...")
+#                         new_access_token = refresh_quickbooks_token(refresh_token)
+#                         if not new_access_token:
+#                             return redirect(f"{reverse('quickbooks_login')}?next=add-processor")
+#                         token_instance.access_token = new_access_token
+#                         token_instance.expires_at = timezone.now() + timedelta(seconds=settings.SESSION_COOKIE_AGE)
+#                         token_instance.save()
+#                 except QuickBooksToken.DoesNotExist:
+#                     return redirect(f"{reverse('quickbooks_login')}?next=add-processor")
+#                 form = ProcessorForm()
+#                 context["form"] = form
+#                 if request.method == 'POST':
+#                     form = ProcessorForm(request.POST)
+#                     fein = request.POST.get('fein')
+#                     entity_name = request.POST.get('entity_name')
+#                     billing_address = request.POST.get('billing_address')
+#                     shipping_address = request.POST.get('shipping_address')
+#                     main_email = request.POST.get('main_email')
+#                     main_number = request.POST.get('main_number')
+#                     main_fax = request.POST.get('main_fax')
+#                     website = request.POST.get('website')
+                
+#                     pp = Processor(
+#                         fein=fein,
+#                         entity_name=entity_name,
+#                         billing_address=billing_address,
+#                         shipping_address=shipping_address,
+#                         main_email=main_email,
+#                         main_number=main_number,
+#                         main_fax=main_fax,
+#                         website=website
+#                         )
+#                     pp.save()  
+                                     
+#                     log_type, log_status, log_device = "Processor", "Added", "Web"
+#                     log_idd, log_name = pp.id, entity_name
+#                     log_email = None
+#                     log_details = f"fein = {fein} | entity_name= {entity_name} | billing_address = {billing_address} | shipping_address = {shipping_address} | main_email = {main_email} | main_number = {main_number} | main_fax = {main_fax} | website = {website}"
+#                     action_by_userid = request.user.id
+#                     userr = User.objects.get(pk=action_by_userid)
+#                     user_role = userr.role.all()
+#                     action_by_username = f'{userr.first_name} {userr.last_name}'
+#                     action_by_email = userr.username
+#                     if request.user.id == 1 :
+#                         action_by_role = "superuser"
+#                     else:
+#                         action_by_role = str(','.join([str(i.role) for i in user_role]))
+#                     logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+#                                         action_by_userid=action_by_userid,action_by_username=action_by_username,
+#                                         action_by_email=action_by_email,action_by_role=action_by_role,log_email=log_email,
+#                                         log_details=log_details,log_device=log_device)
+#                     logtable.save()
+                    
+#                     p = Processor.objects.get(fein=fein,entity_name=entity_name,billing_address=billing_address,shipping_address=shipping_address,main_email=main_email,main_number=main_number,main_fax=main_fax,website=website)
+#                     counter = request.POST.get('counter')
+#                     for i in range(1,int(counter)+1):
+#                         contact_name = request.POST.get('contact_name{}'.format(i))
+
+#                         contact_email = request.POST.get('contact_email{}'.format(i))
+#                         contact_phone = request.POST.get('contact_phone{}'.format(i))
+#                         contact_fax = request.POST.get('contact_fax{}'.format(i))
+#                         if User.objects.filter(email=contact_email).exists():
+#                             messages.error(request,'email already exists')
+#                         else:
+#                             password = generate_random_password()
+                            
+#                             puser = ProcessorUser(processor_id = p.id,contact_name=contact_name,contact_email=contact_email,contact_phone=contact_phone,contact_fax=contact_fax,p_password_raw=password)
+#                             puser.save()
+#                             user = User.objects.create(email=contact_email, username=contact_email,first_name=contact_name)
+#                             user.role.add(Role.objects.get(role='Processor'))
+#                             user.is_processor=True
+#                             user.is_active=True
+#                             user.set_password(password)
+#                             user.password_raw = password
+#                             user.save()
+                            
+#                             log_type, log_status, log_device = "ProcessorUser", "Added", "Web"
+#                             log_idd, log_name = puser.id, contact_name
+#                             log_email = contact_email
+#                             log_details = f"processor_id = {p.id} | processor = {p.entity_name} | contact_name= {contact_name} | contact_email = {contact_email} | contact_phone = {contact_phone} | contact_fax = {contact_fax} | p_password_raw = {password}"
+#                             action_by_userid = request.user.id
+#                             userr = User.objects.get(pk=action_by_userid)
+#                             user_role = userr.role.all()
+#                             action_by_username = f'{userr.first_name} {userr.last_name}'
+#                             action_by_email = userr.username
+#                             if request.user.id == 1 :
+#                                 action_by_role = "superuser"
+#                             else:
+#                                 action_by_role = str(','.join([str(i.role) for i in user_role]))
+#                             logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+#                                                 action_by_userid=action_by_userid,action_by_username=action_by_username,
+#                                                 action_by_email=action_by_email,action_by_role=action_by_role,log_email=log_email,
+#                                                 log_details=log_details,log_device=log_device)
+#                             logtable.save()
+                    
+#                     try:
+#                         if website and not website.startswith('http://') and not website.startswith('https://'):
+#                             website = f"https://{website}"
+#                         vendor_data = {
+#                             "PrimaryEmailAddr": {
+#                                 "Address": main_email
+#                             }, 
+#                             "WebAddr": {
+#                                 "URI": website
+#                             }, 
+#                             "PrimaryPhone": {
+#                                 "FreeFormNumber": main_number
+#                             }, 
+#                             "Fax": {
+#                                 "FreeFormNumber":main_fax
+#                             },
+#                             "DisplayName": entity_name,                             
+#                             "Mobile": {
+#                                 "FreeFormNumber": main_number
+#                             }, 
+#                             "FamilyName": entity_name, 
+#                             "TaxIdentifier": "", 
+#                             "AcctNum": "", 
+#                             "CompanyName": entity_name, 
+#                             "BillAddr": {
+#                                 "City": "", 
+#                                 "Country": "", 
+#                                 "Line3": "", 
+#                                 "Line2": "", 
+#                                 "Line1": billing_address, 
+#                                 "PostalCode": "", 
+#                                 "CountrySubDivisionCode": ""
+#                             }, 
+#                             "GivenName": entity_name, 
+#                             "Suffix": "T1"
+                            
+#                             }
+                                               
+#                         created_vendor = create_vendor(token_instance.realm_id, token_instance.access_token, vendor_data)                        
+#                         if created_vendor:                                
+#                             messages.success(request, "Vendor added successfully and synced with QuickBooks.")
+#                         else:
+#                             messages.error(request, "Failed to sync with QuickBooks.")
+#                     except Exception as qb_error:
+#                         messages.error(request, f"Error creating vendor in QuickBooks: {str(qb_error)}")
+#                         return render(request, 'processor/add_processor.html', {'form': form}) 
+#                     return redirect('list-processor')                    
+#                 return render(request, 'processor/add_processor.html',context)
+#             else:
+#                 messages.error(request, "Not a valid request.")
+#                 return redirect("dashboard")
+#         else:
+#             return redirect('login')
+#     except Exception as e:
+#         context["error_messages"] = str(e)
+#         return render(request, 'processor/add_processor.html',context)
+
+
 @login_required()
 def AddProcessorView(request):
     context = {}
@@ -161,6 +329,7 @@ def AddProcessorView(request):
         if request.user.is_authenticated:
             # superuser.................
             if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+                
                 form = ProcessorForm()
                 context["form"] = form
                 if request.method == 'POST':
@@ -169,16 +338,27 @@ def AddProcessorView(request):
                     entity_name = request.POST.get('entity_name')
                     billing_address = request.POST.get('billing_address')
                     shipping_address = request.POST.get('shipping_address')
+                    main_email = request.POST.get('main_email')
                     main_number = request.POST.get('main_number')
                     main_fax = request.POST.get('main_fax')
                     website = request.POST.get('website')
                 
-                    pp = Processor(fein=fein,entity_name=entity_name,billing_address=billing_address,shipping_address=shipping_address,main_number=main_number,main_fax=main_fax,website=website)
-                    pp.save()                    
+                    pp = Processor(
+                        fein=fein,
+                        entity_name=entity_name,
+                        billing_address=billing_address,
+                        shipping_address=shipping_address,
+                        main_email=main_email,
+                        main_number=main_number,
+                        main_fax=main_fax,
+                        website=website
+                        )
+                    pp.save()  
+                                     
                     log_type, log_status, log_device = "Processor", "Added", "Web"
                     log_idd, log_name = pp.id, entity_name
                     log_email = None
-                    log_details = f"fein = {fein} | entity_name= {entity_name} | billing_address = {billing_address} | shipping_address = {shipping_address} | main_number = {main_number} | main_fax = {main_fax} | website = {website}"
+                    log_details = f"fein = {fein} | entity_name= {entity_name} | billing_address = {billing_address} | shipping_address = {shipping_address} | main_email = {main_email} | main_number = {main_number} | main_fax = {main_fax} | website = {website}"
                     action_by_userid = request.user.id
                     userr = User.objects.get(pk=action_by_userid)
                     user_role = userr.role.all()
@@ -194,7 +374,7 @@ def AddProcessorView(request):
                                         log_details=log_details,log_device=log_device)
                     logtable.save()
                     
-                    p = Processor.objects.get(fein=fein,entity_name=entity_name,billing_address=billing_address,shipping_address=shipping_address,main_number=main_number,main_fax=main_fax,website=website)
+                    p = Processor.objects.get(fein=fein,entity_name=entity_name,billing_address=billing_address,shipping_address=shipping_address,main_email=main_email,main_number=main_number,main_fax=main_fax,website=website)
                     counter = request.POST.get('counter')
                     for i in range(1,int(counter)+1):
                         contact_name = request.POST.get('contact_name{}'.format(i))
@@ -235,6 +415,7 @@ def AddProcessorView(request):
                                                 action_by_email=action_by_email,action_by_role=action_by_role,log_email=log_email,
                                                 log_details=log_details,log_device=log_device)
                             logtable.save()
+                     
                     return redirect('list-processor')                    
                 return render(request, 'processor/add_processor.html',context)
             else:
@@ -427,48 +608,6 @@ def add_processor_user(request,pk):
         return render(request, 'processor/add_processor_user.html',context)
 
 
-# @login_required()
-# def ListProcessorView(request):
-#     context = {}
-#     try:
-#         if request.user.is_authenticated:        
-#             # Grower .....................
-#             if 'Grower' in request.user.get_role() and not request.user.is_superuser:
-#                 pass
-#             # consultant ..............
-#             elif request.user.is_consultant:
-#                 pass
-#             # superadmin and others ........
-#             elif request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
-#                 processor= ProcessorUser.objects.all()
-#                 context['processor'] = processor
-#                 return render(request, 'processor/list_processor.html',context)
-#             # processor..........
-#             elif request.user.is_processor:
-#                 pro= ProcessorUser.objects.filter(contact_email=request.user.email).first()
-#                 entity_name = pro.processor
-#                 processor = ProcessorUser.objects.filter(processor=entity_name)
-#                 context['processor'] = processor
-#                 return render(request, 'processor/list_processor.html',context)
-#             # processor2 ............
-#             elif request.user.is_processor2:           
-#                 pro= ProcessorUser2.objects.filter(contact_email=request.user.email).first()
-#                 entity_name = pro.processor2
-#                 processor = ProcessorUser2.objects.filter(processor2=entity_name)
-#                 context['processor'] = processor
-#                 return render(request, 'processor/list_processor.html',context)
-#             else:
-#                 messages.error(request, "Not a valid request")
-#                 return redirect("dashboard")
-#         else:
-#             return redirect('login')
-#     except Exception as e:
-#         context["error_messages"] = str(e)
-#         return render(request, 'processor/list_processor.html',context)
-
-
-
-
 @login_required()
 def ListProcessorView(request):
     context = {}
@@ -516,11 +655,414 @@ def ListProcessorView(request):
         return render(request, 'processor/list_processor.html', context)
 
 
+# @login_required()
+# def ProcessorUpdate(request,pk):
+#     context = {}
+#     try:
+#         if request.user.is_authenticated: 
+#             success_url = reverse('update-processor', kwargs={'pk': pk})
+#             next_url = f"{success_url}"
+#             redirect_url = f"{reverse('quickbooks_login')}?{urlencode({'next': next_url})}" 
+#             try:
+#                 from apps.quickbooks_integration.models import QuickBooksToken
+#                 from apps.quickbooks_integration.views import refresh_quickbooks_token, create_vendor, update_vendor, get_vendor_data
+#                 token_instance = QuickBooksToken.objects.first()                                    
+#                 refresh_token = token_instance.refresh_token
+#                 if token_instance.is_token_expired():
+#                     print("Token expired, refreshing...")
+#                     new_access_token = refresh_quickbooks_token(refresh_token)
+#                     if not new_access_token:
+#                         return redirect(redirect_url)
+#                     token_instance.access_token = new_access_token
+#                     token_instance.expires_at = timezone.now() + timedelta(seconds=settings.SESSION_COOKIE_AGE)
+#                     token_instance.save()
+#             except QuickBooksToken.DoesNotExist:
+#                 return redirect(redirect_url)      
+#             # Grower ..........
+#             if 'Grower' in request.user.get_role() and not request.user.is_superuser:
+#                 pass
+#             # consultant ........
+#             elif request.user.is_consultant:
+#                 pass
+#             # superadmin ........
+#             elif request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+#                 obj_id = ProcessorUser.objects.get(id=pk)
+#                 context['p_user'] = obj_id
+#                 processor = Processor.objects.get(id=obj_id.processor_id)
+
+#                 context['form'] = ProcessorForm(instance=processor)
+#                 processor_email = obj_id.contact_email
+#                 user = User.objects.get(email=processor_email)
+#                 if request.method == 'POST':
+#                     form = ProcessorForm( request.POST,instance=processor)
+#                     if form.is_valid():
+
+#                         entity_name = form.cleaned_data.get('entity_name')
+#                         main_email = form.cleaned_data.get('main_email')
+#                         main_number = form.cleaned_data.get('main_number')
+#                         main_fax = form.cleaned_data.get('main_fax')
+#                         billing_address = form.cleaned_data.get('billing_address')
+#                         shipping_address = form.cleaned_data.get('shipping_address')
+#                         website = form.cleaned_data.get('website')
+                        
+
+#                         email_update = request.POST.get('contact_email1')
+#                         name_update = request.POST.get('contact_name1')
+#                         phone_update = request.POST.get('contact_phone1')
+#                         fax_update = request.POST.get('contact_fax1')
+#                         obj_id.contact_name = name_update
+#                         obj_id.contact_email = email_update
+#                         obj_id.contact_phone = phone_update
+#                         obj_id.contact_fax = fax_update
+#                         obj_id.save()
+#                         log_email = ''
+#                         if email_update != processor_email:
+#                             f_name = name_update
+#                             user.email = email_update
+#                             user.username = email_update
+#                             user.first_name = f_name
+#                             user.save()
+#                             form.save()
+#                             log_email = email_update
+#                         else :
+#                             f_name = name_update
+#                             user.first_name = f_name
+#                             user.save()
+#                             form.save()
+#                             log_email = obj_id.contact_email
+                        
+#                         vendorId = processor.quickbooks_id
+#                         print(vendorId, "vendorId")
+#                         vendorData = get_vendor_data(vendorId)
+#                         print(vendorData)
+#                         sync_token = vendorData.get("Vendor", {}).get("SyncToken")
+#                         print('sync_token', sync_token)
+                        
+#                         if sync_token:
+#                             if website and not website.startswith('http://') and not website.startswith('https://'):
+#                                 website = f"https://{website}"
+#                             vendor_data = {
+#                                 "PrimaryEmailAddr": {
+#                                     "Address": main_email
+#                                 }, 
+#                                 "WebAddr": {
+#                                     "URI": website
+#                                 }, 
+#                                 "PrimaryPhone": {
+#                                     "FreeFormNumber": main_number
+#                                 }, 
+#                                 "Fax": {
+#                                     "FreeFormNumber":main_fax
+#                                 },
+#                                 "DisplayName": entity_name,                             
+#                                 "Mobile": {
+#                                     "FreeFormNumber": main_number
+#                                 }, 
+#                                 "FamilyName": entity_name, 
+#                                 "TaxIdentifier": "", 
+#                                 "AcctNum": "", 
+#                                 "CompanyName": entity_name, 
+#                                 "BillAddr": {
+#                                     "City": "", 
+#                                     "Country": "", 
+#                                     "Line3": "", 
+#                                     "Line2": "", 
+#                                     "Line1": billing_address, 
+#                                     "PostalCode": "", 
+#                                     "CountrySubDivisionCode": ""
+#                                 }, 
+#                                 "GivenName": entity_name, 
+#                                 "Suffix": "T1"
+                                
+#                                 }
+#                             update_response = update_vendor(
+#                                 token_instance.realm_id, token_instance.access_token, vendorId, sync_token, vendor_data
+#                             )
+
+#                             if update_response:
+#                                 print("Vendor updated successfully in QuickBooks.")
+#                             else:
+#                                 print("Failed to update vendor in QuickBooks.")
+#                         else:
+#                             print("Failed to retrieve SyncToken for updating QuickBooks vendor.")
+#                         # 07-04-23 Log Table
+#                         log_type, log_status, log_device = "ProcessorUser", "Edited", "Web"
+#                         log_idd, log_name = obj_id.id, name_update
+#                         log_details = f"processor_id = {obj_id.processor.id} | processor = {obj_id.processor.entity_name} | contact_name= {name_update} | contact_email = {email_update} | contact_phone = {phone_update} | contact_fax = {fax_update}"
+#                         action_by_userid = request.user.id
+#                         userr = User.objects.get(pk=action_by_userid)
+#                         user_role = userr.role.all()
+#                         action_by_username = f'{userr.first_name} {userr.last_name}'
+#                         action_by_email = userr.username
+#                         if request.user.id == 1 :
+#                             action_by_role = "superuser"
+#                         else:
+#                             action_by_role = str(','.join([str(i.role) for i in user_role]))
+#                         logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+#                                             action_by_userid=action_by_userid,action_by_username=action_by_username,
+#                                             action_by_email=action_by_email,action_by_role=action_by_role,log_email=log_email,
+#                                             log_details=log_details,log_device=log_device)
+#                         logtable.save()
+#                         return redirect('list-processor')
+#                 return render(request, 'processor/update_processor.html',context)
+#             # processor..........
+#             elif request.user.is_processor:
+#                 obj_id = ProcessorUser.objects.get(id=pk)
+#                 context['p_user'] = obj_id
+#                 processor = Processor.objects.get(id=obj_id.processor_id)
+
+#                 context['form'] = ProcessorForm(instance=processor)
+#                 processor_email = obj_id.contact_email
+#                 user = User.objects.get(email=processor_email)
+#                 if request.method == 'POST':
+#                     form = ProcessorForm( request.POST,instance=processor)
+#                     if form.is_valid():
+
+#                         entity_name = form.cleaned_data.get('entity_name')
+#                         main_email = form.cleaned_data.get('main_email')
+#                         main_number = form.cleaned_data.get('main_number')
+#                         main_fax = form.cleaned_data.get('main_fax')
+#                         billing_address = form.cleaned_data.get('billing_address')
+#                         shipping_address = form.cleaned_data.get('shipping_address')
+#                         website = form.cleaned_data.get('website')
+
+#                         email_update = request.POST.get('contact_email1')
+#                         name_update = request.POST.get('contact_name1')
+#                         phone_update = request.POST.get('contact_phone1')
+#                         fax_update = request.POST.get('contact_fax1')
+#                         obj_id.contact_name = name_update
+#                         obj_id.contact_email = email_update
+#                         obj_id.contact_phone = phone_update
+#                         obj_id.contact_fax = fax_update
+#                         obj_id.save()
+#                         log_email = ''
+#                         if email_update != processor_email:
+#                             f_name = name_update
+#                             user.email = email_update
+#                             user.username = email_update
+#                             user.first_name = f_name
+#                             user.save()
+#                             form.save()
+#                             log_email = email_update
+#                         else :
+#                             f_name = name_update
+#                             user.first_name = f_name
+#                             user.save()
+#                             form.save()
+#                             log_email = obj_id.contact_email
+                        
+#                         vendorId = processor.quickbooks_id
+#                         print(vendorId, "vendorId")
+#                         vendor_data = get_vendor_data(vendorId)
+#                         sync_token = vendor_data.get("Vendor", {}).get("SyncToken")
+#                         print('sync_token', sync_token)
+                        
+#                         if sync_token:
+#                             if website and not website.startswith('http://') and not website.startswith('https://'):
+#                                 website = f"https://{website}"
+#                             vendor_data = {
+#                                 "PrimaryEmailAddr": {
+#                                     "Address": main_email
+#                                 }, 
+#                                 "WebAddr": {
+#                                     "URI": website
+#                                 }, 
+#                                 "PrimaryPhone": {
+#                                     "FreeFormNumber": main_number
+#                                 }, 
+#                                 "Fax": {
+#                                     "FreeFormNumber":main_fax
+#                                 },
+#                                 "DisplayName": entity_name,                             
+#                                 "Mobile": {
+#                                     "FreeFormNumber": main_number
+#                                 }, 
+#                                 "FamilyName": entity_name, 
+#                                 "TaxIdentifier": "", 
+#                                 "AcctNum": "", 
+#                                 "CompanyName": entity_name, 
+#                                 "BillAddr": {
+#                                     "City": "", 
+#                                     "Country": "", 
+#                                     "Line3": "", 
+#                                     "Line2": "", 
+#                                     "Line1": billing_address, 
+#                                     "PostalCode": "", 
+#                                     "CountrySubDivisionCode": ""
+#                                 }, 
+#                                 "GivenName": entity_name, 
+#                                 "Suffix": "T1"
+                                
+#                                 }
+#                             update_response = update_vendor(
+#                                 token_instance.realm_id, token_instance.access_token, vendorId, sync_token, vendor_data
+#                             )
+
+#                             if update_response:
+#                                 print("Vendor updated successfully in QuickBooks.")
+#                             else:
+#                                 print("Failed to update vendor in QuickBooks.")
+#                         else:
+#                             print("Failed to retrieve SyncToken for updating QuickBooks vendor.")
+#                         # 07-04-23 Log Table
+#                         log_type, log_status, log_device = "ProcessorUser", "Edited", "Web"
+#                         log_idd, log_name = obj_id.id, name_update
+#                         log_details = f"processor_id = {obj_id.processor.id} | processor = {obj_id.processor.entity_name} | contact_name= {name_update} | contact_email = {email_update} | contact_phone = {phone_update} | contact_fax = {fax_update}"
+#                         action_by_userid = request.user.id
+#                         userr = User.objects.get(pk=action_by_userid)
+#                         user_role = userr.role.all()
+#                         action_by_username = f'{userr.first_name} {userr.last_name}'
+#                         action_by_email = userr.username
+#                         if request.user.id == 1 :
+#                             action_by_role = "superuser"
+#                         else:
+#                             action_by_role = str(','.join([str(i.role) for i in user_role]))
+#                         logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+#                                             action_by_userid=action_by_userid,action_by_username=action_by_username,
+#                                             action_by_email=action_by_email,action_by_role=action_by_role,log_email=log_email,
+#                                             log_details=log_details,log_device=log_device)
+#                         logtable.save()
+#                         return redirect('list-processor')
+#                 return render(request, 'processor/update_processor.html',context)
+#             # processor2.................
+#             elif request.user.is_processor2:
+#                 obj_id = ProcessorUser2.objects.get(id=pk)
+#                 context['p_user'] = obj_id
+#                 processor2 = Processor2.objects.get(id=obj_id.processor2_id)
+#                 context['form'] = ProcessorForm2(instance=processor2)
+#                 processor_email = obj_id.contact_email
+#                 user = User.objects.get(email=processor_email)
+#                 if request.method == 'POST':
+#                     print(request.POST)
+#                     form = ProcessorForm2(request.POST,instance=processor2)
+#                     # print(form)
+#                     if form.is_valid():
+                        
+#                         entity_name = form.cleaned_data.get('entity_name')
+#                         main_email = form.cleaned_data.get('main_email')
+#                         main_number = form.cleaned_data.get('main_number')
+#                         main_fax = form.cleaned_data.get('main_fax')
+#                         billing_address = form.cleaned_data.get('billing_address')
+#                         shipping_address = form.cleaned_data.get('shipping_address')
+#                         website = form.cleaned_data.get('website')
+
+#                         email_update = request.POST.get('contact_email1')
+#                         name_update = request.POST.get('contact_name1')
+#                         phone_update = request.POST.get('contact_phone1')
+#                         fax_update = request.POST.get('contact_fax1')
+#                         obj_id.contact_name = name_update
+#                         obj_id.contact_email = email_update
+#                         obj_id.contact_phone = phone_update
+#                         obj_id.contact_fax = fax_update
+#                         obj_id.save()
+#                         log_email = ''
+#                         if email_update != processor_email:
+#                             f_name = name_update
+#                             user.email = email_update
+#                             user.username = email_update
+#                             user.first_name = f_name
+#                             user.save()
+#                             form.save()
+#                             log_email = email_update
+#                         else :
+#                             f_name = name_update
+#                             user.first_name = f_name
+#                             user.save()
+#                             form.save()
+#                             log_email = obj_id.contact_email
+                        
+#                         vendorId = processor2.quickbooks_id
+#                         print(vendorId, "vendorId")
+#                         vendor_data = get_vendor_data(vendorId)
+#                         sync_token = vendor_data.get("Vendor", {}).get("SyncToken")
+#                         print('sync_token', sync_token)
+                        
+#                         if sync_token:
+#                             if website and not website.startswith('http://') and not website.startswith('https://'):
+#                                 website = f"https://{website}"
+#                             vendor_data = {
+#                                 "PrimaryEmailAddr": {
+#                                     "Address": main_email
+#                                 }, 
+#                                 "WebAddr": {
+#                                     "URI": website
+#                                 }, 
+#                                 "PrimaryPhone": {
+#                                     "FreeFormNumber": main_number
+#                                 },
+#                                 "Fax": {
+#                                     "FreeFormNumber":main_fax
+#                                 }, 
+#                                 "DisplayName": entity_name,                             
+#                                 "Mobile": {
+#                                     "FreeFormNumber": main_number
+#                                 }, 
+#                                 "FamilyName": entity_name, 
+#                                 "TaxIdentifier": "", 
+#                                 "AcctNum": "", 
+#                                 "CompanyName": entity_name, 
+#                                 "BillAddr": {
+#                                     "City": "", 
+#                                     "Country": "", 
+#                                     "Line3": "", 
+#                                     "Line2": "", 
+#                                     "Line1": billing_address, 
+#                                     "PostalCode": "", 
+#                                     "CountrySubDivisionCode": ""
+#                                 }, 
+#                                 "GivenName": entity_name, 
+#                                 "Suffix": "T2"
+                                
+#                                 }
+#                             update_response = update_vendor(
+#                                 token_instance.realm_id, token_instance.access_token, vendorId, sync_token, vendor_data
+#                             )
+
+#                             if update_response:
+#                                 print("Vendor updated successfully in QuickBooks.")
+#                             else:
+#                                 print("Failed to update vendor in QuickBooks.")
+#                         else:
+#                             print("Failed to retrieve SyncToken for updating QuickBooks vendor.")
+#                         # 07-04-23 Log Table
+#                         log_type, log_status, log_device = "ProcessorUser2", "Edited", "Web"
+#                         log_idd, log_name = obj_id.id, name_update
+#                         log_details = f"processor2_id = {obj_id.processor2.id} | processor2 = {obj_id.processor2.entity_name} | contact_name= {name_update} | contact_email = {email_update} | contact_phone = {phone_update} | contact_fax = {fax_update}"
+#                         action_by_userid = request.user.id
+#                         userr = User.objects.get(pk=action_by_userid)
+#                         user_role = userr.role.all()
+#                         action_by_username = f'{userr.first_name} {userr.last_name}'
+#                         action_by_email = userr.username
+#                         if request.user.id == 1 :
+#                             action_by_role = "superuser"
+#                         else:
+#                             action_by_role = str(','.join([str(i.role) for i in user_role]))
+#                         logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+#                                             action_by_userid=action_by_userid,action_by_username=action_by_username,
+#                                             action_by_email=action_by_email,action_by_role=action_by_role,log_email=log_email,
+#                                             log_details=log_details,log_device=log_device)
+#                         logtable.save()
+#                         return redirect('list-processor')
+#                 return render(request, 'processor/update_processor.html',context)
+#             else:
+#                 messages.error(request, "Not a valid request")
+#                 return redirect("dashboard")
+#         else:
+#             return redirect('login')
+#     except Exception as e:
+#         context["error_messages"] = str(e)
+#         return render(request, 'processor/update_processor.html',context)
+
+
 @login_required()
 def ProcessorUpdate(request,pk):
     context = {}
     try:
-        if request.user.is_authenticated:        
+        if request.user.is_authenticated: 
+            success_url = reverse('update-processor', kwargs={'pk': pk})
+            next_url = f"{success_url}"
+            redirect_url = f"{reverse('quickbooks_login')}?{urlencode({'next': next_url})}" 
+                
             # Grower ..........
             if 'Grower' in request.user.get_role() and not request.user.is_superuser:
                 pass
@@ -539,6 +1081,16 @@ def ProcessorUpdate(request,pk):
                 if request.method == 'POST':
                     form = ProcessorForm( request.POST,instance=processor)
                     if form.is_valid():
+
+                        entity_name = form.cleaned_data.get('entity_name')
+                        main_email = form.cleaned_data.get('main_email')
+                        main_number = form.cleaned_data.get('main_number')
+                        main_fax = form.cleaned_data.get('main_fax')
+                        billing_address = form.cleaned_data.get('billing_address')
+                        shipping_address = form.cleaned_data.get('shipping_address')
+                        website = form.cleaned_data.get('website')
+                        
+
                         email_update = request.POST.get('contact_email1')
                         name_update = request.POST.get('contact_name1')
                         phone_update = request.POST.get('contact_phone1')
@@ -562,7 +1114,8 @@ def ProcessorUpdate(request,pk):
                             user.first_name = f_name
                             user.save()
                             form.save()
-                            log_email = obj_id.contact_email
+                            log_email = obj_id.contact_email                        
+                        
                         # 07-04-23 Log Table
                         log_type, log_status, log_device = "ProcessorUser", "Edited", "Web"
                         log_idd, log_name = obj_id.id, name_update
@@ -595,6 +1148,15 @@ def ProcessorUpdate(request,pk):
                 if request.method == 'POST':
                     form = ProcessorForm( request.POST,instance=processor)
                     if form.is_valid():
+
+                        entity_name = form.cleaned_data.get('entity_name')
+                        main_email = form.cleaned_data.get('main_email')
+                        main_number = form.cleaned_data.get('main_number')
+                        main_fax = form.cleaned_data.get('main_fax')
+                        billing_address = form.cleaned_data.get('billing_address')
+                        shipping_address = form.cleaned_data.get('shipping_address')
+                        website = form.cleaned_data.get('website')
+
                         email_update = request.POST.get('contact_email1')
                         name_update = request.POST.get('contact_name1')
                         phone_update = request.POST.get('contact_phone1')
@@ -618,7 +1180,8 @@ def ProcessorUpdate(request,pk):
                             user.first_name = f_name
                             user.save()
                             form.save()
-                            log_email = obj_id.contact_email
+                            log_email = obj_id.contact_email                        
+                        
                         # 07-04-23 Log Table
                         log_type, log_status, log_device = "ProcessorUser", "Edited", "Web"
                         log_idd, log_name = obj_id.id, name_update
@@ -653,6 +1216,14 @@ def ProcessorUpdate(request,pk):
                     # print(form)
                     if form.is_valid():
                         
+                        entity_name = form.cleaned_data.get('entity_name')
+                        main_email = form.cleaned_data.get('main_email')
+                        main_number = form.cleaned_data.get('main_number')
+                        main_fax = form.cleaned_data.get('main_fax')
+                        billing_address = form.cleaned_data.get('billing_address')
+                        shipping_address = form.cleaned_data.get('shipping_address')
+                        website = form.cleaned_data.get('website')
+
                         email_update = request.POST.get('contact_email1')
                         name_update = request.POST.get('contact_name1')
                         phone_update = request.POST.get('contact_phone1')
@@ -677,6 +1248,7 @@ def ProcessorUpdate(request,pk):
                             user.save()
                             form.save()
                             log_email = obj_id.contact_email
+                        
                         # 07-04-23 Log Table
                         log_type, log_status, log_device = "ProcessorUser2", "Edited", "Web"
                         log_idd, log_name = obj_id.id, name_update
@@ -870,6 +1442,7 @@ def addlocation(request):
     except Exception as e:
         context["error_messages"] = str(e)
         return render(request, 'processor/add_location.html',context)
+
 
 @login_required
 def location_list(request):
@@ -1614,173 +2187,43 @@ def grower_shipment(request):
         # grower...............
         if 'Grower' in request.user.get_role() and not request.user.is_superuser:
             context ={}
-            form = GrowerShipmentForm()
-            context['form'] =form
-            grower_id= request.user.grower.id
-            if LinkGrowerToProcessor.objects.filter(grower_id=grower_id).count() !=0:
-                grower_processor = LinkGrowerToProcessor.objects.get(grower_id=grower_id)
-                processor = grower_processor.processor.entity_name
-                p_user = ProcessorUser.objects.filter(processor_id=grower_processor.processor.id)
-                processor_id = grower_processor.processor.id
-                context ['processor']=processor
-                storage = Storage.objects.filter(grower_id=grower_id)
-                context ['storage']=storage
-                field = Field.objects.filter(grower_id=grower_id)
-                context ['field']=field
-                
-                if request.method == 'POST':
-                    id_storage = request.POST.get('id_storage')
-                    module_number = request.POST.get('module_number')
-                    id_field = request.POST.get('id_field')
-                    files = request.FILES.getlist('files')   #add file
-
-                    amount1 = request.POST.get('amount1')
-                    amount2 = request.POST.get('amount2')
-
-                    id_unit1 = request.POST.get('id_unit1')
-                    id_unit2= request.POST.get('id_unit2')
+            try:
+                form = GrowerShipmentForm()
+                context['form'] =form
+                grower_id= request.user.grower.id
+                if LinkGrowerToProcessor.objects.filter(grower_id=grower_id).count() !=0:
+                    grower_processor = LinkGrowerToProcessor.objects.get(grower_id=grower_id)
+                    processor = grower_processor.processor.entity_name
+                    p_user = ProcessorUser.objects.filter(processor_id=grower_processor.processor.id)
+                    processor_id = grower_processor.processor.id
+                    context ['processor']=processor
+                    storage = Storage.objects.filter(grower_id=grower_id)
+                    context ['storage']=storage
+                    field = Field.objects.filter(grower_id=grower_id)
+                    context ['field']=field
                     
-                    get_output= request.POST.get('get_output')
-
-                    sustain_data = SustainabilitySurvey.objects.filter(grower_id=grower_id,field_id=id_field)
-
-                    if sustain_data.count() > 0:
-                        Avg_Percentage_Score_data = sustain_data.aggregate(Avg('sustainabilityscore'))
-                        surveyscore = int(Avg_Percentage_Score_data['sustainabilityscore__avg'])
-                    else:
-                        surveyscore = 0
-
-                    if len(amount1) > 0 and len(amount2) == 0:
-                        if id_unit1 == '1':
-                            id_unit1 = 'LBS'
-                            id_unit2 = ''
-                        if id_unit1 == '38000':
-                            id_unit1 = 'MODULES (8 ROLLS)'
-                            id_unit2 = ''
-                        if id_unit1 == '19000':
-                            id_unit1 = 'SETS (4 ROLLS)'
-                            id_unit2 = ''
-                        if id_unit1 == '4750':
-                            id_unit1 = 'ROLLS'
-                            id_unit2 = ''
-                    
-                    if len(amount1) > 0 and len(amount2) > 0:
-                        if id_unit1 == '1':
-                            id_unit1 = 'LBS'
-                        if id_unit1 == '38000':
-                            id_unit1 = 'MODULES (8 ROLLS)'
-                        if id_unit1 == '19000':
-                            id_unit1 = 'SETS (4 ROLLS)'
-                        if id_unit1 == '4750':
-                            id_unit1 = 'ROLLS'
-                        if id_unit2 == '1':
-                            id_unit2 = 'LBS'
-                        if id_unit2 == '38000':
-                            id_unit2 = 'MODULES (8 ROLLS)'
-                        if id_unit2 == '19000':
-                            id_unit2 = 'SETS (4 ROLLS)'
-                        if id_unit2 == '4750':
-                            id_unit2 = 'ROLLS'
-
-                    if id_field and module_number:
-                        field = Field.objects.get(id=id_field)
-                        field_eschlon_id = field.eschlon_id
-                        crop = field.crop
-                        if crop == "RICE":
-                            status = ""
-                        if crop == "WHEAT":
-                            status = ""
-                        if crop == "COTTON":
-                            status = "APPROVED"
-                        variety = field.variety 
-                        shipment_id = generate_shipment_id()
-                        
-                        if id_storage == None :
-                            id_storage = None
-                            storage_name = ''
-                        else:
-                            id_storage = id_storage
-                            s = Storage.objects.get(id=id_storage)
-                            storage_name = s.storage_name
-                        shipment = GrowerShipment(status=status,total_amount=get_output,unit_type2=id_unit2,amount2=amount2,shipment_id=shipment_id,processor_id=processor_id,grower_id=grower_id,storage_id=id_storage,field_id=id_field,crop=crop,variety=variety,amount=amount1,sustainability_score=surveyscore,echelon_id=field_eschlon_id,module_number=module_number,unit_type=id_unit1)
-                        shipment.save()
-                        for file in files:
-                            new_file = GrowerShipmentFile.objects.create(file=file)
-                            shipment.files.add(new_file)  # add files
-                            
-                        # Sending Email
-                        g = Grower.objects.get(id=grower_id)
-                        
-                        field_name = field.name
-                        for i in p_user:
-                            html_message = render_to_string('processor/shipment_processor_notifi.html',\
-                                {'processor': processor, 'grower_name' :g.name, 'shipment_id' :shipment_id, 'crop' :crop, 'variety': variety, 'amount' :amount1,'field_name':field_name,'field_eschlon_id' :field_eschlon_id, 'storage' : storage_name,'surveyscore':surveyscore})
-                            # send_mail('Shipment Notification','email','techsupportUS@agreeta.com',[i.contact_email],fail_silently=False,html_message=html_message)
-                        
-                        # 07-04-23 Log Table
-                        log_type, log_status, log_device = "GrowerShipment", "Added", "Web"
-                        log_idd, log_name = shipment.id, shipment.shipment_id
-                        log_details = f"status = {status} | total_amount = {get_output} | unit_type2 = {id_unit2} | amount2 = {amount2} | echelon_id = {field.eschlon_id} | sustainability_score = {surveyscore} | amount = {amount1} | variety = {field.variety} | crop = {field.crop} | shipment_id = {shipment_id} | processor_id = {processor_id} | grower_id = {grower_id} | storage_id = {id_storage} | field_id = {id_field} | module_number = {module_number} | unit_type = {id_unit1} | "
-                        action_by_userid = request.user.id
-                        user = User.objects.get(pk=action_by_userid)
-                        user_role = user.role.all()
-                        action_by_username = f'{user.first_name} {user.last_name}'
-                        action_by_email = user.username
-                        if request.user.id == 1 :
-                            action_by_role = "superuser"
-                        else:
-                            action_by_role = str(','.join([str(i.role) for i in user_role]))
-                        logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
-                                            action_by_userid=action_by_userid,action_by_username=action_by_username,
-                                            action_by_email=action_by_email,action_by_role=action_by_role,log_details=log_details,
-                                            log_device=log_device)
-                        logtable.save()
-                        return redirect('grower_shipment_list')
-
-            else:
-                return render(request, 'processor/grower_shipment.html',context)
-            return render(request, 'processor/grower_shipment.html',context)
-        
-        # consultant.............
-        if request.user.is_consultant:
-            context ={}
-            form = GrowerShipmentForm()
-            context['form'] =form
-            consultant_id = Consultant.objects.get(email=request.user.email).id
-            get_growers = Grower.objects.filter(consultant=consultant_id).order_by('name')
-            grower_id = [i.id for i in get_growers]
-            if LinkGrowerToProcessor.objects.filter(grower_id__in=grower_id).count() !=0:
-                print("grower_id.............",grower_id)
-                # grower_processor = LinkGrowerToProcessor.objects.get(grower_id=grower_id[0])
-                # grower_processor = LinkGrowerToProcessor.objects.get(grower_id=662)
-                # processor = grower_processor.processor.entity_name
-                # context ['processor']=processor
-                linked_grower_id = [i.grower_id for i in LinkGrowerToProcessor.objects.filter(grower_id__in=grower_id)]
-                linked_grower = Grower.objects.filter(id__in = linked_grower_id).order_by('name')
-                context ['linked_grower']=linked_grower
-                if request.method == 'POST':
-                    id_g = request.POST.get('id_g')
-                    if id_g !='all':
-                        selected_grower = Grower.objects.get(id=id_g)
-                        context['selected_grower'] = selected_grower
- 
-                        storage_obj = Storage.objects.filter(grower_id=id_g)
-                        context['storage_obj'] = storage_obj
-
-                        field_obj = Field.objects.filter(grower_id=id_g)
-                        context['field'] = field_obj
-
-                        id_storage = request.POST.get('id_sto')
-                        id_field = request.POST.get('id_field')
+                    if request.method == 'POST':
+                        id_storage = request.POST.get('id_storage')
                         module_number = request.POST.get('module_number')
+                        id_field = request.POST.get('id_field')
+                        files = request.FILES.getlist('files')   #add file
 
-                        #code 
                         amount1 = request.POST.get('amount1')
                         amount2 = request.POST.get('amount2')
 
                         id_unit1 = request.POST.get('id_unit1')
                         id_unit2= request.POST.get('id_unit2')
-                        get_output= request.POST.get('get_output')
+                        
+                        get_output= request.POST.get('get_output')                    
+
+                        sustain_data = SustainabilitySurvey.objects.filter(grower_id=grower_id,field_id=id_field)
+
+                        if sustain_data.count() > 0:
+                            Avg_Percentage_Score_data = sustain_data.aggregate(Avg('sustainabilityscore'))
+                            surveyscore = int(Avg_Percentage_Score_data['sustainabilityscore__avg'])
+                        else:
+                            surveyscore = 0
+
                         if len(amount1) > 0 and len(amount2) == 0:
                             if id_unit1 == '1':
                                 id_unit1 = 'LBS'
@@ -1812,29 +2255,19 @@ def grower_shipment(request):
                                 id_unit2 = 'SETS (4 ROLLS)'
                             if id_unit2 == '4750':
                                 id_unit2 = 'ROLLS'
-                        
-                        shipment_id = generate_shipment_id()
-                        
-                        processor_id = LinkGrowerToProcessor.objects.get(grower_id=selected_grower.id).processor_id
-                      
+
                         if id_field and module_number:
                             field = Field.objects.get(id=id_field)
+                            field_eschlon_id = field.eschlon_id
                             crop = field.crop
-                            if crop == "RICE":
-                                status = ""
-                            if crop == "WHEAT":
-                                status = ""
+                            
                             if crop == "COTTON":
                                 status = "APPROVED"
-                            
-                            sustain_data = SustainabilitySurvey.objects.filter(grower_id=selected_grower.id,field_id=id_field)
-
-                            if sustain_data.count() > 0:
-                                Avg_Percentage_Score_data = sustain_data.aggregate(Avg('sustainabilityscore'))
-                                surveyscore = int(Avg_Percentage_Score_data['sustainabilityscore__avg'])
                             else:
-                                surveyscore = 0
-
+                                status = ""
+                            variety = field.variety 
+                            shipment_id = generate_shipment_id()
+                            
                             if id_storage == None :
                                 id_storage = None
                                 storage_name = ''
@@ -1842,24 +2275,25 @@ def grower_shipment(request):
                                 id_storage = id_storage
                                 s = Storage.objects.get(id=id_storage)
                                 storage_name = s.storage_name
-                            shipment = GrowerShipment(status=status,total_amount=get_output,unit_type2=id_unit2,amount2=amount2,echelon_id=field.eschlon_id,sustainability_score=surveyscore,amount=amount1,variety=field.variety,crop=field.crop,shipment_id=shipment_id,processor_id=processor_id,grower_id=selected_grower.id,storage_id=id_storage,field_id=id_field,module_number=module_number,unit_type=id_unit1)
+                            shipment = GrowerShipment(status=status,total_amount=get_output,unit_type2=id_unit2,amount2=amount2,shipment_id=shipment_id,processor_id=processor_id,grower_id=grower_id,storage_id=id_storage,field_id=id_field,crop=crop,variety=variety,amount=amount1,sustainability_score=surveyscore,echelon_id=field_eschlon_id,module_number=module_number,unit_type=id_unit1)
                             shipment.save()
-                            # Sending Mail ...
-                            processor = Processor.objects.get(id=processor_id)
-                            p_user = ProcessorUser.objects.filter(processor_id = processor.id)
-
-                            processor_name = processor.entity_name
-                      
-                            g= Grower.objects.get(id=selected_grower.id)
-                            for i in p_user: 
+                            for file in files:
+                                new_file = GrowerShipmentFile.objects.create(file=file)
+                                shipment.files.add(new_file)  # add files
+                                
+                            # Sending Email
+                            g = Grower.objects.get(id=grower_id)
+                            
+                            field_name = field.name
+                            for i in p_user:
                                 html_message = render_to_string('processor/shipment_processor_notifi.html',\
-                                {'processor': processor_name, 'grower_name' :g.name, 'shipment_id' :shipment_id, 'crop' :field.crop, 'variety': field.variety, 'amount' :amount1,'field_name':field.name,'field_eschlon_id' :field.eschlon_id, 'storage' : storage_name,'surveyscore':surveyscore})
-                                send_mail('Shipment Notification','email','techsupportUS@agreeta.com',[i.contact_email],fail_silently=False,html_message=html_message)
+                                    {'processor': processor, 'grower_name' :g.name, 'shipment_id' :shipment_id, 'crop' :crop, 'variety': variety, 'amount' :amount1,'field_name':field_name,'field_eschlon_id' :field_eschlon_id, 'storage' : storage_name,'surveyscore':surveyscore})
+                                # send_mail('Shipment Notification','email','techsupportUS@agreeta.com',[i.contact_email],fail_silently=False,html_message=html_message)
                             
                             # 07-04-23 Log Table
                             log_type, log_status, log_device = "GrowerShipment", "Added", "Web"
                             log_idd, log_name = shipment.id, shipment.shipment_id
-                            log_details = f"status = {status} | total_amount = {get_output} | unit_type2 = {id_unit2} | amount2 = {amount2} | echelon_id = {field.eschlon_id} | sustainability_score = {surveyscore} | amount = {amount1} | variety = {field.variety} | crop = {field.crop} | shipment_id = {shipment_id} | processor_id = {processor_id} | grower_id = {selected_grower.id} | storage_id = {id_storage} | field_id = {id_field} | module_number = {module_number} | unit_type = {id_unit1} | "
+                            log_details = f"status = {status} | total_amount = {get_output} | unit_type2 = {id_unit2} | amount2 = {amount2} | echelon_id = {field.eschlon_id} | sustainability_score = {surveyscore} | amount = {amount1} | variety = {field.variety} | crop = {field.crop} | shipment_id = {shipment_id} | processor_id = {processor_id} | grower_id = {grower_id} | storage_id = {id_storage} | field_id = {id_field} | module_number = {module_number} | unit_type = {id_unit1} | "
                             action_by_userid = request.user.id
                             user = User.objects.get(pk=action_by_userid)
                             user_role = user.role.all()
@@ -1874,11 +2308,153 @@ def grower_shipment(request):
                                                 action_by_email=action_by_email,action_by_role=action_by_role,log_details=log_details,
                                                 log_device=log_device)
                             logtable.save()
-
                             return redirect('grower_shipment_list')
+                    else:
+                        return render(request, 'processor/grower_shipment.html',context)
+            except Exception as e:
+                context["error_messages"] = str(e)
+                return render(request, 'processor/grower_shipment.html',context)            
+            return render(request, 'processor/grower_shipment.html',context)
+        
+        # consultant.............
+        if request.user.is_consultant:
+            context ={}
+            try:
+                form = GrowerShipmentForm()
+                context['form'] =form
+                consultant_id = Consultant.objects.get(email=request.user.email).id
+                get_growers = Grower.objects.filter(consultant=consultant_id).order_by('name')
+                grower_id = [i.id for i in get_growers]
+                if LinkGrowerToProcessor.objects.filter(grower_id__in=grower_id).count() !=0:
+                    print("grower_id.............",grower_id)
+                    # grower_processor = LinkGrowerToProcessor.objects.get(grower_id=grower_id[0])
+                    # grower_processor = LinkGrowerToProcessor.objects.get(grower_id=662)
+                    # processor = grower_processor.processor.entity_name
+                    # context ['processor']=processor
+                    linked_grower_id = [i.grower_id for i in LinkGrowerToProcessor.objects.filter(grower_id__in=grower_id)]
+                    linked_grower = Grower.objects.filter(id__in = linked_grower_id).order_by('name')
+                    context ['linked_grower']=linked_grower
+                    if request.method == 'POST':
+                        id_g = request.POST.get('id_g')
+                        if id_g !='all':
+                            selected_grower = Grower.objects.get(id=id_g)
+                            context['selected_grower'] = selected_grower
+    
+                            storage_obj = Storage.objects.filter(grower_id=id_g)
+                            context['storage_obj'] = storage_obj
 
+                            field_obj = Field.objects.filter(grower_id=id_g)
+                            context['field'] = field_obj
+
+                            id_storage = request.POST.get('id_sto')
+                            id_field = request.POST.get('id_field')
+                            module_number = request.POST.get('module_number')
+
+                            #code 
+                            amount1 = request.POST.get('amount1')
+                            amount2 = request.POST.get('amount2')
+
+                            id_unit1 = request.POST.get('id_unit1')
+                            id_unit2= request.POST.get('id_unit2')
+                            get_output= request.POST.get('get_output')
+                            if len(amount1) > 0 and len(amount2) == 0:
+                                if id_unit1 == '1':
+                                    id_unit1 = 'LBS'
+                                    id_unit2 = ''
+                                if id_unit1 == '38000':
+                                    id_unit1 = 'MODULES (8 ROLLS)'
+                                    id_unit2 = ''
+                                if id_unit1 == '19000':
+                                    id_unit1 = 'SETS (4 ROLLS)'
+                                    id_unit2 = ''
+                                if id_unit1 == '4750':
+                                    id_unit1 = 'ROLLS'
+                                    id_unit2 = ''
                             
-                        # return render(request, 'processor/grower_shipment.html',context)
+                            if len(amount1) > 0 and len(amount2) > 0:
+                                if id_unit1 == '1':
+                                    id_unit1 = 'LBS'
+                                if id_unit1 == '38000':
+                                    id_unit1 = 'MODULES (8 ROLLS)'
+                                if id_unit1 == '19000':
+                                    id_unit1 = 'SETS (4 ROLLS)'
+                                if id_unit1 == '4750':
+                                    id_unit1 = 'ROLLS'
+                                if id_unit2 == '1':
+                                    id_unit2 = 'LBS'
+                                if id_unit2 == '38000':
+                                    id_unit2 = 'MODULES (8 ROLLS)'
+                                if id_unit2 == '19000':
+                                    id_unit2 = 'SETS (4 ROLLS)'
+                                if id_unit2 == '4750':
+                                    id_unit2 = 'ROLLS'
+                            
+                            shipment_id = generate_shipment_id()
+                            
+                            processor_id = LinkGrowerToProcessor.objects.get(grower_id=selected_grower.id).processor_id
+                        
+                            if id_field and module_number:
+                                field = Field.objects.get(id=id_field)
+                                crop = field.crop
+                                
+                                if crop == "COTTON":
+                                    status = "APPROVED"
+                                else:
+                                    status = ""                                
+                                sustain_data = SustainabilitySurvey.objects.filter(grower_id=selected_grower.id,field_id=id_field)
+
+                                if sustain_data.count() > 0:
+                                    Avg_Percentage_Score_data = sustain_data.aggregate(Avg('sustainabilityscore'))
+                                    surveyscore = int(Avg_Percentage_Score_data['sustainabilityscore__avg'])
+                                else:
+                                    surveyscore = 0
+
+                                if id_storage == None :
+                                    id_storage = None
+                                    storage_name = ''
+                                else:
+                                    id_storage = id_storage
+                                    s = Storage.objects.get(id=id_storage)
+                                    storage_name = s.storage_name
+                                shipment = GrowerShipment(status=status,total_amount=get_output,unit_type2=id_unit2,amount2=amount2,echelon_id=field.eschlon_id,sustainability_score=surveyscore,amount=amount1,variety=field.variety,crop=field.crop,shipment_id=shipment_id,processor_id=processor_id,grower_id=selected_grower.id,storage_id=id_storage,field_id=id_field,module_number=module_number,unit_type=id_unit1)
+                                shipment.save()
+                                # Sending Mail ...
+                                processor = Processor.objects.get(id=processor_id)
+                                p_user = ProcessorUser.objects.filter(processor_id = processor.id)
+
+                                processor_name = processor.entity_name
+                        
+                                g= Grower.objects.get(id=selected_grower.id)
+                                for i in p_user: 
+                                    html_message = render_to_string('processor/shipment_processor_notifi.html',\
+                                    {'processor': processor_name, 'grower_name' :g.name, 'shipment_id' :shipment_id, 'crop' :field.crop, 'variety': field.variety, 'amount' :amount1,'field_name':field.name,'field_eschlon_id' :field.eschlon_id, 'storage' : storage_name,'surveyscore':surveyscore})
+                                    send_mail('Shipment Notification','email','techsupportUS@agreeta.com',[i.contact_email],fail_silently=False,html_message=html_message)
+                                
+                                # 07-04-23 Log Table
+                                log_type, log_status, log_device = "GrowerShipment", "Added", "Web"
+                                log_idd, log_name = shipment.id, shipment.shipment_id
+                                log_details = f"status = {status} | total_amount = {get_output} | unit_type2 = {id_unit2} | amount2 = {amount2} | echelon_id = {field.eschlon_id} | sustainability_score = {surveyscore} | amount = {amount1} | variety = {field.variety} | crop = {field.crop} | shipment_id = {shipment_id} | processor_id = {processor_id} | grower_id = {selected_grower.id} | storage_id = {id_storage} | field_id = {id_field} | module_number = {module_number} | unit_type = {id_unit1} | "
+                                action_by_userid = request.user.id
+                                user = User.objects.get(pk=action_by_userid)
+                                user_role = user.role.all()
+                                action_by_username = f'{user.first_name} {user.last_name}'
+                                action_by_email = user.username
+                                if request.user.id == 1 :
+                                    action_by_role = "superuser"
+                                else:
+                                    action_by_role = str(','.join([str(i.role) for i in user_role]))
+                                logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+                                                    action_by_userid=action_by_userid,action_by_username=action_by_username,
+                                                    action_by_email=action_by_email,action_by_role=action_by_role,log_details=log_details,
+                                                    log_device=log_device)
+                                logtable.save()
+
+                                return redirect('grower_shipment_list')                                
+                    else:
+                        return render(request, 'processor/grower_shipment.html',context)
+            except Exception as e:
+                context["error_messages"] = str(e)
+                return render(request, 'processor/grower_shipment.html',context)    
             return render(request, 'processor/grower_shipment.html',context)
         else:
             messages.error(request, "Not a valid request.")
@@ -2237,6 +2813,12 @@ def processor_inbound_management(request):
             
             # SuperUser ..................
             elif request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+                first_grower_shipment = GrowerShipment.objects.order_by('date_time').first()
+                if first_grower_shipment:
+                    from_date = first_grower_shipment.date_time.date() 
+                else:
+                    from_date = None  
+                to_date = date.today()
                 shipment = GrowerShipment.objects.all()
                 var_id = []
                 for i in range(len(shipment)):
@@ -2336,6 +2918,8 @@ def processor_inbound_management(request):
                 except EmptyPage:
                     report = paginator.page(paginator.num_pages)
 
+                context["from_date"] = from_date
+                context["to_date"] = to_date
                 context['grower_shipment'] = report
                 return render(request, 'processor/processor_inbound_management.html',context)
             
@@ -3275,487 +3859,6 @@ def processor_process_material_edit(request,pk):
 
             return redirect ('processor_outbound_list')
         return render(request, 'processor/processor_process_material_edit.html',context)
-
-    
-@login_required()   
-def processor_receive_delivery(request):
-    context = {}
-    try:
-        if request.user.is_authenticated:        
-            status = ""
-            # Processor................. 
-            if request.user.is_processor:            
-                user_email = request.user.email
-                p = ProcessorUser.objects.get(contact_email=user_email)
-                processor_id = Processor.objects.get(id=p.processor_id).id
-                context["sku_id_list"] = get_sku_list(processor_id, "T1")["data"]
-                grower = LinkGrowerToProcessor.objects.filter(processor_id=processor_id)
-                grower_id = [i.grower_id for i in grower]
-                get_grower = Grower.objects.filter(id__in = grower_id).order_by('name')
-                context['get_grower'] = get_grower
-                if request.method == 'POST':
-                    id_grower = request.POST.get('id_grower')
-                    if id_grower !='all':
-                        selected_grower = Grower.objects.get(id=id_grower)
-                        context['selected_grower'] = selected_grower
-
-                        storage_obj = Storage.objects.filter(grower_id=id_grower)
-                        context['storage'] = storage_obj
-
-                        field_obj = Field.objects.filter(grower_id=id_grower)
-                        context['field'] = field_obj
-
-                        id_storage = request.POST.get('id_storage')
-                        id_field = request.POST.get('id_field')
-                        module_number = request.POST.get('module_number')
-                        
-                        amount1 = request.POST.get('amount1')
-                        amount2 = request.POST.get('amount2')
-
-                        id_unit1 = request.POST.get('id_unit1')
-                        id_unit2= request.POST.get('id_unit2')
-                        
-                        # code
-                        shipment_id = generate_shipment_id()
-                        get_output= request.POST.get('get_output')
-                        files = request.FILES.getlist('files')
-                        
-                        recieved_weight= request.POST.get('recieved_weight')
-                        sku_id = request.POST.get('sku_id')
-                        ticket_number= request.POST.get('ticket_number')
-                        approval_date= request.POST.get('approval_date')
-
-                        moisture_level= request.POST.get('moisture_level')
-                        fancy_count= request.POST.get('fancy_count')
-                        head_count= request.POST.get('head_count')
-                        bin_location_processor= request.POST.get('bin_location_processor')
-                        
-                        if len(amount1) > 0 and len(amount2) == 0:
-                            if id_unit1 == '1':
-                                id_unit1 = 'LBS'
-                                id_unit2 = ''
-                            if id_unit1 == '38000':
-                                id_unit1 = 'MODULES (8 ROLLS)'
-                                id_unit2 = ''
-                            if id_unit1 == '19000':
-                                id_unit1 = 'SETS (4 ROLLS)'
-                                id_unit2 = ''
-                            if id_unit1 == '4750':
-                                id_unit1 = 'ROLLS'
-                                id_unit2 = ''
-                        
-                        if len(amount1) > 0 and len(amount2) > 0:
-                            if id_unit1 == '1':
-                                id_unit1 = 'LBS'
-                            if id_unit1 == '38000':
-                                id_unit1 = 'MODULES (8 ROLLS)'
-                            if id_unit1 == '19000':
-                                id_unit1 = 'SETS (4 ROLLS)'
-                            if id_unit1 == '4750':
-                                id_unit1 = 'ROLLS'
-                            if id_unit2 == '1':
-                                id_unit2 = 'LBS'
-                            if id_unit2 == '38000':
-                                id_unit2 = 'MODULES (8 ROLLS)'
-                            if id_unit2 == '19000':
-                                id_unit2 = 'SETS (4 ROLLS)'
-                            if id_unit2 == '4750':
-                                id_unit2 = 'ROLLS'
-
-                        if id_storage == None :
-                            id_storage = None
-                            
-                        else:
-                            id_storage = id_storage
-                                                
-                        if id_field and module_number:
-                            field = Field.objects.get(id=id_field)
-                            crop = field.crop
-                        
-                            if crop == "RICE":
-                                status = "APPROVED"
-                            if crop == "WHEAT":
-                                status = ""
-                            if crop == "COTTON":
-                                status = "APPROVED"
-                        
-                            sustain_data = SustainabilitySurvey.objects.filter(grower_id=selected_grower.id,field_id=id_field)
-
-                            if sustain_data.count() > 0:
-                                Avg_Percentage_Score_data = sustain_data.aggregate(Avg('sustainabilityscore'))
-                                surveyscore = int(Avg_Percentage_Score_data['sustainabilityscore__avg'])
-                            else:
-                                surveyscore = 0
-                        
-                            shipment = GrowerShipment(status=status,total_amount=get_output,unit_type2=id_unit2,amount2=amount2,echelon_id=field.eschlon_id,
-                                                            sustainability_score=surveyscore,amount=amount1,variety=field.variety,crop=field.crop,shipment_id=shipment_id,processor_id=processor_id,grower_id=selected_grower.id,
-                                                            storage_id=id_storage,field_id=id_field,module_number=module_number,unit_type=id_unit1,received_amount =recieved_weight,sku = sku_id,token_id=ticket_number,approval_date = approval_date,moisture_level=moisture_level,fancy_count=fancy_count,head_count=head_count,bin_location_processor=bin_location_processor)
-                            shipment.save()
-                            create_sku_list(processor_id, "T1",sku_id)
-                            for file in files:
-                                new_file = GrowerShipmentFile.objects.create(file=file)
-                                shipment.files.add(new_file)
-
-                            log_type, log_status, log_device = "GrowerShipment", "Added", "Web"
-                            log_idd, log_name = shipment.id, shipment.shipment_id
-                            log_details = f"status = {status} | total_amount = {get_output} | unit_type2 = {id_unit2} | amount2 = {amount2} | echelon_id = {field.eschlon_id} | sustainability_score = {surveyscore} | amount = {amount1} | variety = {field.variety} | crop = {field.crop} | shipment_id = {shipment_id} | processor_id = {processor_id} | grower_id = {selected_grower.id} | storage_id = {id_storage} | field_id = {id_field} | module_number = {module_number} | unit_type = {id_unit1} | "
-                            action_by_userid = request.user.id
-                            user = User.objects.get(pk=action_by_userid)
-                            user_role = user.role.all()
-                            action_by_username = f'{user.first_name} {user.last_name}'
-                            action_by_email = user.username
-                            if request.user.id == 1 :
-                                action_by_role = "superuser"
-                            else:
-                                action_by_role = str(','.join([str(i.role) for i in user_role]))
-                            logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
-                                                action_by_userid=action_by_userid,action_by_username=action_by_username,
-                                                action_by_email=action_by_email,action_by_role=action_by_role,log_details=log_details,
-                                                log_device=log_device)
-                            logtable.save()
-
-                            return redirect('processor_inbound_management')                        
-                
-                return render(request, 'processor/add_processor_receive_delivery.html',context)
-            # Superuser............ 
-            elif request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
-                grower = LinkGrowerToProcessor.objects.all()
-                grower_id = [i.grower_id for i in grower]
-                get_grower = Grower.objects.filter(id__in = grower_id).order_by('name')
-                context['get_grower'] = get_grower
-                
-                if request.method == 'POST':
-                    id_grower = request.POST.get('id_grower')
-                    # files = request.FILES.getlist('files')   #add file
-                    if id_grower !='all':
-                        selected_grower = Grower.objects.get(id=id_grower)
-                        context['selected_grower'] = selected_grower
-
-                        storage_obj = Storage.objects.filter(grower_id=id_grower)
-                        context['storage'] = storage_obj
-
-                        field_obj = Field.objects.filter(grower_id=id_grower) 
-                        context['field'] = field_obj                    
-                        
-
-                        id_storage = request.POST.get('id_storage')
-                        id_field = request.POST.get('id_field')
-                        module_number = request.POST.get('module_number')
-
-                        amount1 = request.POST.get('amount1')
-                        amount2 = request.POST.get('amount2')
-                        
-                        id_unit1 = request.POST.get('id_unit1')
-                        id_unit2= request.POST.get('id_unit2')
-
-                        get_output= request.POST.get('get_output')
-                        shipment_id = generate_shipment_id()
-                        
-                        recieved_weight= request.POST.get('recieved_weight')
-                        sku_id = request.POST.get('sku_id')  #add sku
-                        files = request.FILES.getlist('files')
-                    
-                        ticket_number= request.POST.get('ticket_number')
-                        approval_date= request.POST.get('approval_date')
-
-                        moisture_level= request.POST.get('moisture_level')
-                        fancy_count= request.POST.get('fancy_count')
-                        head_count= request.POST.get('head_count')
-                        bin_location_processor= request.POST.get('bin_location_processor')
-
-                        
-                        if len(amount1) > 0 and len(amount2) == 0:
-                            if id_unit1 == '1':
-                                id_unit1 = 'LBS'
-                                id_unit2 = ''
-                            if id_unit1 == '38000':
-                                id_unit1 = 'MODULES (8 ROLLS)'
-                                id_unit2 = ''
-                            if id_unit1 == '19000':
-                                id_unit1 = 'SETS (4 ROLLS)'
-                                id_unit2 = ''
-                            if id_unit1 == '4750':
-                                id_unit1 = 'ROLLS'
-                                id_unit2 = ''
-                        
-                        if len(amount1) > 0 and len(amount2) > 0:
-                            if id_unit1 == '1':
-                                id_unit1 = 'LBS'
-                            if id_unit1 == '38000':
-                                id_unit1 = 'MODULES (8 ROLLS)'
-                            if id_unit1 == '19000':
-                                id_unit1 = 'SETS (4 ROLLS)'
-                            if id_unit1 == '4750':
-                                id_unit1 = 'ROLLS'
-                            if id_unit2 == '1':
-                                id_unit2 = 'LBS'
-                            if id_unit2 == '38000':
-                                id_unit2 = 'MODULES (8 ROLLS)'
-                            if id_unit2 == '19000':
-                                id_unit2 = 'SETS (4 ROLLS)'
-                            if id_unit2 == '4750':
-                                id_unit2 = 'ROLLS'
-                        
-                        if id_storage == None :
-                            id_storage = None
-                            
-                        else:
-                            id_storage = id_storage
-
-                        processor_id = LinkGrowerToProcessor.objects.get(grower_id=selected_grower.id).processor_id
-                        context["sku_id_list"] = get_sku_list(int(processor_id), "T1")["data"]
-                        if id_field and module_number:
-                            field = Field.objects.get(id=id_field)
-                            crop = field.crop
-                            
-                            if crop == "RICE":
-                                status = "APPROVED"
-                            if crop == "WHEAT":
-                                status = ""
-                            if crop == "COTTON":
-                                status = "APPROVED"
-
-                            sustain_data = SustainabilitySurvey.objects.filter(grower_id=selected_grower.id,field_id=id_field)
-
-                            if sustain_data.count() > 0:
-                                Avg_Percentage_Score_data = sustain_data.aggregate(Avg('sustainabilityscore'))
-                                surveyscore = int(Avg_Percentage_Score_data['sustainabilityscore__avg'])
-                            else:
-                                surveyscore = 0
-                            
-                            shipment = GrowerShipment(status=status,total_amount=get_output,unit_type2=id_unit2,amount2=amount2,echelon_id=field.eschlon_id,
-                                                            sustainability_score=surveyscore,amount=amount1,variety=field.variety,crop=field.crop,shipment_id=shipment_id,processor_id=processor_id,grower_id=selected_grower.id,
-                                                            storage_id=id_storage,field_id=id_field,module_number=module_number,unit_type=id_unit1,received_amount =recieved_weight,sku = sku_id,token_id=ticket_number,approval_date = approval_date,moisture_level=moisture_level,fancy_count=fancy_count,head_count=head_count,bin_location_processor=bin_location_processor)
-                            shipment.save()
-                            id_processor = Processor.objects.filter(id=processor_id).first().id
-                            create_sku_list(id_processor, "T1", sku_id)
-                            for file in files:
-                                new_file = GrowerShipmentFile.objects.create(file=file)
-                                shipment.files.add(new_file)
-                            
-
-                            # 07-04-23
-                            log_type, log_status, log_device = "GrowerShipment", "Added", "Web"
-                            log_idd, log_name = shipment.id, shipment.shipment_id
-                            log_details = f"status = {status} | total_amount = {get_output} | unit_type2 = {id_unit2} | amount2 = {amount2} | echelon_id = {field.eschlon_id} | sustainability_score = {surveyscore} | amount = {amount1} | variety = {field.variety} | crop = {field.crop} | shipment_id = {shipment_id} | processor_id = {processor_id} | grower_id = {selected_grower.id} | storage_id = {id_storage} | field_id = {id_field} | module_number = {module_number} | unit_type = {id_unit1} | "
-                            action_by_userid = request.user.id
-                            user = User.objects.get(pk=action_by_userid)
-                            user_role = user.role.all()
-                            action_by_username = f'{user.first_name} {user.last_name}'
-                            action_by_email = user.username
-                            if request.user.id == 1 :
-                                action_by_role = "superuser"
-                            else:
-                                action_by_role = str(','.join([str(i.role) for i in user_role]))
-                            logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
-                                                action_by_userid=action_by_userid,action_by_username=action_by_username,
-                                                action_by_email=action_by_email,action_by_role=action_by_role,log_details=log_details,
-                                                log_device=log_device)
-                            logtable.save()
-
-                            return redirect('processor_inbound_management')
-                
-                return render(request, 'processor/add_processor_receive_delivery.html',context)
-            # Processor2.............
-            elif request.user.is_processor2:
-                user_email = request.user.email
-                p = ProcessorUser2.objects.get(contact_email=user_email)
-                processor_id = Processor2.objects.get(id=p.processor2_id).id    
-                processor_name= Processor2.objects.get(id=p.processor2_id).entity_name  
-                processor_type = Processor2.objects.get(id=p.processor2_id).processor_type.all().first().type_name 
-                context["receiver_sku_id_list"] = get_sku_list(int(processor_id), processor_type)["data"]
-                if processor_type == "T2":  
-                    processor1 = list(LinkProcessor1ToProcessor.objects.filter(processor2_id=processor_id).values("processor1__id", "processor1__entity_name"))
-                    linked_processor = []
-                    for pro1 in processor1:
-                        dict_ = {"processor__id":None, "processor__entity_name":None,"processor_type":None } 
-                        dict_["processor__id"] = pro1["processor1__id"]
-                        dict_["processor__entity_name"] = pro1["processor1__entity_name"]
-                        dict_["processor_type"] = "T1"
-                        linked_processor.append(dict_)
-                    context["processor"] = linked_processor   
-                     
-                if processor_type == "T3":
-                    processor1 = list(LinkProcessor1ToProcessor.objects.filter(processor2_id=processor_id).values("processor1__id", "processor1__entity_name"))
-                    processor2 = list(LinkProcessorToProcessor.objects.filter(linked_processor_id=processor_id).values("processor__id", "processor__entity_name"))
-                    linked_processor = []
-                    for pro1 in processor1:
-                        dict_ = {"processor__id":None, "processor__entity_name":None,"processor_type":None } 
-                        dict_["processor__id"] = pro1["processor1__id"]
-                        dict_["processor__entity_name"] = pro1["processor1__entity_name"]
-                        dict_["processor_type"] = "T1"
-                        linked_processor.append(dict_)
-                    for pro2 in processor2:
-                        dict_ = {"processor__id":None, "processor__entity_name":None, "processor_type":None} 
-                        dict_["processor__id"] = pro2["processor__id"]
-                        dict_["processor__entity_name"] = pro2["processor__entity_name"]
-                        dict_["processor_type"] = Processor2.objects.filter(id=int(pro2["processor__id"])).first().processor_type.all().first().type_name
-                        linked_processor.append(dict_)
-                    context["processor"] = linked_processor
-                if processor_type == "T4":
-                    processor1 = list(LinkProcessor1ToProcessor.objects.filter(processor2_id=processor_id).values("processor1__id", "processor1__entity_name"))
-                    processor2 = list(LinkProcessorToProcessor.objects.filter(linked_processor_id=processor_id).values("processor__id", "processor__entity_name"))
-                    linked_processor = []
-                    for pro1 in processor1:
-                        dict_ = {"processor__id":None, "processor__entity_name":None, "processor_type":None} 
-                        dict_["processor__id"] = pro1["processor1__id"]
-                        dict_["processor__entity_name"] = pro1["processor1__entity_name"]
-                        dict_["processor_type"] = "T1"
-                        linked_processor.append(dict_)
-                    for pro2 in processor2:
-                        dict_ = {"processor__id":None, "processor__entity_name":None, "processor_type":None} 
-                        dict_["processor__id"] = pro2["processor__id"]
-                        dict_["processor__entity_name"] = pro2["processor__entity_name"]
-                        dict_["processor_type"] = Processor2.objects.filter(id=int(pro2["processor__id"])).first().processor_type.all().first().type_name
-                        linked_processor.append(dict_)
-                    context["processor"] = linked_processor
-                print(context)
-                
-                context.update({
-                    "select_processor_name": None,
-                    "select_processor_id": None,
-                    "milled_value": "None",
-                    "sender_processor_type":None
-                })
-
-                if request.method == "POST":
-                    data = request.POST
-                    get_bin_pull = data.get("bin_pull")
-                    sku = data.get("storage_bin_id")
-                    volume_shipped = data.get("volume_shipped")
-                    bin_pull_ = get_bin_pull.split("_")               
-                    bin_pull, bin_pull_type = bin_pull_[0], bin_pull_[1]               
-                    if bin_pull_type == "T1":
-                        select_pro_id = Processor.objects.filter(id=int(bin_pull)).first().id
-                        select_processor_name = Processor.objects.filter(id=int(bin_pull)).first().entity_name
-                        context["sender_sku_id_list"] = get_sku_list(int(select_pro_id), "T1")["data"]
-                    else:
-                        select_pro_id = Processor2.objects.filter(id=int(bin_pull)).first().id
-                        select_processor_name = Processor2.objects.filter(id=int(bin_pull)).first().entity_name
-                        context["sender_sku_id_list"] = get_sku_list(int(select_pro_id), "T2")["data"]
-                    context.update({
-                        "select_processor_name": select_processor_name,
-                        "select_processor_id": bin_pull,
-                        "sender_processor_type":bin_pull_type,
-                        "processor2_id": data.get("processor2_id"),
-                        "exp_yield": data.get("exp_yield"),
-                        "exp_yield_unit_id": data.get("exp_yield_unit_id"),
-                        "moist_percentage": data.get("moist_percentage"),
-                        "purchase_number": data.get("purchase_number"),
-                        "weight_prod_unit_id": data.get("weight_prod_unit_id"),
-                        "weight_prod": data.get("weight_prod"),
-                        "storage_bin_id": data.get("storage_bin_id"),
-                        "equipment_id": data.get("equipment_id"),
-                        "equipment_type": data.get("equipment_type"),
-                        "lot_number": data.get("lot_number"),
-                        "volume_shipped": data.get("volume_shipped"),
-                        # "files": data.get("files"),
-                        "status": data.get("status"),
-                        "receiver_sku_id": data.get("receiver_sku_id"),
-                        "received_weight": data.get("received_weight"),
-                        "ticket_number": data.get("ticket_number"),
-                        "approval_date": data.get("approval_date"),
-                        "milled_value":data.get('milled_value')
-                    })
-
-                    if bin_pull and not data.get("save"):                    
-                        
-                        sender_processor_type = bin_pull_type
-                        if sku:
-                            context["milled_value"] =  calculate_milled_volume(int(bin_pull),sender_processor_type, sku)
-                            context["selected_sku"] = sku 
-                        else:
-                            context["milled_value"] =  calculate_milled_volume(int(bin_pull),sender_processor_type, sku) 
-
-                        milled_volume = float(context["milled_value"])
-                        
-                        return render(request, 'processor/add_processor_receive_delivery.html',context)
-                    else:
-
-                        try:
-                            milled_value = float(context["milled_value"])
-                        except ValueError:
-                            context["error_messages"] = "Invalid input: milled_value is not a valid number."
-                            return render(request, 'processor/add_processor_receive_delivery.html', context)
-                        try:
-                            volume_shipped = float(volume_shipped)
-                        except ValueError:
-                            context["error_messages"] = "Invalid input: volume_shipped is not a valid number."
-                            return render(request, 'processor/add_processor_receive_delivery.html', context)
-                        if milled_value < volume_shipped:
-                            context["error_messages"] = "Processor does not have the required milled volume."
-                            return render(request, 'processor/add_processor_receive_delivery.html', context)
- 
-                        else:
-                            if context["weight_prod_unit_id"] == "LBS" :
-                                cal_weight = round(float(context["weight_prod"]),2)
-                            if context["weight_prod_unit_id"] == "BU" :
-                                cal_weight = round(float(context["weight_prod"]) * 45,2)
-                            if context["exp_yield_unit_id"] == "LBS" :
-                                cal_exp_yield = round(float(context["exp_yield"]),2)
-                            if context["exp_yield_unit_id"] == "BU" :
-                                cal_exp_yield = round(float(context["exp_yield"]) * 45,2)
-                            select_proc_id = processor_id
-                            select_destination_ = processor_name
-                            receiver_processor_type = processor_type
-                        
-                            milled_volume = context["milled_value"]
-                            volume_left = float(context["milled_value"]) - float(context["volume_shipped"])
-                            shipment_id = generate_shipment_id()
-                            
-                            save_shipment_management = ShipmentManagement(shipment_id=shipment_id,processor_idd=bin_pull,processor_e_name=select_processor_name, sender_processor_type=context["sender_processor_type"], bin_location=bin_pull,
-                                    equipment_type=context["equipment_type"],equipment_id=context["equipment_id"],storage_bin_send=context["storage_bin_id"],moisture_percent = context["moist_percentage"],weight_of_product_raw = context["weight_prod"],
-                                    weight_of_product=cal_weight,weight_of_product_unit=context["weight_prod_unit_id"], excepted_yield_raw =context["exp_yield"],excepted_yield=cal_exp_yield,excepted_yield_unit=context["exp_yield_unit_id"],recive_delivery_date=context["approval_date"],
-                                    purchase_order_number=context["purchase_number"],lot_number=context["lot_number"],volume_shipped=context["volume_shipped"],milled_volume=milled_volume,volume_left=volume_left,editable_obj=True,status=context["status"],
-                                    storage_bin_recive=context["receiver_sku_id"],ticket_number=context["ticket_number"],received_weight=context["received_weight"],processor2_idd=select_proc_id,processor2_name=select_destination_, receiver_processor_type=receiver_processor_type)
-                            save_shipment_management.save()
-
-                            
-                            create_sku_list(select_pro_id, bin_pull_type, context["storage_bin_id"])
-                            create_sku_list(processor_id, processor_type, context["receiver_sku_id"])
-                            files = request.FILES.getlist('files')
-                            for file in files:
-                                new_file = File.objects.create(file=file)
-                                save_shipment_management.files.add(new_file)
-                            save_shipment_management.save()
-                            #logtable
-                            log_type, log_status, log_device = "ShipmentManagement", "Added", "Web"
-                            log_idd, log_name = save_shipment_management.id, save_shipment_management.bin_location
-                            log_details = f"processor2 = {save_shipment_management.processor_e_name} | processor2_id = {save_shipment_management.processor_idd} | date_pulled = {save_shipment_management.date_pulled} | bin_location = {save_shipment_management.bin_location} | milled_volume = {save_shipment_management.milled_volume} | equipment_type = {save_shipment_management.equipment_type} | equipment_id = {save_shipment_management.equipment_id} | purchase_order_number = {save_shipment_management.purchase_order_number} | lot_number = {save_shipment_management.lot_number} | volume_shipped = {save_shipment_management.volume_shipped} | volume_left = {save_shipment_management.volume_left} | editable_obj = {save_shipment_management.editable_obj} "
-                            action_by_userid = request.user.id
-                            user = User.objects.get(pk=action_by_userid)
-                            user_role = user.role.all()
-                            action_by_username = f'{user.first_name} {user.last_name}'
-                            action_by_email = user.username
-                            if request.user.id == 1 :
-                                action_by_role = "superuser"
-                            else:
-                                action_by_role = str(','.join([str(i.role) for i in user_role]))
-                            logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
-                                                action_by_userid=action_by_userid,action_by_username=action_by_username,
-                                                action_by_email=action_by_email,action_by_role=action_by_role,log_details=log_details,
-                                                log_device=log_device)
-                            logtable.save()
-                            update_obj = ShipmentManagement.objects.filter(processor_idd=int(bin_pull)).exclude(id=save_shipment_management.id).values('id','editable_obj')
-                            
-                            if update_obj.exists():
-                                for i in update_obj :
-                                    get_obj = ShipmentManagement.objects.get(id=i['id'])
-                                    get_obj.editable_obj = False
-                                    get_obj.save()
-                            else:
-                                pass
-                            return redirect('processor_inbound_management')
-                
-                return render(request, 'processor/add_processor_receive_delivery.html',context)
-            else:
-                messages.error(request, "Not a valid request.")
-                return redirect("dashboard")
-        else:
-            return redirect('login')
-    except Exception as e:
-        context["error_messages"] = str(e)
-        return render(request, 'processor/add_processor_receive_delivery.html',context)
 
 
 @login_required()
@@ -6685,7 +6788,7 @@ def grower_field_yield_variance(request):
                         "variance": 'N/A',
                     }
                     yield_variance.append(data)
-            elif i.crop == 'RICE' :
+            else :
                 shipment = GrowerShipment.objects.filter(field=i.id).filter(status='APPROVED')
                 if shipment.exists() :
                     projected_yeild = i.total_yield
@@ -6807,7 +6910,7 @@ def grower_field_yield_variance_download(request,selectedCrop,selectedFarm_id,se
                     writer.writerow([i.farm.name, i.name, i.grower.name, i.crop, projected_yeild, sum_ry, sum_ry - projected_yeild, '{0:.2f}'.format(((sum_ry - projected_yeild) / projected_yeild) * 100)])
                 else:
                     writer.writerow([i.farm.name, i.name, i.grower.name, i.crop, i.total_yield, 'N/A', 'N/A', 'N/A'])
-            elif i.crop == 'RICE' :
+            else:
                 shipment = GrowerShipment.objects.filter(field=i.id).filter(status='APPROVED')
                 if shipment.exists() :
                     projected_yeild = i.total_yield
@@ -6846,17 +6949,18 @@ def classing_csv_all_certificate_check(request):
         field_id = i.id
         composite_score = i.get_composite_score()
         crop = i.crop
-        if crop == 'RICE':
-            if composite_score >= 70:
-                certificate = "Pass"
-            elif composite_score < 70 :
-                certificate = "Fail"
-            else:
-                certificate = 'N/A'
+        
         if crop == 'COTTON':
             if composite_score >= 75:
                 certificate = "Pass"
             elif composite_score < 75 :
+                certificate = "Fail"
+            else:
+                certificate = 'N/A'
+        else:
+            if composite_score >= 70:
+                certificate = "Pass"
+            elif composite_score < 70 :
                 certificate = "Fail"
             else:
                 certificate = 'N/A'
@@ -7471,6 +7575,12 @@ def outbound_shipment_mgmt(request):
     try:
         # Superuser................
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+            first_grower_shipment = GrowerShipment.objects.order_by('date_time').first()
+            if first_grower_shipment:
+                from_date = first_grower_shipment.date_time.date() 
+            else:
+                from_date = None  
+            to_date = date.today()
             output = ShipmentManagement.objects.filter(sender_processor_type="T1").order_by('bin_location','id')
             processors = Processor.objects.all().order_by('entity_name')
             context['processors'] = processors
@@ -7499,6 +7609,8 @@ def outbound_shipment_mgmt(request):
                 report = paginator.page(paginator.num_pages)
 
             context['report'] = report
+            context["from_date"] = from_date
+            context["to_date"] = to_date
             return render (request, 'processor/outbound_shipment_mgmt.html', context)
         # Processor..............
         elif request.user.is_processor :
@@ -7963,20 +8075,22 @@ def add_outbound_shipment_processor1(request):
     context = {}
     try:
         # Superuser...............
-        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
-            
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():            
+            crops = Crop.objects.all()
             context["processor"] = list(Processor.objects.all().values("id", "entity_name"))
+            context["crops"] = crops
             context["processor_type"] = "T1"
             context.update({
                 "select_processor_name": None,
                 "select_processor_id": None,
                 "milled_value": "None",
-            })
-
+                "selected_crop": None
+            })           
             if request.method == "POST":
                 data = request.POST
                 sku = data.get("storage_bin_id")
                 bin_pull = data.get("bin_pull")
+                selected_crop = data.get("id_crop")
                 milled_value = data.get("milled_value")
                 context.update({
                     "processor": list(Processor.objects.all().values("id", "entity_name")),
@@ -7994,21 +8108,22 @@ def add_outbound_shipment_processor1(request):
                     "equipment_type": data.get("equipment_type"),
                     "lot_number": data.get("lot_number"),
                     "volume_shipped": data.get("volume_shipped"),
-                    "id_date": data.get("id_date"),
-                    # "files": data.get("files"),
-                    "milled_value":data.get('milled_value')
+                    "id_date": data.get("id_date"),                   
+                    "milled_value":data.get('milled_value'),
+                    "selected_crop":data.get('id_crop'),
+                    "variety":data.get('variety')
                 })
 
-                if bin_pull and not data.get("save"):
-                    
+                if bin_pull and not data.get("save"): 
+                                   
                     processor_type="T1"
                     if sku:
-                        context["milled_value"] = calculate_milled_volume(int(bin_pull), processor_type, sku)
+                        context["milled_value"] = calculate_milled_volume(selected_crop, int(bin_pull), processor_type, sku)
                         context["selected_sku"] = sku
                     else:
-                        context["milled_value"] =  calculate_milled_volume(int(bin_pull), processor_type, sku)
-                    print(context["milled_value"], "volumeeeeeeeee")
-                    context["sender_sku_id_list"] = get_sku_list(int(bin_pull), "T1")["data"]
+                        context["milled_value"] =  calculate_milled_volume(selected_crop, int(bin_pull), processor_type, sku)                    
+                    context["sender_sku_id_list"] = get_sku_list(int(bin_pull), "T1")["data"]                    
+                    context["varieties"] = CropVariety.objects.filter(crop__code=selected_crop).values_list("variety_code", flat=True)                    
                 
                     processor2 = LinkProcessor1ToProcessor.objects.filter(processor1_id=bin_pull, processor2__processor_type__type_name = "T2").values("processor2__id", "processor2__entity_name")
                     processor3 = LinkProcessor1ToProcessor.objects.filter(processor1_id=bin_pull, processor2__processor_type__type_name = "T3").values("processor2__id", "processor2__entity_name")
@@ -8018,77 +8133,92 @@ def add_outbound_shipment_processor1(request):
                     context["processor2"] = processor2
                     return render(request, 'processor/add_outbound_shipment.html', context)
                 else:
-                    if context["weight_prod_unit_id"] == "LBS" :
-                        cal_weight = round(float(context["weight_prod"]),2)
-                    if context["weight_prod_unit_id"] == "BU" :
-                        cal_weight = round(float(context["weight_prod"]) * 45,2)
-                    if context["exp_yield_unit_id"] == "LBS" :
-                        cal_exp_yield = round(float(context["exp_yield"]),2)
-                    if context["exp_yield_unit_id"] == "BU" :
-                        cal_exp_yield = round(float(context["exp_yield"]) * 45,2)
+                    try:
+                        milled_value = float(context["milled_value"])
+                    except ValueError:
+                        context["error_messages"] = "Invalid input: milled_value is not a valid number."
+                        return render(request, 'processor/add_outbound_shipment.html', context)
+                    try:
+                        volume_shipped = float(volume_shipped)
+                    except ValueError:
+                        context["error_messages"] = "Invalid input: volume_shipped is not a valid number."
+                        return render(request, 'processor/add_outbound_shipment.html', context)
+                    if milled_value < volume_shipped:
+                        context["error_messages"] = "Processor does not have the required milled volume."
+                        return render(request, 'processor/add_outbound_shipment.html', context)
 
-                    select_proc_id, processor_type = context["processor2_id"].split()
-                    if processor_type == 'T2':
-                        select_destination_ = Processor2.objects.get(id=select_proc_id).entity_name
-                        receiver_processor_type = "T2"
-                        # print("select_destination_-----",select_destination_)
-                    elif processor_type == 'T3':
-                        select_destination_ = Processor2.objects.get(id=select_proc_id).entity_name
-                        receiver_processor_type = "T3"
-                        # print("select_destination_-----",select_destination_)
-                    elif processor_type == 'T4':
-                        select_destination_ = Processor2.objects.get(id=select_proc_id).entity_name
-                        receiver_processor_type = "T4"
-                
-                    milled_volume = context["milled_value"]
-                    volume_left = float(context["milled_value"]) - float(context["volume_shipped"])
-                    shipment_id = generate_shipment_id()
-                    
-                    processor_e_name = Processor.objects.filter(id=int(bin_pull)).first().entity_name
-                    save_shipment_management = ShipmentManagement(shipment_id=shipment_id,processor_idd=bin_pull,processor_e_name=processor_e_name, sender_processor_type="T1", bin_location=bin_pull,
-                            date_pulled=context["id_date"],equipment_type=context["equipment_type"],equipment_id=context["equipment_id"],storage_bin_send=context["storage_bin_id"],moisture_percent = context["moist_percentage"],weight_of_product_raw = context["weight_prod"],
-                            weight_of_product=cal_weight,weight_of_product_unit=context["weight_prod_unit_id"], excepted_yield_raw =context["exp_yield"],excepted_yield=cal_exp_yield,excepted_yield_unit=context["exp_yield_unit_id"],
-                            purchase_order_number=context["purchase_number"],lot_number=context["lot_number"],volume_shipped=context["volume_shipped"],milled_volume=milled_volume,volume_left=volume_left,editable_obj=True,
-                            processor2_idd=select_proc_id,processor2_name=select_destination_, receiver_processor_type=receiver_processor_type)
-                    save_shipment_management.save()
-
-                    processor1_id = Processor.objects.filter(id=int(bin_pull)).first().id
-                    create_sku_list(processor1_id, "T1", context["storage_bin_id"])
-                    files = request.FILES.getlist('files')
-                    for file in files:
-                        new_file = File.objects.create(file=file)
-                        save_shipment_management.files.add(new_file)
-                    save_shipment_management.save()
-
-                    log_type, log_status, log_device = "ShipmentManagement", "Added", "Web"
-                    log_idd, log_name = save_shipment_management.id, save_shipment_management.bin_location
-                    log_details = f"processor2 = {save_shipment_management.processor_e_name} | processor2_id = {save_shipment_management.processor_idd} | date_pulled = {save_shipment_management.date_pulled} | bin_location = {save_shipment_management.bin_location} | milled_volume = {save_shipment_management.milled_volume} | equipment_type = {save_shipment_management.equipment_type} | equipment_id = {save_shipment_management.equipment_id} | purchase_order_number = {save_shipment_management.purchase_order_number} | lot_number = {save_shipment_management.lot_number} | volume_shipped = {save_shipment_management.volume_shipped} | volume_left = {save_shipment_management.volume_left} | editable_obj = {save_shipment_management.editable_obj} "
-                    action_by_userid = request.user.id
-                    user = User.objects.get(pk=action_by_userid)
-                    user_role = user.role.all()
-                    action_by_username = f'{user.first_name} {user.last_name}'
-                    action_by_email = user.username
-                    if request.user.id == 1 :
-                        action_by_role = "superuser"
                     else:
-                        action_by_role = str(','.join([str(i.role) for i in user_role]))
-                    logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
-                                        action_by_userid=action_by_userid,action_by_username=action_by_username,
-                                        action_by_email=action_by_email,action_by_role=action_by_role,log_details=log_details,
-                                        log_device=log_device)
-                    logtable.save()
-                    update_obj = ShipmentManagement.objects.filter(processor_idd=int(bin_pull)).exclude(id=save_shipment_management.id).values('id','editable_obj')
-                    
-                    if update_obj.exists():
-                        for i in update_obj :
-                            get_obj = ShipmentManagement.objects.get(id=i['id'])
-                            get_obj.editable_obj = False
-                            get_obj.save()
-                    else:
-                        pass
+                        if context["weight_prod_unit_id"] == "LBS" :
+                            cal_weight = round(float(context["weight_prod"]),2)
+                        if context["weight_prod_unit_id"] == "BU" :
+                            cal_weight = round(float(context["weight_prod"]) * 45,2)
+                        if context["exp_yield_unit_id"] == "LBS" :
+                            cal_exp_yield = round(float(context["exp_yield"]),2)
+                        if context["exp_yield_unit_id"] == "BU" :
+                            cal_exp_yield = round(float(context["exp_yield"]) * 45,2)
 
+                        select_proc_id, processor_type = context["processor2_id"].split()
+                        if processor_type == 'T2':
+                            select_destination_ = Processor2.objects.get(id=select_proc_id).entity_name
+                            receiver_processor_type = "T2"
+                            # print("select_destination_-----",select_destination_)
+                        elif processor_type == 'T3':
+                            select_destination_ = Processor2.objects.get(id=select_proc_id).entity_name
+                            receiver_processor_type = "T3"
+                            # print("select_destination_-----",select_destination_)
+                        elif processor_type == 'T4':
+                            select_destination_ = Processor2.objects.get(id=select_proc_id).entity_name
+                            receiver_processor_type = "T4"
                     
-                    return redirect('outbound_shipment_mgmt')
+                        milled_volume = context["milled_value"]
+                        volume_left = float(context["milled_value"]) - float(context["volume_shipped"])
+                        shipment_id = generate_shipment_id()
+                        
+                        processor_e_name = Processor.objects.filter(id=int(bin_pull)).first().entity_name
+                        save_shipment_management = ShipmentManagement(shipment_id=shipment_id,processor_idd=bin_pull,processor_e_name=processor_e_name, sender_processor_type="T1", bin_location=bin_pull,crop=selected_crop, variety=context.get("variety"),
+                                date_pulled=context["id_date"],equipment_type=context["equipment_type"],equipment_id=context["equipment_id"],storage_bin_send=context["storage_bin_id"],moisture_percent = context["moist_percentage"],weight_of_product_raw = context["weight_prod"],
+                                weight_of_product=cal_weight,weight_of_product_unit=context["weight_prod_unit_id"], excepted_yield_raw =context["exp_yield"],excepted_yield=cal_exp_yield,excepted_yield_unit=context["exp_yield_unit_id"],
+                                purchase_order_number=context["purchase_number"],lot_number=context["lot_number"],volume_shipped=context["volume_shipped"],milled_volume=milled_volume,volume_left=volume_left,editable_obj=True,
+                                processor2_idd=select_proc_id,processor2_name=select_destination_, receiver_processor_type=receiver_processor_type)
+                        save_shipment_management.save()
+
+                        processor1_id = Processor.objects.filter(id=int(bin_pull)).first().id
+                        create_sku_list(processor1_id, "T1", context["storage_bin_id"])
+                        files = request.FILES.getlist('files')
+                        for file in files:
+                            new_file = File.objects.create(file=file)
+                            save_shipment_management.files.add(new_file)
+                        save_shipment_management.save()
+
+                        log_type, log_status, log_device = "ShipmentManagement", "Added", "Web"
+                        log_idd, log_name = save_shipment_management.id, save_shipment_management.bin_location
+                        log_details = f"processor2 = {save_shipment_management.processor_e_name} | processor2_id = {save_shipment_management.processor_idd} | date_pulled = {save_shipment_management.date_pulled} | bin_location = {save_shipment_management.bin_location} | milled_volume = {save_shipment_management.milled_volume} | equipment_type = {save_shipment_management.equipment_type} | equipment_id = {save_shipment_management.equipment_id} | purchase_order_number = {save_shipment_management.purchase_order_number} | lot_number = {save_shipment_management.lot_number} | volume_shipped = {save_shipment_management.volume_shipped} | volume_left = {save_shipment_management.volume_left} | editable_obj = {save_shipment_management.editable_obj} "
+                        action_by_userid = request.user.id
+                        user = User.objects.get(pk=action_by_userid)
+                        user_role = user.role.all()
+                        action_by_username = f'{user.first_name} {user.last_name}'
+                        action_by_email = user.username
+                        if request.user.id == 1 :
+                            action_by_role = "superuser"
+                        else:
+                            action_by_role = str(','.join([str(i.role) for i in user_role]))
+                        logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+                                            action_by_userid=action_by_userid,action_by_username=action_by_username,
+                                            action_by_email=action_by_email,action_by_role=action_by_role,log_details=log_details,
+                                            log_device=log_device)
+                        logtable.save()
+                        update_obj = ShipmentManagement.objects.filter(processor_idd=int(bin_pull)).exclude(id=save_shipment_management.id).values('id','editable_obj')
+                        
+                        if update_obj.exists():
+                            for i in update_obj :
+                                get_obj = ShipmentManagement.objects.get(id=i['id'])
+                                get_obj.editable_obj = False
+                                get_obj.save()
+                        else:
+                            pass
+
+                        
+                        return redirect('outbound_shipment_mgmt')
             
             return render(request, 'processor/add_outbound_shipment.html', context)
         # Processor................
@@ -8096,6 +8226,8 @@ def add_outbound_shipment_processor1(request):
             p = ProcessorUser.objects.get(contact_email=request.user.email)
             context["processor"] = list(Processor.objects.filter(id=p.processor_id).values("id", "entity_name"))
             context["processor_type"] = "T1"
+            crops = Crop.objects.all()
+            context["crops"] = crops
             bin_pull = context["processor"][0]["id"]             
             
             processor2 = LinkProcessor1ToProcessor.objects.filter(processor1_id=bin_pull, processor2__processor_type__type_name = "T2").values("processor2__id", "processor2__entity_name")
@@ -8107,12 +8239,15 @@ def add_outbound_shipment_processor1(request):
             context.update({
                 "select_processor_name": context["processor"][0]["entity_name"],
                 "select_processor_id": bin_pull,
+                "selected_crop": None
                 
             })
             context["sender_sku_id_list"] = get_sku_list(int(bin_pull), "T1")["data"]
             if request.method == "POST":
                 data = request.POST  
-                sku = data.get("storage_bin_id")                    
+                sku = data.get("storage_bin_id")  
+                selected_crop = data.get("id_crop")   
+                milled_value = data.get("milled_value")               
                 context.update({                
                     "processor2_id": data.get("processor2_id"),
                     "exp_yield": data.get("exp_yield"),
@@ -8126,86 +8261,102 @@ def add_outbound_shipment_processor1(request):
                     "equipment_type": data.get("equipment_type"),
                     "lot_number": data.get("lot_number"),
                     "volume_shipped": data.get("volume_shipped"),
-                    "id_date": data.get("id_date"),
-                    # "files": data.get("files"),
-                    "milled_value":data.get('milled_value')
+                    "id_date": data.get("id_date"),                    
+                    "milled_value":data.get('milled_value'),
+                    "selected_crop":data.get('id_crop'),
+                    "variety":data.get('variety')
                 }) 
                 if sku and not data.get("save"):         
                     processor_type="T1"
-                    context["milled_value"] =  calculate_milled_volume(int(bin_pull), processor_type, sku)
+                    context["milled_value"] =  calculate_milled_volume(selected_crop, int(bin_pull), processor_type, sku)
                     context["selected_sku"] = sku
+                    context["varieties"] = CropVariety.objects.filter(crop__code=selected_crop).values_list("variety_code", flat=True)
+                    return render(request, 'processor/add_outbound_shipment.html', context)
                 else:
-                    if context["weight_prod_unit_id"] == "LBS" :
-                        cal_weight = round(float(context["weight_prod"]),2)
-                    if context["weight_prod_unit_id"] == "BU" :
-                        cal_weight = round(float(context["weight_prod"]) * 45,2)
-                    if context["exp_yield_unit_id"] == "LBS" :
-                        cal_exp_yield = round(float(context["exp_yield"]),2)
-                    if context["exp_yield_unit_id"] == "BU" :
-                        cal_exp_yield = round(float(context["exp_yield"]) * 45,2)
+                    try:
+                        milled_value = float(context["milled_value"])
+                    except ValueError:
+                        context["error_messages"] = "Invalid input: milled_value is not a valid number."
+                        return render(request, 'processor/add_outbound_shipment.html', context)
+                    try:
+                        volume_shipped = float(volume_shipped)
+                    except ValueError:
+                        context["error_messages"] = "Invalid input: volume_shipped is not a valid number."
+                        return render(request, 'processor/add_outbound_shipment.html', context)
+                    if milled_value < volume_shipped:
+                        context["error_messages"] = "Processor does not have the required milled volume."
+                        return render(request, 'processor/add_outbound_shipment.html', context)
 
-                    select_proc_id, processor_type = context["processor2_id"].split()
-                    if processor_type == 'T2':
-                        select_destination_ = Processor2.objects.get(id=select_proc_id).entity_name
-                        receiver_processor_type = "T2"
-                        # print("select_destination_-----",select_destination_)
-                    elif processor_type == 'T3':
-                        select_destination_ = Processor2.objects.get(id=select_proc_id).entity_name
-                        receiver_processor_type = "T3"
-                        # print("select_destination_-----",select_destination_)
-                    elif processor_type == 'T4':
-                        select_destination_ = Processor2.objects.get(id=select_proc_id).entity_name
-                        receiver_processor_type = "T4"
-                    
-                    milled_volume = context["milled_value"]
-                    volume_left = float(context["milled_value"]) - float(context["volume_shipped"])
-                    shipment_id = generate_shipment_id()
-                    
-                    processor_e_name = Processor.objects.filter(id=int(bin_pull)).first().entity_name
-                    save_shipment_management = ShipmentManagement(shipment_id=shipment_id,processor_idd=bin_pull,processor_e_name=processor_e_name, sender_processor_type="T1", bin_location=bin_pull,
-                            date_pulled=context["id_date"],equipment_type=context["equipment_type"],equipment_id=context["equipment_id"],storage_bin_send=context["storage_bin_id"],moisture_percent = context["moist_percentage"],weight_of_product_raw = context["weight_prod"],
-                            weight_of_product=cal_weight,weight_of_product_unit=context["weight_prod_unit_id"], excepted_yield_raw =context["exp_yield"],excepted_yield=cal_exp_yield,excepted_yield_unit=context["exp_yield_unit_id"],
-                            purchase_order_number=context["purchase_number"],lot_number=context["lot_number"],volume_shipped=context["volume_shipped"],milled_volume=milled_volume,volume_left=volume_left,editable_obj=True,
-                            processor2_idd=select_proc_id,processor2_name=select_destination_, receiver_processor_type=receiver_processor_type)
-                    save_shipment_management.save()
-
-                    processor1_id = Processor.objects.filter(id=int(bin_pull)).first().id
-                    create_sku_list(processor1_id, "T1", context["storage_bin_id"])
-                    files = request.FILES.getlist('files')
-                    for file in files:
-                        new_file = File.objects.create(file=file)
-                        save_shipment_management.files.add(new_file)
-                    save_shipment_management.save()
-
-                    log_type, log_status, log_device = "ShipmentManagement", "Added", "Web"
-                    log_idd, log_name = save_shipment_management.id, save_shipment_management.bin_location
-                    log_details = f"processor = {save_shipment_management.processor_e_name} | processor_id = {save_shipment_management.processor_idd} | date_pulled = {save_shipment_management.date_pulled} | bin_location = {save_shipment_management.bin_location} | milled_volume = {save_shipment_management.milled_volume} | equipment_type = {save_shipment_management.equipment_type} | equipment_id = {save_shipment_management.equipment_id} | purchase_order_number = {save_shipment_management.purchase_order_number} | lot_number = {save_shipment_management.lot_number} | volume_shipped = {save_shipment_management.volume_shipped} | volume_left = {save_shipment_management.volume_left} | editable_obj = {save_shipment_management.editable_obj} "
-                    action_by_userid = request.user.id
-                    user = User.objects.get(pk=action_by_userid)
-                    user_role = user.role.all()
-                    action_by_username = f'{user.first_name} {user.last_name}'
-                    action_by_email = user.username
-                    if request.user.id == 1 :
-                        action_by_role = "superuser"
                     else:
-                        action_by_role = str(','.join([str(i.role) for i in user_role]))
-                    logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
-                                        action_by_userid=action_by_userid,action_by_username=action_by_username,
-                                        action_by_email=action_by_email,action_by_role=action_by_role,log_details=log_details,
-                                        log_device=log_device)
-                    logtable.save()
-                    update_obj = ShipmentManagement.objects.filter(processor_idd=int(bin_pull)).exclude(id=save_shipment_management.id).values('id','editable_obj')
-                    
-                    if update_obj.exists():
-                        for i in update_obj :
-                            get_obj = ShipmentManagement.objects.get(id=i['id'])
-                            get_obj.editable_obj = False
-                            get_obj.save()
-                    else:
-                        pass
+                        if context["weight_prod_unit_id"] == "LBS" :
+                            cal_weight = round(float(context["weight_prod"]),2)
+                        if context["weight_prod_unit_id"] == "BU" :
+                            cal_weight = round(float(context["weight_prod"]) * 45,2)
+                        if context["exp_yield_unit_id"] == "LBS" :
+                            cal_exp_yield = round(float(context["exp_yield"]),2)
+                        if context["exp_yield_unit_id"] == "BU" :
+                            cal_exp_yield = round(float(context["exp_yield"]) * 45,2)
 
-                    
-                    return redirect('outbound_shipment_mgmt')       
+                        select_proc_id, processor_type = context["processor2_id"].split()
+                        if processor_type == 'T2':
+                            select_destination_ = Processor2.objects.get(id=select_proc_id).entity_name
+                            receiver_processor_type = "T2"
+                            # print("select_destination_-----",select_destination_)
+                        elif processor_type == 'T3':
+                            select_destination_ = Processor2.objects.get(id=select_proc_id).entity_name
+                            receiver_processor_type = "T3"
+                            # print("select_destination_-----",select_destination_)
+                        elif processor_type == 'T4':
+                            select_destination_ = Processor2.objects.get(id=select_proc_id).entity_name
+                            receiver_processor_type = "T4"
+                        
+                        milled_volume = context["milled_value"]
+                        volume_left = float(context["milled_value"]) - float(context["volume_shipped"])
+                        shipment_id = generate_shipment_id()
+                        
+                        processor_e_name = Processor.objects.filter(id=int(bin_pull)).first().entity_name
+                        save_shipment_management = ShipmentManagement(shipment_id=shipment_id,processor_idd=bin_pull,processor_e_name=processor_e_name, sender_processor_type="T1", bin_location=bin_pull,crop=selected_crop, variety=context.get("variety"),
+                                date_pulled=context["id_date"],equipment_type=context["equipment_type"],equipment_id=context["equipment_id"],storage_bin_send=context["storage_bin_id"],moisture_percent = context["moist_percentage"],weight_of_product_raw = context["weight_prod"],
+                                weight_of_product=cal_weight,weight_of_product_unit=context["weight_prod_unit_id"], excepted_yield_raw =context["exp_yield"],excepted_yield=cal_exp_yield,excepted_yield_unit=context["exp_yield_unit_id"],
+                                purchase_order_number=context["purchase_number"],lot_number=context["lot_number"],volume_shipped=context["volume_shipped"],milled_volume=milled_volume,volume_left=volume_left,editable_obj=True,
+                                processor2_idd=select_proc_id,processor2_name=select_destination_, receiver_processor_type=receiver_processor_type)
+                        save_shipment_management.save()
+
+                        processor1_id = Processor.objects.filter(id=int(bin_pull)).first().id
+                        create_sku_list(processor1_id, "T1", context["storage_bin_id"])
+                        files = request.FILES.getlist('files')
+                        for file in files:
+                            new_file = File.objects.create(file=file)
+                            save_shipment_management.files.add(new_file)
+                        save_shipment_management.save()
+
+                        log_type, log_status, log_device = "ShipmentManagement", "Added", "Web"
+                        log_idd, log_name = save_shipment_management.id, save_shipment_management.bin_location
+                        log_details = f"processor = {save_shipment_management.processor_e_name} | processor_id = {save_shipment_management.processor_idd} | date_pulled = {save_shipment_management.date_pulled} | bin_location = {save_shipment_management.bin_location} | milled_volume = {save_shipment_management.milled_volume} | equipment_type = {save_shipment_management.equipment_type} | equipment_id = {save_shipment_management.equipment_id} | purchase_order_number = {save_shipment_management.purchase_order_number} | lot_number = {save_shipment_management.lot_number} | volume_shipped = {save_shipment_management.volume_shipped} | volume_left = {save_shipment_management.volume_left} | editable_obj = {save_shipment_management.editable_obj} "
+                        action_by_userid = request.user.id
+                        user = User.objects.get(pk=action_by_userid)
+                        user_role = user.role.all()
+                        action_by_username = f'{user.first_name} {user.last_name}'
+                        action_by_email = user.username
+                        if request.user.id == 1 :
+                            action_by_role = "superuser"
+                        else:
+                            action_by_role = str(','.join([str(i.role) for i in user_role]))
+                        logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+                                            action_by_userid=action_by_userid,action_by_username=action_by_username,
+                                            action_by_email=action_by_email,action_by_role=action_by_role,log_details=log_details,
+                                            log_device=log_device)
+                        logtable.save()
+                        update_obj = ShipmentManagement.objects.filter(processor_idd=int(bin_pull)).exclude(id=save_shipment_management.id).values('id','editable_obj')
+                        
+                        if update_obj.exists():
+                            for i in update_obj :
+                                get_obj = ShipmentManagement.objects.get(id=i['id'])
+                                get_obj.editable_obj = False
+                                get_obj.save()
+                        else:
+                            pass                    
+                        return redirect('outbound_shipment_mgmt')       
             
             return render(request, 'processor/add_outbound_shipment.html', context)
         # Processor2................
@@ -8213,11 +8364,11 @@ def add_outbound_shipment_processor1(request):
             p = ProcessorUser2.objects.get(contact_email=request.user.email)
             context["processor"] = list(Processor2.objects.filter(id=p.processor2_id).values("id", "entity_name"))
             bin_pull = context["processor"][0]["id"] 
-
+            crops = Crop.objects.all()
+            context["crops"] = crops
             
             sender_processor_type = Processor2.objects.filter(id=int(bin_pull)).first().processor_type.all().first().type_name
-            context["processor_type"] = sender_processor_type
-                    
+            context["processor_type"] = sender_processor_type                   
             
             processor3 = LinkProcessorToProcessor.objects.filter(processor_id=bin_pull, linked_processor__processor_type__type_name = "T3").values("linked_processor__id", "linked_processor__entity_name")
             processor4 = LinkProcessorToProcessor.objects.filter(processor_id=bin_pull, linked_processor__processor_type__type_name = "T4").values("linked_processor__id", "linked_processor__entity_name")
@@ -8227,12 +8378,15 @@ def add_outbound_shipment_processor1(request):
             context.update({
                 "select_processor_name": context["processor"][0]["entity_name"],
                 "select_processor_id": bin_pull,
+                "selected_crop": None
                 
             })
             context["sender_sku_id_list"] = get_sku_list(int(bin_pull), sender_processor_type)["data"]
             if request.method == "POST":
                 data = request.POST  
-                sku = data.get("storage_bin_id")                  
+                sku = data.get("storage_bin_id") 
+                selected_crop = data.get("id_crop")   
+                milled_value = data.get("milled_value")               
                 context.update({
                     "select_processor_name": Processor2.objects.filter(id=int(bin_pull)).first().entity_name,
                     "select_processor_id": bin_pull,
@@ -8247,86 +8401,586 @@ def add_outbound_shipment_processor1(request):
                     "equipment_id": data.get("equipment_id"),
                     "equipment_type": data.get("equipment_type"),
                     "lot_number": data.get("lot_number"),
-                    "volume_shipped": data.get("volume_shipped"),
-                    # "files": data.get("files"),
-                    "milled_value":data.get('milled_value')
+                    "volume_shipped": data.get("volume_shipped"),                   
+                    "milled_value":data.get('milled_value'),
+                    "selected_crop":data.get('id_crop'),
+                    "variety":data.get('variety')
                 }) 
                 if sku and not data.get("save"):
-                    context["milled_value"] =  calculate_milled_volume(int(bin_pull), sender_processor_type, sku)
-                    context["selected_sku"] = sku          
+                    print(sku) 
+                    context["milled_value"] =  calculate_milled_volume(selected_crop, int(bin_pull), sender_processor_type, sku)
+                    context["selected_sku"] = sku  
+                    context["varieties"] = CropVariety.objects.filter(crop__code=selected_crop).values_list("variety_code", flat=True) 
+                    return render(request, 'processor/add_outbound_shipment.html', context)       
                 else:
-                    if context["weight_prod_unit_id"] == "LBS" :
-                        cal_weight = round(float(context["weight_prod"]),2)
-                    if context["weight_prod_unit_id"] == "BU" :
-                        cal_weight = round(float(context["weight_prod"]) * 45,2)
-                    if context["exp_yield_unit_id"] == "LBS" :
-                        cal_exp_yield = round(float(context["exp_yield"]),2)
-                    if context["exp_yield_unit_id"] == "BU" :
-                        cal_exp_yield = round(float(context["exp_yield"]) * 45,2)
+                    try:
+                        milled_value = float(context["milled_value"])
+                    except ValueError:
+                        context["error_messages"] = "Invalid input: milled_value is not a valid number."
+                        return render(request, 'processor/add_outbound_shipment.html', context)
+                    try:
+                        volume_shipped = float(volume_shipped)
+                    except ValueError:
+                        context["error_messages"] = "Invalid input: volume_shipped is not a valid number."
+                        return render(request, 'processor/add_outbound_shipment.html', context)
+                    if milled_value < volume_shipped:
+                        context["error_messages"] = "Processor does not have the required milled volume."
+                        return render(request, 'processor/add_outbound_shipment.html', context)
 
-                    select_proc_id, processor_type = context["processor2_id"].split()
-                    if processor_type == 'T3':
-                        select_destination_ = Processor2.objects.get(id=select_proc_id).entity_name
-                        receiver_processor_type = "T3"
+                    else:
+                        if context["weight_prod_unit_id"] == "LBS" :
+                            cal_weight = round(float(context["weight_prod"]),2)
+                        if context["weight_prod_unit_id"] == "BU" :
+                            cal_weight = round(float(context["weight_prod"]) * 45,2)
+                        if context["exp_yield_unit_id"] == "LBS" :
+                            cal_exp_yield = round(float(context["exp_yield"]),2)
+                        if context["exp_yield_unit_id"] == "BU" :
+                            cal_exp_yield = round(float(context["exp_yield"]) * 45,2)
+
+                        select_proc_id, processor_type = context["processor2_id"].split()
+                        if processor_type == 'T3':
+                            select_destination_ = Processor2.objects.get(id=select_proc_id).entity_name
+                            receiver_processor_type = "T3"
+                            
+                        elif processor_type == 'T4':
+                            select_destination_ = Processor2.objects.get(id=select_proc_id).entity_name
+                            receiver_processor_type = "T4"
                         
-                    elif processor_type == 'T4':
-                        select_destination_ = Processor2.objects.get(id=select_proc_id).entity_name
-                        receiver_processor_type = "T4"
-                    
-                    milled_volume = context["milled_value"]
-                    volume_left = float(context["milled_value"]) - float(context["volume_shipped"])
-                    shipment_id = generate_shipment_id()
-                    
-                    processor_e_name = Processor2.objects.filter(id=int(bin_pull)).first().entity_name
-                    save_shipment_management = ShipmentManagement(shipment_id=shipment_id,processor_idd=bin_pull,processor_e_name=processor_e_name, sender_processor_type=sender_processor_type, bin_location=bin_pull,
-                            equipment_type=context["equipment_type"],equipment_id=context["equipment_id"],storage_bin_send=context["storage_bin_id"],moisture_percent = context["moist_percentage"],weight_of_product_raw = context["weight_prod"],
-                            weight_of_product=cal_weight,weight_of_product_unit=context["weight_prod_unit_id"], excepted_yield_raw =context["exp_yield"],excepted_yield=cal_exp_yield,excepted_yield_unit=context["exp_yield_unit_id"],
-                            purchase_order_number=context["purchase_number"],lot_number=context["lot_number"],volume_shipped=context["volume_shipped"],milled_volume=milled_volume,volume_left=volume_left,editable_obj=True,
-                            processor2_idd=select_proc_id,processor2_name=select_destination_, receiver_processor_type=receiver_processor_type)
-                    save_shipment_management.save()
+                        milled_volume = context["milled_value"]
+                        volume_left = float(context["milled_value"]) - float(context["volume_shipped"])
+                        shipment_id = generate_shipment_id()
+                        
+                        processor_e_name = Processor2.objects.filter(id=int(bin_pull)).first().entity_name
+                        save_shipment_management = ShipmentManagement(shipment_id=shipment_id,processor_idd=bin_pull,processor_e_name=processor_e_name, sender_processor_type=sender_processor_type, bin_location=bin_pull,crop=selected_crop, variety=context.get("variety"),
+                                equipment_type=context["equipment_type"],equipment_id=context["equipment_id"],storage_bin_send=context["storage_bin_id"],moisture_percent = context["moist_percentage"],weight_of_product_raw = context["weight_prod"],
+                                weight_of_product=cal_weight,weight_of_product_unit=context["weight_prod_unit_id"], excepted_yield_raw =context["exp_yield"],excepted_yield=cal_exp_yield,excepted_yield_unit=context["exp_yield_unit_id"],
+                                purchase_order_number=context["purchase_number"],lot_number=context["lot_number"],volume_shipped=context["volume_shipped"],milled_volume=milled_volume,volume_left=volume_left,editable_obj=True,
+                                processor2_idd=select_proc_id,processor2_name=select_destination_, receiver_processor_type=receiver_processor_type)
+                        save_shipment_management.save()
 
-                    processor2_id = Processor2.objects.filter(id=int(bin_pull)).first().id
-                    create_sku_list(processor2_id, sender_processor_type, context["storage_bin_id"])
-                    files = request.FILES.getlist('files')
-                    for file in files:
-                        new_file = File.objects.create(file=file)
-                        save_shipment_management.files.add(new_file)
+                        processor2_id = Processor2.objects.filter(id=int(bin_pull)).first().id
+                        create_sku_list(processor2_id, sender_processor_type, context["storage_bin_id"])
+                        files = request.FILES.getlist('files')
+                        for file in files:
+                            new_file = File.objects.create(file=file)
+                            save_shipment_management.files.add(new_file)
 
-                    log_type, log_status, log_device = "ShipmentManagement", "Added", "Web"
-                    log_idd, log_name = save_shipment_management.id, save_shipment_management.bin_location
-                    log_details = f"processor2 = {save_shipment_management.processor_e_name} | processor2_id = {save_shipment_management.processor_idd} | date_pulled = {save_shipment_management.date_pulled} | bin_location = {save_shipment_management.bin_location} | milled_volume = {save_shipment_management.milled_volume} | equipment_type = {save_shipment_management.equipment_type} | equipment_id = {save_shipment_management.equipment_id} | purchase_order_number = {save_shipment_management.purchase_order_number} | lot_number = {save_shipment_management.lot_number} | volume_shipped = {save_shipment_management.volume_shipped} | volume_left = {save_shipment_management.volume_left} | editable_obj = {save_shipment_management.editable_obj} "
-                    action_by_userid = request.user.id
-                    user = User.objects.get(pk=action_by_userid)
-                    user_role = user.role.all()
-                    action_by_username = f'{user.first_name} {user.last_name}'
-                    action_by_email = user.username
-                    if request.user.id == 1 :
-                        action_by_role = "superuser"
-                    else:
-                        action_by_role = str(','.join([str(i.role) for i in user_role]))
-                    logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
-                                        action_by_userid=action_by_userid,action_by_username=action_by_username,
-                                        action_by_email=action_by_email,action_by_role=action_by_role,log_details=log_details,
-                                        log_device=log_device)
-                    logtable.save()
-                    update_obj = ShipmentManagement.objects.filter(processor_idd=int(bin_pull)).exclude(id=save_shipment_management.id).values('id','editable_obj')
-                    
-                    if update_obj.exists():
-                        for i in update_obj :
-                            get_obj = ShipmentManagement.objects.get(id=i['id'])
-                            get_obj.editable_obj = False
-                            get_obj.save()
-                    else:
-                        pass
+                        log_type, log_status, log_device = "ShipmentManagement", "Added", "Web"
+                        log_idd, log_name = save_shipment_management.id, save_shipment_management.bin_location
+                        log_details = f"processor2 = {save_shipment_management.processor_e_name} | processor2_id = {save_shipment_management.processor_idd} | date_pulled = {save_shipment_management.date_pulled} | bin_location = {save_shipment_management.bin_location} | milled_volume = {save_shipment_management.milled_volume} | equipment_type = {save_shipment_management.equipment_type} | equipment_id = {save_shipment_management.equipment_id} | purchase_order_number = {save_shipment_management.purchase_order_number} | lot_number = {save_shipment_management.lot_number} | volume_shipped = {save_shipment_management.volume_shipped} | volume_left = {save_shipment_management.volume_left} | editable_obj = {save_shipment_management.editable_obj} "
+                        action_by_userid = request.user.id
+                        user = User.objects.get(pk=action_by_userid)
+                        user_role = user.role.all()
+                        action_by_username = f'{user.first_name} {user.last_name}'
+                        action_by_email = user.username
+                        if request.user.id == 1 :
+                            action_by_role = "superuser"
+                        else:
+                            action_by_role = str(','.join([str(i.role) for i in user_role]))
+                        logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+                                            action_by_userid=action_by_userid,action_by_username=action_by_username,
+                                            action_by_email=action_by_email,action_by_role=action_by_role,log_details=log_details,
+                                            log_device=log_device)
+                        logtable.save()
+                        update_obj = ShipmentManagement.objects.filter(processor_idd=int(bin_pull)).exclude(id=save_shipment_management.id).values('id','editable_obj')
+                        
+                        if update_obj.exists():
+                            for i in update_obj :
+                                get_obj = ShipmentManagement.objects.get(id=i['id'])
+                                get_obj.editable_obj = False
+                                get_obj.save()
+                        else:
+                            pass
 
-                    
-                    return redirect('outbound_shipment_list')
+                        
+                        return redirect('outbound_shipment_list')
             return render (request, 'processor/add_outbound_shipment.html', context)
         else:
             return redirect('login')
     except Exception as e:
         context["error_messages"] = str(e)
         return render (request, 'processor/add_outbound_shipment.html', context)
+
+   
+@login_required()   
+def processor_receive_delivery(request):
+    context = {}
+    try:
+        if request.user.is_authenticated:        
+            status = ""
+            # Processor................. 
+            if request.user.is_processor:            
+                user_email = request.user.email
+                p = ProcessorUser.objects.get(contact_email=user_email)
+                processor_id = Processor.objects.get(id=p.processor_id).id
+                context["sku_id_list"] = get_sku_list(processor_id, "T1")["data"]
+                grower = LinkGrowerToProcessor.objects.filter(processor_id=processor_id)
+                grower_id = [i.grower_id for i in grower]
+                get_grower = Grower.objects.filter(id__in = grower_id).order_by('name')
+                context['get_grower'] = get_grower
+                if request.method == 'POST':
+                    id_grower = request.POST.get('id_grower')
+                    if id_grower !='all':
+                        selected_grower = Grower.objects.get(id=id_grower)
+                        context['selected_grower'] = selected_grower
+
+                        storage_obj = Storage.objects.filter(grower_id=id_grower)
+                        context['storage'] = storage_obj
+
+                        field_obj = Field.objects.filter(grower_id=id_grower)
+                        context['field'] = field_obj
+
+                        id_storage = request.POST.get('id_storage')
+                        id_field = request.POST.get('id_field')
+                        module_number = request.POST.get('module_number')
+                        
+                        amount1 = request.POST.get('amount1')
+                        amount2 = request.POST.get('amount2')
+
+                        id_unit1 = request.POST.get('id_unit1')
+                        id_unit2= request.POST.get('id_unit2')
+                        
+                        # code
+                        shipment_id = generate_shipment_id()
+                        get_output= request.POST.get('get_output')
+                        files = request.FILES.getlist('files')
+                        
+                        recieved_weight= request.POST.get('recieved_weight')
+                        sku_id = request.POST.get('sku_id')
+                        ticket_number= request.POST.get('ticket_number')
+                        approval_date= request.POST.get('approval_date')
+
+                        moisture_level= request.POST.get('moisture_level')
+                        fancy_count= request.POST.get('fancy_count')
+                        head_count= request.POST.get('head_count')
+                        bin_location_processor= request.POST.get('bin_location_processor')
+                        
+                        if len(amount1) > 0 and len(amount2) == 0:
+                            if id_unit1 == '1':
+                                id_unit1 = 'LBS'
+                                id_unit2 = ''
+                            if id_unit1 == '38000':
+                                id_unit1 = 'MODULES (8 ROLLS)'
+                                id_unit2 = ''
+                            if id_unit1 == '19000':
+                                id_unit1 = 'SETS (4 ROLLS)'
+                                id_unit2 = ''
+                            if id_unit1 == '4750':
+                                id_unit1 = 'ROLLS'
+                                id_unit2 = ''
+                        
+                        if len(amount1) > 0 and len(amount2) > 0:
+                            if id_unit1 == '1':
+                                id_unit1 = 'LBS'
+                            if id_unit1 == '38000':
+                                id_unit1 = 'MODULES (8 ROLLS)'
+                            if id_unit1 == '19000':
+                                id_unit1 = 'SETS (4 ROLLS)'
+                            if id_unit1 == '4750':
+                                id_unit1 = 'ROLLS'
+                            if id_unit2 == '1':
+                                id_unit2 = 'LBS'
+                            if id_unit2 == '38000':
+                                id_unit2 = 'MODULES (8 ROLLS)'
+                            if id_unit2 == '19000':
+                                id_unit2 = 'SETS (4 ROLLS)'
+                            if id_unit2 == '4750':
+                                id_unit2 = 'ROLLS'
+
+                        if id_storage == None :
+                            id_storage = None
+                            
+                        else:
+                            id_storage = id_storage
+                                                
+                        if id_field and module_number:
+                            field = Field.objects.get(id=id_field)
+                            crop = field.crop                       
+                            
+                            if crop == "WHEAT":
+                                status = ""
+                            else:
+                                status = "APPROVED"                        
+                            sustain_data = SustainabilitySurvey.objects.filter(grower_id=selected_grower.id,field_id=id_field)
+
+                            if sustain_data.count() > 0:
+                                Avg_Percentage_Score_data = sustain_data.aggregate(Avg('sustainabilityscore'))
+                                surveyscore = int(Avg_Percentage_Score_data['sustainabilityscore__avg'])
+                            else:
+                                surveyscore = 0
+                        
+                            shipment = GrowerShipment(status=status,total_amount=get_output,unit_type2=id_unit2,amount2=amount2,echelon_id=field.eschlon_id,
+                                                            sustainability_score=surveyscore,amount=amount1,variety=field.variety,crop=field.crop,shipment_id=shipment_id,processor_id=processor_id,grower_id=selected_grower.id,
+                                                            storage_id=id_storage,field_id=id_field,module_number=module_number,unit_type=id_unit1,received_amount =recieved_weight,sku = sku_id,token_id=ticket_number,approval_date = approval_date,moisture_level=moisture_level,fancy_count=fancy_count,head_count=head_count,bin_location_processor=bin_location_processor)
+                            shipment.save()
+                            create_sku_list(processor_id, "T1",sku_id)
+                            for file in files:
+                                new_file = GrowerShipmentFile.objects.create(file=file)
+                                shipment.files.add(new_file)
+
+                            log_type, log_status, log_device = "GrowerShipment", "Added", "Web"
+                            log_idd, log_name = shipment.id, shipment.shipment_id
+                            log_details = f"status = {status} | total_amount = {get_output} | unit_type2 = {id_unit2} | amount2 = {amount2} | echelon_id = {field.eschlon_id} | sustainability_score = {surveyscore} | amount = {amount1} | variety = {field.variety} | crop = {field.crop} | shipment_id = {shipment_id} | processor_id = {processor_id} | grower_id = {selected_grower.id} | storage_id = {id_storage} | field_id = {id_field} | module_number = {module_number} | unit_type = {id_unit1} | "
+                            action_by_userid = request.user.id
+                            user = User.objects.get(pk=action_by_userid)
+                            user_role = user.role.all()
+                            action_by_username = f'{user.first_name} {user.last_name}'
+                            action_by_email = user.username
+                            if request.user.id == 1 :
+                                action_by_role = "superuser"
+                            else:
+                                action_by_role = str(','.join([str(i.role) for i in user_role]))
+                            logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+                                                action_by_userid=action_by_userid,action_by_username=action_by_username,
+                                                action_by_email=action_by_email,action_by_role=action_by_role,log_details=log_details,
+                                                log_device=log_device)
+                            logtable.save()
+
+                            return redirect('processor_inbound_management')                        
+                
+                return render(request, 'processor/add_processor_receive_delivery.html',context)
+            # Superuser............ 
+            elif request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+                grower = LinkGrowerToProcessor.objects.all()
+                grower_id = [i.grower_id for i in grower]
+                get_grower = Grower.objects.filter(id__in = grower_id).order_by('name')
+                context['get_grower'] = get_grower
+                
+                if request.method == 'POST':
+                    id_grower = request.POST.get('id_grower')
+                    # files = request.FILES.getlist('files')   #add file
+                    if id_grower !='all':
+                        selected_grower = Grower.objects.get(id=id_grower)
+                        context['selected_grower'] = selected_grower
+
+                        storage_obj = Storage.objects.filter(grower_id=id_grower)
+                        context['storage'] = storage_obj
+
+                        field_obj = Field.objects.filter(grower_id=id_grower) 
+                        context['field'] = field_obj                    
+                        
+
+                        id_storage = request.POST.get('id_storage')
+                        id_field = request.POST.get('id_field')
+                        module_number = request.POST.get('module_number')
+
+                        amount1 = request.POST.get('amount1')
+                        amount2 = request.POST.get('amount2')
+                        
+                        id_unit1 = request.POST.get('id_unit1')
+                        id_unit2= request.POST.get('id_unit2')
+
+                        get_output= request.POST.get('get_output')
+                        shipment_id = generate_shipment_id()
+                        
+                        recieved_weight= request.POST.get('recieved_weight')
+                        sku_id = request.POST.get('sku_id')  #add sku
+                        files = request.FILES.getlist('files')
+                    
+                        ticket_number= request.POST.get('ticket_number')
+                        approval_date= request.POST.get('approval_date')
+
+                        moisture_level= request.POST.get('moisture_level')
+                        fancy_count= request.POST.get('fancy_count')
+                        head_count= request.POST.get('head_count')
+                        bin_location_processor= request.POST.get('bin_location_processor')
+
+                        
+                        if len(amount1) > 0 and len(amount2) == 0:
+                            if id_unit1 == '1':
+                                id_unit1 = 'LBS'
+                                id_unit2 = ''
+                            if id_unit1 == '38000':
+                                id_unit1 = 'MODULES (8 ROLLS)'
+                                id_unit2 = ''
+                            if id_unit1 == '19000':
+                                id_unit1 = 'SETS (4 ROLLS)'
+                                id_unit2 = ''
+                            if id_unit1 == '4750':
+                                id_unit1 = 'ROLLS'
+                                id_unit2 = ''
+                        
+                        if len(amount1) > 0 and len(amount2) > 0:
+                            if id_unit1 == '1':
+                                id_unit1 = 'LBS'
+                            if id_unit1 == '38000':
+                                id_unit1 = 'MODULES (8 ROLLS)'
+                            if id_unit1 == '19000':
+                                id_unit1 = 'SETS (4 ROLLS)'
+                            if id_unit1 == '4750':
+                                id_unit1 = 'ROLLS'
+                            if id_unit2 == '1':
+                                id_unit2 = 'LBS'
+                            if id_unit2 == '38000':
+                                id_unit2 = 'MODULES (8 ROLLS)'
+                            if id_unit2 == '19000':
+                                id_unit2 = 'SETS (4 ROLLS)'
+                            if id_unit2 == '4750':
+                                id_unit2 = 'ROLLS'
+                        
+                        if id_storage == None :
+                            id_storage = None
+                            
+                        else:
+                            id_storage = id_storage
+
+                        processor_id = LinkGrowerToProcessor.objects.get(grower_id=selected_grower.id).processor_id
+                        context["sku_id_list"] = get_sku_list(int(processor_id), "T1")["data"]
+                        if id_field and module_number:
+                            field = Field.objects.get(id=id_field)
+                            crop = field.crop
+                            
+                            if crop == "WHEAT":
+                                status = ""
+                            else:
+                                status = "APPROVED"
+
+                            sustain_data = SustainabilitySurvey.objects.filter(grower_id=selected_grower.id,field_id=id_field)
+
+                            if sustain_data.count() > 0:
+                                Avg_Percentage_Score_data = sustain_data.aggregate(Avg('sustainabilityscore'))
+                                surveyscore = int(Avg_Percentage_Score_data['sustainabilityscore__avg'])
+                            else:
+                                surveyscore = 0
+                            
+                            shipment = GrowerShipment(status=status,total_amount=get_output,unit_type2=id_unit2,amount2=amount2,echelon_id=field.eschlon_id,
+                                                            sustainability_score=surveyscore,amount=amount1,variety=field.variety,crop=field.crop,shipment_id=shipment_id,processor_id=processor_id,grower_id=selected_grower.id,
+                                                            storage_id=id_storage,field_id=id_field,module_number=module_number,unit_type=id_unit1,received_amount =recieved_weight,sku = sku_id,token_id=ticket_number,approval_date = approval_date,moisture_level=moisture_level,fancy_count=fancy_count,head_count=head_count,bin_location_processor=bin_location_processor)
+                            shipment.save()
+                            id_processor = Processor.objects.filter(id=processor_id).first().id
+                            create_sku_list(id_processor, "T1", sku_id)
+                            for file in files:
+                                new_file = GrowerShipmentFile.objects.create(file=file)
+                                shipment.files.add(new_file)
+                            
+
+                            # 07-04-23
+                            log_type, log_status, log_device = "GrowerShipment", "Added", "Web"
+                            log_idd, log_name = shipment.id, shipment.shipment_id
+                            log_details = f"status = {status} | total_amount = {get_output} | unit_type2 = {id_unit2} | amount2 = {amount2} | echelon_id = {field.eschlon_id} | sustainability_score = {surveyscore} | amount = {amount1} | variety = {field.variety} | crop = {field.crop} | shipment_id = {shipment_id} | processor_id = {processor_id} | grower_id = {selected_grower.id} | storage_id = {id_storage} | field_id = {id_field} | module_number = {module_number} | unit_type = {id_unit1} | "
+                            action_by_userid = request.user.id
+                            user = User.objects.get(pk=action_by_userid)
+                            user_role = user.role.all()
+                            action_by_username = f'{user.first_name} {user.last_name}'
+                            action_by_email = user.username
+                            if request.user.id == 1 :
+                                action_by_role = "superuser"
+                            else:
+                                action_by_role = str(','.join([str(i.role) for i in user_role]))
+                            logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+                                                action_by_userid=action_by_userid,action_by_username=action_by_username,
+                                                action_by_email=action_by_email,action_by_role=action_by_role,log_details=log_details,
+                                                log_device=log_device)
+                            logtable.save()
+
+                            return redirect('processor_inbound_management')
+                
+                return render(request, 'processor/add_processor_receive_delivery.html',context)
+            # Processor2.............
+            elif request.user.is_processor2:
+                user_email = request.user.email
+                p = ProcessorUser2.objects.get(contact_email=user_email)
+                processor_id = Processor2.objects.get(id=p.processor2_id).id    
+                processor_name= Processor2.objects.get(id=p.processor2_id).entity_name  
+                processor_type = Processor2.objects.get(id=p.processor2_id).processor_type.all().first().type_name 
+                crops = Crop.objects.all()
+                context["crops"] = crops
+                context["receiver_sku_id_list"] = get_sku_list(int(processor_id), processor_type)["data"]
+                if processor_type == "T2":  
+                    processor1 = list(LinkProcessor1ToProcessor.objects.filter(processor2_id=processor_id).values("processor1__id", "processor1__entity_name"))
+                    linked_processor = []
+                    for pro1 in processor1:
+                        dict_ = {"processor__id":None, "processor__entity_name":None,"processor_type":None } 
+                        dict_["processor__id"] = pro1["processor1__id"]
+                        dict_["processor__entity_name"] = pro1["processor1__entity_name"]
+                        dict_["processor_type"] = "T1"
+                        linked_processor.append(dict_)
+                    context["processor"] = linked_processor   
+                     
+                if processor_type == "T3":
+                    processor1 = list(LinkProcessor1ToProcessor.objects.filter(processor2_id=processor_id).values("processor1__id", "processor1__entity_name"))
+                    processor2 = list(LinkProcessorToProcessor.objects.filter(linked_processor_id=processor_id).values("processor__id", "processor__entity_name"))
+                    linked_processor = []
+                    for pro1 in processor1:
+                        dict_ = {"processor__id":None, "processor__entity_name":None,"processor_type":None } 
+                        dict_["processor__id"] = pro1["processor1__id"]
+                        dict_["processor__entity_name"] = pro1["processor1__entity_name"]
+                        dict_["processor_type"] = "T1"
+                        linked_processor.append(dict_)
+                    for pro2 in processor2:
+                        dict_ = {"processor__id":None, "processor__entity_name":None, "processor_type":None} 
+                        dict_["processor__id"] = pro2["processor__id"]
+                        dict_["processor__entity_name"] = pro2["processor__entity_name"]
+                        dict_["processor_type"] = Processor2.objects.filter(id=int(pro2["processor__id"])).first().processor_type.all().first().type_name
+                        linked_processor.append(dict_)
+                    context["processor"] = linked_processor
+                if processor_type == "T4":
+                    processor1 = list(LinkProcessor1ToProcessor.objects.filter(processor2_id=processor_id).values("processor1__id", "processor1__entity_name"))
+                    processor2 = list(LinkProcessorToProcessor.objects.filter(linked_processor_id=processor_id).values("processor__id", "processor__entity_name"))
+                    linked_processor = []
+                    for pro1 in processor1:
+                        dict_ = {"processor__id":None, "processor__entity_name":None, "processor_type":None} 
+                        dict_["processor__id"] = pro1["processor1__id"]
+                        dict_["processor__entity_name"] = pro1["processor1__entity_name"]
+                        dict_["processor_type"] = "T1"
+                        linked_processor.append(dict_)
+                    for pro2 in processor2:
+                        dict_ = {"processor__id":None, "processor__entity_name":None, "processor_type":None} 
+                        dict_["processor__id"] = pro2["processor__id"]
+                        dict_["processor__entity_name"] = pro2["processor__entity_name"]
+                        dict_["processor_type"] = Processor2.objects.filter(id=int(pro2["processor__id"])).first().processor_type.all().first().type_name
+                        linked_processor.append(dict_)
+                    context["processor"] = linked_processor
+                                
+                context.update({
+                    "select_processor_name": None,
+                    "select_processor_id": None,
+                    "milled_value": "None",
+                    "sender_processor_type":None,
+                    "selected_crop":None
+                })
+
+                if request.method == "POST":
+                    data = request.POST
+                    get_bin_pull = data.get("bin_pull")
+                    sku = data.get("storage_bin_id")
+                    volume_shipped = data.get("volume_shipped")
+                    selected_crop = data.get("id_crop")
+                    bin_pull_ = get_bin_pull.split("_")               
+                    bin_pull, bin_pull_type = bin_pull_[0], bin_pull_[1]               
+                    if bin_pull_type == "T1":
+                        select_pro_id = Processor.objects.filter(id=int(bin_pull)).first().id
+                        select_processor_name = Processor.objects.filter(id=int(bin_pull)).first().entity_name
+                        context["sender_sku_id_list"] = get_sku_list(int(select_pro_id), "T1")["data"]
+                    else:
+                        select_pro_id = Processor2.objects.filter(id=int(bin_pull)).first().id
+                        select_processor_name = Processor2.objects.filter(id=int(bin_pull)).first().entity_name
+                        context["sender_sku_id_list"] = get_sku_list(int(select_pro_id), "T2")["data"]
+                    context.update({
+                        "select_processor_name": select_processor_name,
+                        "select_processor_id": bin_pull,
+                        "sender_processor_type":bin_pull_type,
+                        "processor2_id": data.get("processor2_id"),
+                        "exp_yield": data.get("exp_yield"),
+                        "exp_yield_unit_id": data.get("exp_yield_unit_id"),
+                        "moist_percentage": data.get("moist_percentage"),
+                        "purchase_number": data.get("purchase_number"),
+                        "weight_prod_unit_id": data.get("weight_prod_unit_id"),
+                        "weight_prod": data.get("weight_prod"),
+                        "storage_bin_id": data.get("storage_bin_id"),
+                        "equipment_id": data.get("equipment_id"),
+                        "equipment_type": data.get("equipment_type"),
+                        "lot_number": data.get("lot_number"),
+                        "volume_shipped": data.get("volume_shipped"),
+                        "status": data.get("status"),
+                        "receiver_sku_id": data.get("receiver_sku_id"),
+                        "received_weight": data.get("received_weight"),
+                        "ticket_number": data.get("ticket_number"),
+                        "approval_date": data.get("approval_date"),
+                        "milled_value":data.get('milled_value'),
+                        "selected_crop":data.get('id_crop'),
+                        "variety":data.get('variety')
+                    })
+
+                    if bin_pull and not data.get("save"):                    
+                        
+                        sender_processor_type = bin_pull_type
+                        if sku:
+                            context["milled_value"] =  calculate_milled_volume(selected_crop, int(bin_pull),sender_processor_type, sku)
+                            context["selected_sku"] = sku 
+                        else:
+                            context["milled_value"] =  calculate_milled_volume(selected_crop, int(bin_pull),sender_processor_type, sku) 
+
+                        milled_volume = float(context["milled_value"])
+                        context["varieties"] = CropVariety.objects.filter(crop__code=selected_crop).values_list("variety_code", flat=True)
+                        
+                        return render(request, 'processor/add_processor_receive_delivery.html',context)
+                    else:
+
+                        try:
+                            milled_value = float(context["milled_value"])
+                        except ValueError:
+                            context["error_messages"] = "Invalid input: milled_value is not a valid number."
+                            return render(request, 'processor/add_processor_receive_delivery.html', context)
+                        try:
+                            volume_shipped = float(volume_shipped)
+                        except ValueError:
+                            context["error_messages"] = "Invalid input: volume_shipped is not a valid number."
+                            return render(request, 'processor/add_processor_receive_delivery.html', context)
+                        if milled_value < volume_shipped:
+                            context["error_messages"] = "Processor does not have the required milled volume."
+                            return render(request, 'processor/add_processor_receive_delivery.html', context)
+ 
+                        else:
+                            if context["weight_prod_unit_id"] == "LBS" :
+                                cal_weight = round(float(context["weight_prod"]),2)
+                            if context["weight_prod_unit_id"] == "BU" :
+                                cal_weight = round(float(context["weight_prod"]) * 45,2)
+                            if context["exp_yield_unit_id"] == "LBS" :
+                                cal_exp_yield = round(float(context["exp_yield"]),2)
+                            if context["exp_yield_unit_id"] == "BU" :
+                                cal_exp_yield = round(float(context["exp_yield"]) * 45,2)
+                            select_proc_id = processor_id
+                            select_destination_ = processor_name
+                            receiver_processor_type = processor_type
+                        
+                            milled_volume = context["milled_value"]
+                            volume_left = float(context["milled_value"]) - float(context["volume_shipped"])
+                            shipment_id = generate_shipment_id()
+                            
+                            save_shipment_management = ShipmentManagement(shipment_id=shipment_id,processor_idd=bin_pull,processor_e_name=select_processor_name, sender_processor_type=context["sender_processor_type"], bin_location=bin_pull,crop=selected_crop, variety=context.get("variety"),
+                                    equipment_type=context["equipment_type"],equipment_id=context["equipment_id"],storage_bin_send=context["storage_bin_id"],moisture_percent = context["moist_percentage"],weight_of_product_raw = context["weight_prod"],
+                                    weight_of_product=cal_weight,weight_of_product_unit=context["weight_prod_unit_id"], excepted_yield_raw =context["exp_yield"],excepted_yield=cal_exp_yield,excepted_yield_unit=context["exp_yield_unit_id"],recive_delivery_date=context["approval_date"],
+                                    purchase_order_number=context["purchase_number"],lot_number=context["lot_number"],volume_shipped=context["volume_shipped"],milled_volume=milled_volume,volume_left=volume_left,editable_obj=True,status=context["status"],
+                                    storage_bin_recive=context["receiver_sku_id"],ticket_number=context["ticket_number"],received_weight=context["received_weight"],processor2_idd=select_proc_id,processor2_name=select_destination_, receiver_processor_type=receiver_processor_type)
+                            save_shipment_management.save()
+
+                            
+                            create_sku_list(select_pro_id, bin_pull_type, context["storage_bin_id"])
+                            create_sku_list(processor_id, processor_type, context["receiver_sku_id"])
+                            files = request.FILES.getlist('files')
+                            for file in files:
+                                new_file = File.objects.create(file=file)
+                                save_shipment_management.files.add(new_file)
+                            save_shipment_management.save()
+                            #logtable
+                            log_type, log_status, log_device = "ShipmentManagement", "Added", "Web"
+                            log_idd, log_name = save_shipment_management.id, save_shipment_management.bin_location
+                            log_details = f"processor2 = {save_shipment_management.processor_e_name} | processor2_id = {save_shipment_management.processor_idd} | date_pulled = {save_shipment_management.date_pulled} | bin_location = {save_shipment_management.bin_location} | milled_volume = {save_shipment_management.milled_volume} | equipment_type = {save_shipment_management.equipment_type} | equipment_id = {save_shipment_management.equipment_id} | purchase_order_number = {save_shipment_management.purchase_order_number} | lot_number = {save_shipment_management.lot_number} | volume_shipped = {save_shipment_management.volume_shipped} | volume_left = {save_shipment_management.volume_left} | editable_obj = {save_shipment_management.editable_obj} "
+                            action_by_userid = request.user.id
+                            user = User.objects.get(pk=action_by_userid)
+                            user_role = user.role.all()
+                            action_by_username = f'{user.first_name} {user.last_name}'
+                            action_by_email = user.username
+                            if request.user.id == 1 :
+                                action_by_role = "superuser"
+                            else:
+                                action_by_role = str(','.join([str(i.role) for i in user_role]))
+                            logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+                                                action_by_userid=action_by_userid,action_by_username=action_by_username,
+                                                action_by_email=action_by_email,action_by_role=action_by_role,log_details=log_details,
+                                                log_device=log_device)
+                            logtable.save()
+                            update_obj = ShipmentManagement.objects.filter(processor_idd=int(bin_pull)).exclude(id=save_shipment_management.id).values('id','editable_obj')
+                            
+                            if update_obj.exists():
+                                for i in update_obj :
+                                    get_obj = ShipmentManagement.objects.get(id=i['id'])
+                                    get_obj.editable_obj = False
+                                    get_obj.save()
+                            else:
+                                pass
+                            return redirect('processor_inbound_management')
+                
+                return render(request, 'processor/add_processor_receive_delivery.html',context)
+            else:
+                messages.error(request, "Not a valid request.")
+                return redirect("dashboard")
+        else:
+            return redirect('login')
+    except Exception as e:
+        context["error_messages"] = str(e)
+        return render(request, 'processor/add_processor_receive_delivery.html',context)
 
 
 @login_required()

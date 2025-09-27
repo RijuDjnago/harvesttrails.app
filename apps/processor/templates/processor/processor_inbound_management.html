@@ -178,7 +178,7 @@
                 {% endif %}
             </div>
         </div>
-        {% if request.user.is_processor or request.user.is_superuser %}        
+        {% if request.user.is_processor or request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}        
         <form action="" method="get" class="">
             <div class="card card-padding">
                 <div class="main-simple-table-with-search col-12">
@@ -292,6 +292,7 @@
                                             </li>
                                             {% endif %}
                                             {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
+                                            <li><a href="{% url 'view_trace' grower_shipment.shipment_id 0 0 from_date to_date  %}" class="update-btn-link" alt="view traceability" title="view traceability"> <span class="fas fa-arrow-circle-right"></span></a></li>
                                             <li>
                                                 <a type="button"
                                             data-mdb-toggle="modal" data-mdb-target="#deleteModal{{grower_shipment.id}}" alt="delete inbound shipment" title="delete inbound shipment">

@@ -352,55 +352,84 @@ def reports_csv(request,selectedGrower):
 
     return response
 
+
+# def reports(request):
+#     if request.user.is_authenticated:
+#         if request.user.is_consultant:
+#             pass
+#         elif request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+#         # elif request.user.is_superuser:
+#             context = {}
+#             field = Field.objects.all().order_by('-created_date')
+#             # code           
+#             growers = Grower.objects.all().order_by('name')
+#             context['growers'] = growers
+#             if request.method == 'POST':
+#                 grower_id = request.POST.get('grower_id')
+#                 if grower_id != 'all' :
+#                     field = Field.objects.filter(grower_id = grower_id)
+#                     selectedGrower = Grower.objects.get(id=grower_id)
+#                     context['selectedGrower'] = selectedGrower
+#                 else:
+#                     field = Field.objects.all().order_by('-created_date')
+
+#             page = request.GET.get('page', 1)
+#             paginator = Paginator(field, 100)     
+#             try:
+#                 field = paginator.page(page)
+#             except PageNotAnInteger:
+#                 field = paginator.page(page)
+#             except EmptyPage:
+#                 field = paginator.page(paginator.num_pages)
+
+#             field= paginator.get_page(page)
+#             context['field'] = field
+
+#             return render(request,'documents/reports.html',context)
+#     else:
+#         return redirect('login')
+
+
 def reports(request):
     if request.user.is_authenticated:
         if request.user.is_consultant:
-            pass
+            pass  
         elif request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
-        # elif request.user.is_superuser:
             context = {}
-            field = Field.objects.all().order_by('-created_date')
-            # code
-            # sustainability_survey1 = SustainabilitySurvey.objects.filter(grower_id=662).filter(namesurvey_id=1).filter(field_id=1971)
-            # for i in sustainability_survey1:
-            #     composite_score = i.sustainabilityscore
-            #     print(composite_score)
-
             growers = Grower.objects.all().order_by('name')
             context['growers'] = growers
+
+            field_queryset = Field.objects.all().order_by('-created_date')
+
             if request.method == 'POST':
                 grower_id = request.POST.get('grower_id')
-                if grower_id != 'all' :
-                    field = Field.objects.filter(grower_id = grower_id)
+                if grower_id != 'all':
+                    field_queryset = Field.objects.filter(grower_id=grower_id).order_by('-created_date')
                     selectedGrower = Grower.objects.get(id=grower_id)
                     context['selectedGrower'] = selectedGrower
-                else:
-                    field = Field.objects.all().order_by('-created_date')
-
+            
+            paginator = Paginator(field_queryset, 100) 
             page = request.GET.get('page', 1)
-            paginator = Paginator(field, 100)     
-            try:
-                field = paginator.page(page)
-            except PageNotAnInteger:
-                field = paginator.page(page)
-            except EmptyPage:
-                field = paginator.page(paginator.num_pages)
+            field_page = paginator.get_page(page)
 
-            field= paginator.get_page(page)
-            context['field'] = field
+            context['fields'] = field_page
 
-            return render(request,'documents/reports.html',context)
+            return render(request, 'documents/reports.html', context)
     else:
         return redirect('login')
+
 
 class FolderList(LoginRequiredMixin, ListView):
     def get(self, request):
         '''Default function for get request'''
 
         folder_data = DocumentFolder.objects.all().order_by('name')
+        paginator = Paginator(folder_data, 100) 
+        page = request.GET.get('page', 1)
+        folder_page = paginator.get_page(page)
 
         return render(request, 'documents/folder-list.html', {
-            'folder_data':folder_data
+            'folder_data':folder_page
         })
         
 
@@ -515,7 +544,7 @@ class DocumentList(LoginRequiredMixin, ListView):
             folder_data = DocumentFolder.objects.all().order_by('name')
             # pagi
             page = self.request.GET.get('page', 1)
-            paginator = Paginator(doc_file_obj, 200)
+            paginator = Paginator(doc_file_obj, 400)
             folder_data = DocumentFolder.objects.all().order_by('name')
                         
                         
@@ -536,7 +565,7 @@ class DocumentList(LoginRequiredMixin, ListView):
                     type_survey_data = TypeSurvey.objects.all().order_by('name')
                     # pagi
                     page = self.request.GET.get('page', 1)
-                    paginator = Paginator(doc_file_obj, 200)
+                    paginator = Paginator(doc_file_obj, 400)
                     folder_data = DocumentFolder.objects.all().order_by('name')
                         
                         
@@ -556,7 +585,7 @@ class DocumentList(LoginRequiredMixin, ListView):
                     folder_data = DocumentFolder.objects.all().order_by('name')
                     # pagi
                     page = self.request.GET.get('page', 1)
-                    paginator = Paginator(doc_file_obj, 200)
+                    paginator = Paginator(doc_file_obj, 400)
                     folder_data = DocumentFolder.objects.all().order_by('name')
                         
                         
@@ -583,7 +612,7 @@ class DocumentList(LoginRequiredMixin, ListView):
                     type_survey_data = TypeSurvey.objects.all().order_by('name')
                     # pagi
                     page = self.request.GET.get('page', 1)
-                    paginator = Paginator(doc_file_obj, 200)
+                    paginator = Paginator(doc_file_obj, 400)
                     folder_data = DocumentFolder.objects.all().order_by('name')
                         
                         
@@ -605,7 +634,7 @@ class DocumentList(LoginRequiredMixin, ListView):
                     folder_data = DocumentFolder.objects.all().order_by('name')
                     # pagi
                     page = self.request.GET.get('page', 1)
-                    paginator = Paginator(doc_file_obj, 200)
+                    paginator = Paginator(doc_file_obj, 400)
                     folder_data = DocumentFolder.objects.all().order_by('name')
                         
                         
@@ -630,7 +659,7 @@ class DocumentList(LoginRequiredMixin, ListView):
                 doc_file_obj = DocumentFile.objects.filter(grower__in=get_growers).order_by('-id')
                 folder_data = DocumentFolder.objects.all().order_by('name')
                 page = self.request.GET.get('page', 1)
-                paginator = Paginator(doc_file_obj, 200)
+                paginator = Paginator(doc_file_obj, 400)
                 
                 try:
                     doc_list = paginator.page(page)
@@ -652,7 +681,7 @@ class DocumentList(LoginRequiredMixin, ListView):
                         
                         # pagi
                         page = self.request.GET.get('page', 1)
-                        paginator = Paginator(doc_file_obj, 200)
+                        paginator = Paginator(doc_file_obj, 400)
                         folder_data = DocumentFolder.objects.all().order_by('name')
                                                 
                         try:
@@ -671,7 +700,7 @@ class DocumentList(LoginRequiredMixin, ListView):
                     else:
                         # pagi
                         page = self.request.GET.get('page', 1)
-                        paginator = Paginator(doc_file_obj, 200)
+                        paginator = Paginator(doc_file_obj, 400)
                         folder_data = DocumentFolder.objects.all().order_by('name')
                         
                         
@@ -700,7 +729,7 @@ class DocumentList(LoginRequiredMixin, ListView):
 
                         # pagi
                         page = self.request.GET.get('page', 1)
-                        paginator = Paginator(doc_file_obj, 200)
+                        paginator = Paginator(doc_file_obj, 400)
                         folder_data = DocumentFolder.objects.all().order_by('name')
                         
                         
@@ -720,7 +749,7 @@ class DocumentList(LoginRequiredMixin, ListView):
                     else:
                         # pagi
                         page = self.request.GET.get('page', 1)
-                        paginator = Paginator(doc_file_obj, 200)
+                        paginator = Paginator(doc_file_obj, 400)
                         folder_data = DocumentFolder.objects.all().order_by('name')
                         
                         
@@ -750,7 +779,7 @@ class DocumentList(LoginRequiredMixin, ListView):
                         return redirect('document-list')
                     # Pagi
                     page = self.request.GET.get('page', 1)
-                    paginator = Paginator(doc_file_obj, 200)
+                    paginator = Paginator(doc_file_obj, 400)
                     try:
                         doc_list = paginator.page(page)
                     except PageNotAnInteger:
@@ -771,7 +800,7 @@ class DocumentList(LoginRequiredMixin, ListView):
                 get_growers = Grower.objects.all().order_by('name')
                 doc_file_obj = DocumentFile.objects.filter(grower__in=get_growers).order_by('-id')
                 page = self.request.GET.get('page', 1)
-                paginator = Paginator(doc_file_obj, 200)
+                paginator = Paginator(doc_file_obj, 400)
                 folder_data = DocumentFolder.objects.all().order_by('name')
                 try:
                     doc_list = paginator.page(page)
@@ -792,7 +821,7 @@ class DocumentList(LoginRequiredMixin, ListView):
                         get_growers = Grower.objects.all().order_by('name')
                         # Pagi
                         page = self.request.GET.get('page', 1)
-                        paginator = Paginator(doc_file_obj, 200)
+                        paginator = Paginator(doc_file_obj, 400)
                         folder_data = DocumentFolder.objects.all().order_by('name')
                         try:
                             doc_list = paginator.page(page)
@@ -809,7 +838,7 @@ class DocumentList(LoginRequiredMixin, ListView):
                         })
                     else:
                         page = self.request.GET.get('page', 1)
-                        paginator = Paginator(doc_file_obj, 200)
+                        paginator = Paginator(doc_file_obj, 400)
                         folder_data = DocumentFolder.objects.all().order_by('name')
                         try:
                             doc_list = paginator.page(page)
@@ -837,7 +866,7 @@ class DocumentList(LoginRequiredMixin, ListView):
                         get_growers = Grower.objects.all().order_by('name')
                         # pagi
                         page = self.request.GET.get('page', 1)
-                        paginator = Paginator(doc_file_obj, 200)
+                        paginator = Paginator(doc_file_obj, 400)
                         folder_data = DocumentFolder.objects.all().order_by('name')                       
                         try:
                             doc_list = paginator.page(page)
@@ -856,7 +885,7 @@ class DocumentList(LoginRequiredMixin, ListView):
                     else:
                         # pagi
                         page = self.request.GET.get('page', 1)
-                        paginator = Paginator(doc_file_obj, 200)
+                        paginator = Paginator(doc_file_obj, 400)
                         folder_data = DocumentFolder.objects.all().order_by('name')
                         get_growers = Grower.objects.all().order_by('name')
                         try:
@@ -887,7 +916,7 @@ class DocumentList(LoginRequiredMixin, ListView):
                         return redirect('document-list')
                     # Pagi
                     page = self.request.GET.get('page', 1)
-                    paginator = Paginator(doc_file_obj, 200)
+                    paginator = Paginator(doc_file_obj, 400)
                     try:
                         doc_list = paginator.page(page)
                     except PageNotAnInteger:
@@ -921,7 +950,7 @@ class UpdateUploadDocumentPhoto(LoginRequiredMixin, UpdateView):
         for y in range(2020, (datetime.datetime.now().year + 29)):
             year_dropdown.append(y)
 
-        if 'Grower' in request.user.get_role() and not request.user.is_superuser:
+        if 'Grower' in request.user.get_role() and not request.user.is_superuser :
             # do something grower
             grower_id=request.user.grower.id
             get_growers = Grower.objects.filter(id=grower_id).order_by('name')

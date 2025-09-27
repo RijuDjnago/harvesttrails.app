@@ -1,5 +1,6 @@
 from django.db import models
 from apps.processor.models import *
+from apps.field.models import Crop, CropVariety
 # from apps.processor.models import BaleReportFarmField
 
 # Create your models here.
@@ -18,14 +19,18 @@ class ProcessorType(models.Model):
 
 class Processor2(models.Model):
     """Database model for processor"""
+    quickbooks_id = models.CharField(max_length=255, unique=True, null=True, blank=True)
     fein = models.CharField(max_length=250, null=True, blank=True,verbose_name='FEIN')
     entity_name = models.CharField(max_length=250, null=True, blank=True,verbose_name='Entity Name')
     billing_address = models.TextField(null=True, blank=True,verbose_name='Billing Address')
     shipping_address = models.TextField(null=True, blank=True,verbose_name='Shipping Address')
     main_number = models.CharField(max_length=250, null=True, blank=True,verbose_name='Main Number')
     main_fax = models.CharField(max_length=250, null=True, blank=True,verbose_name='Main Fax')
+    main_email = models.CharField(max_length=255, null=True, blank=True, verbose_name='Main Email')
     website = models.TextField(null=True, blank=True,verbose_name='Website')
+    account_number = models.CharField(max_length=255, null=True, blank=True)
     processor_type = models.ManyToManyField(ProcessorType, blank=True)
+    is_active = models.BooleanField(default=True)
 
     def __str__(self):
         return self.entity_name
@@ -147,10 +152,21 @@ Processor_Type =(
 )
 
 class ShipmentManagement(models.Model):
+    @staticmethod
+    def crop_choices():
+        crops = Crop.objects.all()
+        return [(crop.code, crop.name) for crop in crops]
+    @staticmethod
+    def variety_choices():
+        varieties = CropVariety.objects.all()
+        return [(variety.variety_code, variety.variety_name) for variety in varieties] 
+    
     shipment_id = models.CharField(max_length=200, null=True, blank=True)
     processor_idd = models.CharField(max_length=200, null=True, blank=True)
     processor_e_name = models.CharField(max_length=200, null=True, blank=True)
     sender_processor_type = models.CharField(max_length=5, choices=Processor_Type, null=True, blank=True)
+    crop = models.CharField(max_length=255, choices=[], default="RICE")
+    variety = models.CharField(max_length=255, choices=[], default="DG-263L")
     production_management = models.ForeignKey(ProductionManagement,on_delete=models.CASCADE, null=True, blank=True)
     prod_mgmt_processor2 = models.ForeignKey(ProductionManagementProcessor2, on_delete=models.CASCADE, null=True, blank=True)
     bin_location = models.CharField(max_length=200, null=True, blank=True, verbose_name='MILLED STORAGE BIN')
@@ -182,6 +198,11 @@ class ShipmentManagement(models.Model):
     ticket_number = models.CharField(max_length=20, null=True, blank=True)
     qr_code_processor = models.FileField(upload_to='qr_code_processor/',null=True, blank=True)
     reason_for_disapproval = models.CharField(max_length=200, null=True, blank=True,verbose_name='Reason For Disapproval')
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)    
+        self._meta.get_field('crop').choices = self.crop_choices()
+        self._meta.get_field('variety').choices = self.variety_choices()
 
     def __str__(self):
         return f"Shipment Id = {self.shipment_id}, Sender Processor = {self.processor_e_name}, Receiver processor = {self.processor2_name}"

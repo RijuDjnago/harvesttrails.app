@@ -1,4 +1,5 @@
-{% extends "base.html" %} {% load static %}
+{% extends "base.html" %}
+{% load static %}
 {% block title %} Grower Payee List {% endblock title %}
 
 {% block extrahead %}
@@ -8,7 +9,6 @@
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
-
   gtag('config', 'G-Y3EWVPF7PQ');
 </script>
 {% endblock extrahead %}
@@ -23,8 +23,8 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/1.11.0/css/dataTables.bootstrap4.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.2.9/css/responsive.bootstrap4.min.css">
     <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/fixedcolumns/4.2.1/css/fixedColumns.dataTables.min.css">
-  <style>
-    .dataTables_scrollHead,
+    <style>
+        .dataTables_scrollHead,
         .dataTables_scrollBody,
         .dataTables_scrollFoot {
             width: 100% !important;
@@ -35,46 +35,18 @@
         {% include '_alerts.html' %}
         <div class="page-title-with-or-without-btn">
             <span class="farm headingtop">Grower Payee List</span>
-            <!-- Create button for Account-->
             <div class="flex-header-btn">
                 <a href="{% url 'grower_split_payee_list' %}" class="btn-close-cancel">GROWER Payment Statement</a>
                 &nbsp;
                 <a href="{% url 'grower_split_payee_add' %}" class="btn-close-cancel">ADD GROWER SPLIT PAYEE</a>
             </div>
-
         </div>
 
         <div class="card card-padding">
             <div class="main-simple-table-with-search col-12">
-                <!-- <div class="row">
-                    <div class="col-8">
-                        <form action="" method="post" class="">
-                            {% csrf_token %}
-                            <div class="inline-apply-filter">
-                                <div class="three-fields-with-label">
-                                    <select id="growerSelction" name="selectgrower_id">
-                                        <option value='0' selected> Select All Growers </option>
-                                        {% for i in grower %}
-                                        {% if i == selectedGrower %}
-                                        <option value="{{ i.pk }}" selected>{{i.name}} - {{ i.pk }}
-                                        </option>
-                                        {% else %}
-                                        <option value="{{ i.pk }}">{{i.name}} - {{ i.pk }}</option>
-                                        {% endif %}
-                                        {% endfor %}
-                                    </select>
-                                </div>
-                                <input style="display : none;" id="submitBtn" type="submit"
-                                    class="apply-filter-btn primary-btn" value="Apply Filter" />
-                            </div>
-                        </form>
-                    </div>
-                </div> -->
-
                 <div class="both-data-in" style="display: inherit;">
                     <div class="simple-responsive-table">
-                        <table id="processorList_tbl" class="table table-striped dt-responsive nowrap"
-                            style="width:100%">
+                        <table id="processorList_tbl" class="table table-striped dt-responsive nowrap" style="width:100%">
                             <thead>
                                 <tr style="border-bottom: 2px solid #e0e0e0;">
                                     <th width="20%">Grower</th>
@@ -91,20 +63,18 @@
                                     <td>{{grower_payee.field_namee}}</td>
                                     <td>{{grower_payee.lien_name}}</td>
                                     <td>{{grower_payee.split_conut}}</td>
-
-
                                     <td class="backk action-td rmv-bd">
-                                    <ul>                                                                              
-                                       <li>
-                                            <a href="{% url 'grower_split_payee_edit' grower_payee.id %}" class="update-btn-link" alt="edit" title="edit"> <span class="fas fa-edit"></span></a>
-                                        </li>
-                                        <li>
-                                            <a onclick="delShipment('{% url 'grower_split_payee_delete' grower_payee.id %}')"
-                                                href="{% url 'grower_split_payee_delete' grower_payee.id %}"
-                                                data-mdb-toggle="modal" data-mdb-target="#deleteModal" alt="delete" title="delete">
-                                                <span class="fas fa-trash"></span></a>
-                                        </li>
-                                    </ul>
+                                        <ul>                                                                              
+                                            <li>
+                                                <a href="{% url 'grower_split_payee_edit' grower_payee.id %}" class="update-btn-link" alt="edit" title="edit"> <span class="fas fa-edit"></span></a>
+                                            </li>
+                                            <li>
+                                                <a onclick="delShipment('{% url 'grower_split_payee_delete' grower_payee.id %}')"
+                                                    href="{% url 'grower_split_payee_delete' grower_payee.id %}"
+                                                    data-mdb-toggle="modal" data-mdb-target="#deleteModal" alt="delete" title="delete">
+                                                    <span class="fas fa-trash"></span></a>
+                                            </li>
+                                        </ul>
                                     </td>
                                 </tr>
                                 {% endfor %}
@@ -112,123 +82,149 @@
                         </table>
                     </div>
                 </div>
+
+                <!-- Custom Pagination -->
+                {% if grower_payee_lst.has_other_pages %}
+                <nav aria-label="Page navigation">
+                    <ul class="pagination justify-content-center">
+                        {% if grower_payee_lst.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page=1">&laquo;&laquo;</a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ grower_payee_lst.previous_page_number }}">&laquo;</a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled">
+                                <a class="page-link" href="#">&laquo;&laquo;</a>
+                            </li>
+                            <li class="page-item disabled">
+                                <a class="page-link" href="#">&laquo;</a>
+                            </li>
+                        {% endif %}
+
+                        {% for num in grower_payee_lst.paginator.get_elided_page_range %}
+                            {% if num == grower_payee_lst.paginator.ELLIPSIS %}
+                                <li class="page-item disabled"><a class="page-link" href="#">...</a></li>
+                            {% else %}
+                                <li class="page-item {% if grower_payee_lst.number == num %}active{% endif %}">
+                                    <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                                </li>
+                            {% endif %}
+                            {% endfor %}
+
+                        {% if grower_payee_lst.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ grower_payee_lst.next_page_number }}">&raquo;</a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ grower_payee_lst.paginator.num_pages }}">&raquo;&raquo;</a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled">
+                                <a class="page-link" href="#">&raquo;</a>
+                            </li>
+                            <li class="page-item disabled">
+                                <a class="page-link" href="#">&raquo;&raquo;</a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
             </div>
         </div>
-</div>
-</main>
-{% include 'footer.html' %}
+    </main>
+    {% include 'footer.html' %}
 </div>
 
-
-<!-- end -->
 <!-- Delete Popup -->
-<div class="modal fade" id="deleteModal" aria-hidden="true" aria-labelledby="exampleModalToggleLabel22"
-    tabindex="-1">
+<div class="modal fade" id="deleteModal" aria-hidden="true" aria-labelledby="exampleModalToggleLabel22" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-
             <div class="modal-body">
-                <button type="button" class="btn-close cust-close-ds-btn" data-mdb-dismiss="modal"
-                    aria-label="Close"></button>
+                <button type="button" class="btn-close cust-close-ds-btn" data-mdb-dismiss="modal" aria-label="Close"></button>
                 <div class="center-content-status">
                     <img src="{% static 'img/trash.png' %}" alt="right" id="rightImg" class="warning-icon">
                     <p id="message" class="modal-title titlepad">Are you sure you want to delete?</p>
                 </div>
                 <div class="modal-center-btn-footer">
-                    <button onclick="reloadwindow()" id="closeBtnpopup" type="button"
-                        class="btn-close-cancel btn-space" data-mdb-dismiss="modal">
+                    <button onclick="reloadwindow()" id="closeBtnpopup" type="button" class="btn-close-cancel btn-space" data-mdb-dismiss="modal">
                         Close
                     </button>
-
-                    <a onclick="shipmentdeleteNow()" href="" id="shipmentDelete"><button type=""
-                            class="btn-save-submit">Delete</button></a>
-
+                    <a onclick="shipmentdeleteNow()" href="" id="shipmentDelete"><button type="button" class="btn-save-submit">Delete</button></a>
                 </div>
             </div>
-
         </div>
     </div>
 </div>
-<!-- end -->
-    {% endblock content %}
+{% endblock content %}
 
-    {% block scripts %}
-    <script src="https://cdn.datatables.net/1.11.0/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/1.11.0/js/dataTables.bootstrap4.min.js"></script>
-    <script src="https://cdn.datatables.net/responsive/2.2.9/js/dataTables.responsive.min.js"></script>
-    <script src="https://cdn.datatables.net/responsive/2.2.9/js/responsive.bootstrap4.min.js"></script>
-    <script src="{% static 'js/farm/farm_list.js' %}"></script>
-    <script src="https://cdn.datatables.net/fixedcolumns/4.2.1/js/dataTables.fixedColumns.min.js"></script>
+{% block scripts %}
+<script src="https://cdn.datatables.net/1.11.0/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.0/js/dataTables.bootstrap4.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.2.9/js/dataTables.responsive.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.2.9/js/responsive.bootstrap4.min.js"></script>
+<script src="{% static 'js/farm/farm_list.js' %}"></script>
+<script src="https://cdn.datatables.net/fixedcolumns/4.2.1/js/dataTables.fixedColumns.min.js"></script>
 
-    <script>
-        // delete storage
-        function delShipment(url) {
-            $('#shipmentDelete').show();
-            $('#shipmentDelete').attr('url', url);
-        }
-
-        function shipmentdeleteNow() {
-            url = $('#shipmentDelete').attr('url');
-            console.log(url)
-            $.ajax({
-                url: url,
-                data: {},
-                success: function (data) {
-                    if (data == 1) {
-                        location.reload();
-                    }
-                }
-            });
-        }
-    </script>
-
-    <script>
-        $(document).ready(function () {
-            $('#processorList_tbl').DataTable({
-                responsive: false,
-            "paging": true,
-            "pageLength": 100,
-			"autoWidth": true,
+<script>
+    $(document).ready(function () {
+        $('#processorList_tbl').DataTable({
+            responsive: false,
+            paging: false,  // Disable DataTables pagination to use Django pagination
+            info: false,    // Disable info text
+            searching: true, // Keep search functionality
             scrollY: "600px",
             scrollX: true,
             scrollCollapse: true,
             fixedColumns: {
                 left: 1,
                 right: 1
-            },
-            });
+            }
         });
+    });
 
-        function showQR(grower_shipment_pk) {
-            console.log(grower_shipment_pk)
-            $.ajax({
-                type: "GET",
-                url: `/processor/qr_code_view/${grower_shipment_pk}`,
-                data: {},
-                contentType: false,
-                cache: false,
-                processData: false,
-                success: function (response) {
-                    console.log('response1', response)
-                    var qrimgsrc = document.getElementById("qr_id").src;
-                    console.log(qrimgsrc)
-                    $('#qr_id').attr("src", "/media/" + response);
+    function delShipment(url) {
+        $('#shipmentDelete').show();
+        $('#shipmentDelete').attr('url', url);
+    }
 
+    function shipmentdeleteNow() {
+        url = $('#shipmentDelete').attr('url');
+        $.ajax({
+            url: url,
+            data: {},
+            success: function (data) {
+                if (data == 1) {
+                    location.reload();
                 }
-            });
-            $('#addqueModal').modal('show');
-        }
+            }
+        });
+    }
 
-        function closeAddModal() {
-            $('#addqueModal').modal('hide');
-        }
-    </script>
-    <script>
-        $('#Growers-Payments-active').addClass('activeLink');
-                      
-        $('#Growers-Payments-down').addClass('down');
-        $('#Growers-Payments-sub').show();
-        
-        $('#Grower-Payee-List').addClass('activeLink active-nav');
-    </script>
-    {% endblock scripts %}
+    function showQR(grower_shipment_pk) {
+        $.ajax({
+            type: "GET",
+            url: `/processor/qr_code_view/${grower_shipment_pk}`,
+            data: {},
+            contentType: false,
+            cache: false,
+            processData: false,
+            success: function (response) {
+                var qrimgsrc = document.getElementById("qr_id").src;
+                $('#qr_id').attr("src", "/media/" + response);
+            }
+        });
+        $('#addqueModal').modal('show');
+    }
+
+    function closeAddModal() {
+        $('#addqueModal').modal('hide');
+    }
+
+    $('#Growers-Payments-active').addClass('activeLink');
+    $('#Growers-Payments-down').addClass('down');
+    $('#Growers-Payments-sub').show();
+    $('#Grower-Payee-List').addClass('activeLink active-nav');
+</script>
+{% endblock scripts %}

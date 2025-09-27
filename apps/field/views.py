@@ -21,7 +21,7 @@ import csv
 from apps.field.models import CsvToField, ShapeFileDataCo, FieldActivity, FieldUpdated
 from apps.accounts.models import User, LogTable
 from apps.farms.models import Farm
-from apps.field.models import Field, Crop
+from apps.field.models import Field, Crop, CropVariety
 from apps.grower.models import Consultant, Grower
 from . import forms
 import shapefile
@@ -47,6 +47,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from django.http import JsonResponse
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from apps.field.choices import CHOICE
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
@@ -144,6 +145,13 @@ def test(request):
     messages.success(request, '{} Created Successfully!'.format(field.name))
     return redirect('field-update',pk=field.id)
 
+def get_varieties(request, crop_code):
+    # Get crop varieties for the given crop code
+    crop_varieties = CropVariety.objects.filter(crop__code=crop_code).values('id', 'variety_name')
+    print(crop_varieties)
+
+    # Return the varieties as a JSON response
+    return JsonResponse(list(crop_varieties), safe=False)
 
 
 class FieldCreateView(LoginRequiredMixin, CreateView):
@@ -198,7 +206,6 @@ class FieldCreateView(LoginRequiredMixin, CreateView):
             farms_data = Farm.objects.all().order_by('name')
             context["farms"] = farms_data
             return context
-
 
 
 # class FieldListView(LoginRequiredMixin, ListView):
@@ -283,7 +290,8 @@ class FieldCreateView(LoginRequiredMixin, CreateView):
     #             return servicedata_final
             
                 # return self.model.objects.all().order_by('-created_date')
-   
+
+
 class FieldListView(LoginRequiredMixin, ListView):
     '''Generic Class Based view to list all the field objects in database'''
     model = Field
@@ -428,24 +436,25 @@ class FieldDetailView(LoginRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         the_field_id= self.kwargs.get('pk')
         pk= the_field_id
-        data = self.model.objects.filter(id=the_field_id)
-        context = {'data':data}
+        data = self.model.objects.filter(id=the_field_id).first()
+        context = {'object':data}
+        print(context)
          # code ..
-        field_Pre_Fert = FieldActivity.objects.filter(field_activity='Pre_Fert').filter(field_id = pk).order_by('-date_of_activity')
-        field_activity_Early_Post_Fert =FieldActivity.objects.filter(field_activity='Early_Post_Fert').filter(field_id = pk).order_by('-date_of_activity')
-        field_activity_Foliar_Fert_App =FieldActivity.objects.filter(field_activity='Foliar_Fert_App').filter(field_id = pk).order_by('-date_of_activity')
-        field_activity_Pre_Flood_Fert =FieldActivity.objects.filter(field_activity='Pre_Flood_Fert').filter(field_id = pk).order_by('-date_of_activity')
-        field_activity_Post_Flood_Mid_Season_Fert =FieldActivity.objects.filter(field_activity='Post_Flood_Mid_Season_Fert').filter(field_id = pk).order_by('-date_of_activity')
-        field_activity_Boot_Fertilizer =FieldActivity.objects.filter(field_activity='Boot_Fertilizer').filter(field_id = pk).order_by('-date_of_activity')
-        field_activity_Burndown_Chemical =FieldActivity.objects.filter(field_activity='Burndown_Chemical').filter(field_id = pk).order_by('-date_of_activity')
-        field_activity_Preemergence_Chemical =FieldActivity.objects.filter(field_activity='Preemergence_Chemical').filter(field_id = pk).order_by('-date_of_activity')
-        field_activity_Post_Emergence_Chemical =FieldActivity.objects.filter(field_activity='Post_Emergence_Chemical').filter(field_id = pk).order_by('-date_of_activity')
-        field_activity_Fungicide_Micro_Nutrients =FieldActivity.objects.filter(field_activity='Fungicide_Micro_Nutrients').filter(field_id = pk).order_by('-date_of_activity')
-        field_activity_Insecticide_Application =FieldActivity.objects.filter(field_activity='Insecticide_Application').filter(field_id = pk).order_by('-date_of_activity')
-        field_activity_Litter =FieldActivity.objects.filter(field_activity='Litter').filter(field_id = pk).order_by('-date_of_activity')
-        field_activity_Sodium_Chlorate =FieldActivity.objects.filter(field_activity='Sodium_Chlorate').filter(field_id = pk).order_by('-date_of_activity')
+        field_Pre_Fert = FieldActivity.objects.filter(field_activity='Pre_Fert', field_id = pk).order_by('-date_of_activity')
+        field_activity_Early_Post_Fert =FieldActivity.objects.filter(field_activity='Early_Post_Fert', field_id = pk).order_by('-date_of_activity')
+        field_activity_Foliar_Fert_App =FieldActivity.objects.filter(field_activity='Foliar_Fert_App', field_id = pk).order_by('-date_of_activity')
+        field_activity_Pre_Flood_Fert =FieldActivity.objects.filter(field_activity='Pre_Flood_Fert', field_id = pk).order_by('-date_of_activity')
+        field_activity_Post_Flood_Mid_Season_Fert =FieldActivity.objects.filter(field_activity='Post_Flood_Mid_Season_Fert', field_id = pk).order_by('-date_of_activity')
+        field_activity_Boot_Fertilizer =FieldActivity.objects.filter(field_activity='Boot_Fertilizer', field_id = pk).order_by('-date_of_activity')
+        field_activity_Burndown_Chemical =FieldActivity.objects.filter(field_activity='Burndown_Chemical', field_id = pk).order_by('-date_of_activity')
+        field_activity_Preemergence_Chemical =FieldActivity.objects.filter(field_activity='Preemergence_Chemical', field_id = pk).order_by('-date_of_activity')
+        field_activity_Post_Emergence_Chemical =FieldActivity.objects.filter(field_activity='Post_Emergence_Chemical', field_id = pk).order_by('-date_of_activity')
+        field_activity_Fungicide_Micro_Nutrients =FieldActivity.objects.filter(field_activity='Fungicide_Micro_Nutrients', field_id = pk).order_by('-date_of_activity')
+        field_activity_Insecticide_Application =FieldActivity.objects.filter(field_activity='Insecticide_Application', field_id = pk).order_by('-date_of_activity')
+        field_activity_Litter =FieldActivity.objects.filter(field_activity='Litter', field_id = pk).order_by('-date_of_activity')
+        field_activity_Sodium_Chlorate =FieldActivity.objects.filter(field_activity='Sodium_Chlorate', field_id = pk).order_by('-date_of_activity')
 
-        field_activity_npk =FieldActivity.objects.filter(field_activity='NPK_Application').filter(field_id = pk).order_by('-date_of_activity')
+        field_activity_npk =FieldActivity.objects.filter(field_activity='NPK_Application', field_id = pk).order_by('-date_of_activity')
 
         
         context["field_Pre_Fert"] = field_Pre_Fert
@@ -514,6 +523,7 @@ class FieldDetailView(LoginRequiredMixin, DetailView):
         
         return context
 
+
 # fieldActivity Delete ...
 def fieldActivity_delete(request,pk):
     fati = FieldActivity.objects.get(id=pk)
@@ -559,6 +569,7 @@ def fieldEditLogTable(userid, log_idd, edited_field):
                         action_by_email=action_by_email,action_by_role=action_by_role,log_details=log_details,
                         log_device=log_device)
     logtable.save()
+
 
 # fieldActivity..
 def fieldActivity(request):
@@ -838,6 +849,7 @@ def fieldActivity(request):
     messages.success(request, f'Field {field_obj.name} Updated Successfully!')
     return redirect('field-update', hidden_field_id)
 
+
 @login_required()
 def update_field_2024(request,pk):
     context = {}
@@ -892,6 +904,7 @@ def update_field_2024(request,pk):
 
 class FieldUpdateView(LoginRequiredMixin, UpdateView):
     '''Generic Class Based View to update a field created'''
+    
     model = Field
     form_class = forms.FarmForm
     template_name = 'field/field_update.html'
@@ -899,12 +912,15 @@ class FieldUpdateView(LoginRequiredMixin, UpdateView):
 
     def form_valid(self, form):
         """overriding this method to get a message after successfully creating new farm"""
+        print()
         name = form.cleaned_data.get('name')
         farm = form.cleaned_data.get('farm')
         grower = form.cleaned_data.get('grower')
         acreage = form.cleaned_data.get('acreage')
         crop = form.cleaned_data.get('crop')
+        print(crop, "12345")
         variety = form.cleaned_data.get('variety')
+        form.instance.crop = crop
         
 
         # 07-04-23
@@ -932,8 +948,9 @@ class FieldUpdateView(LoginRequiredMixin, UpdateView):
 
     def get_context_data(self, **kwargs,):
         context = super(FieldUpdateView, self).get_context_data(**kwargs)
+        context['crops'] = Crop.objects.all()
         pk = self.kwargs.get('pk')
-
+        
         current_farm = self.model.objects.get(pk=pk)
         context['selected_grower'] = current_farm.grower_id
         context['selected_farm'] = current_farm.farm_id
@@ -949,10 +966,7 @@ class FieldUpdateView(LoginRequiredMixin, UpdateView):
             # 21-06-23
             update_field = Field.objects.get(id = pk)
             context["update_field"] = update_field
-            context["variety_list"] = ['DG-263L','DG-Wheat','DG3605','DG 1464','DG 2425 XF','DG 3215 B3XF','DG 3450 B2XF',
-                                       'DG 3470 B3XF','DG 3570 B3XF','DG 3635 B2XF','DG 3544 B2XF','DG 3651NR B2XF','DG 3109 B2XF',
-                                       'DG 3387 B3XF','DG 3421 B3XF','DG H929 B3XF','DG 3555 B3XF','DG 3402 B3XF','DG H959 B3XF',
-                                       'DG 3469 B3XF','DG 3615 B3XF','DG P224 B3XF','DG 3385 B2XF','DG 3422 B3XF','DG 3799 B3XF']
+            context["variety_list"] = list(CropVariety.objects.values_list('variety_name', flat=True))
 
             btnvariable = ""
             scrop_year = ""
@@ -970,6 +984,7 @@ class FieldUpdateView(LoginRequiredMixin, UpdateView):
                 latitude = self.request.POST.get('latitude')
                 longitude = self.request.POST.get('longitude')
                 crop = self.request.POST.get('crop')
+                print(crop, '000000000')
 
                 btnvariable = self.request.POST.get('btnvariable')
 
@@ -1185,10 +1200,7 @@ class FieldUpdateView(LoginRequiredMixin, UpdateView):
             # 21-06-23
             update_field = Field.objects.get(id = pk)
             context["update_field"] = update_field
-            context["variety_list"] = ['DG-263L','DG-Wheat','DG3605','DG 1464','DG 2425 XF','DG 3215 B3XF','DG 3450 B2XF',
-                                       'DG 3470 B3XF','DG 3570 B3XF','DG 3635 B2XF','DG 3544 B2XF','DG 3651NR B2XF','DG 3109 B2XF',
-                                       'DG 3387 B3XF','DG 3421 B3XF','DG H929 B3XF','DG 3555 B3XF','DG 3402 B3XF','DG H959 B3XF',
-                                       'DG 3469 B3XF','DG 3615 B3XF','DG P224 B3XF','DG 3385 B2XF','DG 3422 B3XF','DG 3799 B3XF']
+            context["variety_list"] = list(CropVariety.objects.values_list('variety_name', flat=True))
             btnvariable = ""
             scrop_year = ""
             crop = ""
@@ -1423,10 +1435,7 @@ class FieldUpdateView(LoginRequiredMixin, UpdateView):
             context["farms"] = farms_data
             update_field = Field.objects.get(id = pk)
             context["update_field"] = update_field
-            context["variety_list"] = ['DG-263L','DG-Wheat','DG3605','DG 1464','DG 2425 XF','DG 3215 B3XF','DG 3450 B2XF',
-                                       'DG 3470 B3XF','DG 3570 B3XF','DG 3635 B2XF','DG 3544 B2XF','DG 3651NR B2XF','DG 3109 B2XF',
-                                       'DG 3387 B3XF','DG 3421 B3XF','DG H929 B3XF','DG 3555 B3XF','DG 3402 B3XF','DG H959 B3XF',
-                                       'DG 3469 B3XF','DG 3615 B3XF','DG P224 B3XF','DG 3385 B2XF','DG 3422 B3XF','DG 3799 B3XF']
+            context["variety_list"] = list(CropVariety.objects.values_list('variety_name', flat=True))
             btnvariable = ""
             scrop_year = ""
             crop = ""
@@ -1443,7 +1452,7 @@ class FieldUpdateView(LoginRequiredMixin, UpdateView):
                 latitude = self.request.POST.get('latitude')
                 longitude = self.request.POST.get('longitude')
                 crop = self.request.POST.get('crop')
-
+                print(crop)
                 btnvariable = self.request.POST.get('btnvariable')
 
             if btnvariable == 'updateField' :

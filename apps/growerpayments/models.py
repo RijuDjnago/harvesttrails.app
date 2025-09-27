@@ -22,6 +22,9 @@ class EntryFeeds(models.Model):
     from_date = models.DateField(null=True, blank=True)
     to_date = models.DateField(null=True, blank=True)
 
+    def __str__(self):
+        return f'{self.grower.name} | {self.crop} | {self.contracted_payment_option}'
+
 class GrowerPayments(models.Model):
     enteyfeeds = models.ForeignKey(EntryFeeds, on_delete=models.CASCADE, null=True, blank=True,verbose_name='EntryFeeds')
     processor = models.IntegerField(null=True, blank=True,verbose_name='Select Processor')
@@ -59,6 +62,9 @@ class GrowerPayments(models.Model):
 
     total_price_2 = models.CharField(max_length=200, null=True, blank=True,verbose_name='Total price Old')
     delivered_value_2 = models.CharField(max_length=200, null=True, blank=True,verbose_name='Delivered Value Old')
+
+    def __str__(self):
+        return f'{self.grower.name} | {self.crop}'
 
 
 class NasdaqApiData(models.Model):

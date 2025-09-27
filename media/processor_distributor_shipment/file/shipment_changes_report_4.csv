@@ -1,0 +1,2 @@
+Shipment ID,Date,Mill,Ship To,Destination,Item || Category || Shipped Weight || Waybill/BOL Number || Lot Number,Purchase Order Name,Purchase Order Number,Invoiced Amount,Description,Field,Old Value,New Value,Updated At,Updated By
+dJVvmdL7GU7C,2025-04-22,Demo Warehouse,Demo Customer,"Atlanta Beltline Eastside Trail, Atlanta, GA, USA",Parboiled White Rice - Tote 1MT - I24 || 9390.0 LBS || 4214 || 465436,Demo Customer,34221A,$501426.00,A new shipment was created from warehouse 'Demo Warehouse' containing crops.,,,,2025-04-22 12:44:34,

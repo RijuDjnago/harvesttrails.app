@@ -4,6 +4,7 @@ from apps.field import views
 
 urlpatterns = [
     path('list/', views.FieldListView.as_view(), name='field-list'),
+    path('get-varieties/<str:crop_code>/', views.get_varieties, name='get_varieties'),
     path('create/', views.FieldCreateView.as_view(), name='field-create'),
     path('<int:pk>/update/', views.FieldUpdateView.as_view(), name='field-update'),
 #     path('<int:pk>/update/', views.fieldUpdateView, name='field-update'),

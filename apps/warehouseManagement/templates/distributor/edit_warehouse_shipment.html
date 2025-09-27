@@ -1,0 +1,2131 @@
+{% extends "base.html" %}
+{% load static %}
+{% load custom_filters %}
+
+{% block title %} Edit Shipment {% endblock title %}
+
+{% block extrahead %}
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-Y3EWVPF7PQ"></script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAfBo6-cZlOpKGrD1ZYwISIGjYvhH_wPmk&libraries=places"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-Y3EWVPF7PQ');
+</script>
+{% endblock extrahead %}
+
+{% block content %}
+{% include 'navbar.html' %}
+
+<style>
+    .shipment-custom-btn {
+        height: 100%;
+        display: flex;
+        align-items: flex-end;
+    }
+
+    .shipment-custom-btn .btn-save-submit {
+        padding-top: 11px;
+        padding-bottom: 11px;
+        border-radius: 4px;
+    }
+    .extra_border_select{
+        border: 1px solid #ccc
+    }
+
+.ui-menu{height: 20vh;overflow-y: auto;padding: 0px 10px;margin: 0px 15px;}
+.ui-menu::-webkit-scrollbar{width:6px;max-height:20px;padding-right: 10px;}
+.ui-menu::-webkit-scrollbar-track{background:#ccc}
+.ui-menu:-webkit-scrollbar-thumb{background-color:#000;border-radius:20px;min-height:20px}
+.bootstrap-select .dropdown-menu li.disabled.selected{display: none;}
+.dropdown.bootstrap-select.form-control .btn{border: 1px solid; padding: 16px 10px; border-radius: 0;}
+.bootstrap-select .dropdown-menu{max-width: 280px;}
+.bootstrap-select .dropdown-menu li.selected.active .dropdown-item.active.selected{margin-left: 0;padding: 0;}
+.no-resize{resize: none;}
+
+
+.file-preview-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.file-item {
+    position: relative;
+    border: 1px solid #ddd;
+    padding: 8px;
+    border-radius: 6px;
+    width: 120px;
+    text-align: center;
+    background: #f9f9f9;
+}
+
+.file-item img {
+    max-width: 100%;
+    max-height: 80px;
+    display: block;
+    margin: 0 auto 5px;
+}
+
+.file-item span {
+    font-size: 12px;
+    word-break: break-word;
+}
+
+.file-item .remove-file {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    background: red;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 22px;
+    height: 22px;
+    cursor: pointer;
+}
+</style>
+<div class="main-content">
+    {% include 'header.html' %} {% load crispy_forms_tags %}
+    <main>
+        <div class="page-title-with-or-without-btn">
+            <span class="farm headingtop">Warehouse Contract Shipment Edit</span>
+            <!-- Create button for add-processor-->
+            {% if not shipment.invoice_approval %}
+            <div class="flex-header-btn">
+                <a href="{% url 'generate_invoice' shipment.id 'warehouse' %}" class="btn-close-cancel">Generate Invoice</a>
+            </div>
+            {% endif %}
+        </div>
+        <div class="card farm-fields-container">
+            {% include '_alerts.html' %}
+            <nav aria-label="breadcrumb m-5">
+                {% if error_messages %}
+                <div id="alertMessage" class="alert alert-warning alert-dismissible fade show" role="alert">
+                    <strong>{{error_messages}}</strong>  
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>                         
+                  </div> 
+                  <script>                            
+                    setTimeout(function() {
+                        document.getElementById('alertMessage').style.display = 'none';
+                    }, 5000);
+                </script>                          
+                  {% endif %}
+                  
+            </nav>
+            <div class="container-fluid">
+                <form method="post" class="farm-fields-form" enctype="multipart/form-data">
+                    {% csrf_token %}                   
+                    <div class="row mb-2">  
+                        <h2 style="background-color: #d7d5d5;color: #0b6c39;font-size: 22px;font-weight: 600;margin: 20px 0;padding: 12px 0;text-align: center">Contract Details</h2>                                            
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="selected_contract">Select Contract<span class="asteriskField">*</span></label>
+                                <select name="selected_contract" id="selected_contract" class="form-control selectpicker" required readonly>                                                                  
+                                    <option value="{{contract.id}}" selected>{{contract.secret_key}}- {{contract.customer_name}}</option>                                 
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="customer_id">Customer<span class="asteriskField">*</span></label>
+                                <input type="text" name="customer_id" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{contract.customer_name}}" readonly>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="selected_contract">Select Warehouse<span class="asteriskField">*</span><span class="asteriskField">*</span></label>
+                                <select name="selected_warehouse" id="selected_warehouse" class="form-control" required readonly>                                                                    
+                                    {% for destination in destination_list%}
+                                    <option value="{{destination.id}}" {% if selected_warehouse_id == destination.id %} selected {% endif %}>{{destination.name}}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4 ">
+                            <div class="form-group">
+                                <label for="processor_invoice_date">Processor Invoice Date</label>
+                                <input type="date" name="processor_invoice_date" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{shipment.processor_invoice_date|date:'Y-m-d'}}">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="processor_invoice">Processor Invoice</label>
+                                <input type="text" name="processor_invoice" id="processor_invoice" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{shipment.processor_invoice_number}}">
+                            </div>
+                        </div>  
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="invoice_id">Agreeta Invoice Number</label>
+                                <input type="text" name="invoice_id" id="invoice_id" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{shipment.invoice_id}}">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="destination_id">Destination<span class="asteriskField">*</span></label>                                 
+                                <textarea name="destination_address" class="form-control address-input no-resize" id="destination_address" rows="1" cols="25" required>{{ shipment.destination }}</textarea>
+                               
+                            </div>
+                        </div>
+                    </div>                                 
+                    <div class="row">  
+                        <h2 style="background-color: #d7d5d5;color: #0b6c39;font-size: 22px;font-weight: 600;margin: 20px 0;padding: 12px 0;text-align: center">Delivery details</h2>                       
+                        
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="outbound_type">Outbound Type<span class="asteriskField">*</span></label>
+                                <select name="outbound_type" id="outbound_type" class="form-control" required >                                 
+                                    <option value="Domestic"{% if shipmet.outbound_type == 'Domestic'%} selected {% endif %}>Domestic</option>
+                                    <option value="International"{% if shipment.outbound_type == 'International'%} selected {% endif %}>International</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="carrier_type">Carrier type<span class="asteriskField">*</span></label>
+                                <select name="carrier_type" id="carrier_type" class="form-control" required>                                 
+                                    <option value="Rail Car"{% if shipment.carrier_type == 'Rail Car'%} selected {% endif %}>Rail Car</option>
+                                    <option value="Truck/Trailer"{% if shipment.carrier_type == 'Truck/Trailer'%} selected {% endif %}>Truck/Trailer</option>
+                                    <option value="Container/Vessel"{% if shipment.carrier_type == 'Container/Vessel'%} selected {% endif %}>Container/Vessel</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="carrier_name">Carrier Name<span class="asteriskField">*</span></label>
+                                <input type="text" name="carrier_name" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{carrier_name}}">
+                            </div>
+                        </div>  
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="additional_equipment_type">Additional Equipment type</label>
+                                <input type="text" id="additional_equipment_type" name="additional_equipment_type" class="form-control" value="{{shipment.additional_equipment_type}}">
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="additional_equipment_name">Additional Equipment Name</label>
+                                
+                                <input type="text" id="additional_equipment_name" name="additional_equipment_name" class="form-control" value="{{additional_equipment_name}}">
+                            </div>
+                        </div>                      
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="purchase_order_name">Purchase Order Name<span class="asteriskField">*</span></label>
+                                <input type="text" name="purchase_order_name" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{shipment.purchase_order_name}}">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="purchase_order_number">Purchase Order Number<span class="asteriskField">*</span></label>
+                                <input type="text" name="purchase_order_number" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{shipment.purchase_order_number}}">
+                            </div>
+                        </div>                                                      
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="waybill_number">Waybill/BOL Number<span class="asteriskField">*</span></label>
+                                <input type="text" name="waybill_number" class="form-control waybill-number" style="width: 100%;padding-left:10px ;" value="{{waybill_number}}">
+                            </div>
+                        </div>                 
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="status">Status<span class="asteriskField">*</span></label>                                
+                                <select name="status" id="status" class="form-select" style="width: 100%;padding-left:10px ;" required>                                   
+                                    <option value="Released"{% if shipment.status == 'Released' %}selected {% endif %}>Released</option>
+                                    <option value="At Border"{% if shipment.status == 'At Border' %}selected {% endif %}>At Border</option>
+                                    <option value="Crossed Border"{% if shipment.status == 'Crossed Border' %}selected {% endif %}>Crossed Border</option>
+                                    <option value="Received"{% if shipment.status == 'Received' %}selected {% endif %}>Received</option>
+                                    <option value="Released/Received"{% if shipment.status == 'Released/Received' %}selected {% endif %}>Released/Received</option>
+                                </select>
+                            </div>
+                        </div>                    
+                        <div class="col-md-4 ">
+                            <div class="form-group">
+                                <label for="placed_at_industry">Placed At Industry</label>
+                                <input type="date" name="placed_at_industry" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{shipment.placed_at_industry_processor|date:'Y-m-d'}}">
+                            </div>
+                        </div>   
+                        <div class="col-md-4 ">
+                            <div class="form-group">
+                                <label for="railcar_loaded">Railcar Loaded</label>
+                                <input type="date" name="railcar_loaded" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{shipment.railcar_loaded|date:'Y-m-d'}}">
+                            </div>
+                        </div>   
+                        <div class="col-md-4 ">
+                            <div class="form-group">
+                                <label for="usda_inspected">USDA Inspected</label>
+                                <input type="date" name="usda_inspected" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{shipment.USDA_inspected|date:'Y-m-d'}}">
+                            </div>
+                        </div>   
+                        <div class="col-md-4 ">
+                            <div class="form-group">
+                                <label for="phyto_received">Phyto Certificate Received</label>
+                                <input type="date" name="phyto_received" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{shipment.phyto_cert_received|date:'Y-m-d'}}">
+                            </div>
+                        </div>   
+                        <div class="col-md-4 ">
+                            <div class="form-group">
+                                <label for="waybill_submitted">Waybill/BOL Submitted</label>
+                                <input type="date" name="waybill_submitted" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{shipment.waybill_submitted|date:'Y-m-d'}}">
+                            </div>
+                        </div>   
+                        <div class="col-md-4 ">
+                            <div class="form-group">
+                                <label for="released_from_industry">Released From Industry</label>
+                                <input type="date" name="released_from_industry" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{shipment.released_from_industry|date:'Y-m-d'}}">
+                            </div>
+                        </div> 
+                        <div class="col-md-4 international">
+                            <div class="form-group">
+                                <label for="departed_lacassine">Departed Facility Date</label>
+                                <input type="date" name="departed_lacassine" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{shipment.departed_lacassine|date:'Y-m-d'}}">
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 international">
+                            <div class="form-group">
+                                <label for="border_exchange">Border Exchange Date</label>
+                                <input type="date" name="border_exchange" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{shipment.border_exchange|date:'Y-m-d'}}">
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 ">
+                            <div class="form-group">
+                                <label for="placed_at_industry_client">Placed at Industry Client</label>
+                                <input type="date" name="placed_at_industry_client" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{shipment.placed_at_industry_client|date:'Y-m-d'}}">
+                            </div>
+                        </div>
+                        <div class="col-md-4 international">
+                            <div class="form-group">
+                                <label for="discharged">Discharged from Client</label>
+                                <input type="date" name="discharged" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{shipment.discharged|date:'Y-m-d'}}">
+                            </div>
+                        </div>
+                        <div class="col-md-4 international">
+                            <div class="form-group">
+                                <label for="returned_to_border_exchange">Returned to Border Exchange</label>
+                                <input type="date" name="returned_to_border_exchange" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{shipment.returned_to_border_exchange|date:'Y-m-d'}}">
+                            </div>
+                        </div>
+                        <div class="col-md-4 international">
+                            <div class="form-group">
+                                <label for="return_date">Returned Date</label>
+                                <input type="date" name="return_date" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{shipment.return_date|date:'Y-m-d'}}">
+                            </div>
+                        </div>
+                        <div class="col-md-4 ">
+                            <div class="form-group">
+                                <label for="final_payment_date">Final Payment Date</label>
+                                <input type="date" name="final_payment_date" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{shipment.final_payment_date|date:'Y-m-d'}}">
+                            </div>
+                        </div> 
+                        
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="comments">Comments</label>
+                                <textarea name="comments" class="form-control no-resize" id="comments" rows="1" cols="25"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <h2 style="background-color: #d7d5d5;color: #0b6c39;font-size: 22px;font-weight: 600;margin: 20px 0;padding: 12px 0;text-align: center">Crop Details</h2>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="shipment_type">Shipment Type<span class="asteriskField">*</span></label>
+                                <select name="shipment_type" id="shipment_type" class="form-control" required>
+                                    <option value="Single Crop"{% if shipment.shipment_type == "Single Crop" %} selected {% endif %}>Single Crop Shipment</option>
+                                    <option value="Multiple Crop"{% if shipment.shipment_type == "Multiple Crop" %} selected {% endif %}>Multiple Crop Shipment</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div id="add-crop-btn-container" class="text-end" style="display: none;">
+                            <button type="button" id="add-crop-btn" class="btn btn-primary" style="width: 41px; height: 24px; padding: 0; display: inline-flex; justify-content: center; align-items: center; font-size: 19px;">+</button>
+                        </div> 
+                        
+                        <div id="crop-fields-container"> 
+                            {% if crops %}
+                                {% for crop in crops %}  
+                                 {% with spec=specification_map|dict_get:crop.id %}                 
+                                <div class="crop-fields-row">                              
+                                    <div class="row mt-2"> 
+                                        <div class="col-md-12 text-end me-3">
+                                            <!-- X button for existing rows -->
+                                            <button type="button" class="btn btn-danger btn-sm remove-existing-crop-btn" data-row-id="{{ crop.id }}" style="width: 41px; height: 24px; padding: 0; display: inline-flex; justify-content: center; align-items: center; font-size: 10px;">x</button>
+                                        </div>  
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="item_type">Item Category<span class="asteriskField">*</span></label>
+                                                <select name="item_type[]" class="form-control" required>
+                                                    <option value="">Select Type</option>
+                                                    <option value="Spices" {% if spec.item_type == "Spices" %}selected {% endif %}>Spices</option>
+                                                    <option value="Crop" {% if spec.item_type == "Crop" %}selected {% endif %}>Crops</option>
+                                                </select>
+                                            </div>
+                                        </div>                               
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="crop">Item<span class="asteriskField">*</span></label>
+                                                <select name="crop_id[]" class="form-control crops" required >
+                                                    <option value="{{crop.crop_id}}" selected>{{crop.item_name}} </option>  
+                                                    
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="seal_numbers">Seal Numbers<span class="asteriskField">*</span></label>
+                                                <input type="text" name="seal_numbers[]" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{crop.seal_numbers}}">
+                                                <small class="form-text text-muted">Write seal numbers separating them by a comma (',')</small>
+
+                                            </div>
+                                        </div> 
+                                        {% for carrier in crop.warehouse_shipment_item.all %}
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="carrier_id">Carrier ID<span class="asteriskField">*</span></label>
+                                                <input type="text" name="carrier_id[]" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{carrier.carrier_id}}">
+                                            </div>
+                                        </div> 
+                                        {% empty %}
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="carrier_id">Carrier ID<span class="asteriskField">*</span></label>
+                                                <input type="text" name="carrier_id[]" id="carrier_id" class="form-control">
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                        {% if crop.warehouse_customer_shipment_item.all %}
+                                        {% for additional_equipment in crop.warehouse_customer_shipment_item.all %}
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="additional_equipment_id">Additional Equipment ID</label>
+                                                <input type="text" name="additional_equipment_id[]" id="additional_equipment_id" class="form-control" value="{{additional_equipment.additional_equipment_id}}">
+                                            </div>
+                                        </div>
+                                        
+                                        {% endfor %}
+                                        {% else %}
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="additional_equipment_id">Additional Equipment ID</label>
+                                                <input type="text" name="additional_equipment_id[]" id="additional_equipment_id" class="form-control">
+                                            </div>
+                                        </div>
+                                        {% endif %}
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="lot_number">Lot Number<span class="asteriskField">*</span></label>
+                                                <input type="text" name="lot_number[]" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{crop.lot_number}}" pattern="[A-Za-z0-9]+" title="Only letters and numbers allowed">
+                                            </div>
+                                        </div> 
+                                        <div class="col-md-4 rail">
+                                            <div class="form-group">
+                                                <label for="weight">Weight<span class="asteriskField">*</span></label>
+                                                <div class="d-flex">
+                                                <input type="number" step="0.01" name="weight[]" class="textinput textInput form-control" value="{{crop.net_weight}}" style="margin-top:0; border-top-right-radius:0 !important; border-bottom-right-radius:0 !important" value="{{weight}}">
+                                                <select name="amount_unit" class="form-select" style="border-top-left-radius:0 !important; border-bottom-left-radius:0 !important; border-left:0; width:90px;" required>                                   
+                                                    <option value="LBS"{% if crop.weight_unit == "LBS" %}selected {% endif %}>LBS</option>
+                                                    <option value="MT"{% if crop.weight_unit == "MT" %}selected {% endif %}>MT</option>
+                                                </select>
+                                            </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 truck">
+                                            <div class="form-group">
+                                                <label for="gross_weight">Gross Weight<span class="asteriskField">*</span></label>
+                                                <div class="d-flex">
+                                                <input type="number" step="0.01" name="gross_weight[]" class="textinput textInput form-control" value="{{crop.gross_weight}}" style="margin-top:0; border-top-right-radius:0 !important; border-bottom-right-radius:0 !important">
+                                                <select name="amount_unit"  class="form-select" style="border-top-left-radius:0 !important; border-bottom-left-radius:0 !important; border-left:0; width:90px;" required>                                   
+                                                    <option value="LBS"{% if crop.weight_unit == "LBS" %}selected {% endif %}>LBS</option>
+                                                    <option value="MT"{% if crop.weight_unit == "MT" %}selected {% endif %}>MT</option>
+                                                </select>
+                                            </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 truck">
+                                            <div class="form-group">
+                                                <label for="ship_weight">Ship Weight<span class="asteriskField">*</span></label>
+                                                <div class="d-flex">
+                                                <input type="number" step="0.01" name="ship_weight[]" class="textinput textInput form-control" value="{{crop.ship_weight}}" style="margin-top:0; border-top-right-radius:0 !important; border-bottom-right-radius:0 !important">
+                                                <select name="amount_unit"  class="form-select" style="border-top-left-radius:0 !important; border-bottom-left-radius:0 !important; border-left:0; width:90px;" required>                                   
+                                                    <option value="LBS"{% if crop.weight_unit == "LBS" %}selected {% endif %}>LBS</option>
+                                                    <option value="MT"{% if crop.weight_unit == "MT" %}selected {% endif %}>MT</option>
+                                                </select>
+                                            </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4 truck">
+                                            <div class="form-group">
+                                                <label for="ship_quantity">Ship Quantity<span class="asteriskField">*</span></label>
+                                                <input type="number" name="ship_quantity[]" class="textinput textInput form-control" value="{{crop.ship_quantity}}" style="width: 100%;padding-left:10px ;">
+                                            </div>
+                                        </div> 
+                                        <div class="col-md-4">
+                                            <label for="received_weight">Recieved Weight</label>
+                                            <div class="d-flex">
+                                                <input type="number" name="received_weight[]" class="textinput textInput form-control" value="{{crop.received_weight}}" style="width: 100%;padding-left:10px ;">
+                                                <select name="amount_unit"  class="form-select" style="border-top-left-radius:0 !important; border-bottom-left-radius:0 !important; border-left:0; width:90px;" required>                                   
+                                                    <option value="LBS"{% if crop.weight_unit == "LBS" %}selected {% endif %}>LBS</option>
+                                                    <option value="MT"{% if crop.weight_unit == "MT" %}selected {% endif %}>MT</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="moisture">Moisture:</label>
+                                                <input type="text" name="moisture[]" class="form-control" value="{{spec.moisture}}">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="Crop-fields" style="display: none;">
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label for="total_seed_heat_damage">Total Seed Heat Damage:</label>
+                                                    <input type="text" name="total_seed_heat_damage[]" class="form-control" value="{{spec.total_seed_heat_damage}}">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label for="heat_damage_kernels">Heat Damage Kernels:</label>
+                                                    <input type="text" name="heat_damage_kernels[]" class="form-control" value="{{spec.heat_damage_kernels}}">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label for="bran">Bran:</label>
+                                                    <input type="text" name="bran[]" class="form-control" value="{{spec.bran}}">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label for="broken">Broken:</label>
+                                                    <input type="text" name="broken[]" class="form-control" value="{{spec.broken}}">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label for="chalky">Chalky:</label>
+                                                    <input type="text" name="chalky[]" class="form-control" value="{{spec.chalky}}">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label for="red_damage">Red Damage:</label>
+                                                    <input type="text" name="red_damage[]" class="form-control" value="{{spec.red_damage}}">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label for="other">Other:</label>
+                                                    <input type="text" name="other[]" class="form-control" value="{{spec.other}}">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                        <!-- Fields for Spices (All except the four above) -->
+                                    <div class="Spices-fields" style="display: none;">
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label for="total_ash">Total Ash:</label>
+                                                    <input type="text" name="total_ash[]" class="form-control" value="{{spec.total_ash}}">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label for="acid_insoluble_ash">Acid Insoluble Ash:</label>
+                                                    <input type="text" name="acid_insoluble_ash[]"  class="form-control" value="{{spec.acid_insoluble_ash}}">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label for="volatile_oil">Volatile Oil:</label>
+                                                    <input type="text" name="volatile_oil[]" class="form-control" value="{{spec.volatile_oil}}">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label for="nonvolatile_oil">Nonvolatile Oil:</label>
+                                                    <input type="text" name="nonvolatile_oil[]" class="form-control" value="{{spec.nonvolatile_oil}}">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label for="extraneous_matter">Extraneous Matter:</label>
+                                                    <input type="text" name="extraneous_matter[]" class="form-control" value="{{spec.extraneous_matter}}">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label for="purity">Purity:</label>
+                                                    <input type="text" name="purity[]" class="form-control" value="{{spec.purity}}">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label for="total_excreta">Total Excreta:</label>
+                                                    <input type="text" name="total_excreta[]" class="form-control" value="{{spec.total_excreta}}">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label for="whole_insect_dead">Whole Insect Dead:</label>
+                                                    <input type="text" name="whole_insect_dead[]" class="form-control" value="{{spec.whole_insect_dead}}">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label for="curcumin">Curcumin:</label>
+                                                    <input type="text" name="curcumin[]" class="form-control" value="{{spec.curcumin}}">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label for="pungency">Pungency:</label>
+                                                    <input type="text" name="pungency[]" class="form-control" value="{{spec.pungency}}">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label for="through_1_mm">Through 1 mm:</label>
+                                                    <input type="text" name="through_1_mm[]" class="form-control" value="{{spec.through_1_mm}}">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label for="through_1point7_mm">Through 1.7 mm:</label>
+                                                    <input type="text" name="through_1point7_mm[]" class="form-control" value="{{spec.through_1point7_mm}}">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label for="through_180_u">Through 180 u:</label>
+                                                    <input type="text" name="through_180_u[]" class="form-control" value="{{spec.through_180_u}}">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label for="through_425_u">Through 425 u:</label>
+                                                    <input type="text" name="through_425_u[]" class="form-control" value="{{spec.through_425_u}}">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label for="through_500_u">Throghu 500 u:</label>
+                                                    <input type="text" name="through_500_u[]" class="form-control" value="{{spec.through_500_u}}">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label for="through_600_u">Through 600 u:</label>
+                                                    <input type="text" name="through_600_u[]"  class="form-control" value="{{spec.through_600_u}}">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label for="through_18_mesh">Thorugh #18 mesh:</label>
+                                                    <input type="text" name="through_18_mesh[]" class="form-control" value="{{spec.through_18_mesh}}">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label for="through_25_mesh">Through #25 mesh:</label>
+                                                    <input type="text" name="through_25_mesh[]"  class="form-control" value="{{spec.through_25_mesh}}">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label for="total_plate_count">Total Plate Count:</label>
+                                                    <input type="text" name="total_plate_count[]"  class="form-control" value="{{spec.total_plate_count}}">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label for="yeast_mold_count">Yest Mold Count:</label>
+                                                    <input type="text" name="yeast_mold_count[]" class="form-control" value="{{spec.yeast_mold_count}}">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label for="e_coli">E coli:</label>
+                                                    <input type="text" name="e_coli[]" class="form-control" value="{{spec.e_coli}}">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label for="salmonella">Salmonella:</label>
+                                                    <input type="text" name="salmonella[]" class="form-control" value="{{spec.salmonella}}">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label for="heavy_metal">Heavy Metal:</label>
+                                                    <input type="text" name="heavy_metal[]" class="form-control" value="{{spec.heavy_metal}}">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label for="aflatoxin_B1">A flatoxin B1:</label>
+                                                    <input type="text" name="aflatoxin_B1[]" class="form-control" value="{{spec.aflatoxin_B1}}">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label for="aflatoxin_B1_B2_G1_G2">A flatoxin B1 B2 G1 G2:</label>
+                                                    <input type="text" name="aflatoxin_B1_B2_G1_G2[]" class="form-control" value="{{spec.aflatoxin_B1_B2_G1_G2}}">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label for="ochratoxin">Ochratoxin:</label>
+                                                    <input type="text" name="ochratoxin[]" class="form-control" value="{{spec.ochratoxin}}">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label for="total_parameters">Total Parameters:</label>
+                                                    <input type="text" name="total_parameters[]" class="form-control" value="{{spec.total_parameters}}">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <input type="hidden" name="id_crop[]" value="{{ crop.id }}">
+                                        <input type="hidden" name="delete_flag[]" value="0" class="delete-flag">                                       
+                                    </div>  
+                                </div>   
+                                {% endwith %}                               
+                                {% endfor %}                                        
+                            {% else %}
+                            <div class="crop-fields-row">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label for="item_type">Item Category<span class="asteriskField">*</span></label>
+                                            <select name="item_type[]" class="form-control" required>
+                                                <option value="">Select Type</option>
+                                                <option value="Spices" {% if item_specification.item_type == "Spices" %}selected {% endif %}>Spices</option>
+                                                <option value="Crop" {% if item_specification.item_type == "Crop" %}selected {% endif %}>Crops</option>
+                                            </select>
+                                        </div>
+                                    </div> 
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label for="crop">Item<span class="asteriskField">*</span></label>
+                                            <select name="crop_id[]" class="form-control crops" required >
+                                                <option value="All" selected disabled>Select </option>  
+                                                
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label for="seal_numbers">Seal Numbers<span class="asteriskField">*</span></label>
+                                            <input type="text" name="seal_numbers[]" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{crop.seal_numbers}}">
+                                            <small class="form-text text-muted">Write seal numbers separating them by a comma (',')</small>
+
+                                        </div>
+                                    </div> 
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label for="carrier_id">Carrier ID<span class="asteriskField">*</span></label>
+                                            <input type="text" name="carrier_id[]" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;">
+                                        </div>
+                                    </div> 
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label for="additional_equipment_id">Additional Equipment ID</label>
+                                            <input type="text" name="additional_equipment_id[]" id="additional_equipment_id" class="form-control" >
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label for="lot_number">Lot Number<span class="asteriskField">*</span></label>
+                                            <input type="text" name="lot_number[]" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" pattern="[A-Za-z0-9]+" title="Only letters and numbers allowed">
+                                        </div>
+                                    </div> 
+                                    <div class="col-md-4 rail">
+                                        <div class="form-group">
+                                            <label for="weight">Weight<span class="asteriskField">*</span></label>
+                                            <div class="d-flex">
+                                            <input type="number" step="0.01" name="weight[]" class="textinput textInput form-control" style="margin-top:0; border-top-right-radius:0 !important; border-bottom-right-radius:0 !important" value="{{weight}}">
+                                            <select name="amount_unit" class="form-select" style="border-top-left-radius:0 !important; border-bottom-left-radius:0 !important; border-left:0; width:90px;" required>                                   
+                                                <option value="LBS">LBS</option>
+                                                <option value="MT">MT</option>
+                                            </select>
+                                        </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 truck">
+                                        <div class="form-group">
+                                            <label for="gross_weight">Gross Weight<span class="asteriskField">*</span></label>
+                                            <div class="d-flex">
+                                            <input type="number" step="0.01" name="gross_weight[]" class="textinput textInput form-control" style="margin-top:0; border-top-right-radius:0 !important; border-bottom-right-radius:0 !important">
+                                            <select name="amount_unit"  class="form-select" style="border-top-left-radius:0 !important; border-bottom-left-radius:0 !important; border-left:0; width:90px;" required>                                   
+                                                <option value="LBS">LBS</option>
+                                                <option value="MT">MT</option>
+                                            </select>
+                                        </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 truck">
+                                        <div class="form-group">
+                                            <label for="ship_weight">Ship Weight<span class="asteriskField">*</span></label>
+                                            <div class="d-flex">
+                                            <input type="number" step="0.01" name="ship_weight[]" class="textinput textInput form-control" style="margin-top:0; border-top-right-radius:0 !important; border-bottom-right-radius:0 !important">
+                                            <select name="amount_unit"  class="form-select" style="border-top-left-radius:0 !important; border-bottom-left-radius:0 !important; border-left:0; width:90px;" required>                                   
+                                                <option value="LBS">LBS</option>
+                                                <option value="MT">MT</option>
+                                            </select>
+                                        </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 truck">
+                                        <div class="form-group">
+                                            <label for="ship_quantity">Ship Quantity<span class="asteriskField">*</span></label>
+                                            <input type="number" name="ship_quantity[]" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;">
+                                        </div>
+                                    </div>  
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label for="moisture">Moisture:</label>
+                                            <input type="text" name="moisture[]" class="form-control" value="{{spec.moisture}}">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="Crop-fields" style="display: none;">
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="total_seed_heat_damage">Total Seed Heat Damage:</label>
+                                                <input type="text" name="total_seed_heat_damage[]" class="form-control" value="{{spec.total_seed_heat_damage}}">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="heat_damage_kernels">Heat Damage Kernels:</label>
+                                                <input type="text" name="heat_damage_kernels[]" class="form-control" value="{{spec.heat_damage_kernels}}">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="bran">Bran:</label>
+                                                <input type="text" name="bran[]" class="form-control" value="{{spec.bran}}">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="broken">Broken:</label>
+                                                <input type="text" name="broken[]" class="form-control" value="{{spec.broken}}">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="chalky">Chalky:</label>
+                                                <input type="text" name="chalky[]" class="form-control" value="{{spec.chalky}}">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="red_damage">Red Damage:</label>
+                                                <input type="text" name="red_damage[]" class="form-control" value="{{spec.red_damage}}">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="other">Other:</label>
+                                                <input type="text" name="other[]" class="form-control" value="{{spec.other}}">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                    <!-- Fields for Spices (All except the four above) -->
+                                <div class="Spices-fields" style="display: none;">
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="total_ash">Total Ash:</label>
+                                                <input type="text" name="total_ash[]" class="form-control" value="{{spec.total_ash}}">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="acid_insoluble_ash">Acid Insoluble Ash:</label>
+                                                <input type="text" name="acid_insoluble_ash[]"  class="form-control" value="{{spec.acid_insoluble_ash}}">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="volatile_oil">Volatile Oil:</label>
+                                                <input type="text" name="volatile_oil[]" class="form-control" value="{{spec.volatile_oil}}">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="nonvolatile_oil">Nonvolatile Oil:</label>
+                                                <input type="text" name="nonvolatile_oil[]" class="form-control" value="{{spec.nonvolatile_oil}}">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="extraneous_matter">Extraneous Matter:</label>
+                                                <input type="text" name="extraneous_matter[]" class="form-control" value="{{spec.extraneous_matter}}">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="purity">Purity:</label>
+                                                <input type="text" name="purity[]" class="form-control" value="{{spec.purity}}">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="total_excreta">Total Excreta:</label>
+                                                <input type="text" name="total_excreta[]" class="form-control" value="{{spec.total_excreta}}">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="whole_insect_dead">Whole Insect Dead:</label>
+                                                <input type="text" name="whole_insect_dead[]" class="form-control" value="{{spec.whole_insect_dead}}">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="curcumin">Curcumin:</label>
+                                                <input type="text" name="curcumin[]" class="form-control" value="{{spec.curcumin}}">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="pungency">Pungency:</label>
+                                                <input type="text" name="pungency[]" class="form-control" value="{{spec.pungency}}">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="through_1_mm">Through 1 mm:</label>
+                                                <input type="text" name="through_1_mm[]" class="form-control" value="{{spec.through_1_mm}}">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="through_1point7_mm">Through 1.7 mm:</label>
+                                                <input type="text" name="through_1point7_mm[]" class="form-control" value="{{spec.through_1point7_mm}}">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="through_180_u">Through 180 u:</label>
+                                                <input type="text" name="through_180_u[]" class="form-control" value="{{spec.through_180_u}}">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="through_425_u">Through 425 u:</label>
+                                                <input type="text" name="through_425_u[]" class="form-control" value="{{spec.through_425_u}}">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="through_500_u">Throghu 500 u:</label>
+                                                <input type="text" name="through_500_u[]" class="form-control" value="{{spec.through_500_u}}">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="through_600_u">Through 600 u:</label>
+                                                <input type="text" name="through_600_u[]"  class="form-control" value="{{spec.through_600_u}}">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="through_18_mesh">Thorugh #18 mesh:</label>
+                                                <input type="text" name="through_18_mesh[]" class="form-control" value="{{spec.through_18_mesh}}">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="through_25_mesh">Through #25 mesh:</label>
+                                                <input type="text" name="through_25_mesh[]"  class="form-control" value="{{spec.through_25_mesh}}">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="total_plate_count">Total Plate Count:</label>
+                                                <input type="text" name="total_plate_count[]"  class="form-control" value="{{spec.total_plate_count}}">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="yeast_mold_count">Yest Mold Count:</label>
+                                                <input type="text" name="yeast_mold_count[]" class="form-control" value="{{spec.yeast_mold_count}}">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="e_coli">E coli:</label>
+                                                <input type="text" name="e_coli[]" class="form-control" value="{{spec.e_coli}}">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="salmonella">Salmonella:</label>
+                                                <input type="text" name="salmonella[]" class="form-control" value="{{spec.salmonella}}">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="heavy_metal">Heavy Metal:</label>
+                                                <input type="text" name="heavy_metal[]" class="form-control" value="{{spec.heavy_metal}}">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="aflatoxin_B1">A flatoxin B1:</label>
+                                                <input type="text" name="aflatoxin_B1[]" class="form-control" value="{{spec.aflatoxin_B1}}">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="aflatoxin_B1_B2_G1_G2">A flatoxin B1 B2 G1 G2:</label>
+                                                <input type="text" name="aflatoxin_B1_B2_G1_G2[]" class="form-control" value="{{spec.aflatoxin_B1_B2_G1_G2}}">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="ochratoxin">Ochratoxin:</label>
+                                                <input type="text" name="ochratoxin[]" class="form-control" value="{{spec.ochratoxin}}">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="total_parameters">Total Parameters:</label>
+                                                <input type="text" name="total_parameters[]" class="form-control" value="{{spec.total_parameters}}">
+                                            </div>
+                                        </div>
+                                    </div>                                  
+                                </div>                                
+                            </div>
+                            {% endif %}
+                        </div>                        
+                    </div>  
+                    <div class="row">
+                        <h2 style="background-color: #d7d5d5; color: #0b6c39; font-size: 22px; font-weight: 600; margin: 20px 0; padding: 12px 0; text-align: center">Files</h2>
+                        <div class="form-group">
+                            <label for="multi_file">Upload File</label>
+                            <input type="file" name="files" multiple accept=".jpg,.png,.xlsx,.csv,.pdf" id="multi_file" class="textinput textInput form-control">
+                            <div class="col-md-8 mb-2"> 
+                                <div id="file_names_container" class="file-preview-container mt-2 mb-2">
+                                    <!-- New files will be listed here -->
+                                </div>
+                                <div id="file_names_container2" class="file-preview-container mt-2">
+                                    {% for file in files %}
+                                    <div class="file-item">
+                                        <div class="file-info">
+                                            <input type="hidden" name="existing_files" value="{{ file.id }}">
+                                            <span>{{ file.name }}</span>
+                                        </div>
+                                        <button type="button" class="remove-file btn-danger" data-file-id="{{ file.id }}">x</button>
+                                    </div>
+                                    {% endfor %}
+                                </div>    
+                                <p id="alert_msg8" style="color:red"></p>
+                            </div>
+                        </div>
+                    </div> 
+                    <div class="row">
+                        <div class="col-12 mb-2">
+                            <div class="d-flex justify-content-between align-items-center" style="background-color: #d7d5d5; padding: 12px; width: 100%;">
+                                <h2 class="m-0" style="color: #0b6c39; font-size: 22px; font-weight: 600; flex-grow: 1; text-align: center;">
+                                    Diversion Tracking
+                                </h2>
+                                <button type="button" class="btn btn-sm font-weight-bold btn-primary add-field" style="flex-shrink: 0;">
+                                    +
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="field_details_container" class="row">
+                        {% if diversions %}
+                        {% for entry in diversions %}
+                            <div class="col-md-12 mb-2" id="field_row_{{ forloop.counter }}">
+                                <div class="row align-items-center">
+                                    <div class="col-4">
+                                        <div class="form-group">
+                                            <label for="crop_{{ forloop.counter }}">Item<span class="asteriskField">*</span></label>
+                                            <select name="crop[]" class="form-control diversion-crop-select" data-shipment-id="{{ shipment.id }}" required >
+                                                {% for crop in crops %}
+                                                <option value="{{crop.id}}" {%if crop.id == entry.crop.id %} selected {%endif %}>{{crop.item_name}} </option>  
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="form-group">
+                                            <label for="weight">Weight<span class="asteriskField">*</span></label>
+                                            <div class="d-flex">
+                                                <input type="number" step="0.01" name="diversion_weight[]" class="textinput textInput form-control" style="margin-top:0; border-top-right-radius:0 !important; border-bottom-right-radius:0 !important" data-original-weight="{{ entry.net_weight }}" value="{{entry.net_weight}}" required>
+                                                <select name="diversion_amount_unit[]" class="form-select" style="border-top-left-radius:0 !important; border-bottom-left-radius:0 !important; border-left:0; width:90px;" required>
+                                                    <option value="LBS" {% if entry.weight_unit == "LBS" %}selected {% endif %}>LBS</option>
+                                                    <option value="MT" {% if entry.weight_unit == "MT" %}selected {% endif %}>MT</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="form-group">
+                                            <label for="previous_waybill_number_{{ forloop.counter }}">Previous Waybill/BOL Number</label>                                            
+                                            <input type="text" name="previous_waybill_number[]" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{entry.prev_waybill_number }}">                                               
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="form-group">
+                                            <label for="additional_waybill_number_{{ forloop.counter }}">New Waybill/BOL Number<span class="asteriskField">*</span></label>
+                                            <input type="text" name="additional_waybill_number[]" class="form-control" placeholder="Waybill Number" value="{{ entry.waybill_number }}" style="height: 52px !important;" pattern="[A-Za-z0-9]+" title="Only letters and numbers allowed" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="form-group">
+                                            <label for="diversion_date">Diversion Date<span class="asteriskField">*</span></label>
+                                            <input type="date" name="diversion_date[]" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{entry.diversion_date|date:'Y-m-d'}}">
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="form-group">
+                                            <label for="address_{{ forloop.counter }}">Address<span class="asteriskField">*</span></label>
+                                            <textarea name="address[]" class="form-control address-input no-resize" id="address_{{ forloop.counter }}" rows="1" cols="25" required>{{ entry.address }}</textarea>
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="form-group">
+                                            <label for="description_{{ forloop.counter }}">Description</label>
+                                            <textarea name="description[]" class="form-control no-resize" rows="1" cols="25">{{ entry.description }}</textarea>
+                                        </div>
+                                    </div>
+                                    <div class="col-1">
+                                        <button type="button" class="btn btn-sm font-weight-bold btn-danger remove-field mt-2" style="width: 41px; height: 24px; padding: 0; display: inline-flex; justify-content: center; align-items: center; font-size: 19px;">-</button>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                        {% endif %}
+                    </div>                    
+                    <script>
+                        let fieldIndex = {{ diversions|length }};
+                        const divertedWeightMap = {};  // { "shipmentId_cropId": totalDiverted }
+
+                        document.addEventListener('click', function (e) {
+                            if (e.target && e.target.classList.contains('add-field')) {
+                                fieldIndex++;
+
+                                const newFieldRow = document.createElement('div');
+                                newFieldRow.classList.add('col-md-12', 'mb-2');
+                                newFieldRow.id = `field_row_${fieldIndex}`;
+                    
+                                newFieldRow.innerHTML = `
+                                    <div class="row align-items-center">
+                                        <div class="col-4">
+                                            <div class="form-group">
+                                                <label for="crop_${fieldIndex}">Item<span class="asteriskField">*</span></label>                                                
+                                                <select name="crop[]" class="form-control diversion-crop-select" data-fetch-waybills="true" data-shipment-id="{{ shipment.id }}" required>
+                                                    {% for crop in crops %}
+                                                        <option value="{{crop.id}}" selected>{{crop.item_name}}</option>  
+                                                    {% endfor %}
+                                                </select>                                                
+                                            </div>
+                                        </div>
+                                        <div class="col-4">
+                                            <div class="form-group">
+                                                <label for="weight">Weight<span class="asteriskField">*</span></label>
+                                                <div class="d-flex">
+                                                    <input type="number" step="0.01" name="diversion_weight[]" class="textinput textInput form-control weight-input" required data-original-weight="">
+                                                    <select name="diversion_amount_unit[]" class="form-select " style="width:90px;" required>
+                                                        <option value="LBS">LBS</option>
+                                                        <option value="MT">MT</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-4">
+                                            <div class="form-group">
+                                                <label for="previous_waybill_number_${fieldIndex}">Previous Waybill/BOL Number</label>
+                                                <select name="previous_waybill_number[]" class="form-control prev-waybill-select">
+                                                    <!-- Dynamically populated -->
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-4">
+                                            <div class="form-group">
+                                                <label for="additional_waybill_number_${fieldIndex}">New Waybill/BOL Number<span class="asteriskField">*</span></label>
+                                                <input type="text" name="additional_waybill_number[]" class="form-control" placeholder="Waybill Number" required>
+                                            </div>
+                                        </div>
+                                        <div class="col-4">
+                                            <div class="form-group">
+                                                <label for="diversion_date">Diversion Date<span class="asteriskField">*</span></label>
+                                                <input type="date" name="diversion_date[]" class="textinput textInput form-control" value="{{shipment.diversion_date|date:'Y-m-d'}}">
+                                            </div>
+                                        </div>
+                                        <div class="col-4">
+                                            <div class="form-group">
+                                                <label for="address_${fieldIndex}">Address<span class="asteriskField">*</span></label>
+                                                <textarea name="address[]" class="form-control address-input no-resize" id="address_${fieldIndex}" rows="1" cols="25" required></textarea>
+                                            </div>
+                                        </div>
+                                        <div class="col-4">
+                                            <div class="form-group">
+                                                <label for="description_${fieldIndex}">Description</label>
+                                                <textarea name="description[]" class="form-control no-resize" rows="1" cols="25"></textarea>
+                                            </div>
+                                        </div>
+                                        <div class="col-1">
+                                            <button type="button" class="btn btn-sm font-weight-bold btn-danger remove-field mt-2">-</button>
+                                        </div>
+                                    </div>
+                                `;
+                    
+                                document.querySelector('#field_details_container').appendChild(newFieldRow);
+
+                                const cropSelect = newFieldRow.querySelector('.diversion-crop-select');
+                                const waybillSelect = newFieldRow.querySelector('.prev-waybill-select');
+                                const weightInput = newFieldRow.querySelector('input[name="diversion_weight[]"]');
+                                const unitSelect = newFieldRow.querySelector('select[name="diversion_amount_unit[]"]');
+                                const shipmentId = cropSelect.getAttribute('data-shipment-id');
+                                const cropId = cropSelect.value;
+
+                                if (cropId && shipmentId) {
+                                    fetch(`/warehouse/get_warehouse_shipment_waybill_numbers/?shipment_id=${shipmentId}&crop_id=${cropId}`)
+                                        .then(response => response.json())
+                                        .then(data => {
+                                            // Set waybill options
+                                            waybillSelect.innerHTML = '';
+                                            data.waybills.forEach(waybill => {
+                                                const option = document.createElement('option');
+                                                option.value = waybill;
+                                                option.textContent = waybill;
+                                                waybillSelect.appendChild(option);
+                                            });
+
+                                            // Calculate remaining weight
+                                            const key = `${shipmentId}_${cropId}`;
+                                            const originalWeight = parseFloat(data.weight || 0);
+                                            const alreadyDiverted = divertedWeightMap[key] || 0;
+                                            const remainingWeight = Math.max(0, originalWeight - alreadyDiverted);
+
+                                            weightInput.value = remainingWeight.toFixed(2);
+                                            weightInput.setAttribute('data-original-weight', remainingWeight);
+
+                                            // Store the new diversion in map
+                                            divertedWeightMap[key] = alreadyDiverted + remainingWeight;
+
+                                            // Track further changes to weight input
+                                            weightInput.addEventListener("input", () => {
+                                                const updatedValue = parseFloat(weightInput.value || 0);
+                                                if (!isNaN(updatedValue)) {
+                                                    // Recalculate total diverted for all inputs
+                                                    const allInputs = Array.from(document.querySelectorAll('input[name="diversion_weight[]"]'));
+                                                    const totalDiverted = allInputs.reduce((sum, input) => {
+                                                        const row = input.closest('.row');
+                                                        const select = row.querySelector('select[name="crop[]"], .diversion-crop-select');
+                                                        const sid = select?.getAttribute('data-shipment-id');
+                                                        const cid = select?.value;
+                                                        if (`${sid}_${cid}` === key) {
+                                                            const val = parseFloat(input.value);
+                                                            return sum + (isNaN(val) ? 0 : val);
+                                                        }
+                                                        return sum;
+                                                    }, 0);
+                                                    divertedWeightMap[key] = totalDiverted;
+                                                }
+                                            });
+
+                                            // Reminder init
+                                            if (weightInput && cropSelect && unitSelect) {
+                                                initReminderForWeightInput(weightInput, cropSelect, unitSelect);
+                                            }
+                                        });
+                                }
+
+                                initAutocomplete(document.getElementById(`address_${fieldIndex}`));
+                            } else if (e.target && e.target.classList.contains('remove-field')) {
+                                e.target.closest('.col-md-12').remove();
+                            }
+                        });
+
+                        document.addEventListener('change', function (e) {
+                            if (
+                                e.target &&
+                                e.target.classList.contains('diversion-crop-select') &&
+                                e.target.getAttribute('data-fetch-waybills') === "true"
+                            ) {
+                                const cropSelect = e.target;
+                                const cropId = cropSelect.value;
+                                const fieldWrapper = cropSelect.closest('.row');
+                                const waybillSelect = fieldWrapper.querySelector('.prev-waybill-select');
+                                const weightInput = fieldWrapper.querySelector('input[name="diversion_weight[]"]');
+                                const unitSelect = fieldWrapper.querySelector('select[name="diversion_amount_unit[]"]');
+                                const shipmentId = cropSelect.getAttribute('data-shipment-id');
+                                const key = `${shipmentId}_${cropId}`;
+
+                                if (cropId && shipmentId) {
+                                    fetch(`/warehouse/get_warehouse_shipment_waybill_numbers/?shipment_id=${shipmentId}&crop_id=${cropId}`)
+                                        .then(response => response.json())
+                                        .then(data => {
+                                            // Waybill
+                                            waybillSelect.innerHTML = '';
+                                            data.waybills.forEach(waybill => {
+                                                const option = document.createElement('option');
+                                                option.value = waybill;
+                                                option.textContent = waybill;
+                                                waybillSelect.appendChild(option);
+                                            });
+
+                                            // Weight & unit
+                                            const originalWeight = parseFloat(data.weight || 0);
+                                            const alreadyDiverted = divertedWeightMap[key] || 0;
+                                            const remainingWeight = Math.max(0, originalWeight - alreadyDiverted);
+
+                                            weightInput.value = remainingWeight.toFixed(2);
+                                            weightInput.setAttribute('data-original-weight', remainingWeight);
+
+                                            divertedWeightMap[key] = alreadyDiverted + remainingWeight;
+
+                                            if (data.weight_unit && unitSelect) unitSelect.value = data.weight_unit;
+
+                                            if (weightInput && cropSelect && unitSelect) {
+                                                initReminderForWeightInput(weightInput, cropSelect, unitSelect);
+                                            }
+                                        });
+                                }
+                            }
+                        });
+                    
+                        function initAutocomplete(inputElement) {
+                            if (!inputElement) return;
+                    
+                            const autocomplete = new google.maps.places.Autocomplete(inputElement, {
+                                types: ["address"],
+                            });
+                    
+                            autocomplete.addListener("place_changed", () => {
+                                const place = autocomplete.getPlace();
+                                if (place.geometry) {
+                                    console.log("Selected address:", place.formatted_address);
+                                    console.log("Location coordinates:", place.geometry.location.toString());
+                                } else {
+                                    console.log("No details available for the selected address.");
+                                }
+                            });
+                        }
+                    
+                        document.querySelectorAll('.address-input').forEach(initAutocomplete);
+                    </script>
+                    <script type="application/json" id="reminder-status">
+                        {{ reminder_json|default:"{}"|safe }}
+                    </script>
+                    
+                    <script>
+                        function debounce(func, wait) {
+                            let timeout;
+                            return function (...args) {
+                                clearTimeout(timeout);
+                                timeout = setTimeout(() => func.apply(this, args), wait);
+                            };
+                        }
+                        
+                        function initReminderForWeightInput(weightInput, cropSelect, unitSelect) {
+                            console.log("🔔 Reminder initialized for:", {
+                                weightInput,
+                                cropId: cropSelect?.value,
+                                shipmentId: cropSelect?.getAttribute("data-shipment-id")
+                            });
+                            const reminderStatus = JSON.parse(document.getElementById('reminder-status').textContent || '{}');
+                        
+                            const handleCheck = debounce(() => {
+                                const originalWeight = parseFloat(weightInput.dataset.originalWeight || 0);
+                                const currentWeight = parseFloat(weightInput.value || 0);
+                                console.log("📏 originalWeight:", originalWeight, "| currentWeight:", currentWeight);
+                        
+                                if (isNaN(originalWeight) || isNaN(currentWeight) || currentWeight >= originalWeight) return;
+                        
+                                const cropId = cropSelect?.value;
+                                const shipmentId = cropSelect?.getAttribute('data-shipment-id');
+                        
+                                if (!cropId || !shipmentId) return;
+                        
+                                const key = `${shipmentId}_${cropId}`;
+                                if (reminderStatus[key]) return;
+                        
+                                const remaining = (originalWeight - currentWeight).toFixed(2);
+                                const unit = unitSelect?.value || 'units';
+                        
+                                const keep = confirm(
+                                    `⚠️ Only ${currentWeight} out of ${originalWeight} ${unit} is diverted.\nRemaining ${remaining} ${unit} is left.\n\nClick OK to keep this reminder.\nClick Cancel to dismiss it.`
+                                );
+                        
+                                if (keep) {
+                                    fetch("{% url 'save_warehouse_shipment_diversion_reminder' %}", {
+                                        method: "POST",
+                                        headers: {
+                                            "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value,
+                                            "Content-Type": "application/x-www-form-urlencoded"
+                                        },
+                                        body: new URLSearchParams({
+                                            shipment_id: shipmentId,
+                                            crop_id: cropId,
+                                            keep: "true",
+                                            remaining_weight: remaining,
+                                            weight_unit: unit
+                                        })
+                                    }).then(() => {
+                                        reminderStatus[key] = true;
+                                    });
+                                } else {
+                                    reminderStatus[key] = true;
+                                }
+                            }, 3000);
+                        
+                            weightInput.addEventListener('input', handleCheck);
+                        }
+                    </script>
+                         
+                    <div class="row">
+                        <h2 style="background-color: #d7d5d5; color: #0b6c39; font-size: 22px; font-weight: 600; margin: 20px 0; padding: 12px 0; text-align: center">Updated Details</h2>
+                        <div id="field_details_container" class="row">
+                            <!-- Initial field_name and description fields -->                            
+                            <div class="col-md-12 mb-2">
+                                <div class="form-group">
+                                    <label for="description_1">**NOTES:</label>
+                                    <textarea id="description_1" name="description" class="form-control" placeholder="Notes"></textarea>
+                                </div>
+                            </div>                            
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="form-btn-row">
+                            <a href="{% url 'list-warehouse-shipment' %}" class="btn-close-cancel btn-space">Cancel</a>
+                            <input style="display: none;" id="hide_btn1" type="submit" class="btn-save-submit"
+                                value="Save" name="save">
+                            <!-- <input type="button" id="hide_btn2" class="btn-save-submit" value="Save" onclick="btnClick()"> -->
+                            <input type="submit" name="save" class="btn-save-submit" value="Save" onclick="activityButton1()">
+                        </div>
+                    </div>                    
+                    <script>
+                        document.addEventListener("DOMContentLoaded", function() {
+                            function handleRemoveButtonClick(button) {
+                                let parent = button.parentElement;
+                                parent.style.display = 'none';
+                                let input = parent.querySelector('input[name="existing_files"]');
+                                if (input) input.setAttribute('name', 'remove_files'); 
+                                parent.classList.add('removed');
+                            }
+
+                            document.querySelectorAll('.remove-file').forEach(button => {
+                                button.addEventListener('click', function() {
+                                    handleRemoveButtonClick(this);
+                                });
+                            });
+
+                            function updateFileList(files) {
+                                var fileNamesContainer = document.getElementById('file_names_container');
+                                fileNamesContainer.innerHTML = ''; 
+
+                                files.forEach(function(file) {
+                                    var fileItem = document.createElement('div');
+                                    fileItem.classList.add('file-item');
+
+                                    // Preview for images
+                                    if (file.type.startsWith("image/")) {
+                                        let reader = new FileReader();
+                                        reader.onload = function(e) {
+                                            fileItem.innerHTML = `
+                                                <img src="${e.target.result}" alt="${file.name}">
+                                                <span>${file.name}</span>
+                                                <button type="button" class="remove-file">x</button>
+                                            `;
+                                            fileNamesContainer.appendChild(fileItem);
+
+                                            fileItem.querySelector('.remove-file').addEventListener('click', function() {
+                                                fileItem.remove();
+                                            });
+                                        };
+                                        reader.readAsDataURL(file);
+                                    } else {
+                                        // Non-image files → just show name
+                                        fileItem.innerHTML = `
+                                            <span>${file.name}</span>
+                                            <button type="button" class="remove-file">x</button>
+                                        `;
+                                        fileNamesContainer.appendChild(fileItem);
+
+                                        fileItem.querySelector('.remove-file').addEventListener('click', function() {
+                                            fileItem.remove();
+                                        });
+                                    }
+                                });
+                            }
+
+                            var fileInput = document.getElementById('multi_file');
+                            fileInput.addEventListener('change', function() {
+                                var files = Array.from(fileInput.files);
+                                updateFileList(files);
+                            });
+
+                            function activityButton1() {
+                                var form = document.querySelector('form');
+                                form.querySelectorAll('.file-item.removed input').forEach(input => {
+                                    input.remove(); 
+                                });
+                                form.submit(); 
+                            }
+
+                            let saveBtn = document.querySelector('.btn-save-submit');
+                            if (saveBtn) saveBtn.addEventListener('click', activityButton1);
+                        });
+                    </script>
+                </form>
+            </div>
+        </div>
+    </main>
+    {% include 'footer.html' %}
+</div>
+{% block script %}
+<script type="application/json" id="existing-reminders">
+    {{ reminder_data_json|default:"{}"|safe }}
+</script>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const reminders = JSON.parse(document.getElementById('existing-reminders').textContent || '{}');
+
+        Object.entries(reminders).forEach(([key, data]) => {
+            const [shipmentId, itemId] = key.split('_');
+            const { remaining_weight, weight_unit, item_name } = data;
+
+            const message = `🔔 Reminder:\nRemaining ${remaining_weight} ${weight_unit} is left to be diverted for "${item_name}".\n\nClick OK to keep this reminder.\nClick Cancel to dismiss it.`;
+
+            const keep = confirm(message);
+
+            if (!keep) {
+                fetch("{% url 'update_warehouse_shipment_diversion_reminder' %}", {
+                    method: "POST",
+                    headers: {
+                        "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value,
+                        "Content-Type": "application/x-www-form-urlencoded"
+                    },
+                    body: new URLSearchParams({
+                        shipment_id: shipmentId,
+                        item_id: itemId,
+                        keep: "false"
+                    })
+                }).then(res => {
+                    if (res.ok) {
+                        console.log(`Reminder for ${shipmentId}_${item_name} dismissed.`);
+                    }
+                });
+            }
+        });
+    });
+</script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var typeSelect = document.getElementById('outbound_type');
+        var statusSelect = document.getElementById('status');
+        var domesticFields = document.querySelectorAll('.domestic');
+        var internationalFields = document.querySelectorAll('.international');
+
+        // Save all options from the status dropdown
+        var allStatusOptions = Array.from(statusSelect.options).map(option => {
+            return {
+                value: option.value,
+                text: option.text
+            };
+        });
+
+        function toggleFieldsAndStatusOptions() {
+            var type = typeSelect.value;
+
+            // Toggle visibility of fields
+            if (type === 'Domestic') {
+                domesticFields.forEach(field => field.style.display = 'block');
+                internationalFields.forEach(field => field.style.display = 'none');
+
+                // Update status options for Domestic
+                updateStatusOptions(['Released', 'Received', 'Released/Received']);
+            } else if (type === 'International') {
+                domesticFields.forEach(field => field.style.display = 'none');
+                internationalFields.forEach(field => field.style.display = 'block');
+
+                // Reset all options for International
+                updateStatusOptions(allStatusOptions.map(opt => opt.value));
+            } else {
+                domesticFields.forEach(field => field.style.display = 'none');
+                internationalFields.forEach(field => field.style.display = 'none');
+
+                // Empty status options
+                updateStatusOptions([]);
+            }
+        }
+
+        function updateStatusOptions(allowedValues) {
+            // Clear existing options
+            statusSelect.innerHTML = '';
+
+            // Filter and add allowed options
+            allStatusOptions.forEach(opt => {
+                if (allowedValues.includes(opt.value)) {
+                    var option = document.createElement('option');
+                    option.value = opt.value;
+                    option.text = opt.text;
+                    statusSelect.appendChild(option);
+                }
+            });
+        }
+
+        typeSelect.addEventListener('change', toggleFieldsAndStatusOptions);
+        toggleFieldsAndStatusOptions(); // Initialize on page load
+    });
+</script>
+
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var statusSelect = document.getElementById('carrier_type');
+        var approvedFields = document.querySelectorAll('.rail');
+        var disapprovedFields = document.querySelectorAll('.truck');
+    
+        function toggleFields() {
+            var status = statusSelect.value;
+            if (status === 'Rail Car') {
+                approvedFields.forEach(function(field) {
+                    field.style.display = 'block';
+                });
+                disapprovedFields.forEach(function(field) {
+                    field.style.display = 'none';
+                });
+            } else if (status === 'Truck/Trailer'|| status === 'Container/Vessel') {
+                approvedFields.forEach(function(field) {
+                    field.style.display = 'none';
+                });
+                disapprovedFields.forEach(function(field) {
+                    field.style.display = 'block';
+                });
+            } else {
+                approvedFields.forEach(function(field) {
+                    field.style.display = 'none';
+                });
+                disapprovedFields.forEach(function(field) {
+                    field.style.display = 'none';
+                });
+            }
+        }
+    
+        statusSelect.addEventListener('change', toggleFields);
+    
+        // Initial call to set the correct fields based on the current value
+        toggleFields();
+    });
+</script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const shipmentType = document.getElementById('shipment_type');
+        const carrierType = document.getElementById('carrier_type');
+        const addCropBtn = document.getElementById('add-crop-btn');
+        const cropFieldsContainer = document.getElementById('crop-fields-container');
+
+        // Show or hide the "+" button based on shipment type
+        shipmentType.addEventListener('change', function () {
+            if (shipmentType.value === 'Multiple Crop') {
+                document.getElementById('add-crop-btn-container').style.display = 'block';
+            } else {
+                document.getElementById('add-crop-btn-container').style.display = 'none';
+            }
+        });
+
+        // Add new crop fields row
+        addCropBtn.addEventListener('click', function () {
+            const carrier = carrierType.value; 
+            const selectedContract = document.getElementById('selected_contract').value;
+
+            const newRow = document.createElement('div');
+            newRow.className = 'crop-fields-row';
+            newRow.innerHTML = `
+                <div class="row mt-3">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="item_type">Item Category<span class="asteriskField">*</span></label>
+                            <select name="item_type[]" class="form-control item-type" required>
+                                <option value="">Select Type</option>
+                                <option value="Spices" {% if item_specification.item_type == "Spices" %}selected {% endif %}>Spices</option>
+                                <option value="Crop" {% if item_specification.item_type == "Crop" %}selected {% endif %}>Crops</option>
+                            </select>
+                        </div>
+                    </div> 
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="crop">Item<span class="asteriskField">*</span></label>
+                            <select name="crop_id[]" class="form-control crops" required>
+                                <option value="All" selected disabled>Select</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="seal_numbers">Seal Numbers<span class="asteriskField">*</span></label>
+                            <input type="text" name="seal_numbers[]" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{crop.seal_numbers}}">
+                            <small class="form-text text-muted">Write seal numbers separating them by a comma (',')</small>
+
+                        </div>
+                    </div> 
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="carrier_id">Carrier ID<span class="asteriskField">*</span></label>
+                            <input type="text" name="carrier_id[]" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;">
+                        </div>
+                    </div> 
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="additional_equipment_id">Additional Equipment ID</label>
+                            <input type="text" name="additional_equipment_id[]" id="additional_equipment_id" class="form-control">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="lot_number">Lot Number<span class="asteriskField">*</span></label>
+                            <input type="text" name="lot_number[]" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;"pattern="[A-Za-z0-9]+" title="Only letters and numbers allowed" >
+                        </div>
+                    </div>
+                    ${carrier === 'Rail Car' ? `
+                    <div class="col-md-4 rail">
+                        <div class="form-group">
+                            <label for="weight">Weight<span class="asteriskField">*</span></label>
+                            <div class="d-flex">
+                                <input type="number" step="0.01" name="weight[]" class="form-control">
+                                <select name="amount_unit" class="form-select" style="width:90px;" required>
+                                    <option value="LBS">LBS</option>
+                                    <option value="MT">MT</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>` : `
+                    <div class="col-md-4 truck">
+                        <div class="form-group">
+                            <label for="gross_weight">Gross Weight<span class="asteriskField">*</span></label>
+                            <div class="d-flex">
+                                <input type="number" step="0.01" name="gross_weight[]" class="textinput textInput form-control">
+                                <select name="amount_unit" class="form-select" style="width:90px;" required>
+                                    <option value="LBS">LBS</option>
+                                    <option value="MT">MT</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 truck">
+                        <div class="form-group">
+                            <label for="ship_weight">Ship Weight<span class="asteriskField">*</span></label>
+                            <div class="d-flex">
+                                <input type="number" step="0.01" name="ship_weight[]" class="textinput textInput form-control">
+                                <select name="amount_unit" class="form-select" style="width:90px;" required>
+                                    <option value="LBS">LBS</option>
+                                    <option value="MT">MT</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 truck">
+                        <div class="form-group">
+                            <label for="ship_quantity">Ship Quantity<span class="asteriskField">*</span></label>
+                            <input type="number" name="ship_quantity[]" class="textinput textInput form-control">
+                        </div>
+                    </div>`}
+                                        <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="moisture">Moisture:</label>
+                            <input type="text" name="moisture[]" class="form-control" value="{{item_specification.moisture}}">
+                        </div>
+                    </div>
+                        
+                    <div class="Crop-fields" style="display: none;">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="total_seed_heat_damage">Total Seed Heat Damage:</label>
+                                    <input type="text" name="total_seed_heat_damage[]" class="form-control" value="{{item_specification.total_seed_heat_damage}}">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="heat_damage_kernels">Heat Damage Kernels:</label>
+                                    <input type="text" name="heat_damage_kernels[]" class="form-control" value="{{item_specification.heat_damage_kernels}}">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="bran">Bran:</label>
+                                    <input type="text" name="bran[]" class="form-control" value="{{item_specification.bran}}">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="broken">Broken:</label>
+                                    <input type="text" name="broken[]" class="form-control" value="{{item_specification.broken}}">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="chalky">Chalky:</label>
+                                    <input type="text" name="chalky[]" class="form-control" value="{{item_specification.chalky}}">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="red_damage">Red Damage:</label>
+                                    <input type="text" name="red_damage[]" class="form-control" value="{{item_specification.red_damage}}">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="other">Other:</label>
+                                    <input type="text" name="other[]" class="form-control" value="{{item_specification.other}}">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                        
+                    <div class="Spices-fields" style="display: none;">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="total_ash">Total Ash:</label>
+                                    <input type="text" name="total_ash[]" class="form-control" value="{{item_specification.total_ash}}">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="acid_insoluble_ash">Acid Insoluble Ash:</label>
+                                    <input type="text" name="acid_insoluble_ash[]" class="form-control" value="{{item_specification.acid_insoluble_ash}}">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="volatile_oil">Volatile Oil:</label>
+                                    <input type="text" name="volatile_oil[]" class="form-control" value="{{item_specification.volatile_oil}}">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="nonvolatile_oil">Nonvolatile Oil:</label>
+                                    <input type="text" name="nonvolatile_oil[]" class="form-control" value="{{item_specification.nonvolatile_oil}}">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="extraneous_matter">Extraneous Matter:</label>
+                                    <input type="text" name="extraneous_matter[]" class="form-control" value="{{item_specification.extraneous_matter}}">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="purity">Purity:</label>
+                                    <input type="text" name="purity[]" class="form-control" value="{{item_specification.purity}}">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="total_excreta">Total Excreta:</label>
+                                    <input type="text" name="total_excreta[]" class="form-control" value="{{item_specification.total_excreta}}">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="whole_insect_dead">Whole Insect Dead:</label>
+                                    <input type="text" name="whole_insect_dead[]" class="form-control" value="{{item_specification.whole_insect_dead}}">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="curcumin">Curcumin:</label>
+                                    <input type="text" name="curcumin[]" class="form-control" value="{{item_specification.curcumin}}">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="pungency">Pungency:</label>
+                                    <input type="text" name="pungency[]" class="form-control" value="{{item_specification.pungency}}">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="through_1_mm">Through 1 mm:</label>
+                                    <input type="text" name="through_1_mm[]" class="form-control" value="{{item_specification.through_1_mm}}">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="through_1point7_mm">Through 1.7 mm:</label>
+                                    <input type="text" name="through_1point7_mm[]" class="form-control" value="{{item_specification.through_1point7_mm}}">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="through_180_u">Through 180 u:</label>
+                                    <input type="text" name="through_180_u[]" class="form-control" value="{{item_specification.through_180_u}}">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="through_425_u">Through 425 u:</label>
+                                    <input type="text" name="through_425_u[]" class="form-control" value="{{item_specification.through_425_u}}">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="through_500_u">Throghu 500 u:</label>
+                                    <input type="text" name="through_500_u[]" class="form-control" value="{{item_specification.through_500_u}}">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="through_600_u">Through 600 u:</label>
+                                    <input type="text" name="through_600_u[]" class="form-control" value="{{item_specification.through_600_u}}">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="through_18_mesh">Thorugh #18 mesh:</label>
+                                    <input type="text" name="through_18_mesh[]" class="form-control" value="{{item_specification.through_18_mesh}}">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="through_25_mesh">Through #25 mesh:</label>
+                                    <input type="text" name="through_25_mesh[]" class="form-control" value="{{item_specification.through_25_mesh}}">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="total_plate_count">Total Plate Count:</label>
+                                    <input type="text" name="total_plate_count[]" class="form-control" value="{{item_specification.total_plate_count}}">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="yeast_mold_count">Yest Mold Count:</label>
+                                    <input type="text" name="yeast_mold_count[]" class="form-control" value="{{item_specification.yeast_mold_count}}">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="e_coli">E coli:</label>
+                                    <input type="text" name="e_coli[]" class="form-control" value="{{item_specification.e_coli}}">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="salmonella">Salmonella:</label>
+                                    <input type="text" name="salmonella[]" class="form-control" value="{{item_specification.salmonella}}">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="heavy_metal">Heavy Metal:</label>
+                                    <input type="text" name="heavy_metal[]" class="form-control" value="{{item_specification.heavy_metal}}">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="aflatoxin_B1">A flatoxin B1:</label>
+                                    <input type="text" name="aflatoxin_B1[]" class="form-control" value="{{item_specification.aflatoxin_B1}}">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="aflatoxin_B1_B2_G1_G2">A flatoxin B1 B2 G1 G2:</label>
+                                    <input type="text" name="aflatoxin_B1_B2_G1_G2[]" class="form-control" value="{{item_specification.aflatoxin_B1_B2_G1_G2}}">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="ochratoxin">Ochratoxin:</label>
+                                    <input type="text" name="ochratoxin[]" class="form-control" value="{{item_specification.ochratoxin}}">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="total_parameters">Total Parameters:</label>
+                                    <input type="text" name="total_parameters[]" class="form-control" value="{{item_specification.total_parameters}}">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="button" class="btn btn-danger btn-sm remove-crop-btn" style="width: 41px; height: 24px; padding: 0; display: inline-flex; justify-content: center; align-items: center; font-size: 15px; margin-bottom:10px;" >-</button>
+                    </div>
+                </div>
+            `;
+            cropFieldsContainer.appendChild(newRow);
+
+            // AJAX to fetch crops for the newly added row
+            const itemTypeSelect = newRow.querySelector('.item-type');
+            const cropSelect = newRow.querySelector('.crops');
+
+            itemTypeSelect.addEventListener('change', function () {
+                const selectedContract = $('#selected_contract').val();
+                const itemType = this.value;
+                console.log(selectedContract, itemType)
+
+                if (selectedContract && itemType) {
+                    $.ajax({
+                        url: '{% url "get_customer_contract_crops" %}',
+                        method: 'GET',
+                        data: {
+                            selected_contract: selectedContract,
+                            item_type: itemType
+                        },
+                        success: function (response) {
+                            $(cropSelect).empty();
+                            if (response.crops) {
+                                $(cropSelect).append('<option value="All" selected disabled>Select</option>');
+                                response.crops.forEach(function (crop) {
+                                    $(cropSelect).append(
+                                        `<option value="${crop.id}">${crop.item_name}</option>`
+                                    );
+                                });
+                            } else {
+                                $(cropSelect).append('<option value="All" selected disabled>No Item available</option>');
+                            }
+                        },
+                        error: function () {
+                            alert('No Item available.');
+                            $(cropSelect).empty().append('<option value="All" selected disabled>Select</option>');
+                        }
+                    });
+                }
+            });
+        });
+
+        // Remove crop fields row
+        cropFieldsContainer.addEventListener('click', function (event) {
+            if (event.target.classList.contains('remove-crop-btn')) {
+                event.target.closest('.crop-fields-row').remove();
+            }
+        });
+
+        // Initial check for the "+" button visibility
+        if (shipmentType.value === 'Multiple Crop') {
+            document.getElementById('add-crop-btn-container').style.display = 'block';
+        } else {
+            document.getElementById('add-crop-btn-container').style.display = 'none';
+        }
+    });
+</script>
+
+<script>
+    // Function to toggle fields based on item type
+    function toggleFields(selectElement) {
+        const row = selectElement.closest('.crop-fields-row');
+        const spicesFields = row.querySelector('.Spices-fields');
+        const othersFields = row.querySelector('.Crop-fields');
+
+        if (selectElement.value === 'Spices') {
+            spicesFields.style.display = 'block';
+            othersFields.style.display = 'none';
+        } else if (selectElement.value === 'Crop') {
+            spicesFields.style.display = 'none';
+            othersFields.style.display = 'block';
+        } else {
+            spicesFields.style.display = 'none';
+            othersFields.style.display = 'none';
+        }
+    }
+
+    // Delegate the change event to dynamically added elements
+    document.addEventListener('change', function (event) {
+        if (event.target && event.target.name === 'item_type[]') {
+            toggleFields(event.target);
+        }
+    });
+
+    // When page loads, initialize the first one if exists
+    document.querySelectorAll('[name="item_type[]"]').forEach(select => {
+        toggleFields(select);
+    });
+</script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Get all the "X" buttons for existing crop rows
+        const cropFieldsContainer = document.getElementById('crop-fields-container');
+    
+        // Handle removal of existing crop rows
+        cropFieldsContainer.addEventListener('click', function (event) {
+            if (event.target.classList.contains('remove-existing-crop-btn')) {
+                const row = event.target.closest('.crop-fields-row');
+                const deleteFlag = row.querySelector('.delete-flag');
+    
+                if (deleteFlag) {
+                    // Mark the row for deletion by setting the delete_flag value to 1
+                    deleteFlag.value = "1";
+                }
+                // Hide the row visually (soft delete)
+                row.style.display = 'none';
+            }
+        });
+    });
+</script>
+
+<script>
+    document.addEventListener('change', function(event) {
+        if (event.target && event.target.classList.contains('crops')) {
+            const cropId = event.target.value;
+    
+            if (cropId && cropId !== "All") {
+                fetch(`/warehouse/get-customer-crop-availability/?crop_id=${cropId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.available_amount !== undefined) {
+                            alert(`Remaining amount for this Item: ${data.available_amount} ${data.unit}`);
+                            
+                            // Optional: show it in a styled way instead of alert
+                            // const infoBox = document.createElement('div');
+                            // infoBox.textContent = `Available: ${data.available_amount}`;
+                            // infoBox.classList.add('alert', 'alert-info', 'mt-2');
+                            // event.target.closest('.form-group').appendChild(infoBox);
+                        } else if (data.error) {
+                            alert(data.error);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching Item availability:', error);
+                        alert('Something went wrong.');
+                    });
+            }
+        }
+    });
+</script>
+
+<script>
+    $('#Warehouse-active').addClass('activeLink');
+  
+    $('#Warehouse-down').addClass('down');
+    $('#Warehouse-sub_unic').show();
+  
+    $('#Warehouse-Shipment').addClass('activeLink active-nav');
+  
+</script>
+{% endblock script %}
+{% endblock content %}

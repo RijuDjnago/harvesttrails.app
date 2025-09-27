@@ -28,7 +28,7 @@
         <div class="page-title-with-or-without-btn">
             <span class="farm headingtop"> Processor To Processor Management</span>
             <!-- Create button for Account-->
-            {% if request.user.is_superuser %}
+            {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
             <div class="flex-header-btn">
                 <a href="{% url 'link_processor_one' %}" class="btn-close-cancel">Link Tier 1 Processor To Processor</a>
             </div>
@@ -38,7 +38,7 @@
             <div class="main-simple-table-with-search">
                 <div class="row">
                     <div class="col-8">
-                        {% if request.user.is_superuser %}
+                        {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
                         <form action="" method="get" class="">
                             <div class="inline-apply-filter">
                                 <div class="three-fields-with-label">                               
@@ -61,14 +61,14 @@
                 </div>
                 <div class="both-data-in" style="display: inherit;">
                     <div class="simple-responsive-table">
-                        {% if request.user.is_processor or request.user.is_superuser %}
+                        {% if request.user.is_processor or request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role%}
                         <table id="processorList_tbl" class="table table-striped dt-responsive nowrap" style="width:100%">
                             <thead>
                                 <tr style="border-bottom: 2px solid #e0e0e0;">
                                     <th>T1 Processor</th>
                                     <th>Processor</th>
                                     <th>Linked Processor Type</th>
-                                    {% if request.user.is_superuser %}
+                                    {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
                                     <th>Action</th>
                                     {% endif %}
                                 </tr>
@@ -81,7 +81,7 @@
                                     <td>{{ pro.processor1.entity_name }}</td>
                                     <td>{{ pro.processor2.entity_name }}</td>
                                     <td>{% for pr in pro.processor2.processor_type.all %}{{ pr.type_name }}{% endfor %}</td>
-                                    {% if request.user.is_superuser %}
+                                    {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
                                     <td class="backk action-td">
                                         <li>
                                             <a type="button" data-mdb-toggle="modal" data-mdb-target="#deleteModal{{ pro.id }}" alt="delete linked processor to processor" title="delete linked processor to processor">

@@ -83,7 +83,7 @@
                   <canvas id="colors_sketch" width="500" height="150" style="border: 2px dashed #ddd;">
                   </canvas>
 
-                {% if not request.user.is_superuser %}
+                {% if not request.user.is_superuser or not 'SubAdmin' in request.user.get_role or not 'SuperUser' in request.user.get_role %}
                     <div class="row">
                         <div class="form-btn-row">
                             <a href="{% url 'contract-list' %}" class="btn-close-cancel btn-space">Cancel</a>

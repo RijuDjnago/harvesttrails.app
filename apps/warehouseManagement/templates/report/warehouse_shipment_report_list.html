@@ -84,7 +84,7 @@
     <main>
         {% include '_alerts.html' %}
         <div class="page-title-with-or-without-btn">
-        <span class="farm headingtop">Warehouse Shipment Report</span>
+        <span class="farm headingtop">Warehouse Shipment Changes Report</span>
         {% if changes_dict %}
             <div class="flex-header-btn">
                 <a href="{% url 'warehouse_shipment_export_csv' %}" class="btn-close-cancel">Download CSV</a>
@@ -94,8 +94,7 @@
         <div class="card farm-fields-container">           
             
             <!-- Search Bar and Button -->
-            <form class="d-flex flex-column flex-sm-row my-3" method="POST">
-                {% csrf_token %}
+            <form class="d-flex flex-column flex-sm-row my-3" method="GET">
                 <select id="date_choice" name="date_choice" class="form-control mb-3 mb-sm-0 me-sm-2">
                     <option value="all" {% if date_choice == 'all' %}selected{% endif %}>Select Date Type</option>
                     <option value="single_date" {% if date_choice == 'single_date' %}selected{% endif %}>Single Date</option>
@@ -115,47 +114,57 @@
                        value="{{ end_date }}" 
                        style="display: {% if date_choice == 'date_range' %}block{% else %}none{% endif %};">
             
-                <button class="btn text-white" type="submit" style="background-color:#549874;">Generate Report</button>
+                <button class="btn text-white" type="submit" style="background-color:#549874; width:110px; min-width:110px;">Generate Report</button>
             </form>
            
             <!-- Conditionally render table if any date filter is applied -->
             {% if date_choice %}
             <div class="container">
                 {% if changes_dict %}
-                    {% for shipment_id, descriptions in changes_dict.items %}
-                    <div class="d-flex justify-content-between align-items-center p-3" style="background-color: #d7d5d5;color: #0b6c39;font-size: 22px;font-weight: 600;margin: 20px 0;padding: 12px 0;">
-                        <span class="font-weight-bold">Shipment ID: {{ shipment_id }}</span>
-                        <span><a href="{% url 'export_csv_for_single_shipment_warehouse' shipment_id %}" class="btn text-white font-weight-bold" style="background-color:#549874;">CSV Download</a></span>
-                    </div>
-                        
-                        {% for description, changes in descriptions.items %}
-                            <h6 class="font-weight-bold">Description: {{ description }}</h6>
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th width="20%">Field</th>
-                                        <th width="20%">Old Value</th>
-                                        <th width="20%">New Value</th>
-                                        <th width="20%">Updated At</th>
-                                        <th width="20%">Updated By</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for change in changes %}
+                    {% for shipment_id, shipment_data in changes_dict.items %}
+                        <div class="d-flex justify-content-between align-items-center p-3" style="background-color: #d7d5d5;color: #0b6c39;font-size: 22px;font-weight: 600;margin: 20px 0;padding: 12px 0;">
+                            <span class="font-weight-bold">
+                                Shipment ID: 
+                                <a href="{% url 'warehouse_shipment_details' shipment_data.id %}">{{ shipment_id }}</a>
+                            </span>
+                            <span>
+                                <a href="{% url 'export_csv_for_single_shipment_processor' shipment_id %}" 
+                                class="btn text-white font-weight-bold" style="background-color:#549874;">
+                                CSV Download
+                                </a>
+                            </span>
+                        </div>
+
+                        {% for description, changes in shipment_data.logs.items %}
+                            <div style="margin-bottom: 40px;">
+                                <h6 class="font-weight-bold" style="font-size: 1.2rem;">Description: {{ description }}</h6>
+                                <table>
+                                    <thead>
                                         <tr>
-                                            <td>{{ change.field }}</td>
-                                            <td>{{ change.old }}</td>
-                                            <td>{{ change.new }}</td>
-                                            <td>{{ change.updated_at }}</td>
-                                            <td>{{ change.updated_by }}</td>
+                                            <th width="20%">Field</th>
+                                            <th width="20%">Old Value</th>
+                                            <th width="20%">New Value</th>
+                                            <th width="20%">Updated At</th>
+                                            <th width="20%">Updated By</th>
                                         </tr>
-                                    {% empty %}
-                                        <tr>
-                                            <td colspan="5">No changes found</td>
-                                        </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody>
+                                        {% for change in changes %}
+                                            <tr>
+                                                <td>{{ change.field|default_if_none:"" }}</td>
+                                                <td>{{ change.old|default_if_none:"" }}</td>
+                                                <td>{{ change.new|default_if_none:"" }}</td>
+                                                <td>{{ change.updated_at|default_if_none:"" }}</td>
+                                                <td>{{ change.updated_by|default_if_none:"" }}</td>
+                                            </tr>
+                                        {% empty %}
+                                            <tr>
+                                                <td colspan="5">No changes found</td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
                         {% endfor %}
                     {% endfor %}
                 {% else %}

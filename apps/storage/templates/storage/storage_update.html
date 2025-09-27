@@ -27,6 +27,10 @@
     .mystyle {
         display: none;
     }
+    .bootstrap-select .dropdown-menu li.disabled.selected{display: none;}
+    .dropdown.bootstrap-select.form-control .btn{border: 1px solid #B2BEB5; padding: 13px 8px; border-radius:0;}
+    .bootstrap-select .dropdown-menu{max-width: 280px;}
+    .bootstrap-select .dropdown-menu li.selected.active .dropdown-item.active.selected{margin-left: 0;padding: 0;}
 </style>
 <div class="main-content">
     {% include 'header.html' %}
@@ -58,7 +62,7 @@
             <div class="col-md-4" class="gro_dd">
                 <lable>Grower Name</lable>
                 <div>
-                    <select id="growerSelction" name="growerSelction" class="storagetextbox">
+                    <select id="growerSelction" name="growerSelction" class="form-control selectpicker" data-live-search="true">
                         {% for grower in growers %}
                         <option value="{{grower.id}}" {% if selectedGrower == grower.id %}selected{% endif %}>{{grower.name}}-{{grower.id}} </option>
                         {% endfor %}

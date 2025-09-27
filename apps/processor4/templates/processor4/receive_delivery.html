@@ -169,7 +169,30 @@
                                     {% endif %}
                             </div>
                         </div>
-
+                        <div class="col-md-4 mb-2">
+                            <label for="id_crop">Crop<span class="asteriskField">*</span></label>
+                            <select name="id_crop" id="id_crop"  class="form-control " onchange="this.form.submit()">
+                                <option value="all" selected disabled>Select Crop</option>
+                                {% for crop in crops %}
+                                <option value="{{crop.code}}" {% if selected_crop == crop.code %}selected {% endif %}>{{crop.code}}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <div id="div_id_variety" class="form-group">
+                                <label for="id_variety" class=" requiredField">
+                                    Variety<span class="asteriskField">*</span>
+                                </label>
+                                <div>
+                                    <select name="variety" class="select form-control" required id="id_variety">
+                                        <option value="all" selected disabled>Select Variety</option>
+                                        {% for variety in varieties %}
+                                        <option value="{{variety}}" {% if variety == variety %}selected {% endif %}>{{variety}}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
                         <div class="col-md-4 mb-2">  
                             <label for="">Receiver Storage Bin Id (SKU ID)<span class="asteriskField">*</span></label>
                             <input type="text" id="receiver_sku_id" name="receiver_sku_id" class="textinput textInput form-control" list="suggestions2" autocomplete="off" value="{{receiver_sku_id}}">

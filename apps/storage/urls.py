@@ -12,6 +12,6 @@ urlpatterns = [
     
     path('storage_feed_add/', views.storage_feed_add, name='storage_feed_add'),
     path('storage_feed_list/', views.storage_feed_list, name='storage_feed_list'),
-    path('storage_feed_remove_update/', views.storage_feed_remove_update, name='storage_feed_remove_update'),
+    path('storage_feed_update/', views.storage_feed_update, name='storage_feed_update'),
     path('assign_feed_csv/', views.assign_storage_feed_csv, name='assign_feed_csv'),
 ]

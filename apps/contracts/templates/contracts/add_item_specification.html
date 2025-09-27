@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Edit Item Specification{% endblock title %}
+
+{% block content %}
+{% include 'navbar.html' %}
+<div class="main-content">
+    {% include 'header.html' %}
+    <main>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+
+        <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
+        <!-- Include Select2 JS -->
+        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+        <style>
+            
+            .bootstrap-select .dropdown-menu li.disabled.selected{display: none;}
+            .dropdown.bootstrap-select.form-control .btn{border: 1px solid; padding: 16px 10px; border-radius: 0;}
+            .bootstrap-select .dropdown-menu{max-width: 280px;}
+            .bootstrap-select .dropdown-menu li.selected.active .dropdown-item.active.selected{margin-left: 0;padding: 0;}
+            .select2-container--default .select2-results__option--highlighted.select2-results__option--selectable {
+                background-color:#0b6c39;
+                
+            }
+        </style>
+        {% include '_alerts.html' %}
+        <span class="farm headingtop">Add/Edit Item Details</span>
+        <div class="card farm-fields-container">
+            <div class="container-fluid">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="item">Item:</label>
+                                <select name="item" id="item" class="form-control selectpicker" data-live-search="true">
+                                    {% for item in items %}
+                                        <option value="{{ item.id }}" {% if item.id == selected_item.id %} selected {% endif %}>{{ item.item }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="item_category">Item Category:</label>
+                                <select name="item_category" class="form-control" required>
+                                    <option value="">Select Type</option>
+                                    <option value="Spices" {% if selected_item.item_category == "Spices" %}selected {% endif %}>Spices</option>
+                                    <option value="Crop" {% if selected_item.item_category == "Crop" %}selected {% endif %}>Crops</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="item_number">Item Number:</label>
+                                <input type="number" name="item_number" id="item_number" class="form-control" value="{{selected_item.item_number}}">
+                            </div>
+                        </div>
+                        {% comment %} <div class="col-md-4 mt-3">
+                            <div class="form-group">
+                                <label for="supplier_name">Supplier Name:</label>
+                                <input type="text" name="supplier_name" id="supplier_name" class="form-control" value="{{selected_item.supplier_entity_name}}">
+                            </div>
+                        </div>
+                        <div class="col-md-4 mt-3">
+                            <div class="form-group">
+                                <label for="supplier_type">Supplier Type:</label>
+                                <select name="supplier_type" id="supplier_type" class="form-control">                                   
+                                    <option value="T1" {% if selected_item.supplier_type == "T1" %} selected {% endif %}>T1</option>
+                                    <option value="T2" {% if selected_item.supplier_type == "T2" %} selected {% endif %}>T2</option>
+                                    <option value="T3" {% if selected_item.supplier_type == "T3" %} selected {% endif %}>T3</option>
+                                    <option value="T4" {% if selected_item.supplier_type == "T4" %} selected {% endif %}>T4</option>                                    
+                                </select>
+                            </div>
+                        </div> {% endcomment %}
+                        <div class="col-md-4 mt-3">
+                            <div class="form-group">
+                                <label>Select Supplier</label>
+                                <select name="selected_supplier" id="supplier_id" class="form-control" required >
+                                    <option value="All">Select Supplier</option>
+                                    {% with t1_processors=processor|dictsort:"type" %}
+                                        {% if t1_processors %}
+                                            <optgroup label="Select T1 Processor">
+                                            {% for pro in t1_processors %}
+                                                {% if pro.type == "T1" %}
+                                                <option value="{{ pro.id }}_{{ pro.type }}"
+                                                    {% if pro.id == selected_processor_id and pro.type == selected_processor_type %}
+                                                        selected
+                                                    {% endif %}>
+                                                    {{ pro.entity_name }}
+                                                </option>
+                                                {% endif %}
+                                            {% endfor %}
+                                            </optgroup>
+                                        {% endif %}
+                                    {% endwith %}
+
+                                    {% with t2_processors=processor|dictsort:"type" %}
+                                        {% if t2_processors %}
+                                            <optgroup label="Select T2 Processor">
+                                            {% for pro in t2_processors %}
+                                                {% if pro.type == "T2" %}
+                                                <option value="{{ pro.id }}_{{ pro.type }}"
+                                                    {% if pro.id == selected_processor_id and pro.type == selected_processor_type %}
+                                                        selected
+                                                    {% endif %}>
+                                                    {{ pro.entity_name }}
+                                                </option>
+                                                {% endif %}
+                                            {% endfor %}
+                                            </optgroup>
+                                        {% endif %}
+                                    {% endwith %}
+
+                                    {% with t3_processors=processor|dictsort:"type" %}
+                                        {% if t3_processors %}
+                                            <optgroup label="Select T3 Processor">
+                                            {% for pro in t3_processors %}
+                                                {% if pro.type == "T3" %}
+                                                <option value="{{ pro.id }}_{{ pro.type }}"
+                                                    {% if pro.id == selected_processor_id and pro.type == selected_processor_type %}
+                                                        selected
+                                                    {% endif %}>
+                                                    {{ pro.entity_name }}
+                                                </option>
+                                                {% endif %}
+                                            {% endfor %}
+                                            </optgroup>
+                                        {% endif %}
+                                    {% endwith %}
+
+                                    {% with t4_processors=processor|dictsort:"type" %}
+                                        {% if t4_processors %}
+                                            <optgroup label="Select T4 Processor">
+                                            {% for pro in t4_processors %}
+                                                {% if pro.type == "T4" %}
+                                                <option value="{{ pro.id }}_{{ pro.type }}"
+                                                    {% if pro.id == selected_processor_id and pro.type == selected_processor_type %}
+                                                        selected
+                                                    {% endif %}>
+                                                    {{ pro.entity_name }}
+                                                </option>
+                                                {% endif %}
+                                            {% endfor %}
+                                            </optgroup>
+                                        {% endif %}
+                                    {% endwith %}
+                                </select>
+                            </div>
+                        </div>
+                        
+                        </div>
+                    </div>
+                    
+                    <div class="row mt-3">
+                        <div class="form-btn-row text-center text-md-end">
+                            <a href="{% url 'shipment_item_list' %}" class="btn-close-cancel">Cancel</a>
+                            <button type="submit" class="btn-save-submit">Save</button>
+                        </div>
+                    </div>
+                </form>               
+                
+            </div>
+        </div>
+
+    </main>
+    {% include 'footer.html' %}
+</div>
+{% endblock %}
+{% block jquery %}
+<script type="text/javascript">
+    $(document).ready(function () {
+        $('#supplier_id').select2({
+            placeholder: "Select a Supplier",
+            allowClear: true, // Adds a clear button
+            width: 'resolve' // Ensures proper width adjustment
+        });
+    });
+</script>
+
+<script>
+    $('#Contracts-active').addClass('activeLink');
+  
+    $('#Contracts-down').addClass('down');
+    $('#Contracts-sub').show();
+  
+    $('#Shipment-Item-List').addClass('activeLink active-nav');
+  
+</script>
+{% endblock %}

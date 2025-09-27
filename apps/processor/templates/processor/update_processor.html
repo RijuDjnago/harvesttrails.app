@@ -35,6 +35,9 @@
                         {{ form.shipping_address|as_crispy_field }}
                     </div>
                     <div class="col-md-4">
+                        {{ form.main_email|as_crispy_field }}
+                    </div>
+                    <div class="col-md-4">
                         {{ form.main_number|as_crispy_field }}
                     </div>
                     <div class="col-md-4">
@@ -66,8 +69,8 @@
                     </div>
                     <div class="col-md-3">
                         <div>
-                            <label for="contact_phone">Contact Phone</label>
-                            <input value="{{p_user.contact_phone}}" type="number" name="contact_phone1" id="contact_phone1" class="textinput textInput form-control">
+                            <label for="contact_phone">Contact Phone<span class="asteriskField">*</span></label>
+                            <input value="{{p_user.contact_phone}}" type="number" name="contact_phone1" id="contact_phone1" class="textinput textInput form-control" required>
                         </div>
                     </div>
                     <div class="col-md-3">

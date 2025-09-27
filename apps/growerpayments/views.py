@@ -41,6 +41,7 @@ def entry_feeds_add(request):
         context["growers"] = growers
         if request.method == "POST":
             grower_id = request.POST.get("grower_id")
+            #print(grower_id)
             if grower_id != "all":
                 field = Field.objects.filter(grower_id=grower_id).values_list('crop', flat=True)
 
@@ -52,6 +53,7 @@ def entry_feeds_add(request):
                 show_entry = EntryFeeds.objects.filter(grower_id=grower_id).order_by('-id')
                 context["show_entry"] = show_entry
                 grower_crop = request.POST.get("grower_crop")
+                #print(grower_crop)
                 contracted_payment_option = request.POST.get("contracted_payment_option")
                 contract_base_price = request.POST.get("contract_base_price")
                 sustainability_premium = request.POST.get("sustainability_premium")
@@ -174,9 +176,13 @@ def entry_feeds_add(request):
 def entry_feeds_list(request):
     context = {}
     if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
-        entery = EntryFeeds.objects.all()
+        entery_list = EntryFeeds.objects.all()
+        paginator = Paginator(entery_list,20)  # Show 10 entries per page
+        page_number = request.GET.get('page')
+        entery = paginator.get_page(page_number)
         context["entery"] = entery
-        return render(request, "growerpayments/entry_feeds_list.html",context)
+    return render(request, "growerpayments/entry_feeds_list.html", context)
+
 
 @login_required()
 def entry_feeds_edit(request,pk):
@@ -397,7 +403,7 @@ def grower_payments_table(request):
                 acreage_Release_grower_id.append(i.grower.id)
             if i.crop == 'COTTON' :
                 crop_cotton_grower_id.append(i.grower.id)
-            if i.crop == 'RICE' :
+            else:
                 crop_rice_grower_id.append(i.grower.id)
         total_grower_id = fixed_price_grower_id + delivery_grower_id + acreage_Release_grower_id
         growers = Grower.objects.filter(id__in = total_grower_id).order_by('name')
@@ -405,6 +411,7 @@ def grower_payments_table(request):
         # if request.method == 'POST':
         grower_idd = request.GET.get('grower_id')
         crop_idd = request.GET.get('crop_id')
+        #print(crop_idd)
         get_page_no_temp = request.GET.get('get_page_no_temp')
         
         if get_page_no_temp :
@@ -443,7 +450,7 @@ def grower_payments_table(request):
                 total_grower_id = fixed_price_grower_id + delivery_grower_id
                 selectedGrower = ''
                 
-            elif crop_idd == "RICE":
+            else:
                 # crop_rice_grower_id
                 delivery_grower_id = crop_rice_grower_id
                 fixed_price_grower_id = []
@@ -470,19 +477,16 @@ def grower_payments_table(request):
                     fixed_price_grower_id = []
                     delivery_grower_id = []
                     total_grower_id = fixed_price_grower_id + delivery_grower_id
-            elif selectedGrowerCrop == 'RICE' :
-                if int(grower_idd) in fixed_price_grower_id and selectedCrop == 'RICE' :
+            else:
+                if int(grower_idd) in fixed_price_grower_id :
                     fixed_price_grower_id = [int(grower_idd)]
                     delivery_grower_id = []
                     total_grower_id = fixed_price_grower_id + delivery_grower_id
-                elif int(grower_idd) in delivery_grower_id and selectedCrop == 'RICE' :
+                elif int(grower_idd) in delivery_grower_id :
                     delivery_grower_id = [int(grower_idd)]
                     fixed_price_grower_id = []
                     total_grower_id = fixed_price_grower_id + delivery_grower_id
-            else :
-                fixed_price_grower_id = []
-                delivery_grower_id = []
-                total_grower_id = fixed_price_grower_id + delivery_grower_id
+            
             
         else:
             entry = entry
@@ -494,7 +498,7 @@ def grower_payments_table(request):
         
         # custom pagination code 
         pagi_bale = BaleReportFarmField.objects.filter(ob2__in = total_grower_id)
-        pagi_grower_shipment = GrowerShipment.objects.filter(grower_id__in=total_grower_id).filter(crop='RICE').filter(status='APPROVED')
+        pagi_grower_shipment = GrowerShipment.objects.filter(grower_id__in=total_grower_id).filter(crop=crop_idd).filter(status='APPROVED')
         total_obj_qury = len(pagi_bale) + len(pagi_grower_shipment)
         tem_total_no_page = total_obj_qury // 100 
 
@@ -639,13 +643,13 @@ def grower_payments_table(request):
 
         # For Delivery Market ...........
         if get_page_no_temp :
-            grower_shipment = GrowerShipment.objects.filter(grower_id__in=total_grower_id).filter(crop='RICE').filter(status='APPROVED')[int(page_lower_limit):int(page_upper_limit)]
+            grower_shipment = GrowerShipment.objects.filter(grower_id__in=total_grower_id).filter(crop=crop_idd).filter(status='APPROVED')[int(page_lower_limit):int(page_upper_limit)]
         elif crop_idd and crop_idd != 'All' :
-            grower_shipment = GrowerShipment.objects.filter(grower_id__in=total_grower_id).filter(crop='RICE').filter(status='APPROVED')[int(page_lower_limit):int(page_upper_limit)]
+            grower_shipment = GrowerShipment.objects.filter(grower_id__in=total_grower_id).filter(crop=crop_idd).filter(status='APPROVED')[int(page_lower_limit):int(page_upper_limit)]
         else :
-            grower_shipment = GrowerShipment.objects.filter(grower_id__in=total_grower_id).filter(crop='RICE').filter(status='APPROVED')
+            grower_shipment = GrowerShipment.objects.filter(grower_id__in=total_grower_id).filter(crop=crop_idd).filter(status='APPROVED')
 
-        # grower_shipment = GrowerShipment.objects.filter(grower_id__in=total_grower_id).filter(crop='RICE').filter(status='APPROVED') 
+        # grower_shipment = GrowerShipment.objects.filter(grower_id__in=total_grower_id).filter(crop=crop_idd).filter(status='APPROVED') 
         for i in grower_shipment :
             grower_id = i.grower.id
             delivery_id = i.shipment_id
@@ -661,10 +665,10 @@ def grower_payments_table(request):
                 # 25-03-23
                 check_entry_with_date = EntryFeeds.objects.filter(grower_id = grower_id,from_date__lte=i.process_date,to_date__gte=i.process_date)
                 check_entry_with_no_date = EntryFeeds.objects.filter(grower_id = grower_id,from_date__isnull=True,to_date__isnull=True)
-                if check_entry_with_date.exist() :
+                if check_entry_with_date.exists() :
                     check_entry_id = [i.id for i in check_entry_with_date][0]
                     var = EntryFeeds.objects.get(id=check_entry_id)
-                elif check_entry_with_no_date.exist() :
+                elif check_entry_with_no_date.exists() :
                     check_entry_id = [i.id for i in check_entry_with_no_date][0]
                     var = EntryFeeds.objects.get(id = check_entry_id)
             else:
@@ -910,9 +914,9 @@ def grower_payments_table_csv_download(request):
             # grower_payment.append(data)
         # For Delivery Market ...........
         #  22-08-23
-        grower_shipment = GrowerShipment.objects.filter(grower_id__in=total_grower_id,crop='RICE',status='APPROVED').values("shipment_id","received_amount",
+        grower_shipment = GrowerShipment.objects.filter(grower_id__in=total_grower_id,status='APPROVED').values("shipment_id","received_amount",
                                                         "grower__name","grower_id","crop","variety","field__name","approval_date","process_date",
-                                                        "processor__entity_name")
+                                                        "processor__entity_name", "total_amount")
         for i in grower_shipment :
             delivery_id = i["shipment_id"]
             grower_name = i["grower__name"]
@@ -923,28 +927,30 @@ def grower_payments_table_csv_download(request):
             if i["approval_date"] == None:
                 process_date_init = i["process_date"]
                 delivery_date = process_date_init.strftime("%m/%d/%y")
-                new_date = delivery_date + timedelta(60)
+                new_date = process_date_init + timedelta(60)
                 payment_due_date = new_date.strftime("%m/%d/%y")
-                check_entry_with_date = EntryFeeds.objects.filter(grower_id = grower_id,from_date__lte=process_date_init,to_date__gte=process_date_init).only("id")
-                check_entry_with_no_date = EntryFeeds.objects.filter(grower_id = grower_id,from_date__isnull=True,to_date__isnull=True).only("id")
+                check_entry_with_date = EntryFeeds.objects.filter(grower_id = grower_id,from_date__lte=process_date_init,to_date__gte=process_date_init)
+                check_entry_with_no_date = EntryFeeds.objects.filter(grower_id = grower_id,from_date__isnull=True,to_date__isnull=True)
+                #print(check_entry_with_date, check_entry_with_no_date)
                 if check_entry_with_date.exists() :
-                    check_entry_id = [i["id"] for i in check_entry_with_date][0]
+                    check_entry_id = check_entry_with_date.first().id
                     var = EntryFeeds.objects.get(id=check_entry_id)
                 elif check_entry_with_no_date.exists() :
-                    check_entry_id = [i["id"] for i in check_entry_with_no_date][0]
+                    check_entry_id = check_entry_with_no_date.first().id
                     var = EntryFeeds.objects.get(id = check_entry_id)
             else:
                 process_date_init = i["approval_date"]
                 delivery_date = process_date_init.strftime("%m/%d/%y")
                 new_date = process_date_init + timedelta(60)
                 payment_due_date = new_date.strftime("%m/%d/%y")
-                check_entry_with_date = EntryFeeds.objects.filter(grower_id = grower_id,from_date__lte=process_date_init,to_date__gte=process_date_init).values("id")
-                check_entry_with_no_date = EntryFeeds.objects.filter(grower_id = grower_id,from_date__isnull=True,to_date__isnull=True).values("id")
+                check_entry_with_date = EntryFeeds.objects.filter(grower_id = grower_id,from_date__lte=process_date_init,to_date__gte=process_date_init)
+                check_entry_with_no_date = EntryFeeds.objects.filter(grower_id = grower_id,from_date__isnull=True,to_date__isnull=True)
+                #print(check_entry_with_date, check_entry_with_no_date)
                 if check_entry_with_date.exists() :
-                    check_entry_id = [i["id"] for i in check_entry_with_date][0]
+                    check_entry_id = check_entry_with_date.first().id
                     var = EntryFeeds.objects.get(id=check_entry_id)
                 elif check_entry_with_no_date.exists() :
-                    check_entry_id = [i["id"] for i in check_entry_with_no_date][0]
+                    check_entry_id = check_entry_with_no_date.first().id
                     var = EntryFeeds.objects.get(id = check_entry_id)
                 # check_entry = EntryFeeds.objects.filter(grower_id = grower_id).only("id")
                 # if len(check_entry) == 0 :
@@ -955,7 +961,7 @@ def grower_payments_table_csv_download(request):
                 #     check_entry_with_date = EntryFeeds.objects.filter(grower_id = grower_id,from_date__lte=process_date_init,to_date__gte=process_date_init).values("id")
                 #     check_entry_with_no_date = EntryFeeds.objects.filter(grower_id = grower_id,from_date__isnull=True,to_date__isnull=True).values("id")
                 #     if check_entry_with_date.exists() :
-                #         print("......",check_entry_with_date)
+                #         #print("......",check_entry_with_date)
                 #         check_entry_id = [i["id"] for i in check_entry_with_date][0]
                 #         var = EntryFeeds.objects.get(id = check_entry_id)
                 #     elif check_entry_with_no_date.exists() :
@@ -985,7 +991,7 @@ def grower_payments_table_csv_download(request):
                 delivery_lbs = int(float(i["received_amount"])) 
                 delivered_value = float(delivery_lbs) * total_price
             else:
-                delivery_lbs = int(float(i["total_amount"]))
+                delivery_lbs = int(float(i["total_amount"])) if i["total_amount"] else 0
                 delivered_value = float(delivery_lbs) * total_price
             
             processor = i["processor__entity_name"]
@@ -1041,9 +1047,10 @@ def grower_payments_list_not_paid_csv_download(request):
         
         grower_shipment = GrowerShipment.objects.filter(~Q(shipment_id__in=Subquery(
                         GrowerPayments.objects.values('delivery_id')
-                    ))).filter(crop='RICE').filter(status='APPROVED').values('id','shipment_id',
+                    ))).filter(status='APPROVED').values('id','shipment_id',
                         'grower__name','grower__id','crop','variety','field__name','approval_date',
                         'process_date','total_amount','received_amount')
+        
         for i in bale :
             delivery_date = i['dt_class']
             delivery_id = i['bale_id']
@@ -1147,6 +1154,9 @@ def grower_payments_list_not_paid_csv_download(request):
         #                 'grower__name','grower__id','crop','variety','field__name','approval_date','process_date','total_amount','received_amount')
         # approval_date process_date shipment_id grower__id grower__name crop variety field__name
         for i in grower_shipment : 
+            #print(i)
+            #print(i["id"])
+            #print(i["total_amount"])
             delivery_id = i['shipment_id']
             grower_name = i['grower__name']
             grower_id = i['grower__id']
@@ -1154,56 +1164,64 @@ def grower_payments_list_not_paid_csv_download(request):
             variety = i['variety']
             field = i["field__name"]
 
-            if i['approval_date'] == None:
+            if i['approval_date'] is None:
                 delivery_date = i['process_date'].strftime("%m/%d/%y")
                 new_date = i['process_date'] + timedelta(60)
                 payment_due_date = new_date.strftime("%m/%d/%y")
-                # 27-03-23
-                check_entry_with_date = EntryFeeds.objects.filter(grower_id = grower_id,from_date__lte=i['process_date'],to_date__gte=i['process_date'])
-                check_entry_with_no_date = EntryFeeds.objects.filter(grower_id = grower_id,from_date__isnull=True,to_date__isnull=True)
-                if check_entry_with_date.exists() :
-                    check_entry_id = [i.id for i in check_entry_with_date][0]
-                    var = EntryFeeds.objects.get(id=check_entry_id)
-                elif check_entry_with_no_date.exists() :
-                    check_entry_id = [i.id for i in check_entry_with_no_date][0]
-                    var = EntryFeeds.objects.get(id = check_entry_id)
+                check_entry_with_date = EntryFeeds.objects.filter(grower_id=grower_id, from_date__lte=i['process_date'], to_date__gte=i['process_date'])
+                check_entry_with_no_date = EntryFeeds.objects.filter(grower_id=grower_id, from_date__isnull=True, to_date__isnull=True)
             else:
                 delivery_date = i['approval_date'].strftime("%m/%d/%y")
                 new_date = i['approval_date'] + timedelta(60)
                 payment_due_date = new_date.strftime("%m/%d/%y")
-                # 27-03-23
-                check_entry_with_date = EntryFeeds.objects.filter(grower_id = grower_id,from_date__lte=i['approval_date'],to_date__gte=i['approval_date'])
-                check_entry_with_no_date = EntryFeeds.objects.filter(grower_id = grower_id,from_date__isnull=True,to_date__isnull=True)
-                if check_entry_with_date.exists() :
-                    check_entry_id = [i.id for i in check_entry_with_date][0]
-                    var = EntryFeeds.objects.get(id=check_entry_id)
-                elif check_entry_with_no_date.exists() :
-                    check_entry_id = [i.id for i in check_entry_with_no_date][0]
-                    var = EntryFeeds.objects.get(id = check_entry_id)
+                check_entry_with_date = EntryFeeds.objects.filter(grower_id=grower_id, from_date__lte=i['approval_date'], to_date__gte=i['approval_date'])
+                check_entry_with_no_date = EntryFeeds.objects.filter(grower_id=grower_id, from_date__isnull=True, to_date__isnull=True)
+
+            # Initialize var to None
+            var = None
+            #print(check_entry_with_date,"dateee")
+            #print(check_entry_with_no_date, "no dateee")
+            if check_entry_with_date.exists():
+                check_entry_id = [entry.id for entry in check_entry_with_date][0]
+                var = EntryFeeds.objects.get(id=check_entry_id)
+            elif check_entry_with_no_date.exists():
+                check_entry_id = [entry.id for entry in check_entry_with_no_date][0]
+                var = EntryFeeds.objects.get(id=check_entry_id)
 
             # var = EntryFeeds.objects.get(grower_id=grower_id)
-            if var.contracted_payment_option == 'Fixed Price' or  var.contracted_payment_option == 'Acreage Release' :
-                cpb_lbs = var.contract_base_price
-                sp_lbs = var.sustainability_premium
-                total_price_init = float(cpb_lbs) + float(sp_lbs)
-                total_price = total_price_init
-            else:
-                calculation_date = i['approval_date']
-                if NasdaqApiData.objects.filter(date_api=calculation_date).count() !=0 :
-                    total_price_init = NasdaqApiData.objects.get(date_api=calculation_date).close_value_api
+            total_price = 0.0  # Default value
+
+            # Proceed if var has been assigned
+            if var:
+                if var.contracted_payment_option == 'Fixed Price' or var.contracted_payment_option == 'Acreage Release':
+                    cpb_lbs = var.contract_base_price
+                    sp_lbs = var.sustainability_premium
+                    total_price_init = float(cpb_lbs) + float(sp_lbs)
+                    total_price = total_price_init
                 else:
-                    for l in range(1,10):
-                        next_date = calculation_date - timedelta(l)
-                        if NasdaqApiData.objects.filter(date_api=next_date).count() !=0 :
-                            total_price_init = NasdaqApiData.objects.get(date_api=next_date).close_value_api
-                            break
-                total_price2 = float(total_price_init) / 100
-                total_price = total_price2 + 0.04
+                    calculation_date = i['approval_date']
+                    # Ensure that total_price_init is fetched from NasdaqApiData
+                    total_price_init = None
+                    if NasdaqApiData.objects.filter(date_api=calculation_date).exists():
+                        total_price_init = NasdaqApiData.objects.get(date_api=calculation_date).close_value_api
+                    else:
+                        for l in range(1, 10):
+                            next_date = calculation_date - timedelta(l)
+                            if NasdaqApiData.objects.filter(date_api=next_date).exists():
+                                total_price_init = NasdaqApiData.objects.get(date_api=next_date).close_value_api
+                                break
+                    # If NasdaqApiData was not found, default to 0.0 or another fallback
+                    if total_price_init is not None:
+                        total_price2 = float(total_price_init) / 100
+                        total_price = total_price2 + 0.04
+                    else:
+                        total_price = 0.0 
+                
             if i['received_amount'] != None :
                 delivery_lbs = int(float(i['received_amount'])) 
                 delivered_value = float(delivery_lbs) * total_price
             else:
-                delivery_lbs = int(float(i['total_amount']))
+                delivery_lbs = int(float(i['total_amount'])) if i['total_amount'] else 0
                 delivered_value = float(delivery_lbs) * total_price
 
             total_price = "{0:.5f}".format(total_price)
@@ -1261,7 +1279,7 @@ def update_paid_payments_list(request) :
                 get_payment.variety = [i["crop_variety"] for i in check_bale][0] if len([i["crop_variety"] for i in check_bale])!=0 else None
                 get_payment.level = [i["level"] for i in check_bale][0] if len([i["level"] for i in check_bale])!=0 else None
                 get_payment.save()
-        elif get_payment.crop == "RICE":
+        else:
             check_shipment = GrowerShipment.objects.filter(shipment_id=get_payment.delivery_id).values("grower__name","field_id","field__name","field__farm__id","field__farm__name","variety")
             if len(check_shipment) == 1 :
 
@@ -1453,7 +1471,7 @@ def grower_payments_list_csv_download(request):
                 grower_payment.append(data)
 
         # For Delivery Market ...........
-        grower_shipment = GrowerShipment.objects.filter(grower_id__in=total_grower_id).filter(crop='RICE').filter(status='APPROVED').values('id','shipment_id',
+        grower_shipment = GrowerShipment.objects.filter(grower_id__in=total_grower_id).filter(status='APPROVED').values('id','shipment_id',
                         'grower__name','grower__id','crop','variety','field__name','approval_date','process_date','total_amount','received_amount')
         # approval_date process_date shipment_id grower__id grower__name crop variety field__name
         for i in grower_shipment : 
@@ -1610,7 +1628,7 @@ def grower_payments_list(request):
                 acreage_Release_grower_id.append(i.grower.id)
             if i.crop == 'COTTON' :
                 crop_cotton_grower_id.append(i.grower.id)
-            if i.crop == 'RICE' :
+            else :
                 crop_rice_grower_id.append(i.grower.id)
         total_grower_id = fixed_price_grower_id + delivery_grower_id + acreage_Release_grower_id
         growers = Grower.objects.filter(id__in = total_grower_id).order_by('name')
@@ -1650,12 +1668,12 @@ def grower_payments_list(request):
                 selectedGrower = ''
                 selectedCrop = "COTTON"
         
-            elif crop_idd == "RICE":
+            else:
                 # crop_rice_grower_id
                 delivery_grower_id = crop_rice_grower_id
                 fixed_price_grower_id = []
                 total_grower_id = fixed_price_grower_id + delivery_grower_id
-                selectedCrop = "RICE"
+                selectedCrop = crop_idd
                 selectedGrower = ''
             context['var_pagni_crop'] = crop_idd
             if get_page_no_temp :
@@ -1680,19 +1698,16 @@ def grower_payments_list(request):
                     fixed_price_grower_id = []
                     delivery_grower_id = []
                     total_grower_id = fixed_price_grower_id + delivery_grower_id
-            elif selectedGrowerCrop == 'RICE' :
-                if int(grower_idd) in fixed_price_grower_id and selectedCrop == 'RICE' :
+            else:
+                if int(grower_idd) in fixed_price_grower_id  :
                     fixed_price_grower_id = [int(grower_idd)]
                     delivery_grower_id = []
                     total_grower_id = fixed_price_grower_id + delivery_grower_id
-                elif int(grower_idd) in delivery_grower_id and selectedCrop == 'RICE' :
+                elif int(grower_idd) in delivery_grower_id  :
                     delivery_grower_id = [int(grower_idd)]
                     fixed_price_grower_id = []
                     total_grower_id = fixed_price_grower_id + delivery_grower_id
-            else :
-                fixed_price_grower_id = []
-                delivery_grower_id = []
-                total_grower_id = fixed_price_grower_id + delivery_grower_id
+            
         else:
             entry = entry
             grower_payment = grower_payment
@@ -1702,7 +1717,7 @@ def grower_payments_list(request):
             delivery_grower_id = delivery_grower_id
         # custom pagination code 
         pagi_bale = BaleReportFarmField.objects.filter(ob2__in = total_grower_id).exclude(level='None')
-        pagi_grower_shipment = GrowerShipment.objects.filter(grower_id__in=total_grower_id).filter(crop='RICE').filter(status='APPROVED')
+        pagi_grower_shipment = GrowerShipment.objects.filter(grower_id__in=total_grower_id).filter(crop=crop_idd).filter(status='APPROVED')
         total_obj_qury = len(pagi_bale) + len(pagi_grower_shipment)
         tem_total_no_page = total_obj_qury // 100 
 
@@ -1895,11 +1910,11 @@ def grower_payments_list(request):
 
         # For Delivery Market ...........
         if get_page_no_temp :
-            grower_shipment = GrowerShipment.objects.filter(grower_id__in=total_grower_id).filter(crop='RICE').filter(status='APPROVED')[int(page_lower_limit):int(page_upper_limit)]
+            grower_shipment = GrowerShipment.objects.filter(grower_id__in=total_grower_id).filter(crop=crop_idd).filter(status='APPROVED')[int(page_lower_limit):int(page_upper_limit)]
         elif crop_idd and crop_idd != 'All' :
-            grower_shipment = GrowerShipment.objects.filter(grower_id__in=total_grower_id).filter(crop='RICE').filter(status='APPROVED')[int(page_lower_limit):int(page_upper_limit)]
+            grower_shipment = GrowerShipment.objects.filter(grower_id__in=total_grower_id).filter(crop=crop_idd).filter(status='APPROVED')[int(page_lower_limit):int(page_upper_limit)]
         else :
-            grower_shipment = GrowerShipment.objects.filter(grower_id__in=total_grower_id).filter(crop='RICE').filter(status='APPROVED')
+            grower_shipment = GrowerShipment.objects.filter(grower_id__in=total_grower_id).filter(status='APPROVED')
         
         for i in grower_shipment :
             delivery_id = i.shipment_id
@@ -2206,7 +2221,7 @@ def grower_payments_list(request):
                 grower_payment.append(data)
 
             # For Delivery Market ...........
-            grower_shipment = GrowerShipment.objects.filter(grower_id__in=total_grower_id).filter(crop='RICE').filter(status='APPROVED') 
+            grower_shipment = GrowerShipment.objects.filter(grower_id__in=total_grower_id).filter(status='APPROVED') 
             for i in grower_shipment :
                 delivery_id = i.shipment_id
                 grower_name = i.grower.name
@@ -2379,7 +2394,7 @@ def ajax_grower_payments_list(request,grower_id,crop_id):
             delivery_grower_id.append(i.grower.id)
         if i.crop == 'COTTON' :
             crop_cotton_grower_id.append(i.grower.id)
-        if i.crop == 'RICE' :
+        else :
             crop_rice_grower_id.append(i.grower.id)
 
     if grower_id == 'grower' :
@@ -2394,7 +2409,7 @@ def ajax_grower_payments_list(request,grower_id,crop_id):
             # selectedGrower = ''
             # selectedCrop = "COTTON"
     
-        elif crop_id == "RICE":
+        else:
             # crop_rice_grower_id
             delivery_grower_id = crop_rice_grower_id
             fixed_price_grower_id = []
@@ -2506,7 +2521,7 @@ def ajax_grower_payments_list(request,grower_id,crop_id):
         total_cal_total_deliverd_lbs.append(int(float(delivery_lbs)))
         total_cal_total_deliverd_values.append(float(delivered_value))
         
-    cal_shipment = GrowerShipment.objects.filter(grower_id__in=total_grower_id).filter(crop='RICE').filter(status='APPROVED').values('shipment_id','grower_id','received_amount','process_date','approval_date')
+    cal_shipment = GrowerShipment.objects.filter(grower_id__in=total_grower_id).filter(crop=crop_id).filter(status='APPROVED').values('shipment_id','grower_id','received_amount','process_date','approval_date')
     count_cal_shipment = cal_shipment.count()
     
     for i in cal_shipment :
@@ -2623,7 +2638,7 @@ def grower_payments_add(request,var,pk):
                 delivery_date = process_date_int
                 process_date_raw= bale.process_date
                 # 28-03-23
-                check_entry_with_date = EntryFeeds.objects.filter(grower_id = bale.grower.id,from_date__lte=bale.process_date,to_date__gte=bale.process_date,crop='RICE')
+                check_entry_with_date = EntryFeeds.objects.filter(grower_id = bale.grower.id,from_date__lte=bale.process_date,to_date__gte=bale.process_date)
                 check_entry_with_no_date = EntryFeeds.objects.filter(grower_id = bale.grower.id,from_date__isnull=True,to_date__isnull=True)
                 if check_entry_with_date.exists() :
                     check_entry_id = [i.id for i in check_entry_with_date][0]
@@ -2638,7 +2653,7 @@ def grower_payments_add(request,var,pk):
                 delivery_date = process_date_int
                 process_date_raw= bale.approval_date
                 # 28-03-23
-                check_entry_with_date = EntryFeeds.objects.filter(grower_id = bale.grower.id,from_date__lte=bale.approval_date,to_date__gte=bale.approval_date,crop='RICE')
+                check_entry_with_date = EntryFeeds.objects.filter(grower_id = bale.grower.id,from_date__lte=bale.approval_date,to_date__gte=bale.approval_date)
                 check_entry_with_no_date = EntryFeeds.objects.filter(grower_id = bale.grower.id,from_date__isnull=True,to_date__isnull=True)
                 if check_entry_with_date.exists() :
                     check_entry_id = [i.id for i in check_entry_with_date][0]
@@ -2864,7 +2879,7 @@ def grower_payments_add(request,var,pk):
                 payment_date = request.POST.get("payment_date")
                 payment_type = request.POST.get("payment_type")
                 payment_confirmation = request.POST.get("payment_confirmation")
-                # print(payment_amount,payment_date,payment_type,payment_confirmation)
+                # #print(payment_amount,payment_date,payment_type,payment_confirmation)
                 # Save Grower Payment 
                 grower_payment = GrowerPayments(enteyfeeds_id=entry_id, grower_id=grower_id, processor=processor_id,crop=crop,field=field_id,
                 delivery_id=bale.bale_id, delivery_date=bale.dt_class, delivery_lbs=bale.net_wt, contract_base_price=contract_base_price,
@@ -2958,137 +2973,8 @@ def grower_payments_bulk_add(request):
                 payment_confirmation = line[5]
                 saved_grower_id = []
                 wrong_spelling = []
-                if crop == 'RICE':
-                    bale = GrowerShipment.objects.filter(shipment_id=delivery_id)
-                    
-                    exist_payment = GrowerPayments.objects.filter(delivery_id=delivery_id)
-                    if bale.exists() :
-                        grower_id = [GrowerShipment.objects.get(shipment_id=delivery_id).grower.id]
-                    else:
-                        grower_id = []
-                    exist_entry_feeds = EntryFeeds.objects.filter(grower_id__in=grower_id)
-
-                    if bale.exists() and len(exist_payment) == 0 and exist_entry_feeds.exists() :
-                        bale = GrowerShipment.objects.get(shipment_id=delivery_id)
-                        field_name = bale.field.name
-                        grower_name = bale.grower.name
-                        farm_name = bale.field.farm.name
-                        farm = bale.field.farm.id
-                        variety = bale.variety
-                        entry = EntryFeeds.objects.filter(grower_id=bale.grower.id).filter(crop='RICE')
-                        contracted_payment_option = [i.contracted_payment_option for i in entry][0]
-                        contract_base_price = [i.contract_base_price for i in entry][0]
-
-                        if bale.approval_date == None:
-                            process_date_int = bale.process_date.strftime("%m/%d/%y")
-                            delivery_date = process_date_int
-                            process_date_raw= bale.process_date
-                        else:
-                            process_date_int = bale.approval_date.strftime("%m/%d/%y")
-                            delivery_date = process_date_int
-                            process_date_raw= bale.approval_date
-
-                        entry_id = [i.id for i in entry][0]
-                        field_id = bale.field.id
-
-                        if contracted_payment_option == "Acreage Release" :
-                            total_price = float([i.contract_base_price for i in entry][0]) + float([i.sustainability_premium for i in entry][0])
-                            if bale.received_amount != None :
-                                received_amount_data = int(bale.received_amount) 
-                                delivered_value = float(received_amount_data) * total_price
-                            else:
-                                received_amount_data = int(bale.total_amount)
-                                delivered_value = float(received_amount_data) * total_price 
-                        else:
-                            calculation_date = bale.approval_date
-                            if NasdaqApiData.objects.filter(date_api=calculation_date).count() !=0 :
-                                total_price_init = NasdaqApiData.objects.get(date_api=calculation_date).close_value_api
-                            else:
-                                for l in range(1,10):
-                                    next_date = calculation_date - timedelta(l)
-                                    if NasdaqApiData.objects.filter(date_api=next_date).count() !=0 :
-                                        total_price_init = NasdaqApiData.objects.get(date_api=next_date).close_value_api
-                                        break
-                            total_price2 = float(total_price_init) / 100
-                            total_price = total_price2 + 0.04
-
-                            if bale.received_amount != None :
-                                received_amount_data = int(bale.received_amount) 
-                                delivered_value = float(received_amount_data) * total_price
-                            else:
-                                received_amount_data = int(bale.total_amount)
-                                delivered_value = float(received_amount_data) * total_price
-
-                        new_date = process_date_raw + timedelta(60)
-                        payment_due_date = new_date.strftime("%m/%d/%y")
-                        # data saved part
-                        grower_payment = GrowerPayments(enteyfeeds_id=entry_id, grower_id=bale.grower.id, processor=bale.processor.id,
-                        delivery_id=bale.shipment_id, delivery_date=bale.date_time, delivery_lbs=received_amount_data,
-                        total_price=total_price, delivered_value=delivered_value,crop=crop,field=field_id,
-                        payment_due_date=payment_due_date, payment_amount=payment_amount, payment_date=payment_date, payment_type=payment_type, 
-                        payment_confirmation=payment_confirmation,grower_name=grower_name,field_name=field_name,farm_name=farm_name,level=None,
-                        farm=farm,variety=variety)
-                        grower_payment.save()
-                        # For Notification
-                        saved_grower_id.append(bale.grower.id)
-
-                        # Log Table 13-04-23
-                        grower_name = grower_name
-                        payment_option = grower_payment.enteyfeeds.contracted_payment_option
-                        contract_base_price = grower_payment.enteyfeeds.contract_base_price
-                        sustainability_premium = grower_payment.enteyfeeds.sustainability_premium
-                        if payment_option == "Delivered Market Price" :
-                            sustainability_premium = 0.04
-                        from_date = grower_payment.enteyfeeds.from_date
-                        to_date = grower_payment.enteyfeeds.to_date
-                        log_type, log_status, log_device = "GrowerPayments", "Added", "Web"
-                        log_idd, log_name = grower_payment.id, f'{grower_name} - {grower_payment.delivery_id}'
-                        log_details = f"Grower = {grower_name}  | contracted_payment_option = {payment_option} | contract_base_price = {contract_base_price} | sustainability_premium = {sustainability_premium} | from_date = {from_date} | to_date = {to_date} | crop = {grower_payment.crop} | variety = {grower_payment.variety} | field_name = {grower_payment.field_name} | farm_name = {grower_payment.farm_name} | delivery_id = {grower_payment.delivery_id} | delivery_date = {grower_payment.delivery_date} | delivery_lbs = {grower_payment.delivery_lbs} | total_price = {grower_payment.total_price} | delivered_value = {grower_payment.delivered_value} | payment_due_date = {grower_payment.payment_due_date} | payment_amount = {grower_payment.payment_amount} | payment_date = {grower_payment.payment_date} | payment_type = {grower_payment.payment_type} | payment_confirmation = {grower_payment.payment_confirmation}"
-                        
-                        logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
-                                            action_by_userid=action_by_userid,action_by_username=action_by_username,
-                                            action_by_email=action_by_email,action_by_role=action_by_role,log_details=log_details,
-                                            log_device=log_device)
-                                            
-                        logtable.save()
-
-                    elif bale.exists() and exist_payment.exists() :
-                        update_grower_payment = GrowerPayments.objects.get(delivery_id=delivery_id)
-                        update_grower_payment.crop = crop
-                        update_grower_payment.payment_amount = payment_amount
-                        update_grower_payment.payment_date = payment_date
-                        update_grower_payment.payment_type = payment_type
-                        update_grower_payment.payment_confirmation = payment_confirmation
-                        update_grower_payment.save()
-                        # For Notification
-                        saved_grower_id.append(update_grower_payment.grower.id)
-                        # Log Table 13-04-23
-                        grower_name = update_grower_payment.grower.name
-                        payment_option = update_grower_payment.enteyfeeds.contracted_payment_option
-                        contract_base_price = update_grower_payment.enteyfeeds.contract_base_price
-                        sustainability_premium = update_grower_payment.enteyfeeds.sustainability_premium
-                        if payment_option == "Delivered Market Price" :
-                            sustainability_premium = 0.04
-                        from_date = update_grower_payment.enteyfeeds.from_date
-                        to_date = update_grower_payment.enteyfeeds.to_date
-                        log_type, log_status, log_device = "GrowerPayments", "Edited", "Web"
-                        log_idd, log_name = update_grower_payment.id, f'{grower_name} - {update_grower_payment.delivery_id}'
-                        log_details = f"Grower = {grower_name}  | contracted_payment_option = {payment_option} | contract_base_price = {contract_base_price} | sustainability_premium = {sustainability_premium} | from_date = {from_date} | to_date = {to_date} | crop = {update_grower_payment.crop} | variety = {update_grower_payment.variety} | field_name = {update_grower_payment.field_name} | farm_name = {update_grower_payment.farm_name} | delivery_id = {update_grower_payment.delivery_id} | delivery_date = {update_grower_payment.delivery_date} | delivery_lbs = {update_grower_payment.delivery_lbs} | total_price = {update_grower_payment.total_price} | delivered_value = {update_grower_payment.delivered_value} | payment_due_date = {update_grower_payment.payment_due_date} | payment_amount = {update_grower_payment.payment_amount} | payment_date = {update_grower_payment.payment_date} | payment_type = {update_grower_payment.payment_type} | payment_confirmation = {update_grower_payment.payment_confirmation}"
-                        
-                        logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
-                                            action_by_userid=action_by_userid,action_by_username=action_by_username,
-                                            action_by_email=action_by_email,action_by_role=action_by_role,log_details=log_details,
-                                            log_device=log_device)
-                                            
-                        logtable.save()
-                        
-                    elif len(bale) == 0 and exist_entry_feeds.exists() :
-                        not_found_bale_id.append(delivery_id)
-                    elif bale.exists() and len(exist_entry_feeds) == 0 :
-                        not_found_entry_feeds.append(delivery_id)
-                    elif len(bale) == 0 and len(exist_entry_feeds) == 0 :
-                        not_found_bale_id.append(delivery_id)
-                elif crop == 'COTTON':
+                
+                if crop == 'COTTON':
                     bale = BaleReportFarmField.objects.filter(bale_id = delivery_id)
                     exist_payment = GrowerPayments.objects.filter(delivery_id=delivery_id)
                     bale0 = BaleReportFarmField.objects.filter(bale_id = f"0{delivery_id}")
@@ -3305,7 +3191,136 @@ def grower_payments_bulk_add(request):
                     else:
                         not_found_bale_id.append(delivery_id)
                 else:
-                    wrong_spelling.append(delivery_id)
+                    bale = GrowerShipment.objects.filter(shipment_id=delivery_id, crop=crop)
+                    
+                    exist_payment = GrowerPayments.objects.filter(delivery_id=delivery_id)
+                    if bale.exists() :
+                        grower_id = [GrowerShipment.objects.get(shipment_id=delivery_id).grower.id]
+                    else:
+                        grower_id = []
+                    exist_entry_feeds = EntryFeeds.objects.filter(grower_id__in=grower_id)
+
+                    if bale.exists() and len(exist_payment) == 0 and exist_entry_feeds.exists() :
+                        bale = GrowerShipment.objects.get(shipment_id=delivery_id)
+                        field_name = bale.field.name
+                        grower_name = bale.grower.name
+                        farm_name = bale.field.farm.name
+                        farm = bale.field.farm.id
+                        variety = bale.variety
+                        entry = EntryFeeds.objects.filter(grower_id=bale.grower.id).filter(crop=crop)
+                        contracted_payment_option = [i.contracted_payment_option for i in entry][0]
+                        contract_base_price = [i.contract_base_price for i in entry][0]
+
+                        if bale.approval_date == None:
+                            process_date_int = bale.process_date.strftime("%m/%d/%y")
+                            delivery_date = process_date_int
+                            process_date_raw= bale.process_date
+                        else:
+                            process_date_int = bale.approval_date.strftime("%m/%d/%y")
+                            delivery_date = process_date_int
+                            process_date_raw= bale.approval_date
+
+                        entry_id = [i.id for i in entry][0]
+                        field_id = bale.field.id
+
+                        if contracted_payment_option == "Acreage Release" :
+                            total_price = float([i.contract_base_price for i in entry][0]) + float([i.sustainability_premium for i in entry][0])
+                            if bale.received_amount != None :
+                                received_amount_data = int(bale.received_amount) 
+                                delivered_value = float(received_amount_data) * total_price
+                            else:
+                                received_amount_data = int(bale.total_amount)
+                                delivered_value = float(received_amount_data) * total_price 
+                        else:
+                            calculation_date = bale.approval_date
+                            if NasdaqApiData.objects.filter(date_api=calculation_date).count() !=0 :
+                                total_price_init = NasdaqApiData.objects.get(date_api=calculation_date).close_value_api
+                            else:
+                                for l in range(1,10):
+                                    next_date = calculation_date - timedelta(l)
+                                    if NasdaqApiData.objects.filter(date_api=next_date).count() !=0 :
+                                        total_price_init = NasdaqApiData.objects.get(date_api=next_date).close_value_api
+                                        break
+                            total_price2 = float(total_price_init) / 100
+                            total_price = total_price2 + 0.04
+
+                            if bale.received_amount != None :
+                                received_amount_data = int(bale.received_amount) 
+                                delivered_value = float(received_amount_data) * total_price
+                            else:
+                                received_amount_data = int(bale.total_amount)
+                                delivered_value = float(received_amount_data) * total_price
+
+                        new_date = process_date_raw + timedelta(60)
+                        payment_due_date = new_date.strftime("%m/%d/%y")
+                        # data saved part
+                        grower_payment = GrowerPayments(enteyfeeds_id=entry_id, grower_id=bale.grower.id, processor=bale.processor.id,
+                        delivery_id=bale.shipment_id, delivery_date=bale.date_time, delivery_lbs=received_amount_data,
+                        total_price=total_price, delivered_value=delivered_value,crop=crop,field=field_id,
+                        payment_due_date=payment_due_date, payment_amount=payment_amount, payment_date=payment_date, payment_type=payment_type, 
+                        payment_confirmation=payment_confirmation,grower_name=grower_name,field_name=field_name,farm_name=farm_name,level=None,
+                        farm=farm,variety=variety)
+                        grower_payment.save()
+                        # For Notification
+                        saved_grower_id.append(bale.grower.id)
+
+                        # Log Table 13-04-23
+                        grower_name = grower_name
+                        payment_option = grower_payment.enteyfeeds.contracted_payment_option
+                        contract_base_price = grower_payment.enteyfeeds.contract_base_price
+                        sustainability_premium = grower_payment.enteyfeeds.sustainability_premium
+                        if payment_option == "Delivered Market Price" :
+                            sustainability_premium = 0.04
+                        from_date = grower_payment.enteyfeeds.from_date
+                        to_date = grower_payment.enteyfeeds.to_date
+                        log_type, log_status, log_device = "GrowerPayments", "Added", "Web"
+                        log_idd, log_name = grower_payment.id, f'{grower_name} - {grower_payment.delivery_id}'
+                        log_details = f"Grower = {grower_name}  | contracted_payment_option = {payment_option} | contract_base_price = {contract_base_price} | sustainability_premium = {sustainability_premium} | from_date = {from_date} | to_date = {to_date} | crop = {grower_payment.crop} | variety = {grower_payment.variety} | field_name = {grower_payment.field_name} | farm_name = {grower_payment.farm_name} | delivery_id = {grower_payment.delivery_id} | delivery_date = {grower_payment.delivery_date} | delivery_lbs = {grower_payment.delivery_lbs} | total_price = {grower_payment.total_price} | delivered_value = {grower_payment.delivered_value} | payment_due_date = {grower_payment.payment_due_date} | payment_amount = {grower_payment.payment_amount} | payment_date = {grower_payment.payment_date} | payment_type = {grower_payment.payment_type} | payment_confirmation = {grower_payment.payment_confirmation}"
+                        
+                        logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+                                            action_by_userid=action_by_userid,action_by_username=action_by_username,
+                                            action_by_email=action_by_email,action_by_role=action_by_role,log_details=log_details,
+                                            log_device=log_device)
+                                            
+                        logtable.save()
+
+                    elif bale.exists() and exist_payment.exists() :
+                        update_grower_payment = GrowerPayments.objects.get(delivery_id=delivery_id)
+                        update_grower_payment.crop = crop
+                        update_grower_payment.payment_amount = payment_amount
+                        update_grower_payment.payment_date = payment_date
+                        update_grower_payment.payment_type = payment_type
+                        update_grower_payment.payment_confirmation = payment_confirmation
+                        update_grower_payment.save()
+                        # For Notification
+                        saved_grower_id.append(update_grower_payment.grower.id)
+                        # Log Table 13-04-23
+                        grower_name = update_grower_payment.grower.name
+                        payment_option = update_grower_payment.enteyfeeds.contracted_payment_option
+                        contract_base_price = update_grower_payment.enteyfeeds.contract_base_price
+                        sustainability_premium = update_grower_payment.enteyfeeds.sustainability_premium
+                        if payment_option == "Delivered Market Price" :
+                            sustainability_premium = 0.04
+                        from_date = update_grower_payment.enteyfeeds.from_date
+                        to_date = update_grower_payment.enteyfeeds.to_date
+                        log_type, log_status, log_device = "GrowerPayments", "Edited", "Web"
+                        log_idd, log_name = update_grower_payment.id, f'{grower_name} - {update_grower_payment.delivery_id}'
+                        log_details = f"Grower = {grower_name}  | contracted_payment_option = {payment_option} | contract_base_price = {contract_base_price} | sustainability_premium = {sustainability_premium} | from_date = {from_date} | to_date = {to_date} | crop = {update_grower_payment.crop} | variety = {update_grower_payment.variety} | field_name = {update_grower_payment.field_name} | farm_name = {update_grower_payment.farm_name} | delivery_id = {update_grower_payment.delivery_id} | delivery_date = {update_grower_payment.delivery_date} | delivery_lbs = {update_grower_payment.delivery_lbs} | total_price = {update_grower_payment.total_price} | delivered_value = {update_grower_payment.delivered_value} | payment_due_date = {update_grower_payment.payment_due_date} | payment_amount = {update_grower_payment.payment_amount} | payment_date = {update_grower_payment.payment_date} | payment_type = {update_grower_payment.payment_type} | payment_confirmation = {update_grower_payment.payment_confirmation}"
+                        
+                        logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+                                            action_by_userid=action_by_userid,action_by_username=action_by_username,
+                                            action_by_email=action_by_email,action_by_role=action_by_role,log_details=log_details,
+                                            log_device=log_device)
+                                            
+                        logtable.save()
+                        
+                    elif len(bale) == 0 and exist_entry_feeds.exists() :
+                        not_found_bale_id.append(delivery_id)
+                    elif bale.exists() and len(exist_entry_feeds) == 0 :
+                        not_found_entry_feeds.append(delivery_id)
+                    elif len(bale) == 0 and len(exist_entry_feeds) == 0 :
+                        not_found_bale_id.append(delivery_id)
+                
             # For Notification
             unique_saved_grower_id = list(set(saved_grower_id))
             for i in unique_saved_grower_id :
@@ -3792,7 +3807,7 @@ def grower_split_payee_list(request):
                         # entry_feeds = EntryFeeds.objects.get(grower_id = grower_payee.grower_idd)
                         total_grower_id = [grower_payee.grower_idd]
                         bale = BaleReportFarmField.objects.filter(ob2__in = total_grower_id).exclude(level='None')
-                        grower_shipment = GrowerShipment.objects.filter(grower_id__in=total_grower_id).filter(crop='RICE').filter(status='APPROVED')
+                        grower_shipment = GrowerShipment.objects.filter(grower_id__in=total_grower_id).filter(crop=grower_crop).filter(status='APPROVED')
                         
                         # if start_date and end_date :
                             # Loop for Bale
@@ -4050,8 +4065,8 @@ def grower_split_payee_list(request):
                                 context['selected_end_date'] = str(end_date)
                                 context['selected_start_date_low'] = f"{start_date_var[1]}/{start_date_var[2]}/{start_date_var[0]}"
                                 context['selected_end_date_low'] = f"{end_date_var[1]}/{end_date_var[2]}/{end_date_var[0]}"
-                                for i in range(0,delta + 1 ) :
-                                    d_check = str(d0 + timedelta(days=i))
+                                for j in range(0,delta + 1 ) :
+                                    d_check = str(d0 + timedelta(days=j))
                                     dd_check = new_date.strftime("%Y-%m-%d")
                                     if d_check == dd_check :
                                         data = {
@@ -4073,7 +4088,7 @@ def grower_split_payee_list(request):
                                         grower_payment.append(data)
                                         total_deliverd_lbs.append(int(float(delivery_lbs)))
                                         total_deliverd_values.append(float(delivered_value))
-                                        crop_get_check.append('RICE')
+                                        crop_get_check.append(crop)
                                     else:
                                         pass
                             # Rice
@@ -4098,7 +4113,7 @@ def grower_split_payee_list(request):
                                 grower_payment.append(data)
                                 total_deliverd_lbs.append(int(float(delivery_lbs)))
                                 total_deliverd_values.append(float(delivered_value))
-                                crop_get_check.append('RICE')
+                                crop_get_check.append(crop)
                             else:
                                 pass
 
@@ -4133,7 +4148,7 @@ def grower_split_payee_list(request):
                                 # split_data_payment_amount = net pay * split % 
                                 if 'COTTON' in crop_get_check :
                                     net_pay = sum(total_deliverd_values)
-                                elif 'RICE' in crop_get_check :
+                                else:
                                     if 'Acreage Release' in entry_feeds_obj :
                                         ar_tax = 0.00
                                     else:
@@ -4163,7 +4178,7 @@ def grower_split_payee_list(request):
                             context['ar_tax'] = ar_tax
                             net_pay = sum(total_deliverd_values)
                           
-                        elif 'RICE' in crop_get_check :
+                        else:
                             entry_feeds_obj = list(set(entry_feeds_obj))
                             if 'Acreage Release' in entry_feeds_obj :
                                 ar_tax = 0.00
@@ -4331,28 +4346,33 @@ def grower_payment_split_list(request):
     if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
         grower_payee = GrowerPayee.objects.all().order_by('-id')
         grower_payee_lst = []
-        for i in grower_payee :
-            lien = PaymentSplits.objects.filter(grower_payee_id = i.id).filter(split_payee_type = 'Lien')
-            split = PaymentSplits.objects.filter(grower_payee_id = i.id).filter(split_payee_type = 'Split').order_by('id')
-            if lien.exists() :
+        for i in grower_payee:
+            lien = PaymentSplits.objects.filter(grower_payee_id=i.id).filter(split_payee_type='Lien')
+            split = PaymentSplits.objects.filter(grower_payee_id=i.id).filter(split_payee_type='Split').order_by('id')
+            if lien.exists():
                 lien_id = [i.id for i in lien][0]
                 lien_name = PaymentSplits.objects.get(id=lien_id).split_payee_name
             else:
                 lien_name = 'N/A'
-            if split.exists() :
+            if split.exists():
                 split_conut = len(split)
             else:
                 split_conut = 'N/A'
             data = {
-                "grower_namee" : i.grower_namee,
-                "field_namee" : i.field_namee,
-                "lien_name" : lien_name,
-                "split_conut" : split_conut,
-                "id" : i.id,
+                "grower_namee": i.grower_namee,
+                "field_namee": i.field_namee,
+                "lien_name": lien_name,
+                "split_conut": split_conut,
+                "id": i.id,
             }
             grower_payee_lst.append(data)
-        context['grower_payee_lst'] = grower_payee_lst
-        return render(request, "growerpayments/grower_payment_split_list.html",context)
+        
+        # Implement server-side pagination
+        paginator = Paginator(grower_payee_lst, 20)  # Show 10 entries per page
+        page_number = request.GET.get('page')
+        page_obj = paginator.get_page(page_number)
+        context['grower_payee_lst'] = page_obj
+    return render(request, "growerpayments/grower_payment_split_list.html", context)
 
 
 @login_required()

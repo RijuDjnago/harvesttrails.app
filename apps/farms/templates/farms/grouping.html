@@ -55,7 +55,7 @@
                                     <!-- <li> <a href="javascript:void(0)" data-mdb-toggle="modal" data-mdb-target="#deleteModal"> 
                                         <span class="fas fa-trash"></span></a>
                                         </li> -->
-                                        {% if 'Farm Group Delete' in request.user.get_role_perm or request.user.is_superuser %}
+                                        {% if 'Farm Group Delete' in request.user.get_role_perm or request.user.is_superuser  %}
                                         <li><a onclick="delFarmgrouping('{% url 'grouping-delete' grouping.pk %}')" href="javascript:void(0)" data-mdb-toggle="modal" data-mdb-target="#deleteModal" alt="delete grouping" title="delete grouping">
                                           <span class="fas fa-trash" ></span></a></li>
                                           {% endif %}

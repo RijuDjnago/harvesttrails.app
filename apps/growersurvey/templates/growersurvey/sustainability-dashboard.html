@@ -1,6 +1,12 @@
 {% extends "base.html" %}
 {% load static %} {% block title %} Survey List {% endblock title %} {% block content %}
 {% include 'navbar.html' %}
+<style>
+  .bootstrap-select .dropdown-menu li.disabled.selected{display: none;}
+  .dropdown.bootstrap-select.form-control .btn{border: 1px solid #ddd; padding: 6px 8px; border-radius: 0;}
+  .bootstrap-select .dropdown-menu{max-width: 280px;}
+  .bootstrap-select .dropdown-menu li.selected.active .dropdown-item.active.selected{margin-left: 0;padding: 0;}
+</style>
 <div class="main-content">
     {% include 'header.html' %}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.5.2/css/bootstrap.css">

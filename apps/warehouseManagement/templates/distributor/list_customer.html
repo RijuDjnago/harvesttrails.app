@@ -51,13 +51,15 @@
                         <thead>
                             <tr style="border-bottom: 2px solid #e0e0e0;">
                                 <th width="">Customer name</th> 
-                                <th width="">Location</th>                                
-                                <th width="">Contact Name</th>
+                                <th width="30%">Warehouse</th>
+                                <th width="">Location</th>                               
+                                
                                 <th width="">Email</th>
                                 <th width="">Password</th>
                                 <th width="">Phone</th>
                                 <th width="">Credit Terms</th>
-                                <th width="">Tax Status</th>                                
+                                <th width="">Tax Status</th>    
+                                <th width="">Availble Credit</th>                             
                                 <th width="">Action</th>
                             </tr>
                         </thead>
@@ -65,14 +67,15 @@
                         <tbody>
                             {% for i in page_obj %}                                                  
                             <tr>                               
-                                <td>{{i.customer.name}}</td>                                                         
+                                <td>{{i.customer.name}}</td>
+                                <td>{% for warehouse in i.customer.warehouses.all %}{{warehouse.name}}<br>{% endfor %}</td>                                                         
                                 <td>{{i.customer.location}}</td>
-                                <td>{{i.contact_name}}</td>
                                 <td>{{i.contact_email}}</td>
                                 <td>{{i.p_password_raw}}</td>
                                 <td><a href="tel:{{i.contact_phone}}" title="{{i.contact_phone}}"><span class="fas fa-phone"></span></a></td>
                                 <td>{{i.customer.credit_terms}} Days</td>
-                                <td>{% if i.customer.is_tax_payable %} Payable {% else %}Non Payable {% endif %}</td>                                
+                                <td>{% if i.customer.is_tax_payable %} Payable {% else %}Non Payable {% endif %}</td> 
+                                <td>{{i.customer.available_credit}}</td>                             
                                 <td class="backk action-td">
                                     <li>
                                         <a href="{% url 'customer_view' i.pk %}" class="map-icon-link" alt="view customer" title="view customer"><span class="fas fa-eye"></span></a>

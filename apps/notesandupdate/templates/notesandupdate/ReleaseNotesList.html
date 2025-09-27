@@ -52,7 +52,7 @@
                   {% endif %}
                 </td>
                 <td class="backk1">
-                  {% if 'Release Note Edit' in request.user.get_role_perm or request.user.is_superuser %}
+                  {% if 'Release Note Edit' in request.user.get_role_perm or request.user.is_superuser  %}
                   <li>
                     <a href="{% url 'release-notes-update' relnote.pk %}"
                       ><span class="fas fa-edit"> </span
@@ -60,7 +60,7 @@
                   </li>
                   {% endif %}
 
-                  {% if 'Release Note Delete' in request.user.get_role_perm or request.user.is_superuser %}
+                  {% if 'Release Note Delete' in request.user.get_role_perm or request.user.is_superuser  %}
 
                   <a href="javascript:void(0)" onclick="deleteNote('{{relnote.pk}}')">
                     <span class="fas fa-trash"></span>

@@ -89,14 +89,81 @@
             text-align: center;
             margin-top: 5px;
         }
+        .uploaded-files-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-top: 10px;
+}
+
+.file-card {
+    width: 140px;
+    height: 180px; /* fixed height */
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between; /* space top/middle/bottom */
+    align-items: center;
+    text-align: center;
+    padding: 8px;
+    background: #fafafa;
+    box-shadow: 2px 2px 6px rgba(0,0,0,0.05);
+}
+
+.file-type {
+    font-size: 12px;
+    font-weight: bold;
+    color: #444;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+}
+
+.file-preview {
+    flex-grow: 1; /* take middle space */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    max-height: 100px;
+}
+
+.file-preview img {
+    max-width: 100%;
+    max-height: 100px;
+    border-radius: 4px;
+    object-fit: cover;
+}
+
+.file-link {
+    font-size: 30px;
+    text-decoration: none;
+    color: #007bff;
+}
+
+.file-link:hover {
+    text-decoration: underline;
+}
+
+.file-name {
+    font-size: 12px;
+    margin-top: 5px;
+    word-break: break-word;
+    color: #333;
+}
+
+.not-uploaded {
+    color: red;
+    font-size: 12px;
+}
     </style>
 
     <main>
         {% include '_alerts.html' %}
         <div class="page-title-with-or-without-btn">
             <span class="farm headingtop">Contract Detail</span>
-            <!-- Create button for Account-->
-            
+            <div class="flex-header-btn">
+                <a href="{% url 'edit-admin-processor-contract' contract.pk %}" class="btn-close-cancel" alt="update contract details" title="{%  if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}update contract details {% endif %} {% if request.user.is_processor or request.user.is_processor2 %} upload documents {% endif %}">{% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role%}Edit{% endif %}{% if request.user.is_processor or request.user.is_processor2 %}Upload File{% endif %}</span></a>
+            </div>
         </div>
 
         <div class="card farm-fields-container">
@@ -151,8 +218,9 @@
                             <table class="table table-bordered">
                                 <thead>
                                     <tr>
-                                        <th>Crop</th>
-                                        <th>Crop Type</th>
+                                        <th>Item</th>
+                                       
+                                        <th>Item Number</th>
                                         <th>Contract Amount</th>
                                         <th>Per Unit Rate</th>
                                     </tr>
@@ -160,8 +228,9 @@
                                 <tbody>
                                     {% for crop in contract.contractCrop.all %}
                                     <tr>
-                                        <td>{{ crop.crop }}</td>
-                                        <td>{{ crop.crop_type }}</td>
+                                        <td>{{ crop.item.item }}</td>
+                                        
+                                        <td>{{ crop.item_number }}</td>
                                         <td>{{ crop.contract_amount }} {{ crop.amount_unit }}</td>
                                         <td>&#36; {{ crop.per_unit_rate }}</td>
                                     </tr>
@@ -178,8 +247,66 @@
                     <div class="row">
                         <h2 style="background-color: #d7d5d5;color: #0b6c39;font-size: 22px;font-weight: 600;margin: 20px 0;padding: 12px 0;text-align: center">Documents</h2>
                         <div class="col-md-6" >
-                            <label for="UploadedFiles" style="font-weight:bold;">Uploaded Documents</label>
-                            {% for document in documents %}
+                            <label for="UploadedFiles" style="font-weight:bold;">Uploaded Documents by Admin:</label>
+                            {% if admin_documents %}
+                            <div class="uploaded-files-container">
+                                {% for document in admin_documents %}
+                                    <div class="file-card">
+                                    <!-- Top: File Type -->
+                                    <div class="file-type">
+                                        {% if document.document %}
+                                        {% with file_url=document.document|lower %}
+                                            {% if file_url|slice:"-4:" == ".jpg" or file_url|slice:"-5:" == ".jpeg" %}
+                                            JPG
+                                            {% elif file_url|slice:"-4:" == ".png" %}
+                                            PNG
+                                            {% elif file_url|slice:"-4:" == ".pdf" %}
+                                            PDF
+                                            {% elif file_url|slice:"-4:" == ".csv" %}
+                                            CSV
+                                            {% elif file_url|slice:"-5:" == ".docx" or file_url|slice:"-4:" == ".doc" %}
+                                            WORD
+                                            {% elif file_url|slice:"-5:" == ".xlsx" or file_url|slice:"-4:" == ".xls" %}
+                                            EXCEL
+                                            {% else %}
+                                            FILE
+                                            {% endif %}
+                                        {% endwith %}
+                                        {% else %}
+                                        NOT UPLOADED
+                                        {% endif %}
+                                    </div>
+
+                                    <!-- Middle: Preview -->
+                                    <div class="file-preview">
+                                        {% if document.document %}
+                                        {% with file_url=document.document|lower %}
+                                            {% if file_url|slice:"-4:" == ".jpg" or file_url|slice:"-5:" == ".jpeg" or file_url|slice:"-4:" == ".png" %}
+                                            <a href="{{ document.document }}" target="_blank">
+                                                <img src="{{ document.document }}" alt="{{ document.name }}">
+                                            </a>
+                                            {% else %}
+                                            <a href="{{ document.document }}" target="_blank" class="file-link">📄</a>
+                                            {% endif %}
+                                        {% endwith %}
+                                        {% else %}
+                                        <span class="not-uploaded">Not uploaded yet.</span>
+                                        {% endif %}
+                                    </div>
+
+                                    <!-- Bottom: Name -->
+                                    <div class="file-name">{{ document.name }}</div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <p>No document available</p>
+                            {% endif %}
+                        </div>                                        
+                    
+                        <div class="col-md-6" >
+                            <label for="UploadedFiles" style="font-weight:bold;">Uploaded Documents by Processor:</label>
+                            {% for document in processor_documents %}
                             <div class="row mt-3">
                             {%  if document.document %}                        
                             <span>{{document.name}}:  <a href="{{ document.document.url }}" class="" target="_blank">{{ document.name }}</a></span>

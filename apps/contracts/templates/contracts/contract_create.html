@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %} {% block title %} Create Field {% endblock title %} {% block content %}
+{% load static %} {% block title %} Create Contract {% endblock title %} {% block content %}
 {% include 'navbar.html' %}
 <div class="main-content">
     {% include 'header.html' %} {% load crispy_forms_tags %}
@@ -71,7 +71,7 @@
 
                     <div class="row">
                         <div class="form-btn-row text-center text-md-end">
-                            <a href="{% url 'field-list' %}" class="btn-close-cancel">Cancel</a>
+                            <a href="{% url 'contract-list' %}" class="btn-close-cancel">Cancel</a>
                             <button type="submit" class="btn-save-submit">Save</button> 
                             <!-- <input type="button" id="contractFormSubmitButton" class="btn-save-submit" value="Save"> -->
                         </div>

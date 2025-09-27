@@ -12,7 +12,14 @@
 </script>
 {% endblock extrahead %}
 
-{% block content %} {% include 'navbar.html' %}
+{% block content %}
+ {% include 'navbar.html' %}
+ <style>
+    .bootstrap-select .dropdown-menu li.disabled.selected{display: none;}
+    .dropdown.bootstrap-select.form-control .btn{border: 1px solid; padding: 16px 8px; border-radius: 0;}
+    .bootstrap-select .dropdown-menu{max-width: 280px;}
+    .bootstrap-select .dropdown-menu li.selected.active .dropdown-item.active.selected{margin-left: 0;padding: 0;}
+ </style>
 <div class="main-content">
     {% include 'header.html' %} {% load crispy_forms_tags %}
   <main>
@@ -27,7 +34,7 @@
                         <div>
                             <label for="">Grower<span class="asteriskField">*</span></label>
                             <!-- <input type="text" name="" id="" class="textinput textInput form-control">style="border-radius:0px !important" -->
-                            <select id="growerSelction" name="grower_id" class="textinput textInput form-control" required>
+                            <select id="growerSelction" name="grower_id" class="textinput textInput form-control selectpicker" required data-live-search="true">
                                 <option value='all' selected disabled> Select All Growers </option>
                                 {% for grower in growers %}
                                 {% if grower == selectedGrower %}

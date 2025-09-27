@@ -1,0 +1,169 @@
+{% extends "base.html" %} {% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}Carrier List{% endblock title %}
+
+{% block content %}
+{% include 'navbar.html' %}
+<div class="main-content">
+    {% include 'header.html' %}
+    <main>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+
+        <!-- Include Select2 CSS -->
+        <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
+        <!-- Include Select2 JS -->
+        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+        {% include '_alerts.html' %}
+        <div class="page-title-with-or-without-btn">
+        <span class="farm headingtop">Carrier List</span>
+        {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role or request.user.is_processor or request.user.is_processor2 %}
+            <div class="flex-header-btn">
+                <a href="{% url 'carrier_add' %}" class="btn-close-cancel">Add Carrier</a>
+            </div>
+        {% endif %}
+        </div>
+        <div class="card farm-fields-container">
+            
+            <nav aria-label="breadcrumb m-5">
+                {% if error_messages %}
+                <div id="alertMessage" class="alert alert-warning alert-dismissible fade show" role="alert">
+                    <strong>{{error_messages}}</strong>  
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>                         
+                  </div> 
+                  <script>                            
+                    setTimeout(function() {
+                        document.getElementById('alertMessage').style.display = 'none';
+                    }, 5000);
+                </script>                          
+                  {% endif %}
+            </nav> 
+            <form method='get' action='' class=''>
+                <div class="row d-flex justify-content-end">  
+                    
+                        <div class="col-4">
+                            <div class="row ">
+                                <div class="col-8">
+                                    <input class="form-control" name="search_name" type="search" placeholder="Search" autocomplete="off" aria-label="Search" id="search_name" value="{{get_search_name}}">
+                                </div>
+                                <div class="col-4">
+                                    <button class="btn btn-outline-success btn-block" type="submit">Search</button>
+                                </div>
+                            </div>
+                            
+                        </div> 
+                    
+                </div>   
+            </form>     
+            <div class="mt-3">
+                <div class="main-simple-table-with-search col-12">                        
+
+                    <div class="both-data-in" style="display: inherit;">
+                        <div class="table-responsive">
+                            <table id="" class="table table-striped dt-responsive nowrap"
+                                style="width:100%">
+                                
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Type</th>
+                                        <th>Carrier ID</th>
+                                        <th>Description</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                    {% for carrier in carriers %}
+                                    <tr>
+                                        <td>{{ carrier.name }}</td>
+                                        <td>{{ carrier.type }}</td>
+                                        <td>{{ carrier.carrier_id }}</td>
+                                        <td>{{ carrier.description }}</td>
+                                        <td>
+                                            <a href="{% url 'carrier_edit' carrier.pk %}"><span class="fas fa-edit me-3"></span></a>
+                                            <a href="#" data-bs-toggle="modal" data-bs-target="#deleteModal-{{ carrier.id }}"><span class="fas fa-trash"></span></a>
+                                        
+                                            <!-- Delete Modal -->
+                                            <div class="modal fade" id="deleteModal-{{ carrier.id }}" tabindex="-1" aria-labelledby="deleteModalLabel-{{ carrier.id }}" aria-hidden="true">
+                                                <div class="modal-dialog">
+                                                    <div class="modal-content">
+                                                        <div class="modal-body">
+                                                            <button type="button" class="btn-close cust-close-ds-btn" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                            <div class="center-content-status text-center">
+                                                                <img src="{% static 'img/trash.png' %}" alt="Delete" class="warning-icon">
+                                                                <p class="modal-title titlepad">Are you sure you want to delete?</p>
+                                                            </div>
+                                                            <form method="POST" action="{% url 'carrier_delete' carrier.id %}">
+                                                                {% csrf_token %}
+                                                                <div class="modal-footer justify-content-center">
+                                                                    <button type="submit" class="btn-save-submit">Delete</button>
+                                                                    <button type="button" class="btn-close-cancel btn-space" data-bs-dismiss="modal">Close</button>
+                                                                </div>
+                                                            </form>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        
+                                    </tr>
+                                    {% endfor %}
+                                </table>
+                        </div>
+
+                        <div class="row align-carriers-center">
+                                <div class="col-md-12 col-sm-12 col-12 text-center">
+                                    {% if carriers.has_other_pages %}
+                                        <ul class="pagination" id="nav_1">
+                                            {% if carriers.has_previous %}
+                                                <li><a href="?page={{ carriers.previous_page_number }}">&laquo;</a></li>
+                                            {% else %}
+                                                <li class="disabled"><span>&laquo;</span></li>
+                                            {% endif %}
+                                            {% for i in carriers.paginator.page_range %}
+                                                {% if carriers.number == i %}
+                                                    <li class="active"><span>{{ i }} <span class="sr-only">(current)</span></span></li>
+                                                {% else %}
+                                                    <li><a href="?page={{ i }}">{{ i }}</a></li>
+                                                {% endif %}
+                                            {% endfor %}
+                                            {% if carriers.has_next %}
+                                                <li><a href="?page={{ carriers.next_page_number }}">&raquo;</a></li>
+                                            {% else %}
+                                                <li class="disabled"><span>&raquo;</span></li>
+                                            {% endif %}
+                                        </ul>
+                                    {% endif %}
+                                </div>
+                            <div class="col-md-12 col-sm-12 col-12 text-center mt-2" style="text-align:right">
+                                <span>Showing  {{ carriers.start_index }} - {{ carriers.end_index }} of {{ carriers.paginator.count }} entries
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>           
+        </div>
+    </main>
+    {% include 'footer.html' %}
+</div>
+{% endblock %}
+{% block jquery %}
+<script type="text/javascript">
+    $(document).ready(function() {
+        $('#processor_id').select2({
+            placeholder: "Select a Processor",
+            allowClear: true
+        });
+    });
+</script>
+<script>
+    $('#Warehouse-active').addClass('activeLink');
+  
+    $('#Warehouse-down').addClass('down');
+    $('#Warehouse-sub_unic').show();
+
+    $('#carrier-management').addClass('activeLink active-nav');
+
+</script>
+{% endblock jquery %}

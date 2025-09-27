@@ -95,6 +95,30 @@
                             </div>
                         </div>
                         <div class="col-md-4 mb-2">
+                            <label for="id_crop">Crop<span class="asteriskField">*</span></label>
+                            <select name="id_crop" id="id_crop"  class="form-control " onchange="this.form.submit()">
+                                <option value="all" selected disabled>Select Crop</option>
+                                {% for crop in crops %}
+                                <option value="{{crop.code}}" {% if selected_crop == crop.code %}selected {% endif %}>{{crop.code}}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <div id="div_id_variety" class="form-group">
+                                <label for="id_variety" class=" requiredField">
+                                    Variety<span class="asteriskField">*</span>
+                                </label>
+                                <div>
+                                    <select name="variety" class="select form-control" required id="id_variety">
+                                        <option value="all" selected disabled>Select Variety</option>
+                                        {% for variety in varieties %}
+                                        <option value="{{variety}}" {% if variety == variety %}selected {% endif %}>{{variety}}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-2">
                             <label for="id_date">Date Pulled<span class="asteriskField">*</span></label>
                             <input type="date" name="id_date" id="id_date" class="textinput textInput form-control" value="{{id_date}}">
                             <p id="alert_msg0" style="color:red"></p>

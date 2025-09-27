@@ -8,7 +8,7 @@
       <span class="farm headingtop">Help And Guide Listing</span>
       <!-- Create button for Account-->
       <div class="flex-header-btn">
-        {% if 'Help guide' in request.user.get_role_perm or request.user.is_superuser %}
+        {% if 'Help guide' in request.user.get_role_perm or request.user.is_superuser  %}
         <a href="{% url 'HelpAndGuideCreate' %}" class="btn-add-green"
           >+ Create Help And Guide</a
         >
@@ -52,13 +52,13 @@
                     {{help_guide.upload_file|truncatechars:50}}
                 </td>
                 <td class="backk1">
-                  {% if 'Help guide' in request.user.get_role_perm or request.user.is_superuser %}
+                  {% if 'Help guide' in request.user.get_role_perm or request.user.is_superuser  %}
                   <li>
                     <a href="{% url 'HelpAndGuideEdit' help_guide.pk %}" ><span class="fas fa-edit"> </span></a>
                   </li>
                   {% endif %}
 
-                  {% if 'Help guide' in request.user.get_role_perm or request.user.is_superuser %}
+                  {% if 'Help guide' in request.user.get_role_perm or request.user.is_superuser  %}
 
                   <a href="javascript:void(0)" onclick="deleteNote('{{help_guide.pk}}')">
                     <span class="fas fa-trash"></span>

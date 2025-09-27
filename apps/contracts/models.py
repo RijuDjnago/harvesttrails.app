@@ -3,11 +3,16 @@ import string
 from datetime import datetime, timedelta
 from django.db import models
 from django.urls import reverse
+from django.conf import settings
+from django.shortcuts import redirect
 from django.utils import timezone
 from apps.accounts.models import User
 from decimal import Decimal
 from django.core.validators import MinValueValidator
-
+from django.core.exceptions import ImproperlyConfigured
+from django.contrib import messages
+from django.shortcuts import HttpResponse
+from dateutil.relativedelta import relativedelta
 
 
 class Contracts(models.Model):
@@ -105,6 +110,43 @@ class VerifiedSignedContracts(models.Model):
         # return f'{self.id}:{self.name}'
         return f'{self.name}'
 
+    
+type_choices = (
+    ("Service", "Service"),
+    ("Inventory", "Inventory"),
+    ("NonInventory", "NonInventory"),
+)  
+category_choices = (
+    ("Crop", "Crop"),
+    ("Spices", "Spices"),
+) 
+class ShipmentItem(models.Model):
+    item = models.CharField(max_length=255, null=True, blank=True)
+    item_name = models.CharField(max_length=255)
+    item_type = models.CharField(max_length=255)
+    quickbooks_id = models.CharField(max_length=255, unique=True, null=True, blank=True)
+    per_unit_price = models.DecimalField(max_digits=10, decimal_places=4) 
+    description = models.TextField(null=True, blank=True)
+    type = models.CharField(max_length=255, choices=type_choices, default="Inventory")
+    purchase_price = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True)
+    purchase_description = models.TextField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    item_number = models.IntegerField(null=True, blank=True)
+    item_category = models.CharField(max_length=255, choices=category_choices, default="Crop")
+    supplier_entity_name = models.CharField(max_length=255, null=True, blank=True)
+    supplier_type = models.CharField(max_length=5, null=True, blank=True)
+    supplier_id =  models.CharField(max_length=10, null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        if self.quickbooks_id and self.quickbooks_id.isdigit():
+            self.item_number = int(self.quickbooks_id)
+        else:
+            self.item_number = None  # Or retain old value, or log a warning
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.item}"
+ 
 
 unit_choice = (
     ("LBS","LBS"),
@@ -142,6 +184,7 @@ def generate_secret_key( length=32):
     random_number = secrets.randbelow(900) + 100  
     secret_key = f"HT{date_part}{random_number}"
     return secret_key
+ 
        
 class AdminProcessorContract(models.Model):
     secret_key = models.CharField(max_length=255, unique=True)
@@ -149,7 +192,7 @@ class AdminProcessorContract(models.Model):
     processor_type = models.CharField(max_length=5, choices=processor_type)
     processor_entity_name = models.CharField(max_length=255, null=True, blank=True)  
     contract_type = models.CharField(max_length=25, choices=contract_type, default='Single Crop')  
-    total_price = models.DecimalField( max_digits=20,decimal_places=2,validators=[MinValueValidator(Decimal('0.01'))],null=True, blank=True)
+    total_price = models.DecimalField( max_digits=20,decimal_places=4,validators=[MinValueValidator(Decimal('0.0001'))],null=True, blank=True)
     contract_start_date = models.DateTimeField()
     contract_period = models.PositiveIntegerField(help_text="Warranty period")
     contract_period_choice = models.CharField(max_length=10, choices=contract_period_choices, default="Days" )
@@ -173,8 +216,13 @@ class AdminProcessorContract(models.Model):
             self.contract_period = int(self.contract_period)
 
         if isinstance(self.contract_start_date, str):
-            self.contract_start_date = datetime.strptime(self.contract_start_date, "%Y-%m-%d").date()
-        
+            self.contract_start_date = datetime.strptime(self.contract_start_date, "%Y-%m-%d")
+
+        # Make contract_start_date timezone-aware
+        if timezone.is_naive(self.contract_start_date):
+            self.contract_start_date = timezone.make_aware(self.contract_start_date, timezone.get_current_timezone())
+
+        # Calculate end_date based on the period choice
         if self.contract_period:
             if self.contract_period_choice == "Days":
                 self.end_date = self.contract_start_date + timedelta(days=self.contract_period)
@@ -183,8 +231,29 @@ class AdminProcessorContract(models.Model):
             elif self.contract_period_choice == "Year":
                 self.end_date = self.contract_start_date + timedelta(days=self.contract_period * 365)  # Approximate to 365 days per year
 
-        super().save(*args, **kwargs)   
+        # Make end_date timezone-aware
+        if timezone.is_naive(self.end_date):
+            self.end_date = timezone.make_aware(self.end_date, timezone.get_current_timezone())
 
+        super().save(*args, **kwargs)
+
+    def get_active_months(self):
+        """
+        Returns a list of months (as strings) during which the contract is active.
+        """
+        if not self.contract_start_date or not self.end_date:
+            return []
+
+        active_months = []
+        current_date = self.contract_start_date.replace(day=1)  # Start at the beginning of the month
+        end_date = self.end_date.replace(day=1)  # Ensure we only compare months, not specific days or times
+
+        while current_date <= end_date:
+            active_months.append(current_date.strftime('%B %Y'))  # Add the current month to the list
+            current_date += relativedelta(months=1)  # Move to the next month
+
+        return active_months
+    
     def __str__(self):
         return f'Contract ID - {self.secret_key} || {self.processor_entity_name} || {self.processor_type}'
 
@@ -197,12 +266,18 @@ class CropDetails(models.Model):
         return [(crop.code, crop.name) for crop in crops] 
     
     contract = models.ForeignKey(AdminProcessorContract, on_delete=models.CASCADE, related_name='contractCrop')
+    item = models.ForeignKey(ShipmentItem, on_delete=models.SET_NULL, null=True, blank=True)
+    item_type = models.CharField(max_length=255, null=True, blank=True)
+    item_number = models.IntegerField(null=True, blank=True)
+    item_description = models.TextField(null=True, blank=True)
     crop = models.CharField(max_length=255, choices=[], null=True, blank=True)
     crop_type = models.CharField(max_length=255, null=True, blank=True)
     contract_amount = models.FloatField()
     amount_unit = models.CharField(max_length=10, choices=unit_choice)
-    per_unit_rate = models.DecimalField(max_digits=10, decimal_places=3) 
+    per_unit_rate = models.DecimalField(max_digits=10, decimal_places=4) 
     left_amount = models.FloatField(null=True, blank=True)
+    lot_number = models.IntegerField(null=True, blank=True)
+    waybill_number = models.IntegerField(null=True, blank=True)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)    
@@ -212,7 +287,7 @@ class CropDetails(models.Model):
         if self._state.adding and self.left_amount is None:
             self.left_amount = self.contract_amount
         super().save(*args, **kwargs)
-
+        
     def __str__(self):
         return f'Contract ID - {self.contract.secret_key} || Crop -  {self.crop} || Amount - {self.contract_amount} {self.amount_unit}'
 
@@ -233,6 +308,7 @@ class AdminProcessorContractDocuments(models.Model):
     document = models.FileField(upload_to='contracts/documents/', null=True, blank=True)
     document_status = models.TextField(null=True, blank=True)
     uploaded_at = models.DateTimeField(auto_now_add=True)
+    uploaded_by = models.CharField(max_length=255, null=True, blank=True)
 
     def __str__(self):
         return f'Documents for {self.contract.id}'
@@ -243,7 +319,7 @@ class AdminCustomerContract(models.Model):
     customer_id = models.CharField(max_length=255) 
     customer_name = models.CharField(max_length=255)   
     contract_type = models.CharField(max_length=25, choices=contract_type, default='Single Crop') 
-    total_price = models.DecimalField( max_digits=20,decimal_places=2,validators=[MinValueValidator(Decimal('0.01'))],null=True, blank=True)
+    total_price = models.DecimalField( max_digits=20,decimal_places=4,validators=[MinValueValidator(Decimal('0.0001'))],null=True, blank=True)
     contract_start_date = models.DateTimeField()
     contract_period = models.PositiveIntegerField(help_text="Warranty period")
     contract_period_choice = models.CharField(max_length=10, choices=contract_period_choices, default="Days" )
@@ -278,6 +354,23 @@ class AdminCustomerContract(models.Model):
                 self.end_date = self.contract_start_date + timedelta(days=self.contract_period * 365)  # Approximate to 365 days per year
         super().save(*args, **kwargs)   
 
+    def get_active_months(self):
+        """
+        Returns a list of months (as strings) during which the contract is active.
+        """
+        if not self.contract_start_date or not self.end_date:
+            return []
+
+        active_months = []
+        current_date = self.contract_start_date.replace(day=1)  # Start at the beginning of the month
+        end_date = self.end_date.replace(day=1)  # Ensure we only compare months, not specific days or times
+
+        while current_date <= end_date:
+            active_months.append(current_date.strftime('%B %Y'))  # Add the current month to the list
+            current_date += relativedelta(months=1)  # Move to the next month
+
+        return active_months
+    
     def __str__(self):
         return f'Contract ID - {self.secret_key} || {self.customer_name}'
 
@@ -290,12 +383,18 @@ class CustomerContractCropDetails(models.Model):
         return [(crop.code, crop.name) for crop in crops] 
     
     contract = models.ForeignKey(AdminCustomerContract, on_delete=models.CASCADE, related_name='customerContractCrop')
+    item = models.ForeignKey(ShipmentItem, on_delete=models.SET_NULL, null=True, blank=True)
+    item_type = models.CharField(max_length=255, null=True, blank=True)
+    item_number = models.IntegerField(null=True, blank=True)
+    item_description = models.TextField(null=True, blank=True)
     crop = models.CharField(max_length=255, choices=[], null=True, blank=True)
     crop_type = models.CharField(max_length=255, null=True, blank=True)
     contract_amount = models.FloatField()
     amount_unit = models.CharField(max_length=10, choices=unit_choice)
-    per_unit_rate = models.DecimalField(max_digits=10, decimal_places=3) 
+    per_unit_rate = models.DecimalField(max_digits=10, decimal_places=4) 
     left_amount = models.FloatField(null=True, blank=True)
+    lot_number = models.IntegerField(null=True, blank=True)
+    waybill_number = models.IntegerField(null=True, blank=True)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)    
@@ -304,7 +403,7 @@ class CustomerContractCropDetails(models.Model):
     def save(self, *args, **kwargs):
         if self._state.adding and self.left_amount is None:
             self.left_amount = self.contract_amount
-        super().save(*args, **kwargs)
+        super().save(*args, **kwargs)     
 
     def __str__(self):
         return f'Contract ID - {self.contract.secret_key} || Crop -  {self.crop} || Amount - {self.contract_amount} {self.amount_unit}'
@@ -326,7 +425,8 @@ class AdminCustomerContractDocuments(models.Model):
     document = models.FileField(upload_to='contracts/documents/', null=True, blank=True)
     document_status = models.TextField(null=True, blank=True)
     uploaded_at = models.DateTimeField(auto_now_add=True)
+    uploaded_by = models.CharField(max_length=255, null=True, blank=True)
 
     def __str__(self):
         return f'Documents for {self.contract.id}'
-    
+   

@@ -130,14 +130,17 @@
                     padding-left: 8px !important;
                     padding-bottom: 4px !important;
                     padding-right: 8x !important;
-                    font-size: 16px !important;
-                    background: #00b258 !important;
+                    font-size: 16px !important;                    
                     border: 0 !important
                 }
 
-                .dropdown.bootstrap-select.form-control .btn {
-                    border-radius: 6px;
-                  }
+    .dropdown.bootstrap-select.form-control .btn {
+        border-radius: 6px;
+        }
+    .bootstrap-select .dropdown-menu li.disabled.selected{display: none;}
+    .dropdown.bootstrap-select.form-control .btn{border: 1px solid; padding: 8px 8px;}
+    .bootstrap-select .dropdown-menu{max-width: 280px;}
+    .bootstrap-select .dropdown-menu li.selected.active .dropdown-item.active.selected{margin-left: 0;padding: 0;}
     </style>
     <main>
         <div class="page-title-with-or-without-btn">
@@ -154,8 +157,8 @@
                 {% endif %}
             </div>
             <div class="flex-header-btn ms-1">
-                {% if  request.user.is_superuser or 'Grower' in request.user.get_role  or request.user.is_consultant%}
-                <a href="{% url 'storage_feed_remove_update' %}" class="btn-close-cancel">Remove Quantity</a>
+                {% if request.user.is_superuser or 'Grower' in request.user.get_role  or request.user.is_consultant%}
+                <a href="{% url 'storage_feed_update' %}" class="btn-close-cancel">Edit Quantity</a>
                 {% endif %}
             </div>
            

@@ -75,13 +75,17 @@
         padding-bottom: 4px !important;
         padding-right: 8x !important;
         font-size: 16px !important;
-        background: #00b258 !important;
+        
         border: 0 !important
     }
 
     .dropdown.bootstrap-select.form-control .btn {
     border-radius: 6px;
     }
+    .bootstrap-select .dropdown-menu li.disabled.selected{display: none;}
+    .dropdown.bootstrap-select.form-control .btn{border: 1px solid; padding: 7px 8px;}
+    .bootstrap-select .dropdown-menu{max-width: 280px;}
+    .bootstrap-select .dropdown-menu li.selected.active .dropdown-item.active.selected{margin-left: 0;padding: 0;}
     {% comment %} fields-form select.form-select {
         height: auto;
         padding: 4px 22px !important;
@@ -95,14 +99,25 @@
     {% load crispy_forms_tags %}
     {% comment %} {% include '_alerts.html' %} {% endcomment %}
     <main>
-        <span class="farm headingtop">Storage Qnt Remove</span>
+        <span class="farm headingtop">Storage Qnt Edit</span>
         <div class="card farm-fields-container">
+            <nav aria-label="breadcrumb m-5">
+                {% if error_messages %}
+                <div id="alertMessage" class="alert alert-warning alert-dismissible fade show" role="alert">
+                    <strong>{{error_messages}}</strong>  
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>                         
+                  </div> 
+                  <script>                            
+                    setTimeout(function() {
+                        document.getElementById('alertMessage').style.display = 'none';
+                    }, 5000);
+                </script>                          
+                  {% endif %}
+            </nav>
             <div class="container-fluid">
-                {% if messages %}
-                <div class="alert alert-danger" role="alert">
-                    {{messages}}
-                  </div>
-                {% endif %}
+                
                 <form action="" method="post" class="farm-fields-form"
                     enctype="multipart/form-data">
                     {% csrf_token %}
@@ -111,7 +126,7 @@
                         <div class="col-md-3">
                             <div class="form-group">
                                 <lable>Select Growers<span class="asteriskField">*</span></lable>
-                                <select id="growerSelction" name="grower_id" class="selectpicker " data-live-search="true">
+                                <select id="growerSelction" name="grower_id" class="selectpicker " data-live-search="true" onchange="this.form.submit()">
                                     <option value="all"> Select All Growers </option>
                                     {% for grower in growers %}
                                     {% if selectedGrower == grower %}
@@ -127,7 +142,7 @@
                         <div class="col-md-3">
                             <div class="form-group">
                                 <lable>Select Crop<span class="asteriskField">*</span></lable>
-                                <select id="grower_crop" name="grower_crop" class="selectpicker " data-live-search="true">
+                                <select id="grower_crop" name="grower_crop" class="selectpicker " data-live-search="true", onchange="this.form.submit()">
                                     <option value='all'> Select Crop </option>
                                     {% for crop in crop %}
                                     {% if selectedCrop == crop %}
@@ -143,7 +158,7 @@
                         <div class="col-md-3">
                             <div class="form-group">
                                 <lable>Select Storage<span class="asteriskField">*</span></lable>
-                                <select id="storageSelction" name="storage_id" class="selectpicker" data-live-search="true">
+                                <select id="storageSelction" name="storage_id" class="selectpicker" data-live-search="true" onchange="this.form.submit()">
                                     <option value="all"> Select All Storage </option>
                                     {% for storage in storage_name %}
                                     {% if selectedStorage == storage %}
@@ -171,42 +186,30 @@
                                 </select>
                             </div>
                         </div>   {% endcomment %}
+                         
                         <div class="col-md-3">
-                            <div>
-                                <label for="quantity">Total Quantity<span class="asteriskField">*</span></label>
-                                <div class="mt-2">
-                                    {{total_quantity}}
-                                </div>
-                                {% comment %} <input type="text" name="quantity" id="" autocomplete="off"
-                                    class="textinput textInput form-control" value="{{total_quantity}}" readonly> {% endcomment %}
-                            </div>  
-                        </div>    
-                        <div class="col-md-3">
-                            <label for="quantity">qnt<span class="asteriskField">*</span></label>
+                            <label for="quantity">Quantity<span class="asteriskField">*</span></label>
                             <div class="d-flex">
                                 <input type="text" name="quantity" id="quantity" autocomplete="off"
-                                    class="textinput textInput form-control" style="margin-top:0 !important; padding-left: 8px !important; padding-right: 8px; border-top-right-radius:0 !important; border-bottom-right-radius:0 !important">
+                                    class="textinput textInput form-control" value="{{total_quantity}}" style="margin-top:0 !important; padding-left: 8px !important; padding-right: 8px; border-top-right-radius:0 !important; border-bottom-right-radius:0 !important">
                             
                                 <select id="unitSelction" name="unit_id" class="form-select" style="border-top-left-radius:0 !important; border-bottom-left-radius:0 !important; border-left:0;width: 85px;  padding: 3px 22px !important;">
-                                    <option value="LBS">LBS</option>
-                                    <option value="BU">BU</option>
+                                    <option value="LBS" {% if amount_unit == "LBS" %}selected{% endif %}>LBS</option>
+                                    <option value="BU" {% if amount_unit == "BU" %}selected{% endif %}>BU</option>
                                 </select>
                             </div>
                             <p id="p4" style="color: red;"></p>
-                        </div>   
-                        <div class="col-md-3">
-                            <div>
-                                <label for="shipment">Shipment ID<span class="asteriskField">*</span></label>
-                                <input type="text" name="ship_id" id="shipment" autocomplete="off"
-                                    class="textinput textInput form-control w-100" >
-                            </div>  
                         </div> 
-                       
+                        
                         <div class="form-btn-row text-center text-md-end">
                             <a href="{% url 'storage_feed_list' %}" class="btn-close-cancel btn-space">Cancel</a>
-                            <button id="mainSavebutton" type="button" class="btn-save-submit" value="Save" onclick="activityButton1()">Save</button>
+                            {% comment %} <button id="mainSavebutton" type="button" class="btn-save-submit" value="Save" onclick="activityButton1()">Save</button>
                             <input id="mainSave" type="submit" name="mainSave" class="btn-save-submit" value="Save" style="display:none;" >
-                            <input id="submitBtn" type="submit" style="display:none;" name="submitBtn" class="btn-save-submit" value="submitBtn">
+                            <input id="submitBtn" type="submit" style="display:none;" name="submitBtn" class="btn-save-submit" value="submitBtn"> {% endcomment %}
+                            <input style="display: none;" id="hide_btn1" type="submit" class="btn-save-submit"
+                                value="Save" name="save">
+                            <!-- <input type="button" id="hide_btn2" class="btn-save-submit" value="Save" onclick="btnClick()"> -->
+                            <input type="submit" name="save" class="btn-save-submit" value="Save" onclick="activityButton1()">
                         </div>
                     </div>
                 </form>
@@ -217,24 +220,9 @@
 {% include 'footer.html' %}
 </div>
 {% endblock content %}
-{% block scripts %}
-<script>
-    $(document).ready(function() {
-        $('#growerSelction').change( function () {
-        $('#submitBtn').click();
-        });
-        });
-    
-        $(document).ready(function() {
-            $('#storageSelction').change( function () {
-            $('#submitBtn').click();
-            });
-            });
-       
-</script>
-{% endblock scripts %}
+
 {% block jquery %}
-<script>
+{% comment %} <script>
     function activityButton1(){
         var growerSelction = document.getElementById("growerSelction").value;
         var grower_crop = document.getElementById("grower_crop").value;
@@ -280,7 +268,7 @@
  
         }
 
-</script>
+</script> {% endcomment %}
 
 <script>
     $('#Storage-Management-active').addClass('activeLink');

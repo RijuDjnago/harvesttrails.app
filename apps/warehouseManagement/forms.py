@@ -25,48 +25,75 @@ class DistributorForm(forms.ModelForm):
         }
 
 
+
 class WarehouseForm(forms.ModelForm):
     distributor = forms.ModelMultipleChoiceField(
         queryset=Distributor.objects.all(),
-        required=False, 
-        widget=forms.SelectMultiple(attrs={'class': 'form-control'}), 
-        label="Select Distributor"
+        required=False,
+        widget=forms.SelectMultiple(attrs={'class': 'form-control'}),
+        label="Select Distributors"
     )
-    def __init__(self, *args, **kwargs):
-        super(WarehouseForm, self).__init__(*args, **kwargs)
-        self.fields['name'].required = True
-        self.fields['location'].required = True
-
-        if self.instance.pk:
-            self.fields['distributor'].initial = self.instance.distributor_set.all()
+    customers = forms.ModelMultipleChoiceField(
+        queryset=Customer.objects.all(),
+        required=False,
+        widget=forms.SelectMultiple(attrs={'class': 'form-control'}),
+        label="Select Customers"
+    )
 
     class Meta:
         model = Warehouse
         fields = ['name', 'location', 'latitude', 'longitude', 'status']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
-            'location': forms.Textarea(attrs={
-                'class': 'form-control',
-                'rows': 1,
-                'cols': 30
-            }),
+            'location': forms.Textarea(attrs={'class': 'form-control', 'rows': 1, 'cols': 30}),
             'latitude': forms.TextInput(attrs={'class': 'form-control'}),
             'longitude': forms.TextInput(attrs={'class': 'form-control'}),
             'status': forms.TextInput(attrs={'class': 'form-control'}),
         }
 
+    def __init__(self, *args, **kwargs):
+        super(WarehouseForm, self).__init__(*args, **kwargs)
+        self.fields['name'].required = True
+        self.fields['location'].required = True
+
+        if self.instance.pk:
+            # For distributor
+            self.fields['distributor'].initial = self.instance.distributor_set.all()
+
+            # For customers, fetch all customers linked to this warehouse
+            self.fields['customers'].initial = Customer.objects.filter(warehouses=self.instance)
+
+    def save(self, commit=True):
+        warehouse = super(WarehouseForm, self).save(commit=commit)
+
+        if commit and 'customers' in self.cleaned_data:
+            selected_customers = self.cleaned_data['customers']
+            current_customers = warehouse.customers.all()
+
+            for customer in current_customers:
+                if customer not in selected_customers:
+                    customer.warehouses.remove(warehouse)
+
+            for customer in selected_customers:
+                customer.warehouses.add(warehouse)
+
+        return warehouse
+
+
+
 class CustomerForm(forms.ModelForm):
+    
     def __init__(self, *args, **kwargs):
         super(CustomerForm, self).__init__(*args, **kwargs)
         self.fields['name'].required = True
-        self.fields['location'].required = True
+        self.fields['location'].required = True        
 
     class Meta:
         model = Customer
         fields = [
             'name', 'location', 'latitude', 'longitude',
             'credit_terms', 'billing_address', 'shipping_address',
-            'is_tax_payable', 'tax_percentage'
+            'is_tax_payable', 'tax_percentage','warehouses'
         ]
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
@@ -75,6 +102,7 @@ class CustomerForm(forms.ModelForm):
                 'rows': 1,
                 'cols': 30
             }),
+            'warehouses': forms.SelectMultiple(attrs={'class': 'form-control'}),
             'latitude': forms.TextInput(attrs={'class': 'form-control'}),
             'longitude': forms.TextInput(attrs={'class': 'form-control'}),
             'credit_terms': forms.Select(attrs={'class': 'form-control'}),
@@ -94,6 +122,7 @@ class CustomerForm(forms.ModelForm):
                 'step': '0.01',
                 'placeholder': 'Tax percentage if applicable'
             }),
+            
         }
 
     def clean(self):
@@ -108,3 +137,4 @@ class CustomerForm(forms.ModelForm):
             cleaned_data['tax_percentage'] = None
 
         return cleaned_data
+    

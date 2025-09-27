@@ -4,21 +4,25 @@ from django.db import models
 from django.utils import timezone
 from apps.core.validate import validate_zipcode
 from apps.grower.models import Grower
-from apps.storage.models import Storage
+from apps.storage.models import Storage, StorageFeed
 from apps.field.models import Field
-
+from django.core.exceptions import ValidationError
 
 
 class Processor(models.Model):
     """Database model for processor"""
+    quickbooks_id = models.CharField(max_length=255, unique=True, null=True, blank=True)
     fein = models.CharField(max_length=250, null=True, blank=True,verbose_name='FEIN')
     entity_name = models.CharField(max_length=250, null=True, blank=True,verbose_name='Entity Name')
     billing_address = models.TextField(null=True, blank=True,verbose_name='Billing Address')
     shipping_address = models.TextField(null=True, blank=True,verbose_name='Shipping Address')
     main_number = models.CharField(max_length=250, null=True, blank=True,verbose_name='Main Number')
     main_fax = models.CharField(max_length=250, null=True, blank=True,verbose_name='Main Fax')
+    main_email = models.CharField(max_length=255, null=True, blank=True, verbose_name='Main Email')
     website = models.TextField(null=True, blank=True,verbose_name='Website')
+    account_number = models.CharField(max_length=255, null=True, blank=True)
     gin_id = models.CharField(max_length=250, null=True, blank=True,verbose_name='Gin Id')
+    is_active = models.BooleanField(default=True)
 
     def __str__(self):
         return self.entity_name
@@ -77,6 +81,8 @@ class GrowerShipmentFile(models.Model):
     def __str__(self):
         return self.file.name
     
+LBS_TO_BU_CONVERSION = 56
+
 class GrowerShipment(models.Model):
     processor = models.ForeignKey(Processor, on_delete=models.CASCADE, null=True, blank=True,verbose_name='Select Processor')
     grower = models.ForeignKey(Grower, on_delete=models.CASCADE, null=True, blank=True,verbose_name='Select Grower')
@@ -123,6 +129,64 @@ class GrowerShipment(models.Model):
 
     def __str__(self):
         return f"Shipment Id = {self.shipment_id}, Grower = {self.grower.name}, Processor = {self.processor.entity_name}"
+    
+    def save(self, *args, **kwargs):
+        """
+        Override the save method to validate the total_amount and update the final_quantity in StorageFeed.
+        """
+        if self.storage:
+            total_amount_lbs = float(self.total_amount)
+            try:
+                storage_feed = StorageFeed.objects.filter(storage=self.storage).last()
+                if storage_feed:
+                    if storage_feed.unit == "BU":
+                        total_amount_in_bu = total_amount_lbs / LBS_TO_BU_CONVERSION
+                        if total_amount_in_bu > float(storage_feed.final_quantity):
+                            raise ValidationError(
+                                f"The total amount ({total_amount_in_bu} BU) exceeds the available final quantity ({storage_feed.final_quantity} BU) in the storage feed."
+                            )
+                        # Deduct the amount from storage
+                        new_final_quantity = float(storage_feed.final_quantity) - total_amount_in_bu
+                    else:
+                        if total_amount_lbs > float(storage_feed.final_quantity):
+                            raise ValidationError(
+                                f"The total amount ({total_amount_lbs} LBS) exceeds the available final quantity ({storage_feed.final_quantity} LBS) in the storage feed."
+                            )
+                        # Deduct the amount from storage
+                        new_final_quantity = float(storage_feed.final_quantity) - total_amount_lbs
+
+                    storage_feed.final_quantity = new_final_quantity
+                    storage_feed.save()
+                else:
+                    pass
+            except StorageFeed.DoesNotExist:
+                raise ValidationError(f"StorageFeed does not exist for the selected storage: {self.storage}")
+
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        """
+        Override the delete method to add the total_amount back to the final_quantity in StorageFeed.
+        """
+        if self.storage:
+            total_amount_lbs = float(self.total_amount)
+            try:
+                storage_feed = StorageFeed.objects.filter(storage=self.storage).last()
+
+                if storage_feed.unit == "BU":
+                    total_amount_in_bu = total_amount_lbs / LBS_TO_BU_CONVERSION
+                    # Add the amount back to storage
+                    storage_feed.final_quantity = float(storage_feed.final_quantity) + total_amount_in_bu
+                else:
+                    # Add the amount back to storage
+                    storage_feed.final_quantity = float(storage_feed.final_quantity) + total_amount_lbs
+
+                storage_feed.save()
+
+            except StorageFeed.DoesNotExist:
+                raise ValidationError(f"StorageFeed does not exist for the selected storage: {self.storage}")
+
+        super().delete(*args, **kwargs)
 
 class ClassingReport(models.Model):
     processor = models.ForeignKey(Processor, on_delete=models.CASCADE, null=True, blank=True)

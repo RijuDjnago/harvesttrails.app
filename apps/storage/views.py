@@ -36,8 +36,10 @@ def StorageCreateView(request):
             grower = Grower.objects.filter(id=int(grower_id))
             context['grower'] = grower
             field = Field.objects.values_list('crop', flat=True)
+            print(field)
             crop_list = set(field) 
             available_crops = set(Crop.objects.values_list('code', flat=True)) 
+            print(available_crops)
 
             crop = list(crop_list.intersection(available_crops))
             context["crop"] = crop
@@ -1047,68 +1049,79 @@ def storage_feed_add(request):
             if 'Grower' in request.user.get_role() and not request.user.is_superuser: 
                 grower_id = request.user.grower.id if request.user.grower else None
                 context['growers'] = Grower.objects.filter(id=grower_id)
-
-                if request.method == "POST":
+                context.update({
+                    'selectedStorage': None,
+                    'selectedField': None,
+                    'selectedCrop': None,
+                    'quantity': None,
+                    'unit_id': None
                     
-                    storage_id = request.POST.get('storage_id')
-                    field_id = request.POST.get('field_id')
-                    grower_crop = request.POST.get('grower_crop')
-                    quantity = request.POST.get('quantity')
-                    unit_id = request.POST.get('unit_id')
-                    submitBtn = request.POST.get('submitBtn')
-                    mainSave = request.POST.get('mainSave')
-
-                    crop = []
-                    if grower_id and grower_id != "all" and submitBtn == "submitBtn":
+                    })
+                if request.method == "POST":                    
+                    context.update({
+                    'storage_id': request.POST.get('storage_id'),
+                    'field_id': request.POST.get('field_id'),
+                    'grower_crop': request.POST.get('grower_crop'),
+                    'quantity': request.POST.get('quantity'),
+                    'unit_id': request.POST.get('unit_id')
+                    
+                    })
+                    
+                    if grower_id and grower_id != "all" and not request.POST.get('save'):
                         context["selectedGrower"] =  Grower.objects.filter(id=grower_id).first()
                         storage_name = Storage.objects.filter(grower_id=grower_id).order_by('storage_name')
-                        context['storage_name'] = storage_name
-                        field_name = Field.objects.filter(grower_id=grower_id).order_by('id')
-                        context['field_name'] = field_name
-                        field = Field.objects.filter(grower_id=grower_id).values_list('crop', flat=True)
 
+                        if request.POST.get('storage_id') and request.POST.get('storage_id') != 'all':
+                            context['storage_name'] = storage_name
+                            context['selectedStorage'] = storage_name.filter(id=storage_id).first()
+                        else:
+                            context['storage_name'] = storage_name
+
+                        field_name = Field.objects.filter(grower_id=grower_id).order_by('id')
+                        if request.POST.get('field_id') and request.POST.get('field_id') != 'all':
+                            context['field_name'] = field_name
+                            context['selectedField'] = field_name.filter(id=field_id).first()
+                        else:
+                            context['field_name'] = field_name
+                        
+                        field = Field.objects.filter(grower_id=grower_id).values_list('crop', flat=True)
                         available_crops = set(Crop.objects.values_list('code', flat=True))
                         crop = list(set(field).intersection(available_crops))
 
-                        context["crop"] = crop
+                        if request.POST.get('field_id') and request.POST.get('field_id') != 'all':
+                            context["crops"] = crop  
+                            context["selectedCrop"] = Crop.objects.filter(crop_code=crop).first() 
+                        else:
+                            context["crops"] = crop                      
                         
-                    else:
-                        if grower_id and grower_id != "all" and mainSave == "Save" :
-                            context["selectedGrower"] = Grower.objects.filter(id=grower_id).first()
-                            if storage_id and storage_id !="all" :
-                                storage_name = Storage.objects.filter(grower_id=grower_id).order_by('storage_name')
-                                context['storage_name'] = storage_name
-                                context['selectedStorage'] = storage_name.filter(id=storage_id).first()
-                            else:
-                                error_msg.append("Storage")
-                            if field_id and field_id !="all":
-                                field_name = Field.objects.filter(grower_id=grower_id).order_by('id')
-                                context['field_name'] = field_name
-                                context['selectedField'] = field_name.filter(id=field_id).first() 
-                            else :
-                                error_msg.append("Field")
-                            quantity = error_msg.append("Quantity") if not quantity or len(quantity) <=0 else quantity
-                            
-                            if len(error_msg) == 0:
-                                save_crop = context['selectedField'].crop if context['selectedField'] else grower_crop
-                                if unit_id == "LBS" :
-                                    cal_quantity = round(float(quantity),2)
-                                if unit_id == "BU" :
-                                    cal_quantity = round(float(quantity) * 45,2)
-                                final_quantity = cal_quantity
-                                check_final_quantity = StorageFeed.objects.filter(grower_id = grower_id,crop=save_crop,
-                                                        storage_id = storage_id)
-                                if check_final_quantity.exists():
-                                    check_final_quantity = check_final_quantity.last()
-                                    final_quantity = round(float(check_final_quantity.final_quantity) + float(cal_quantity),2)
-                                    
-                                save_feed_data = StorageFeed(grower_id = grower_id,crop=save_crop,storage_id = storage_id,
-                                            field_id = field_id,quantity_raw = quantity,quantity=cal_quantity,status = "quantity_in",
-                                            unit=unit_id,final_quantity=final_quantity)
-                                save_feed_data.save()
-                                return redirect ("storage_feed_list")
-                            else:
-                                context['messages'] = error_msg       
+                    else:                       
+                        storage_id = context.get('storage_id') 
+                        field_id = context.get('field_id')
+                        grower_crop = context.get('grower_crop')
+                        quantity = context.get('quantity')    
+                        unit_id = context.get('unit_id')                                             
+                        quantity = error_msg.append("Quantity") if not quantity or len(quantity) <=0 else quantity
+                        
+                        if len(error_msg) == 0:
+                            save_crop = context['selectedField'].crop if context['selectedField'] else grower_crop
+                            if unit_id == "LBS" :
+                                cal_quantity = round(float(quantity),2)
+                            if unit_id == "BU" :
+                                cal_quantity = round(float(quantity) * 45,2)
+                            final_quantity = cal_quantity
+                            check_final_quantity = StorageFeed.objects.filter(grower_id = grower_id,crop=save_crop,
+                                                    storage_id = storage_id)
+                            if check_final_quantity.exists():
+                                check_final_quantity = check_final_quantity.last()
+                                final_quantity = round(float(check_final_quantity.final_quantity) + float(cal_quantity),2)
+                                
+                            save_feed_data = StorageFeed(grower_id = grower_id,crop=save_crop,storage_id = storage_id,
+                                        field_id = field_id,quantity_raw = quantity,quantity=cal_quantity,status = "quantity_in",
+                                        unit=unit_id,final_quantity=final_quantity)
+                            save_feed_data.save()
+                            return redirect ("storage_feed_list")
+                        else:
+                            context['messages'] = error_msg       
                 return render(request,"storage/storage_feed_add.html",context)
             elif request.user.is_consultant:
                 consultant_id = Consultant.objects.get(email=request.user.email).id
@@ -1116,140 +1129,166 @@ def storage_feed_add(request):
                 growers = Grower.objects.filter(consultant=consultant_id)
                 context['growers'] = growers
 
-                if request.method == "POST":
+                context.update({
+                    'selectedStorage': None,
+                    'selectedField': None,
+                    'selectedCrop': None,
+                    'quantity': None,
+                    'unit_id': None
                     
-                    grower_id = request.POST.get('grower_id')
-                    storage_id = request.POST.get('storage_id')
-                    field_id = request.POST.get('field_id')
-                    grower_crop = request.POST.get('grower_crop')
-                    quantity = request.POST.get('quantity')
-                    unit_id = request.POST.get('unit_id')
-                    submitBtn = request.POST.get('submitBtn')
-                    mainSave = request.POST.get('mainSave')
-
-                    crop = []
-                    if grower_id and grower_id != "all" and submitBtn == "submitBtn":
+                    })
+                if request.method == "POST":
+                    grower_id = request.POST.get('grower_id')                    
+                    context.update({
+                        'grower_id': request.POST.get('grower_id'),
+                        'storage_id': request.POST.get('storage_id'),
+                        'field_id': request.POST.get('field_id'),
+                        'grower_crop': request.POST.get('grower_crop'),
+                        'quantity': request.POST.get('quantity'),
+                        'unit_id': request.POST.get('unit_id')
+                        
+                        })
+                    
+                    if grower_id and grower_id != "all" and not request.POST.get('save'):
                         context["selectedGrower"] =  Grower.objects.filter(id=grower_id).first()
                         storage_name = Storage.objects.filter(grower_id=grower_id).order_by('storage_name')
-                        context['storage_name'] = storage_name
-                        field_name = Field.objects.filter(grower_id=grower_id).order_by('id')
-                        context['field_name'] = field_name
-                        field = Field.objects.filter(grower_id=grower_id).values_list('crop', flat=True)
 
+                        if request.POST.get('storage_id') and request.POST.get('storage_id') != 'all':
+                            context['storage_name'] = storage_name
+                            context['selectedStorage'] = storage_name.filter(id=storage_id).first()
+                        else:
+                            context['storage_name'] = storage_name
+
+                        field_name = Field.objects.filter(grower_id=grower_id).order_by('id')
+                        if request.POST.get('field_id') and request.POST.get('field_id') != 'all':
+                            context['field_name'] = field_name
+                            context['selectedField'] = field_name.filter(id=field_id).first()
+                        else:
+                            context['field_name'] = field_name
+                        
+                        field = Field.objects.filter(grower_id=grower_id).values_list('crop', flat=True)
                         available_crops = set(Crop.objects.values_list('code', flat=True))
                         crop = list(set(field).intersection(available_crops))
 
-                        context["crop"] = crop
+                        if request.POST.get('field_id') and request.POST.get('field_id') != 'all':
+                            context["crops"] = crop  
+                            context["selectedCrop"] = Crop.objects.filter(crop_code=crop).first() 
+                        else:
+                            context["crops"] = crop                      
+                        
                     else:
-                        if grower_id and grower_id != "all" and mainSave == "Save" :
-                            context["selectedGrower"] = Grower.objects.filter(id=grower_id).first()
-                            if storage_id and storage_id !="all" :
-                                storage_name = Storage.objects.filter(grower_id=grower_id).order_by('storage_name')
-                                context['storage_name'] = storage_name
-                                context['selectedStorage'] = storage_name.filter(id=storage_id).first()
-                            else:
-                                error_msg.append("Storage")
-                            if field_id and field_id !="all":
-                                field_name = Field.objects.filter(grower_id=grower_id).order_by('id')
-                                context['field_name'] = field_name
-                                context['selectedField'] = field_name.filter(id=field_id).first() 
-                            else :
-                                error_msg.append("Field")
-                            quantity = error_msg.append("Quantity") if not quantity or len(quantity) <=0 else quantity
-                            
-                            if len(error_msg) == 0:
-                                save_crop = context['selectedField'].crop if context['selectedField'] else grower_crop
-                                if unit_id == "LBS" :
-                                    cal_quantity = round(float(quantity),2)
-                                if unit_id == "BU" :
-                                    cal_quantity = round(float(quantity) * 45,2)
-                                final_quantity = cal_quantity
-                                check_final_quantity = StorageFeed.objects.filter(grower_id = grower_id,crop=save_crop,
-                                                        storage_id = storage_id)
-                                if check_final_quantity.exists():
-                                    check_final_quantity = check_final_quantity.last()
-                                    final_quantity = round(float(check_final_quantity.final_quantity) + float(cal_quantity),2)
-                                    
-                                save_feed_data = StorageFeed(grower_id = grower_id,crop=save_crop,storage_id = storage_id,
-                                            field_id = field_id,quantity_raw = quantity,quantity=cal_quantity,status = "quantity_in",
-                                            unit=unit_id,final_quantity=final_quantity)
-                                save_feed_data.save()
-                                return redirect ("storage_feed_list")
-                            else:
-                                context['messages'] = error_msg     
+                        grower_id = context.get('grower_id')  
+                        grower_id = Grower.objects.filter(id=int(grower_id)).first().id                    
+                        storage_id = context.get('storage_id') 
+                        field_id = context.get('field_id')
+                        grower_crop = context.get('grower_crop')
+                        quantity = context.get('quantity')    
+                        unit_id = context.get('unit_id')                                             
+                        quantity = error_msg.append("Quantity") if not quantity or len(quantity) <=0 else quantity
+                        
+                        if len(error_msg) == 0:
+                            save_crop = context['selectedField'].crop if context['selectedField'] else grower_crop
+                            if unit_id == "LBS" :
+                                cal_quantity = round(float(quantity),2)
+                            if unit_id == "BU" :
+                                cal_quantity = round(float(quantity) * 45,2)
+                            final_quantity = cal_quantity
+                            check_final_quantity = StorageFeed.objects.filter(grower_id = grower_id,crop=save_crop,
+                                                    storage_id = storage_id)
+                            if check_final_quantity.exists():
+                                check_final_quantity = check_final_quantity.last()
+                                final_quantity = round(float(check_final_quantity.final_quantity) + float(cal_quantity),2)
+                                
+                            save_feed_data = StorageFeed(grower_id = grower_id,crop=save_crop,storage_id = storage_id,
+                                        field_id = field_id,quantity_raw = quantity,quantity=cal_quantity,status = "quantity_in",
+                                        unit=unit_id,final_quantity=final_quantity)
+                            save_feed_data.save()
+                            return redirect ("storage_feed_list")
+                        else:
+                            context['messages'] = error_msg     
                 return render(request,"storage/storage_feed_add.html",context)
             
             
             elif request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
                 grower = Grower.objects.all().order_by('name')
                 context['growers'] = grower
+                context.update({
+                    'selectedStorage': None,
+                    'selectedField': None,
+                    'selectedCrop': None,
+                    'quantity': None,
+                    'unit_id': None
+                    
+                    })
                 if request.method == "POST":
-                    grower_id = request.POST.get("grower_id")
-                    storage_id = request.POST.get('storage_id')
-                    field_id = request.POST.get('field_id')
-                    grower_crop = request.POST.get('grower_crop')
-                    quantity = request.POST.get('quantity')
-                    unit_id = request.POST.get('unit_id')
-                    submitBtn = request.POST.get('submitBtn')
-                    mainSave = request.POST.get('mainSave')
-                    counter = request.POST.get('counter')
-                    # print("submitBtn",submitBtn)
-                    # print("mainSave",mainSave)
-                    # print("grower_id",grower_id)
-                    # print("storage_id",storage_id)
-                    # print("field_id",field_id)
-                    # print("quantity",quantity)
-                    crop = []
-                    if grower_id and grower_id != "all" and submitBtn == "submitBtn":
-                        context["selectedGrower"] = grower.filter(id=grower_id).first()
+                    grower_id = request.POST.get('grower_id')                    
+                    context.update({
+                        'grower_id': request.POST.get('grower_id'),
+                        'storage_id': request.POST.get('storage_id'),
+                        'field_id': request.POST.get('field_id'),
+                        'grower_crop': request.POST.get('grower_crop'),
+                        'quantity': request.POST.get('quantity'),
+                        'unit_id': request.POST.get('unit_id')
+                        
+                        })
+                    
+                    if grower_id and grower_id != "all" and not request.POST.get('save'):
+                        context["selectedGrower"] =  Grower.objects.filter(id=grower_id).first()
                         storage_name = Storage.objects.filter(grower_id=grower_id).order_by('storage_name')
-                        context['storage_name'] = storage_name
-                        field_name = Field.objects.filter(grower_id=grower_id).order_by('id')
-                        context['field_name'] = field_name
-                        field = Field.objects.filter(grower_id=grower_id).values_list('crop', flat=True)
 
+                        if request.POST.get('storage_id') and request.POST.get('storage_id') != 'all':
+                            context['storage_name'] = storage_name
+                            context['selectedStorage'] = storage_name.filter(id=storage_id).first()
+                        else:
+                            context['storage_name'] = storage_name
+
+                        field_name = Field.objects.filter(grower_id=grower_id).order_by('id')
+                        if request.POST.get('field_id') and request.POST.get('field_id') != 'all':
+                            context['field_name'] = field_name
+                            context['selectedField'] = field_name.filter(id=field_id).first()
+                        else:
+                            context['field_name'] = field_name
+                        
+                        field = Field.objects.filter(grower_id=grower_id).values_list('crop', flat=True)
                         available_crops = set(Crop.objects.values_list('code', flat=True))
                         crop = list(set(field).intersection(available_crops))
 
-                        context["crop"] = crop
-            
+                        if request.POST.get('field_id') and request.POST.get('field_id') != 'all':
+                            context["crops"] = crop  
+                            context["selectedCrop"] = Crop.objects.filter(crop_code=crop).first() 
+                        else:
+                            context["crops"] = crop                      
+                        
                     else:
-                        if grower_id and grower_id != "all" and mainSave == "Save" :
-                            context["selectedGrower"] = grower.filter(id=grower_id).first()
-                            if storage_id and storage_id !="all" :
-                                storage_name = Storage.objects.filter(grower_id=grower_id).order_by('storage_name')
-                                context['storage_name'] = storage_name
-                                context['selectedStorage'] = storage_name.filter(id=storage_id).first()
-                            else:
-                                error_msg.append("Storage")
-                            if field_id and field_id !="all":
-                                field_name = Field.objects.filter(grower_id=grower_id).order_by('id')
-                                context['field_name'] = field_name
-                                context['selectedField'] = field_name.filter(id=field_id).first() 
-                            else :
-                                error_msg.append("Field")
-                            quantity = error_msg.append("Quantity") if not quantity or len(quantity) <=0 else quantity
-                            
-                            if len(error_msg) == 0:
-                                save_crop = context['selectedField'].crop if context['selectedField'] else grower_crop
-                                if unit_id == "LBS" :
-                                    cal_quantity = round(float(quantity),2)
-                                if unit_id == "BU" :
-                                    cal_quantity = round(float(quantity) * 45,2)
-                                final_quantity = cal_quantity
-                                check_final_quantity = StorageFeed.objects.filter(grower_id = grower_id,crop=save_crop,
-                                                        storage_id = storage_id)
-                                if check_final_quantity.exists():
-                                    check_final_quantity = check_final_quantity.last()
-                                    final_quantity = round(float(check_final_quantity.final_quantity) + float(cal_quantity),2)
-                                    
-                                save_feed_data = StorageFeed(grower_id = grower_id,crop=save_crop,storage_id = storage_id,
-                                            field_id = field_id,quantity_raw = quantity,quantity=cal_quantity,status = "quantity_in",
-                                            unit=unit_id,final_quantity=final_quantity)
-                                save_feed_data.save()
-                                return redirect ("storage_feed_list")
-                            else:
-                                context['messages'] = error_msg   
+                        grower_id = context.get('grower_id')  
+                        grower_id = Grower.objects.filter(id=int(grower_id)).first().id                    
+                        storage_id = context.get('storage_id') 
+                        field_id = context.get('field_id')
+                        grower_crop = context.get('grower_crop')
+                        quantity = context.get('quantity')    
+                        unit_id = context.get('unit_id')                                             
+                        quantity = error_msg.append("Quantity") if not quantity or len(quantity) <=0 else quantity
+                        
+                        if len(error_msg) == 0:
+                            save_crop = context['selectedField'].crop if context['selectedField'] else grower_crop
+                            if unit_id == "LBS" :
+                                cal_quantity = round(float(quantity),2)
+                            if unit_id == "BU" :
+                                cal_quantity = round(float(quantity) * 45,2)
+                            final_quantity = cal_quantity
+                            check_final_quantity = StorageFeed.objects.filter(grower_id = grower_id,crop=save_crop,
+                                                    storage_id = storage_id)
+                            if check_final_quantity.exists():
+                                check_final_quantity = check_final_quantity.last()
+                                final_quantity = round(float(check_final_quantity.final_quantity) + float(cal_quantity),2)
+                                
+                            save_feed_data = StorageFeed(grower_id = grower_id,crop=save_crop,storage_id = storage_id,
+                                        field_id = field_id,quantity_raw = quantity,quantity=cal_quantity,status = "quantity_in",
+                                        unit=unit_id,final_quantity=final_quantity)
+                            save_feed_data.save()
+                            return redirect ("storage_feed_list")
+                        else:
+                            context['messages'] = error_msg     
                                 
                 return render(request,"storage/storage_feed_add.html",context)
             else:
@@ -1262,256 +1301,237 @@ def storage_feed_add(request):
 
 
 @login_required
-def storage_feed_remove_update(request):
+def storage_feed_update(request):
     try:
         context={}
         error_msg = []
         if 'Grower' in request.user.get_role() and not request.user.is_superuser: 
-            grower_id = request.user.grower.id if request.user.grower else None
-            context['growers'] = Grower.objects.filter(id=grower_id)
-            if request.method == "POST":
-                storage_id = request.POST.get('storage_id')
-                field_id = request.POST.get('field_id')
-                grower_crop = request.POST.get('grower_crop')
-                quantity = request.POST.get('quantity')
-                unit_id = request.POST.get('unit_id')
-                ship_id = request.POST.get('ship_id')
-                submitBtn = request.POST.get('submitBtn')
-                mainSave = request.POST.get('mainSave')
-                counter = request.POST.get('counter')
-                crop = []
-                # print("error_msg",error_msg)
-                if grower_id and grower_id != "all" and submitBtn == "submitBtn":
-                    context["selectedGrower"] = Grower.objects.filter(id=grower_id).first()
-                    storage_name = Storage.objects.filter(grower_id=grower_id).order_by('storage_name')
-                    context['storage_name'] = storage_name
-                    if storage_id and storage_id != "all" :
-                        context['selectedStorage'] = storage_name.filter(id=storage_id).first()
-                    if grower_crop :
-                        context["selectedCrop"] = grower_crop
-                    if storage_id and storage_id != "all" and grower_crop :
-                        check_amt = StorageFeed.objects.filter(grower_id=grower_id,storage_id=storage_id)
-                        if check_amt.exists():
-                            check_amt = check_amt.last()
-                            context["total_quantity"] = f"{check_amt.final_quantity} {check_amt.unit}"
-                            context["raw_val"] = f"{check_amt.final_quantity}"
-                        else:
-                            context["total_quantity"] = f"0 LBS"
-                            context["raw_val"] = f"0"
-                    field_name = Field.objects.filter(grower_id=grower_id).order_by('id')
-                    context['field_name'] = field_name
-                    field = Field.objects.filter(grower_id=grower_id).values_list('crop', flat=True)
+            try:
+                grower_id = request.user.grower.id if request.user.grower else None
+                context['growers'] = Grower.objects.filter(id=grower_id)
+                context.update({
+                        "selectedGrower":None,
+                        "selectedStorage":None,
+                        "selectedCrop":None,
 
-                    available_crops = set(Crop.objects.values_list('code', flat=True))
-                    crop = list(set(field).intersection(available_crops))
-
-                    context["crop"] = crop
-  
-                else:
-                    print("save.....................")
-                    if grower_id and grower_id != "all" and mainSave == "Save" :
-                        print("save.....................")
-                        context["selectedGrower"] = Grower.objects.filter(id=grower_id).first()
-                        if storage_id and storage_id !="all" :
-                            storage_name = Storage.objects.filter(grower_id=grower_id).order_by('storage_name')
-                            context['storage_name'] = storage_name
-                            context['selectedStorage'] = storage_name.filter(id=storage_id).first()
-                        else:
-                            error_msg.append("Storage")
-                        quantity = error_msg.append("Quantity") if not quantity or len(quantity) <=0 else quantity
-                        ship_id = error_msg.append("Shipment_ID") if not ship_id or len(ship_id) <=0 else ship_id
-                        # ship_id = ship_id if ship_id else None
-                        print("error_msg.....................",error_msg)
-                        if len(error_msg) == 0:
-                            print("save.....................")
-                            # save_crop = context['selectedField'].crop if context['selectedField'] else grower_crop
-                            if unit_id == "LBS" :
-                                cal_quantity = round(float(quantity),2)
-                            if unit_id == "BU" :
-                                cal_quantity = round(float(quantity) * 45,2)
-                            final_quantity = cal_quantity
-                            check_final_quantity = StorageFeed.objects.filter(grower_id = grower_id,storage_id = storage_id)
-                            save_crop = None                     
-                            if check_final_quantity.exists():
-                                check_final_quantity = check_final_quantity.last()
-                                save_crop = check_final_quantity.crop
-                                final_quantity = round(float(check_final_quantity.final_quantity) - float(cal_quantity),2)
-                                
-                            save_feed_data = StorageFeed(grower_id = grower_id,crop=save_crop,storage_id = storage_id,
-                                                        quantity_raw = quantity,quantity=cal_quantity,status = "quantity_out",
-                                                        unit=unit_id,final_quantity=final_quantity,shipment_id=ship_id)
-                            save_feed_data.save()
-                            return redirect ("storage_feed_list")
-                        else:
-                            context['messages'] = error_msg   
-            return render(request,"storage/storage_feed_update.html",context)
-        elif request.user.is_consultant:
-            consultant_id = Consultant.objects.get(email=request.user.email).id
-            # print("consultant_id==========",consultant_id)
-            growers = Grower.objects.filter(consultant=consultant_id)
-            context['growers'] = growers
-            if request.method == "POST":
-                grower_id = request.POST.get('grower_id')
-                storage_id = request.POST.get('storage_id')
-                field_id = request.POST.get('field_id')
-                grower_crop = request.POST.get('grower_crop')
-                quantity = request.POST.get('quantity')
-                unit_id = request.POST.get('unit_id')
-                ship_id = request.POST.get('ship_id')
-                submitBtn = request.POST.get('submitBtn')
-                mainSave = request.POST.get('mainSave')
-                counter = request.POST.get('counter')
-                crop = []
-                # print("error_msg",error_msg)
-                if grower_id and grower_id != "all" and submitBtn == "submitBtn":
-                    context["selectedGrower"] = Grower.objects.filter(id=grower_id).first()
-                    storage_name = Storage.objects.filter(grower_id=grower_id).order_by('storage_name')
-                    context['storage_name'] = storage_name
-                    if storage_id and storage_id != "all" :
-                        context['selectedStorage'] = storage_name.filter(id=storage_id).first()
-                    if grower_crop :
-                        context["selectedCrop"] = grower_crop
-                    if storage_id and storage_id != "all" and grower_crop :
-                        check_amt = StorageFeed.objects.filter(grower_id=grower_id,storage_id=storage_id)
-                        if check_amt.exists():
-                            check_amt = check_amt.last()
-                            context["total_quantity"] = f"{check_amt.final_quantity} {check_amt.unit}"
-                            context["raw_val"] = f"{check_amt.final_quantity}"
-                        else:
-                            context["total_quantity"] = f"0 LBS"
-                            context["raw_val"] = f"0"
-                    field_name = Field.objects.filter(grower_id=grower_id).order_by('id')
-                    context['field_name'] = field_name
-                    field = Field.objects.filter(grower_id=grower_id).values_list('crop', flat=True)
-
-                    available_crops = set(Crop.objects.values_list('code', flat=True))
-                    crop = list(set(field).intersection(available_crops))
-
-                    context["crop"] = crop
-                    
-                else:
-                    # print("save.....................")
-                    if grower_id and grower_id != "all" and mainSave == "Save" :
-                        # print("save.....................")
-                        context["selectedGrower"] = Grower.objects.filter(id=grower_id).first()
-                        if storage_id and storage_id !="all" :
-                            storage_name = Storage.objects.filter(grower_id=grower_id).order_by('storage_name')
-                            context['storage_name'] = storage_name
-                            context['selectedStorage'] = storage_name.filter(id=storage_id).first()
-                        else:
-                            error_msg.append("Storage")
-                        quantity = error_msg.append("Quantity") if not quantity or len(quantity) <=0 else quantity
-                        ship_id = error_msg.append("Shipment_ID") if not ship_id or len(ship_id) <=0 else ship_id
-                        # ship_id = ship_id if ship_id else None
-                        # print("error_msg.....................",error_msg)
-                        if len(error_msg) == 0:
-                            # print("save.....................")
-                            # save_crop = context['selectedField'].crop if context['selectedField'] else grower_crop
-                            if unit_id == "LBS" :
-                                cal_quantity = round(float(quantity),2)
-                            if unit_id == "BU" :
-                                cal_quantity = round(float(quantity) * 45,2)
-                            final_quantity = cal_quantity
-                            check_final_quantity = StorageFeed.objects.filter(grower_id = grower_id,storage_id = storage_id)
-                            save_crop = None                     
-                            if check_final_quantity.exists():
-                                check_final_quantity = check_final_quantity.last()
-                                save_crop = check_final_quantity.crop
-                                final_quantity = round(float(check_final_quantity.final_quantity) - float(cal_quantity),2)
-                                
-                            save_feed_data = StorageFeed(grower_id = grower_id,crop=save_crop,storage_id = storage_id,
-                                                        quantity_raw = quantity,quantity=cal_quantity,status = "quantity_out",
-                                                        unit=unit_id,final_quantity=final_quantity,shipment_id=ship_id)
-                            save_feed_data.save()
-                            return redirect ("storage_feed_list")
-                        else:
-                            context['messages'] = error_msg     
-            return render(request,"storage/storage_feed_update.html",context)
-        elif request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
-            grower = Grower.objects.all().order_by('name')
-            context['growers'] = grower
-            if request.method == "POST":
-                grower_id = request.POST.get("grower_id")
-                storage_id = request.POST.get('storage_id')
-                field_id = request.POST.get('field_id')
-                grower_crop = request.POST.get('grower_crop')
-                quantity = request.POST.get('quantity')
-                unit_id = request.POST.get('unit_id')
-                ship_id = request.POST.get('ship_id')
-                submitBtn = request.POST.get('submitBtn')
-                mainSave = request.POST.get('mainSave')
-                counter = request.POST.get('counter')
-                crop = []
-                # print("error_msg",error_msg)
-                if grower_id and grower_id != "all" and submitBtn == "submitBtn":
-                    context["selectedGrower"] = grower.filter(id=grower_id).first()
-                    storage_name = Storage.objects.filter(grower_id=grower_id).order_by('storage_name')
-                    context['storage_name'] = storage_name
-                    if storage_id and storage_id != "all" :
-                        context['selectedStorage'] = storage_name.filter(id=storage_id).first()
-                    if grower_crop :
-                        context["selectedCrop"] = grower_crop
-                    if storage_id and storage_id != "all" and grower_crop :
-                        check_amt = StorageFeed.objects.filter(grower_id=grower_id,storage_id=storage_id)
-                        if check_amt.exists():
-                            check_amt = check_amt.last()
-                            context["total_quantity"] = f"{check_amt.final_quantity} {check_amt.unit}"
-                            context["raw_val"] = f"{check_amt.final_quantity}"
-                        else:
-                            context["total_quantity"] = f"0 LBS"
-                            context["raw_val"] = f"0"
-                    field_name = Field.objects.filter(grower_id=grower_id).order_by('id')
-                    context['field_name'] = field_name
-                    field = Field.objects.filter(grower_id=grower_id).values_list('crop', flat=True)
-
-                    available_crops = set(Crop.objects.values_list('code', flat=True))
-                    crop = list(set(field).intersection(available_crops))
-
-                    context["crop"] = crop
-  
-                else:
-                    print("save.....................")
-                    if grower_id and grower_id != "all" and mainSave == "Save" :
-                        print("save.....................")
+                    })
+                if request.method == "POST":
+                    data = request.POST
+                    grower_id = data.get("grower_id")                 
+                    context.update({
+                        "grower_id": data.get("grower_id"),
+                        "storage_id": data.get("storage_id"),
+                        "grower_crop":data.get("grower_crop"),
+                        "quantity":data.get("quantity"),
+                        "unit_id":data.get("unit_id")
+                    })               
+                
+                    if grower_id and grower_id != "all" and not data.get("save"):
+                        storage_id = data.get('storage_id') 
+                        grower_crop = data.get('grower_crop')
                         context["selectedGrower"] = grower.filter(id=grower_id).first()
-                        if storage_id and storage_id !="all" :
-                            storage_name = Storage.objects.filter(grower_id=grower_id).order_by('storage_name')
-                            context['storage_name'] = storage_name
+                        storage_name = Storage.objects.filter(grower_id=grower_id).order_by('storage_name')
+                        context['storage_name'] = storage_name
+                        if storage_id and storage_id != "all" :
                             context['selectedStorage'] = storage_name.filter(id=storage_id).first()
-                        else:
-                            error_msg.append("Storage")
-                        quantity = error_msg.append("Quantity") if not quantity or len(quantity) <=0 else quantity
-                        ship_id = error_msg.append("Shipment_ID") if not ship_id or len(ship_id) <=0 else ship_id
-                        # ship_id = ship_id if ship_id else None
-                        print("error_msg.....................",error_msg)
-                        if len(error_msg) == 0:
-                            print("save.....................")
-                            # save_crop = context['selectedField'].crop if context['selectedField'] else grower_crop
-                            if unit_id == "LBS" :
-                                cal_quantity = round(float(quantity),2)
-                            if unit_id == "BU" :
-                                cal_quantity = round(float(quantity) * 45,2)
-                            final_quantity = cal_quantity
-                            check_final_quantity = StorageFeed.objects.filter(grower_id = grower_id,storage_id = storage_id)
-                            save_crop = None                     
-                            if check_final_quantity.exists():
-                                check_final_quantity = check_final_quantity.last()
-                                save_crop = check_final_quantity.crop
-                                final_quantity = round(float(check_final_quantity.final_quantity) - float(cal_quantity),2)
+                        if grower_crop :
+                            context["selectedCrop"] = grower_crop
+                        if storage_id and storage_id != "all" and grower_crop :
+                            check_amt = StorageFeed.objects.filter(grower_id=grower_id,storage_id=storage_id)
+                            if check_amt.exists():
+                                check_amt = check_amt.last()
+                                context["total_quantity"] = check_amt.final_quantity
+                                context["amount_unit"] = check_amt.unit
                                 
-                            save_feed_data = StorageFeed(grower_id = grower_id,crop=save_crop,storage_id = storage_id,
-                                                        quantity_raw = quantity,quantity=cal_quantity,status = "quantity_out",
-                                                        unit=unit_id,final_quantity=final_quantity,shipment_id=ship_id)
-                            save_feed_data.save()
-                            return redirect ("storage_feed_list")
-                        else:
-                            context['messages'] = error_msg   
-            return render(request,"storage/storage_feed_update.html",context)
+                            else:
+                                context["total_quantity"] = 0
+                                context["amount_unit"] = None
+                                
+                        field_name = Field.objects.filter(grower_id=grower_id).order_by('id')
+                        context['field_name'] = field_name
+                        field = Field.objects.filter(grower_id=grower_id).values_list('crop', flat=True)
+
+                        available_crops = set(Crop.objects.values_list('code', flat=True))
+                        crop = list(set(field).intersection(available_crops))
+
+                        context["crop"] = crop
+                        return render(request,"storage/storage_feed_update.html",context)
+                    else:
+                        storage_id = context.get('storage_id')                
+                        grower_crop = context.get('grower_crop')
+                        quantity = context.get('quantity')
+                        unit_id = context.get('unit_id')
+                        
+                        if unit_id == "LBS" :
+                            cal_quantity = round(float(quantity),2)
+                        if unit_id == "BU" :
+                            cal_quantity = round(float(quantity) * 45,2)
+                        final_quantity = cal_quantity                    
+                                    
+                        save_feed_data = StorageFeed(grower_id = grower_id,crop=grower_crop,storage_id = storage_id,
+                                                    quantity_raw = quantity,quantity=cal_quantity,status = "quantity_edit",
+                                                    unit=unit_id,final_quantity=final_quantity)
+                        save_feed_data.save()
+                        return redirect ("storage_feed_list")
+                else:
+                    return render(request,"storage/storage_feed_update.html",context)    
+            except Exception as e:
+                context["error_messages"] = str(e)
+                return render(request,"storage/storage_feed_update.html",context)
+        elif request.user.is_consultant:
+            try:
+                consultant_id = Consultant.objects.get(email=request.user.email).id
+                # print("consultant_id==========",consultant_id)
+                growers = Grower.objects.filter(consultant=consultant_id)
+                context['growers'] = growers
+                context.update({
+                        "selectedGrower":None,
+                        "selectedStorage":None,
+                        "selectedCrop":None,
+
+                    })
+                if request.method == "POST":
+                    data = request.POST
+                    grower_id = data.get("grower_id")                 
+                    context.update({
+                        "grower_id": data.get("grower_id"),
+                        "storage_id": data.get("storage_id"),
+                        "grower_crop":data.get("grower_crop"),
+                        "quantity":data.get("quantity"),
+                        "unit_id":data.get("unit_id")
+                    })               
+                
+                    if grower_id and grower_id != "all" and not data.get("save"):
+                        storage_id = data.get('storage_id') 
+                        grower_crop = data.get('grower_crop')
+                        context["selectedGrower"] = grower.filter(id=grower_id).first()
+                        storage_name = Storage.objects.filter(grower_id=grower_id).order_by('storage_name')
+                        context['storage_name'] = storage_name
+                        if storage_id and storage_id != "all" :
+                            context['selectedStorage'] = storage_name.filter(id=storage_id).first()
+                        if grower_crop :
+                            context["selectedCrop"] = grower_crop
+                        if storage_id and storage_id != "all" and grower_crop :
+                            check_amt = StorageFeed.objects.filter(grower_id=grower_id,storage_id=storage_id)
+                            if check_amt.exists():
+                                check_amt = check_amt.last()
+                                context["total_quantity"] = check_amt.final_quantity
+                                context["amount_unit"] = check_amt.unit
+                                
+                            else:
+                                context["total_quantity"] = 0
+                                context["amount_unit"] = None
+                                
+                        field_name = Field.objects.filter(grower_id=grower_id).order_by('id')
+                        context['field_name'] = field_name
+                        field = Field.objects.filter(grower_id=grower_id).values_list('crop', flat=True)
+
+                        available_crops = set(Crop.objects.values_list('code', flat=True))
+                        crop = list(set(field).intersection(available_crops))
+
+                        context["crop"] = crop
+                        return render(request,"storage/storage_feed_update.html",context)
+                    else:
+                        storage_id = context.get('storage_id')                
+                        grower_crop = context.get('grower_crop')
+                        quantity = context.get('quantity')
+                        unit_id = context.get('unit_id')
+                        
+                        if unit_id == "LBS" :
+                            cal_quantity = round(float(quantity),2)
+                        if unit_id == "BU" :
+                            cal_quantity = round(float(quantity) * 45,2)
+                        final_quantity = cal_quantity                    
+                                    
+                        save_feed_data = StorageFeed(grower_id = grower_id,crop=grower_crop,storage_id = storage_id,
+                                                    quantity_raw = quantity,quantity=cal_quantity,status = "quantity_edit",
+                                                    unit=unit_id,final_quantity=final_quantity)
+                        save_feed_data.save()
+                        return redirect ("storage_feed_list")
+                else:
+                    return render(request,"storage/storage_feed_update.html",context)    
+            except Exception as e:
+                context["error_messages"] = str(e)
+                return render(request,"storage/storage_feed_update.html",context)
+        elif request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+            try:
+                grower = Grower.objects.all().order_by('name')
+                context['growers'] = grower
+                context.update({
+                    "selectedGrower":None,
+                    "selectedStorage":None,
+                    "selectedCrop":None,
+
+                })
+                if request.method == "POST":
+                    data = request.POST
+                    grower_id = data.get("grower_id")                 
+                    context.update({
+                        "grower_id": data.get("grower_id"),
+                        "storage_id": data.get("storage_id"),
+                        "grower_crop":data.get("grower_crop"),
+                        "quantity":data.get("quantity"),
+                        "unit_id":data.get("unit_id")
+                    })               
+                
+                    if grower_id and grower_id != "all" and not data.get("save"):
+                        storage_id = data.get('storage_id') 
+                        grower_crop = data.get('grower_crop')
+                        context["selectedGrower"] = grower.filter(id=grower_id).first()
+                        storage_name = Storage.objects.filter(grower_id=grower_id).order_by('storage_name')
+                        context['storage_name'] = storage_name
+                        if storage_id and storage_id != "all" :
+                            context['selectedStorage'] = storage_name.filter(id=storage_id).first()
+                        if grower_crop :
+                            context["selectedCrop"] = grower_crop
+                        if storage_id and storage_id != "all" and grower_crop :
+                            check_amt = StorageFeed.objects.filter(grower_id=grower_id,storage_id=storage_id)
+                            if check_amt.exists():
+                                check_amt = check_amt.last()
+                                context["total_quantity"] = check_amt.final_quantity
+                                context["amount_unit"] = check_amt.unit
+                                
+                            else:
+                                context["total_quantity"] = 0
+                                context["amount_unit"] = None
+                                
+                        field_name = Field.objects.filter(grower_id=grower_id).order_by('id')
+                        context['field_name'] = field_name
+                        field = Field.objects.filter(grower_id=grower_id).values_list('crop', flat=True)
+
+                        available_crops = set(Crop.objects.values_list('code', flat=True))
+                        crop = list(set(field).intersection(available_crops))
+
+                        context["crop"] = crop
+                        return render(request,"storage/storage_feed_update.html",context)
+                    else:
+                        storage_id = context.get('storage_id')                
+                        grower_crop = context.get('grower_crop')
+                        quantity = context.get('quantity')
+                        unit_id = context.get('unit_id')
+                        
+                        if unit_id == "LBS" :
+                            cal_quantity = round(float(quantity),2)
+                        if unit_id == "BU" :
+                            cal_quantity = round(float(quantity) * 45,2)
+                        final_quantity = cal_quantity                    
+                                    
+                        save_feed_data = StorageFeed(grower_id = grower_id,crop=grower_crop,storage_id = storage_id,
+                                                    quantity_raw = quantity,quantity=cal_quantity,status = "quantity_edit",
+                                                    unit=unit_id,final_quantity=final_quantity)
+                        save_feed_data.save()
+                        return redirect ("storage_feed_list")
+                else:
+                    return render(request,"storage/storage_feed_update.html",context) 
+            except Exception as e:
+                context["error_messages"] = str(e)  
+                return render(request,"storage/storage_feed_update.html",context)      
+            
         else:
             return redirect('login')
     except Exception as e:
-        messages = str(e)
-        return render(request,"storage/storage_feed_update.html",{"messages":messages})
+        context["error_messages"] = str(e)
+        return render(request,"storage/storage_feed_update.html",context)
     
 
 @login_required()

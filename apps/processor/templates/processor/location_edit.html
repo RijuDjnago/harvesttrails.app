@@ -26,6 +26,10 @@
     .mystyle {
         display: none;
     }
+    .bootstrap-select .dropdown-menu li.disabled.selected{display: none;}
+    .dropdown.bootstrap-select.form-control .btn{border: 1px solid #B2BEB5; padding: 14px 8px; border-radius:0;}
+    .bootstrap-select .dropdown-menu{max-width: 280px;}
+    .bootstrap-select .dropdown-menu li.selected.active .dropdown-item.active.selected{margin-left: 0;padding: 0;}
 </style>
 <div class="main-content">
     {% include 'header.html' %}
@@ -49,7 +53,7 @@
             {% else %}
             <div class="col-md-4" class="gro_dd">
                 <lable>processor Name</lable>
-                <select id="growerSelction" name="processor_name" class="storagetextbox " style="width: 100%;">
+                <select id="growerSelction" name="processor_name" class="storagetextbox form-control selectpicker" style="width: 100%;" data-live-search="true">
                     {% for processor in processor %}
                     <option value="{{processor.id}}" {% if selectedprocessor == processor.id %}selected{% endif %}>{{processor.entity_name}}-{{processor.id}} </option>
                     {% endfor %}

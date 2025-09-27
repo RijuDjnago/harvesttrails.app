@@ -25,12 +25,39 @@ class Crop(models.Model):
     def __str__(self):
         return self.name
 
+
+class CropVariety(models.Model):
+    crop = models.ForeignKey(Crop, on_delete=models.CASCADE, related_name="cropVariety")
+    variety_name = models.CharField(max_length=255, null=True, blank=True)
+    variety_code = models.CharField(max_length=255, null=True, blank=True)
+
+    def save(self, *args, **kwargs):        
+        if self.variety_name:
+            self.variety_code = self.variety_name 
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.crop.code} - {self.variety_name}"
+
+class CropType(models.Model):
+    crop = models.ForeignKey(Crop, on_delete=models.CASCADE, related_name="cropType")
+    type = models.CharField(max_length=255, null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.crop.name} - {self.type}"
+
+
 class Field(models.Model):
     """Database model for field"""  
     @staticmethod
     def crop_choices():
         crops = Crop.objects.all()
         return [(crop.code, crop.name) for crop in crops] 
+    
+    @staticmethod
+    def variety_choices():
+        varieties = CropVariety.objects.all()
+        return [(variety.variety_code, variety.variety_name) for variety in varieties] 
     
     name = models.CharField(unique=True, max_length=200)
     farm = models.ForeignKey(
@@ -53,7 +80,7 @@ class Field(models.Model):
     longitude = models.FloatField(null=True, blank=True)
     crop = models.CharField(max_length=255, choices=[], null=True, blank=True)
     variety = models.CharField(
-        max_length=255, choices=CHOICE.VARIETY_CHOICES, null=True, blank=True
+        max_length=255, choices=[], null=True, blank=True
     )
     yield_per_acre = models.FloatField(null=True, blank=True, verbose_name='Yield Per Acre')
     total_yield = models.FloatField(null=True, blank=True, verbose_name='Total Yield')
@@ -310,7 +337,8 @@ class Field(models.Model):
             
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)    
-        self._meta.get_field('crop').choices = self.crop_choices()   
+        self._meta.get_field('crop').choices = self.crop_choices()  
+        self._meta.get_field('variety').choices = self.variety_choices()  
     
     def __str__(self):
         """Returns string representation of farm"""
@@ -576,6 +604,7 @@ class CsvToField(models.Model):
         '''For returning url after storing file'''
         return reverse("csv-field-mapping", kwargs={"pk": self.pk})
 
+
 class ShapeFileDataCo(models.Model):
     coordinates = models.JSONField(default=list)
     field = models.ForeignKey(Field, on_delete=models.CASCADE, null=True, blank=True)
@@ -596,6 +625,11 @@ class FieldUpdated(models.Model):
     def crop_choices():
         crops = Crop.objects.all()
         return [(crop.code, crop.name) for crop in crops] 
+    
+    @staticmethod
+    def variety_choices():
+        varieties = CropVariety.objects.all()
+        return [(variety.variety_code, variety.variety_name) for variety in varieties] 
     
     field = models.ForeignKey(Field,on_delete=models.CASCADE,null=True,blank=True)
     name = models.CharField(max_length=200,null=True,blank=True)
@@ -622,7 +656,7 @@ class FieldUpdated(models.Model):
         verbose_name='FSA Field Number')
     crop = models.CharField(max_length=255, choices=[], null=True, blank=True)
     variety = models.CharField(
-        max_length=255, choices=CHOICE.VARIETY_CHOICES, null=True, blank=True
+        max_length=255, choices=[], null=True, blank=True
     )
     yield_per_acre = models.FloatField(null=True, blank=True, verbose_name='Yield Per Acre')
     total_yield = models.FloatField(null=True, blank=True, verbose_name='Total Yield')
@@ -653,6 +687,7 @@ class FieldUpdated(models.Model):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)    
         self._meta.get_field('crop').choices = self.crop_choices()
+        self._meta.get_field('variety').choices = self.variety_choices()
 
 class FieldActivity(models.Model):
     field_activity = models.CharField(max_length=200, null=True, blank=True)

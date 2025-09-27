@@ -45,6 +45,10 @@
         margin-top: 0px;
         height: 50px;
     }
+    .bootstrap-select .dropdown-menu li.disabled.selected{display: none;}
+    .dropdown.bootstrap-select.form-control .btn{border: 1px solid #B2BEB5; padding: 13px 8px; border-radius:0;}
+    .bootstrap-select .dropdown-menu{max-width: 280px;}
+    .bootstrap-select .dropdown-menu li.selected.active .dropdown-item.active.selected{margin-left: 0;padding: 0;}
 </style>
 
 <div class="main-content">
@@ -75,7 +79,7 @@
                         <div class="col-md-4">
                             <div class="form-group">
                                 <lable>Select Growers</lable>
-                                <select id="growerSelction" name="grower_id" class="gro_dd form-select">
+                                <select id="growerSelction" name="grower_id" class="gro_dd form-control selectpicker" data-live-search="true">
                                     <option value=0 selected disabled> Select All Growers </option>
                                     {% for grower in grower %}
                                     <option value="{{ grower.pk }}">{{grower.name}} - {{ grower.pk }}</option>

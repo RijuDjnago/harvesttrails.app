@@ -20,7 +20,7 @@
         &nbsp;
         &nbsp;
         &nbsp;
-        {% if 'Grower Edit' in request.user.get_role_perm or request.user.is_superuser %}
+        {% if 'Grower Edit' in request.user.get_role_perm or request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role%}
         <a href="{% url 'account-create' %}" class="btn-close-cancel">Create Grower</a>
         {% endif %}
       </div>
@@ -50,25 +50,25 @@
                 <td>{{account.phone}}</td>
                 <td>{{account.physical_address}}</td>
                 <td class="backk1">
-                  {% if 'Grower Edit' in request.user.get_role_perm or request.user.is_superuser %}
+                  {% if 'Grower Edit' in request.user.get_role_perm or request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
                   <li>
                     <a href="{% url 'account-update' account.pk %}" alt="edit grower" title="edit grower"><span class="fas fa-edit"> </span></a>
                   </li>
                   {% endif %}
-                  {% if 'Grower Delete' in request.user.get_role_perm or request.user.is_superuser %}
+                  {% if 'Grower Delete' in request.user.get_role_perm or request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
                   <li>
                     <a onclick="delGrower('{% url 'account-delete' account.pk %}')" href="javascript:void(0)"
                       data-mdb-toggle="modal" data-mdb-target="#deleteModal" alt="delete grower" title="delete grower">
                       <span class="fas fa-trash"></span></a>
                   </li>
                   {% endif %}
-                  {% if 'Grower Resend' in request.user.get_role_perm or request.user.is_superuser %}
+                  {% if 'Grower Resend' in request.user.get_role_perm or request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
                   <li>
                     <a href="{% url 'email-resend' account.pk %}" alt="email resend" title="email resend"><span class="fas fa-send"></span>
                     </a>
                   <li>
                     {% endif %}
-                    {% if 'Grower View' in request.user.get_role_perm or request.user.is_superuser %}
+                    {% if 'Grower View' in request.user.get_role_perm or request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
                   <li>
                     <a href="{% url 'account-detail' account.pk %}" alt="view grower details" title="view grower details"><span class="fas fa-eye"></span>
                     </a>

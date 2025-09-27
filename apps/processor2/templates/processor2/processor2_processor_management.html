@@ -56,7 +56,7 @@
         <div class="page-title-with-or-without-btn">
             <span class="farm headingtop"> Tier 2 Processor To Processor Management</span>
             <!-- Create button for Account-->
-            {% if 'Processor Management' in request.user.get_role_perm or request.user.is_superuser %}
+            {% if 'Processor Management' in request.user.get_role_perm or request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
             {% if not request.user.is_processor %}
             <div class="flex-header-btn">
                 <a href="{% url 'link_processor_two' %}" class="btn-close-cancel">Link Tier 2 Processor To Processor</a>

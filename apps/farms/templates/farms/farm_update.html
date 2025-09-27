@@ -41,8 +41,10 @@
                                 <div>
                                     <select name="land_type" class="select form-control" id="id_land_type">
                                         <option value="">Select Crop</option>
-                                        <option value="Rice">Rice</option>
-                                        <option value="Cotton">Cotton</option>
+                                        {% for crop in crops %}
+                                        <option value="{{crop.name}}" {% if selected_landtype == crop.name %} selected {% endif %}>{{crop.name}}</option>
+                                        {% endfor %}
+                                        
                                     </select>
                                 </div>
 			    </div>

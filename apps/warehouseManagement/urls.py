@@ -18,24 +18,62 @@ urlpatterns = [
     path('customer-change-password/<int:pk>/', customer_change_password, name='customer-change-password'),
     path('customer_upload_documents/<int:pk>/', customer_upload_documents,name='customer_upload_documents' ),
     path('customer_view/<int:pk>/', customer_view, name='customer_view'),
+    
     path('add-processor-shipment/', create_processor_shipment, name='add-processor-shipment'),
     path('list-processor-shipment/', list_processor_shipment, name='list-processor-shipment'),
     path('view-processor-shipment/<int:pk>/', processor_shipment_view, name='view-processor-shipment'),
     path('edit-processor-shipment/<int:pk>/', edit_processor_shipment, name='edit-processor-shipment'),
+    path('delete-processor-shipment/<int:pk>/', delete_processor_shipment, name='delete-processor-shipment'),
+    path('processor_shipment_current_location_track/<int:pk>/', processor_shipment_current_location_track, name='processor_shipment_current_location_track'),
 
     path('add-warehouse-shipment/', create_warehouse_shipment, name='add-warehouse-shipment'),
     path('list-warehouse-shipment/', warehouse_shipment_list, name='list-warehouse-shipment'),
     path('warehouse-shipment-view/<int:pk>/', warehouse_shipment_view, name='warehouse-shipment-view'),
     path('edit-warehouse-shipment/<int:pk>/', edit_warehouse_shipment, name='edit-warehouse-shipment'),
-    path('warehouse-shipment-invoice/<int:pk>/', warehouse_shipment_invoice, name='warehouse-shipment-invoice'),
+    path('delete-warehouse-shipment/<int:pk>/', delete_warehouse_shipment, name='delete-warehouse-shipment'),
+    path('warehouse_shipment_current_location_track/<int:pk>/', warehouse_shipment_current_location_track, name='warehouse_shipment_current_location_track'),
+
+    path('warehouse-shipment-invoice/<int:pk>/<str:type>/', warehouse_shipment_invoice, name='warehouse-shipment-invoice'),
     path('create-payment/<int:pk>/<str:type>/', create_payment_for_shipment, name='create_payment_for_shipment'),
     path('checkout-success/<int:pk>/<str:type>/<str:checkout_session_id>/', checkout_success, name='checkout-success'),
-    path('generate_invoice/<int:pk>/', generate_invoice, name='generate_invoice'),   
+    path('generate_invoice/<int:pk>/<str:type>/', generate_invoice, name='generate_invoice'),   
     path('processor_shipment_generate_report/', processor_shipment_generate_report, name='processor_shipment_generate_report'),
     path('processor_shipment_export_csv/', processor_shipment_export_csv, name='processor_shipment_export_csv'),
     path('export_csv_for_single_shipment_processor/<str:shipment_id>', processor_shipment_csv_single_shipment, name='export_csv_for_single_shipment_processor'),
     path('warehouse_shipment_generate_report/', warehouse_shipment_generate_report, name='warehouse_shipment_generate_report'),
     path('warehouse_shipment_export_csv/', warehouse_shipment_export_csv, name='warehouse_shipment_export_csv'),
     path('export_csv_for_single_shipment_warehouse/<str:shipment_id>', warehouse_shipment_csv_single_shipment, name='export_csv_for_single_shipment_warehouse'),
+
+    path('processor_shipment_details/<int:pk>/', processor_shipment_details, name='processor_shipment_details'),
+    path('warehouse_shipment_details/<int:pk>/', warehouse_shipment_details, name='warehouse_shipment_details'),
     
+    path('get_selected_processor/', get_selected_processor, name="get_selected_processor"),
+    path('get_destination_list/', get_destination_list, name="get_destination_list"),
+    path('get_crops/', get_crops, name="get_crops"),
+    path('get_customer_contracts/', get_customer_contracts, name="get_customer_contracts"), 
+    path('get_selected_customer/', get_selected_customer, name="get_selected_customer"),
+    path('get_lot_and_waybill/', get_lot_and_waybill, name='get_lot_and_waybill'),
+    path('get_warehouse/', get_warehouse, name="get_warehouse"),
+    path('get_customer_contract_crops/', get_customer_contract_crops, name="get_customer_contract_crops"),
+
+    path('processor_shipment_csv_download/', processor_shipment_csv_download, name='processor_shipment_csv_download'),
+    path('warehouse_shipment_csv_download/', warehouse_shipment_csv_download, name='warehouse_shipment_csv_download'),
+
+    path('customer_credit_memo_issue/', customer_credit_memo_issue, name='customer_credit_memo_issue'),
+
+    path('get-crop-availability/', get_crop_availability, name='get_crop_availability'),
+    path('get-customer-crop-availability/', get_customer_crop_availability, name='get_customer_crop_availability'),
+    path('get-waybill-numbers/', get_waybill_numbers, name='get_waybill_numbers'),
+    path('get_warehouse_shipment_waybill_numbers/', get_warehouse_shipment_waybill_numbers, name='get_warehouse_shipment_waybill_numbers'),
+
+    path('save_diversion_reminder/',save_diversion_reminder, name='save_diversion_reminder'),
+    path('update_diversion_reminder/', update_diversion_reminder, name='update_diversion_reminder'),
+    path('save_warehouse_shipment_diversion_reminder/', save_warehouse_shipment_diversion_reminder, name='save_warehouse_shipment_diversion_reminder'),
+    path('update_warehouse_shipment_diversion_reminder/', update_warehouse_shipment_diversion_reminder, name='update_warehouse_shipment_diversion_reminder'),
+    
+    path('carrier_list/', carrier_list, name='carrier_list'),
+    path('carrier_add/', carrier_add, name='carrier_add'),
+    path('carrier_edit/<int:pk>/', carrier_edit, name='carrier_edit'),
+    path('carrier_delete/<int:pk>/', carrier_delete, name='carrier_delete'),
+
 ]

@@ -16,7 +16,12 @@
 {% load crispy_forms_tags %}
 {% block content %}
 {% include 'navbar.html' %}
-
+<style>
+    .bootstrap-select .dropdown-menu li.disabled.selected{display: none;}
+    .dropdown.bootstrap-select.form-control .btn{border: 1px solid #B2BEB5; padding: 12px 8px;}
+    .bootstrap-select .dropdown-menu{max-width: 280px;}
+    .bootstrap-select .dropdown-menu li.selected.active .dropdown-item.active.selected{margin-left: 0;padding: 0;}
+</style>
 <div class="main-content">
     {% include 'header.html' %}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.5.2/css/bootstrap.css">
@@ -28,7 +33,7 @@
         <div class="page-title-with-or-without-btn">
             <span class="farm headingtop">Processor Grower Management</span>
             <!-- Create button for Account-->
-            {% if 'Processor Management' in request.user.get_role_perm or request.user.is_superuser  %}
+            {% if 'Processor Management' in request.user.get_role_perm or request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role  %}
             {% if not request.user.is_processor %}
             <div class="flex-header-btn">
                 <a href="{% url 'link_grower_processor' %}" class="btn-close-cancel">Link Grower To Processor</a>

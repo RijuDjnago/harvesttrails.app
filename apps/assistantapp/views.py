@@ -19,7 +19,7 @@ from timezonefinder import TimezoneFinder
 
 @login_required()
 def helpapi(request):
-    if 'Grower' in request.user.get_role() and not request.user.is_superuser:
+    if 'Grower' in request.user.get_role() and not request.user.is_superuser :
         if request.method == 'POST':
             question = request.POST.get('qes')     
             # prompt = "what is best cotton variety in usa"
@@ -179,7 +179,7 @@ def chatGptApi(question):
 @login_required()
 def digital_crop_consultant(request):
     context = {}
-    if 'Grower' in request.user.get_role() and not request.user.is_superuser:
+    if 'Grower' in request.user.get_role() and not request.user.is_superuser :
         grower_id = User.objects.get(id=request.user.id).grower.id
         # farm = Farm.objects.filter(grower_id=grower_id)
         field = Field.objects.filter(grower_id=grower_id)

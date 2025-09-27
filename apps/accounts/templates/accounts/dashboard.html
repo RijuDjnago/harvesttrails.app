@@ -117,13 +117,20 @@ border-radius: 0;
       </div>
     {% endif %} -->
 
-    <h3 class="headingtop">Hi, {{user.username}}</h3>
-    <p class="dashboard-subtitle">Welcome to your dashboard</p>
+    <div class="admin-head">
+      <div class="head-ic">
+        <i class="fas fa-home"></i>
+      </div>
+      <div class="head-desc">
+        <h3 class="headingtop">Hi, {{user.username}}</h3>
+        <p class="dashboard-subtitle">Welcome to your dashboard</p>
+      </div>
+    </div>
     {% if request.user.is_processor or request.user.is_processor2 or request.user.is_distributor or request.user.is_customer or request.user.is_warehouse_manager %}
       
     {% else %}
     <div>
-      <div class="cards">
+      <div class="cards mb-3">
             <div class="min1">
               <a href="{% url 'user-list' %}" target="_blank">
                 <div class="for-card-use1">
@@ -131,7 +138,7 @@ border-radius: 0;
                 </div>
                 <div class="for-card-use">
                   <div class="iccon">
-                    <span class="img1"><img src="{% static 'img/icons/plus.png' %}" /></span>
+                    <span class="img1"><i class="fas fa-user-plus"></i></span>
                   </div>
                   <div class="for-card-use1">
                     {% if 'Grower' in request.user.get_role and not request.user.is_superuser %} 
@@ -152,7 +159,7 @@ border-radius: 0;
               {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
               <a href="{% url 'survey-listing' %}" target="_blank">
               {% endif %}
-              {% if 'Grower' in request.user.get_role and not request.user.is_superuser %}
+              {% if 'Grower' in request.user.get_role and not request.user.is_superuser or not 'SubAdmin' in request.user.get_role or not 'SuperUser' in request.user.get_role %}
               <a href="{% url 'type-survey' %}" target="_blank">
               {% endif %}
                 <div class="for-card-use1">
@@ -160,7 +167,7 @@ border-radius: 0;
                 </div>
                 <div class="for-card-use">
                   <div class="iccon">
-                    <span class="img1"><img src="{% static 'img/icons/group.png' %}" /></span>
+                    <span class="img1"><i class="far fa-chart-bar"></i></span>
                   </div>
                   <div class="for-card-use1">
                     <h1>{{survey_count}}</h1>
@@ -176,7 +183,7 @@ border-radius: 0;
               </div>
               <div class="for-card-use">
                 <div class="iccon">
-                  <span class="img1"><img src="{% static 'img/icons/comma.png' %}" /></span>
+                  <span class="img1"><i class="fas fa-percentage"></i></span>
                 </div>
                 <div class="for-card-use1">
                   <h1>{{Avg_Percentage_Score}}</h1>
@@ -191,7 +198,7 @@ border-radius: 0;
               </div>
               <div class="for-card-use">
                 <div class="iccon">
-                  <span class="img1"><img src="{% static 'img/icons/speed.png' %}" /></span>
+                  <span class="img1"><i class="fas fa-tachometer-alt"></i></span>
                 </div>
                 <div class="for-card-use1">
                   <h1>{{SustainabilitySurvey_data_latest}}</h1>
@@ -200,6 +207,77 @@ border-radius: 0;
               </a>
             </div>
       </div>
+      {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
+      <div class="cards">
+        <div class="top-card" style="background-image: linear-gradient(to left, #1CF4FF, #E47367);">
+          <a href="{% url 'account-list' %}" target="_blank">
+            <div class="for-card-use1">
+              <h4 class="digitt">Total Grower</h4>
+            </div>
+            <div class="for-card-use">
+              <div class="iccon">
+                <span class="img1"><i class="fas fa-seedling"></i></span>
+              </div>
+              <div class="for-card-use1">                
+                  <h1>{{total_grower_count}}</h1>                  
+              </div>
+            </div>
+          </a>
+        </div>
+        <div class="top-card" style="  background-image: linear-gradient(to left, #43E97B, #38F9D7);">
+          <a href="{% url 'list-processor' %}" target="_blank">
+            <div class="for-card-use1">
+              <h4 class="digitt">Total Processor</h4>
+            </div>
+            <div class="for-card-use">
+              <div class="iccon">
+                <span class="img1"><i class="fas fa-chalkboard-teacher"></i></span>
+              </div>
+              <div class="for-card-use1">
+                
+                  <h1>{{total_processor_count}}</h1>
+                  
+              </div>
+            </div>
+          </a>
+        </div>
+        <div class="top-card" style="background-image: linear-gradient(to left, #EF9F39, #FFE258);">
+          <a href="{% url 'list-warehouse' %}" target="_blank">
+            <div class="for-card-use1">
+              <h4 class="digitt">Total Warehouse</h4>
+            </div>
+            <div class="for-card-use">
+              <div class="iccon">
+                <span class="img1"><i class="fas fa-warehouse"></i></span>
+              </div>
+              <div class="for-card-use1">
+                
+                  <h1>{{total_warehouse_count}}</h1>
+                  
+              </div>
+            </div>
+          </a>
+        </div>
+        
+        <div class="top-card" style="background-image: linear-gradient(to left, #ED3A53, #FFAF6B);">
+          <a href="{% url 'list-customer' %}" target="_blank">
+            <div class="for-card-use1">
+              <h4 class="digitt">Total Customer</h4>
+            </div>
+            <div class="for-card-use">
+              <div class="iccon">
+                <span class="img1"><i class="fas fa-user-tag"></i></span>
+              </div>
+              <div class="for-card-use1">
+                
+                  <h1>{{total_customer_count}}</h1>
+                  
+              </div>
+            </div>
+          </a>
+        </div>
+      </div>
+      {% endif %}
       <!-- {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
       <div class="cards-2columns">
         <div class="min5">
@@ -396,18 +474,16 @@ border-radius: 0;
             <div class="card card-padding">
                 <h2 class="user-detls">Your Details</h2>
                 <div class="row">
-                    <div class="col-4"><strong>Entity Name : </strong>
+                    <div class="col-3"><strong>Entity Name : </strong>
                         <div>{{customer.name}}</div>
                     </div>
-                    <div class="col-4"><strong>Location : </strong>
+                    <div class="col-3"><strong>Location : </strong>
                         <div>{{customer.location}}</div>
                     </div>
-                    <div class="col-4"><strong>Latitude : </strong>
+                    <div class="col-3"><strong>Latitude : </strong>
                         <div>{{customer.latitude}}</div>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-4"><strong>Longitude : </strong>
+                    </div>              
+                    <div class="col-3"><strong>Longitude : </strong>
                         <div>{{customer.longitude}}</div>
                     </div>
                 </div>
@@ -431,8 +507,8 @@ border-radius: 0;
             <div class="card card-padding mt-3">
                 <h2 class="user-detls">Unpaid Shipments</h2>
         
-                {% if unpaid_shipments %}
-                <!-- If there are unpaid shipments, display the table -->
+                {% if unpaid_warehouse_shipments %}
+                <h6 class="font-weight-bold"> Warehouse Shipments </h6>
                 <table class="table table-striped">
                     <thead>
                         <tr>
@@ -444,14 +520,14 @@ border-radius: 0;
                         </tr>
                     </thead>
                     <tbody>
-                        {% for shipment in unpaid_shipments %}
+                        {% for shipment in unpaid_warehouse_shipments %}
                         <tr>
                             <td>{{ shipment }}</td>
                             <td>&#36; {{ shipment.amount }}</td>
                             <td>{{ shipment.due_date }}</td>
                             <td>
                                 {% if shipment.invoice_approval %}
-                                <a href="{% url 'warehouse-shipment-invoice' shipment.id %}" class="update-btn-link" alt="view invoice details" title="view invoice details">
+                                <a href="{% url 'warehouse-shipment-invoice' shipment.id 'warehouse' %}" class="update-btn-link" alt="view invoice details" title="view invoice details">
                                     <span class="fas fa-file-invoice"></span>
                                 </a>
                                 {% else %}
@@ -474,12 +550,62 @@ border-radius: 0;
                   <tfoot>
                       <tr>
                           <td colspan="4" class="text-end"><strong>Total Amount:</strong></td> <!-- Align the text to the right -->
-                          <td class="text-end">&#36;{{ total_amount }}</td> <!-- Align the total amount to the right -->
+                          <td class="text-end">&#36;{{ total_warehouse_amount }}</td> <!-- Align the total amount to the right -->
                       </tr>
                   </tfoot>
                 </table>
                 {% else %}                
-                <p>No unpaid shipments</p>
+                <p>No unpaid warehouse shipments</p>
+                {% endif %}
+                {% if unpaid_processor_shipments %}
+                <h6 class="font-weight-bold mt-4"> Processor Shipments </h6>
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Shipment</th>
+                            <th>Total Amount</th>
+                            <th>Due Date</th>
+                            <th>Invoice</th>
+                            <th>Pay Now</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for shipment in unpaid_processor_shipments %}
+                        <tr>
+                            <td>{{ shipment }}</td>
+                            <td>&#36; {{ shipment.amount }}</td>
+                            <td>{{ shipment.due_date }}</td>
+                            <td>
+                                {% if shipment.invoice_approval %}
+                                <a href="{% url 'warehouse-shipment-invoice' shipment.id 'processor' %}" class="update-btn-link" alt="view invoice details" title="view invoice details">
+                                    <span class="fas fa-file-invoice"></span>
+                                </a>
+                                {% else %}
+                                <span>No Invoice</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <form action="{% url 'create_payment_for_shipment' shipment.id 'processor' %}" method="POST">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm me-3 text-white" style="background-color: #549874;">
+                                        <span class="fas fa-credit-card"></span>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <table class="table">
+                  <tfoot>
+                      <tr>
+                          <td colspan="4" class="text-end"><strong>Total Amount:</strong></td> <!-- Align the text to the right -->
+                          <td class="text-end">&#36;{{ total_processor_amount }}</td> <!-- Align the total amount to the right -->
+                      </tr>
+                  </tfoot>
+                </table>
+                {% else %}                
+                <p>No unpaid processor shipments</p>
                 {% endif %}
             </div>
           </div>             
@@ -572,7 +698,11 @@ border-radius: 0;
             <h2 class="user-detls">Recent Added Users</h2>
               {% for recentUser in recent_users %}
               <a href="{% url 'user-detail' recentUser.pk %}" target="_blank" style="color: black;">
-              <p>{{recentUser.first_name}} {{recentUser.last_name}}</p>
+                
+                {% if recentUser.first_name != "abmin" %}
+                <p>{{recentUser.first_name}} {{recentUser.last_name}}</p>
+                {% endif %}
+            
               </a>
               {% endfor %}
             {% else %}
@@ -621,11 +751,11 @@ border-radius: 0;
       </div>
       <div class="row">
         <div class="col-md-12 col-12">
-         {% if not request.user.is_superuser or 'SuperUser' in request.user.get_role or 'Grower' in request.user.get_role and 'Consultant' in request.user.get_role and 'Processor' in request.user.get_role and 'Processor2' in request.user.get_role and 'Farm Operator' in request.user.get_role %}
-          {% else %}
+          {% if  request.user.is_superuser or  'SuperUser' in request.user.get_role or 'SubAdmin' in request.user.get_role  %}
+          {% comment %} {% else %} {% endcomment %}
           {% comment %} {% if 'SubAdmin' in request.user.get_role %} {% endcomment %}
           <div class="card card-padding">
-            <h2 class="user-detls">LOG DETAILS</h2>
+            <h2 class="user-detls">Log Details</h2>
             <div class="table-responsive tblborder">
               <table class="table table-striped">
                 <thead>
@@ -739,15 +869,15 @@ border-radius: 0;
               </p>
             
               {% else %}
-              {% if request.user.is_processor or request.user.is_processor2 or request.user.is_superuser or 'SuperUser' in request.user.get_role or 'SubAdmin' in request.user.get_role %}
-              {% else %}
+              <!-- {% if request.user.is_processor or request.user.is_processor2 or request.user.is_superuser or 'SuperUser' in request.user.get_role or 'SubAdmin' in request.user.get_role %}
+              
               <h2 class="user-detls">Recent Added Users</h2>
               {% for recentUser in recent_users %}
               <a href="{% url 'user-detail' recentUser.pk %}" target="_blank" style="color: black;">
               <p>{{recentUser.first_name}} {{recentUser.last_name}}</p>
               </a>
               {% endfor %}
-              {% endif %}
+              {% endif %} -->
             </div>
           </div>
           {% endif %}

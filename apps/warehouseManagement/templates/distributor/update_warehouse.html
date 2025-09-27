@@ -3,6 +3,8 @@
 {% block extrahead %}
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-Y3EWVPF7PQ"></script>
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
@@ -13,11 +15,39 @@
 {% endblock extrahead %}
 
 {% block content %} {% include 'navbar.html' %}
+<style>
+    .select2-container--default .select2-selection--multiple {
+    background-color: white;
+    border: 1px solid #aaa;
+    border-radius: 4px;
+    cursor: text;
+    padding-bottom: 5px;
+    padding-right: 5px;
+    position: relative;
+    height: 46px;
+}
+
+</style>
 <div class="main-content">
     {% include 'header.html' %} {% load crispy_forms_tags %}
   <main>
     <span class="farm headingtop">Warehouse Update</span>
     <div class="card farm-fields-container">
+        <nav aria-label="breadcrumb m-5">
+            {% if error_messages %}
+            <div id="alertMessage" class="alert alert-warning alert-dismissible fade show" role="alert">
+                <strong>{{error_messages}}</strong>  
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>                         
+              </div> 
+              <script>                            
+                setTimeout(function() {
+                    document.getElementById('alertMessage').style.display = 'none';
+                }, 5000);
+            </script>                          
+              {% endif %}
+        </nav>
         <div class="container-fluid">
             <form method="post" class="farm-fields-form">
                 {% csrf_token %}
@@ -31,6 +61,9 @@
                     </div>
                     <div class="col-md-4">
                         {{ form.distributor|as_crispy_field }}
+                    </div>
+                    <div class="col-md-4">
+                        {{ form.customers|as_crispy_field }}
                     </div>
                     <div class="col-md-4">
                         {{ form.latitude|as_crispy_field }}
@@ -59,7 +92,7 @@
                         </div>
                     </div>
                     <div class="col-md-6">                         
-                        <label for="user_phone">Contact Phone</label>                                   
+                        <label for="user_phone">Contact Phone<span class="asteriskField">*</span></label>                                   
                         <div class="d-flex">
                             {% comment %} <select name="country_code1" id="country_code" class="form-control" style="border-top-left-radius:0 !important; border-bottom-left-radius:0 !important; width:135px;" required>                    
                                 <option value="" selected disabled>Select Country Code</option>
@@ -323,7 +356,22 @@
 {% endblock %}
 
 {% block jquery %}
-
+<script>
+  $(document).ready(function() {
+      $('#id_distributor').select2({
+          placeholder: "Select Disrtibutor(s)",
+          allowClear: true
+      });
+  });
+</script>
+<script>
+  $(document).ready(function() {
+      $('#id_customers').select2({
+          placeholder: "Select Customer(s)",
+          allowClear: true
+      });
+  });
+</script>
 <script>
     $('#Warehouse-active').addClass('activeLink');
   

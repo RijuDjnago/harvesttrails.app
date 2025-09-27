@@ -13,7 +13,7 @@
         margin-bottom: 20px;
     }
 </style>
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAQ_OGAb4yuL8g55IMufP3Dwd4yjrWxrdI&libraries=places"></script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAfBo6-cZlOpKGrD1ZYwISIGjYvhH_wPmk&libraries=places"></script>
 
 {% endblock extrahead %}
 
@@ -42,63 +42,105 @@
                 </div>
                 {% endif %}
             </div>
-
+        
             <div class="card farm-fields-container">
                 <div class="container-fluid">
                     {% csrf_token %}
                     <div class="row">
-                        <div class="col-md-3">
+                        <!-- First Row -->
+                        <div class="col-md-4">
                             <label><strong>Select Crop</strong><span class="asteriskField">*</span></label>
-                            <select name="select_crop" id="select_crop_id" onchange="getText()" class="form-control" required>
-                                <option value=''>Select Crop</option>
-                                <option value='RICE' {% if select_crop == 'RICE' %}selected{% endif %}>RICE</option>
-                                <option value='COTTON' {% if select_crop == 'COTTON' %}selected{% endif %}>COTTON</option>
+                            <select name="select_crop" id="select_crop_id" class="form-control" required>
+                                <option value="">Select Crop</option>
+                                {% for crop in crops %}
+                                <option value="{{ crop.code }}" {% if select_crop == crop.code %}selected{% endif %}>{{ crop.code }}</option>
+                                {% endfor %}
                             </select>
                         </div>
-                        <div class="col-md-3">
-                            <label><strong>Select Crop Year</strong><span class="asteriskField">*</span></label>
-                            <select name="crop_year" id="" class="form-control" required>
-                                <option value=''>Select Crop Year</option>
-                                <option value='2022' {% if crop_year == '2022' %}selected{% endif %}>2022</option>
-                                <option value='2023' {% if crop_year == '2023' %}selected{% endif %}>2023</option>
+                        <div class="col-md-4">
+                            <label><strong>Select Search By</strong><span class="asteriskField">*</span></label>
+                            <select name="get_search_by" onchange="removeSelectedOption()" id="getTextid" class="form-control" required>
+                                <option value="">Select Search By</option>
+                                <option value="grower" {% if get_search_by == 'grower' %}selected{% endif %}>Grower</option>
+                                <option value="field" {% if get_search_by == 'field' %}selected{% endif %}>Field</option>
+                                <option value="processor" {% if get_search_by == 'processor' %}selected{% endif %}>Processor</option>
+                                <option value="sku_id" {% if get_search_by == 'sku_id' %}selected{% endif %}>SKU ID</option>
+                                <option value="deliveryid" {% if get_search_by == 'deliveryid' %}selected{% endif %}>Delivery ID</option>
                             </select>
                         </div>
-                        <div class="col-md-3">
-                            <label><strong>From Date</strong><span class="asteriskField">*</span></label>
-                            <input name="from_date" value="{{from_date}}" type="date" class="form-control" required>
-                        </div>
-                        <div class="col-md-3">
-                            <label><strong>To Date</strong><span class="asteriskField">*</span></label>
-                            <input name="to_date" value="{{to_date}}" type="date" class="form-control" required>
-                        </div>
-                        <div class="col-md-3 mt-2">
-                            <select name="get_search_by" onchange="removeSelectedOption()" id="getTextid" class="form-control" style="padding-top: 9px;padding-bottom: 9px;">
-                                <option value=''>Select Search By</option>
-                                <option value='grower' {% if get_search_by == 'grower' %}selected{% endif %}>Grower</option>
-                                <option value='field' {% if get_search_by == 'field' %}selected{% endif %}>Field</option>
-                                <option value='processor' {% if get_search_by == 'processor' %}selected{% endif %}>Processor</option>
-                                <option value='sku_id' {% if get_search_by == 'sku_id' %}selected{% endif %}>SKU id</option>
-                                <option value='deliveryid' {% if get_search_by == 'deliveryid' %}selected{% endif %}>Delivery id</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6 mt-2">
-                            <input name="search_text" onkeyup="getText()" id="tags" value="{{search_text}}" type="text" class="form-control" placeholder="Search Delivery ID, Field, Grower, Processor, etc.">
-                        </div>
-                        <div class="col-md-3 text-left mt-2 pt-2">
-                            <input type="submit" id="searchBtn" class="btn-save-submit" value="TABLE SHOW" name="table_view"> 
+                        <div class="col-md-4">
+                            <label><strong>Search Text</strong><span class="asteriskField">*</span></label>
+                            <input name="search_text" onkeyup="getText()" id="tags" value="{{ search_text }}" type="text" class="form-control" placeholder="Search Delivery ID, Field, Grower, Processor, etc." required>
                         </div>
                     </div>
+        
+                    <!-- Second Row -->
+                    <div class="row mt-3">
+                        <div class="col-md-4">
+                            <label><strong>Select Filter Type</strong><span class="asteriskField">*</span></label>
+                            <select name="filter_type" id="filter_type" class="form-control" onchange="toggleFilterFields()">
+                                <option value="all" {% if filter_type == "all" %} selected {% endif %}>All</option>
+                                <option value="date_range" {% if filter_type == "date_range" %} selected {% endif %}>Date Range</option>
+                                <option value="year" {% if filter_type == "year" %} selected {% endif %}>Year</option>
+                                
+                            </select>
+                        </div>
+                        <div class="col-md-4" id="year_field" style="display: none;">
+                            <label><strong>Select Crop Year</strong></label>
+                            <select name="crop_year" class="form-control">
+                                <option value="">Select Crop Year</option>
+                                <option value="2022" {% if crop_year == '2022' %}selected{% endif %}>2022</option>
+                                <option value="2023" {% if crop_year == '2023' %}selected{% endif %}>2023</option>
+                                <option value="2024" {% if crop_year == '2024' %}selected{% endif %}>2024</option>
+                                
+                            </select>
+                        </div>
+                        <div class="col-md-4" id="date_range_fields" style="display: none;">
+                            <div class="row">
+                                <div class="col-6">
+                                    <label><strong>From Date</strong></label>
+                                    <input name="from_date" value="{{ from_date }}" type="date" class="form-control">
+                                </div>
+                                <div class="col-6">
+                                    <label><strong>To Date</strong></label>
+                                    <input name="to_date" value="{{ to_date }}" type="date" class="form-control">
+                                </div>                        
+                            </div>
+                        </div>
+                        <div class="col-md-3 text-left" style="margin-top:35px;">
+                            <input type="submit" id="searchBtn" class="btn-save-submit" value="TABLE SHOW" name="table_view">
+                        </div>
+                    </div>
+        
                 </div>
             </div>
         </form>
-
-
+        <script>
+            function toggleFilterFields() {
+                const filterType = document.getElementById('filter_type').value;
+                const yearField = document.getElementById('year_field');
+                const dateRangeFields = document.getElementById('date_range_fields');
+            
+                yearField.style.display = 'none';
+                dateRangeFields.style.display = 'none';
+            
+                if (filterType === 'year') {
+                    yearField.style.display = 'block';
+                } else if (filterType === 'date_range') {
+                    dateRangeFields.style.display = 'block';
+                }
+            }
         
+            // Ensure correct fields are displayed on page load
+            document.addEventListener('DOMContentLoaded', function() {
+                toggleFilterFields();
+            });
+        </script>
 
         <section id="map_show" class="map_show main_section hidden" style="background-color: #fff; max-width: 100%; width: 100%; margin: auto; padding: 20px 0;">
             <div class="container-fluid">
                 <div class="heading"  style="">
-                    <h style="font-size: 35px;"><b>Traceability Report for Map</b>  </h>
+                    <h1 style="font-size: 35px;"><b>Traceability Report for Map</b></h1>
                 </div>
                 
                 {% if origin_context %}
@@ -369,24 +411,15 @@
 
 
 <script>
-    // Initialize and display the map
     function initMap2() {
-        // Define a default center
-        //alert("hello Riju")
         var defaultCenter = { lat: 0, lng: 0 };
-
-        // Check if locations are available
         var locations = {{ field_location_list|safe }};
         var center;
-
-        // If locations are available and there is at least one location, set the center to the first location
         if (locations && locations.length > 0) {
             center = { lat: locations[0].lat, lng: locations[0].lng };
         } else {
-            center = defaultCenter; // Set default center if no locations are available
+            center = defaultCenter; 
         }
-
-        // Create a new map object
         var map = new google.maps.Map(document.getElementById('grower_location'), {
             center: center,
             zoom: 5 // Set the initial zoom level
@@ -471,7 +504,7 @@
     
     function initMap4() {
         // Define a default center
-        //alert("hello pritam")
+        
         var defaultCenter = { lat: 0, lng: 0 };
 
         // Check if locations are available
@@ -515,7 +548,6 @@
 
     window.onload = initMap4();
 </script>
-
 
 <script>
     
@@ -566,7 +598,6 @@
     window.onload = initMap5();
 </script>
 
-
 <script>
     
     function initMap6() {
@@ -616,7 +647,6 @@
     window.onload = initMap6();
 </script>
 
-
 <script>
     function initMap() {
         {% for out2 in outbound2_wip %}
@@ -660,34 +690,28 @@
     
 </script>
 
-
 <script>
-
-
-function getText(){
-    // alert("okay")
-    getTextid = $("#getTextid").val();
-    select_crop_id = $("#select_crop_id").val();
-    // console.log("svdhsg", getTextid, select_crop_id)
-    if (getTextid != '' && select_crop_id != ''){
-        $.ajax({
-            type: "GET",
-                url: `/tracemodule/autocomplete_suggestions/${getTextid}/${select_crop_id}/`,
-                data: {},
-                contentType: false,
-                cache: false,
-                processData: false,
-                success: function (response){
-                    var availableTags  = response.select_search;
-                    $("#tags").autocomplete({
-                        source: availableTags
-                    });
-                }
-        })
+    function getText(){
+        // alert("okay")
+        getTextid = $("#getTextid").val();
+        select_crop_id = $("#select_crop_id").val();
+        // console.log("svdhsg", getTextid, select_crop_id)
+        if (getTextid != '' && select_crop_id != ''){
+            $.ajax({
+                type: "GET",
+                    url: `/tracemodule/autocomplete_suggestions/${getTextid}/${select_crop_id}/`,
+                    data: {},
+                    contentType: false,
+                    cache: false,
+                    processData: false,
+                    success: function (response){
+                        var availableTags  = response.select_search;
+                        $("#tags").autocomplete({
+                            source: availableTags
+                        });
+                    }
+            })
+        }
     }
-}
-
-
-
 </script>
 {% endblock jquery %}

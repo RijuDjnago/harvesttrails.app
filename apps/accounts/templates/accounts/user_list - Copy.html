@@ -26,7 +26,7 @@
             <span class="farm headingtop">User Management</span>
             <!-- Create button for Account-->
             <div class="flex-header-btn">
-                {% if 'User Edit' in request.user.get_role_perm or request.user.is_superuser %}
+                {% if 'User Edit' in request.user.get_role_perm or request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
                 <a href="{% url 'super-account-create' %}" class="btn-close-cancel mt-2 mt-sm-0">Create User</a>
                 &nbsp;
                 <a href="{% url 'add-consultant' %}" class="btn-close-cancel mt-2 mt-sm-0">Create Consultant</a>
@@ -71,7 +71,7 @@
 
                                     <!-- Only For SuperUser -->
                                     <!-- {{users.password_raw}} -->
-                                    {% if request.user.is_superuser %}
+                                    {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
                                     {{users.password_raw}}
                                     {% endif %}
                                     <!-- {% for role in users.role.all %} {% if role.role == "SubAdmin" %} - {% else %} {{users.password_raw}} {% endif %} {% endfor %} -->
@@ -82,7 +82,7 @@
                                 <td>{{users.grower.name}}</td>
                                 <td class="backk" style="vertical-align: middle;">
                                     
-                                    {% if 'User Edit' in request.user.get_role_perm or request.user.is_superuser %}
+                                    {% if 'User Edit' in request.user.get_role_perm or request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
                                     <li> <a href="{% url 'user-update' users.pk %}" alt="edit user" title="edit user"><span class="fas fa-edit" data-mdb-toggle="modal" data-mdb-target="#exampleModal"></span></a></li>
 
 
@@ -94,16 +94,16 @@
                                     {% endif %} 
                                     {% endfor %}
                                     
-                                    {% if request.user.is_superuser %}
+                                    {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
                                     <li><a href="{% url 'user_change_password' users.pk %}" alt="change password" title="change password"><span class="fas fa-key"></span></a></li>
                                     {% endif %}
 
                                     {% endif %}
                                     <!-- <li> <a href="{% url 'user-delete' user.pk %}"><span class="fas fa-trash" data-mdb-toggle="modal" data-mdb-target="#deleteModal"></span></a></li> -->
-                                    {% if 'User Delete' in request.user.get_role_perm or request.user.is_superuser %}
+                                    {% if 'User Delete' in request.user.get_role_perm or request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
                                     <li> <a onclick="delUser('{% url 'user-delete' users.pk %}')" href="javascript:void(0)" data-mdb-toggle="modal" data-mdb-target="#deleteModal" alt="delete user" title="delete user"><span class="fas fa-trash"></span></a></li>
                                     {% endif %}
-                                    {% if 'User View' in request.user.get_role_perm or request.user.is_superuser %}
+                                    {% if 'User View' in request.user.get_role_perm or request.user.is_superuser  or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role%}
                                     <li> <a href="{% url 'user-detail' users.pk %}" alt="view user" title="view user"><span class="fas fa-eye"></span> </a></li>
                                     {% endif %}
                                 </td>

@@ -1,6 +1,12 @@
 {% extends "base.html" %}
-{% load static %} {% block title %} Document/Photo List {% endblock title %} {% block content %}
+{% load static %} {% block title %} Survey Document/Photo List {% endblock title %} {% block content %}
 {% include 'navbar.html' %}
+<style>
+  .bootstrap-select .dropdown-menu li.disabled.selected{display: none;}
+  .dropdown.bootstrap-select.form-control .btn{border: 1px solid #ddd; padding: 6px 8px; border-radius: 0;}
+  .bootstrap-select .dropdown-menu{max-width: 280px;}
+  .bootstrap-select .dropdown-menu li.selected.active .dropdown-item.active.selected{margin-left: 0;padding: 0;}
+</style>
 <div class="main-content">
   {% include 'header.html' %}
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.5.2/css/bootstrap.css">
@@ -8,14 +14,14 @@
   <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.2.9/css/responsive.bootstrap4.min.css">
   <main>
     <div class="page-title-with-or-without-btn">
-      <span class="farm headingtop">Document/Photo Listing</span>
+      <span class="farm headingtop">Survey Document/Photo Listing</span>
       <!-- Create button for Account-->
       <div class="flex-header-btn">
         {% if 'Folder List' in request.user.get_role_perm or request.user.is_superuser %}
-        <a href="{% url 'folder-list' %}" class="btn-add-green">Folder List</a>
+        <a href="{% url 'folder-list' %}" class="btn-add-green me-2">Folder List</a>
         {% endif %}
-        {% if 'Document Create' in request.user.get_role_perm or request.user.is_superuser %}
-        <a href="{% url 'upload-document-photo' %}" class="btn-add-green mt-1 mt-md-0">+ Upload Document/Photo</a>
+        {% if 'Document Create' in request.user.get_role_perm or request.user.is_superuser  %}
+        <a href="{% url 'upload-document-photo' %}" class="btn-add-green mt-1 mt-md-0">Upload Document/Photo</a>
         {% endif %}
       </div>
     </div>
@@ -37,7 +43,7 @@
                   <div id="div_id_folder" class="form-group mb-0" style="margin-left: auto;">
                     <div class="serveytype">
                       <form action="{% url 'document-list' %}" method="get" class="">
-                        <select name="folder" class="select form-control mb-0" id="folder">
+                        <select name="folder" class="select form-control mb-0 selectpicker" id="folder" data-live-search="true">
                           <option value=0> Select All Folders </option>
                           {% for folder in folder_data %}
                           {% if folder.name == request.GET.folder %}
@@ -57,7 +63,7 @@
                   <div id="div_id_name" class="form-group mb-0" style="margin-left: auto;">
                     <div class="serveytype">
                       <form action="{% url 'document-list' %}" method="get" class="">
-                        <select name="survey_type" class="select form-control mb-0" id="survey_type">
+                        <select name="survey_type" class="select form-control mb-0 selectpicker" id="survey_type" data-live-search="true">
                           <option value="0">Survey Type</option>
                           {% for survey_type in type_survey_data %}
                           {% if survey_type.name == request.GET.survey_type %}
@@ -80,7 +86,7 @@
                       GROWER
                       {% else %}
                       <form action="{% url 'document-list' %}" method="get" class="">
-                        <select name="grower_id" class="select form-control mb-0" id="grower_id">
+                        <select name="grower_id" class="select form-control mb-0 selectpicker" id="grower_id" data-live-search="true">
                           <option value="0">Growers</option>
                           {% for grower in get_growers %}
                           {% if grower == selectedGrower %}
@@ -98,27 +104,7 @@
                     </div>
                   </div>
                 </th>
-                <!-- <th style="width: 10%">
-                  <div id="div_id_name" class="form-group" style="margin-left: auto;">
-                    <div class="serveytype">
-                      <form action="{% url 'document-list' %}" method="get" class="">
-                        <select id="growerSelction" name="grower_id">
-                          <option value=0 selected> Select All Growers </option>
-                          {% for grower in get_growers %}
-                          {% if grower == selectedGrower %}
-                          <option selected value="{{ grower.pk }}">{{grower.name}} - {{ grower.pk }}
-                          </option>
-                          {% else %}
-                          <option value="{{ grower.pk }}">{{grower.name}} - {{ grower.pk }}</option>
-                          {% endif %}
-                          {% endfor %}
-                        </select>
-                        <input style="display : none;" id="submitBtn3" type="submit"
-                          class="apply-filter-btn primary-btn" value="Apply Filter" />
-                      </form>
-                    </div>
-                  </div>
-                </th> -->
+                
                 <th style="width: 10%">Farm | Field</th>
                 <th style="width: 10%">Crop Year</th>
                 <th style="width: 10%">Action</th>
@@ -159,37 +145,57 @@
             </tbody>
           </table>
           <!-- Pagination starts-->
-          <div class="row align-items-center">
-
-            <div class="col-md-8 col-sm-12 col-12 text-center text-md-start">
-              {% if doc_file_obj.has_other_pages %}
-              <ul class="pagination">
-                {% if doc_file_obj.has_previous %}
-                <li><a href="?page={{ doc_file_obj.previous_page_number }}">&laquo;</a></li>
-                {% else %}
-                <li class="disabled"><span>&laquo;</span></li>
-                {% endif %}
-                {% for i in doc_file_obj.paginator.page_range %}
-                {% if farms.number == i %}
-                <li class="active"><span>{{ i }} <span class="sr-only">(current)</span></span></li>
-                {% else %}
-                <li><a href="?page={{ i }}">{{ i }}</a></li>
-                {% endif %}
-                {% endfor %}
-                {% if doc_file_obj.has_next %}
-                <li><a href="?page={{ doc_file_obj.next_page_number }}">&raquo;</a></li>
-                {% else %}
-                <li class="disabled"><span>&raquo;</span></li>
-                {% endif %}
-              </ul>
-              {% endif %}
-            </div>
-            <div class="col-md-4 col-sm-12 col-12 text-center text-md-end">
-              <span>Showing {{ doc_file_obj.start_index }} - {{ doc_file_obj.end_index }} of {{doc_file_obj.paginator.count}} entries
-                
-              </span>
+          <div class="row d-flex justify-content-center ">
+            <div class="col-md-12 col-sm-12 col-12 text-center mt-2">                
+                <span>Showing {{ doc_file_obj.start_index }} - {{ doc_file_obj.end_index }} of {{ doc_file_obj.paginator.count }} entries</span>                                      
             </div>
           </div>
+        <div class="row d-flex justify-content-center align-items-center">
+            {% if doc_file_obj.has_other_pages %}
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center">
+                    <!-- Previous Page -->
+                    {% if doc_file_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ doc_file_obj.previous_page_number }}" aria-label="Previous">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link" aria-hidden="true">&laquo;</span>
+                    </li>
+                    {% endif %}
+        
+                    <!-- Page Numbers -->
+                    {% for i in doc_file_obj.paginator.page_range %}
+                    {% if doc_file_obj.number == i %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ i }}</span>
+                    </li>
+                    {% else %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ i }}">{{ i }}</a>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+        
+                    <!-- Next Page -->
+                    {% if doc_file_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ doc_file_obj.next_page_number }}" aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link" aria-hidden="true">&raquo;</span>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>  
         </div>
       </div>
     </div>

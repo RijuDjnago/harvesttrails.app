@@ -1,5 +1,5 @@
 from optparse import Values
-from tkinter import Widget
+# from tkinter import Widget
 from django import forms
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.db.models import fields

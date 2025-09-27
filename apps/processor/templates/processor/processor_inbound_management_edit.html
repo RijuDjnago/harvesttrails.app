@@ -55,7 +55,7 @@
         <span class="farm headingtop">Receive Delivery Edit</span>
         <div class="card farm-fields-container">
             <div class="container-fluid">             
-                {% if request.user.is_processor or request.user.is_superuser %}
+                {% if request.user.is_processor or request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role%}
                 <form method="post" class="farm-fields-form" enctype="multipart/form-data">
                     {% csrf_token %}
                     <div class="row" style="margin-bottom:10px">

@@ -40,7 +40,7 @@
                 padding-bottom: 4px !important;
                 padding-right: 8x !important;
                 font-size: 16px !important;
-                background: #00b258 !important;
+                
                 border: 0 !important
             }
 
@@ -54,6 +54,10 @@
         padding-top: 11px;
         padding-bottom: 11px;
       }
+      .bootstrap-select .dropdown-menu li.disabled.selected{display: none;}
+    .dropdown.bootstrap-select.form-control .btn{border: 1px solid #B2BEB5; padding: 12px 8px;}
+    .bootstrap-select .dropdown-menu{max-width: 280px;}
+    .bootstrap-select .dropdown-menu li.selected.active .dropdown-item.active.selected{margin-left: 0;padding: 0;}
 </style>
 
 <div class="main-content">
@@ -77,14 +81,14 @@
                   {% endif %}
             </nav>
             <div class="container-fluid">
-                {% if request.user.is_superuser or request.user.is_processor %}
+                {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role or request.user.is_processor %}
                 <form method="post" class="farm-fields-form" enctype="multipart/form-data">
                     {% csrf_token %}
                     <div class="row" style="margin-bottom:10px">
 
                         <div class="col-md-3 mb-2">
                             <div class="form-group">
-                                <lable>Select Growers<span class="asteriskField">*</span></lable>
+                                <label>Select Growers<span class="asteriskField">*</span></label>
                                 <select id="id_grower" name="id_grower" class="selectpicker " data-live-search="true" >
                                     <option value="all"> Select All Growers </option>
                                     {% for grower in get_grower %}
@@ -100,7 +104,7 @@
                         <div class="col-md-3 mb-2">
                             <div class="form-group">
                                 <label for="id_storage">Storage</label>
-                                <select  id="id_storage" name="id_storage" class="form-control selectpicker" data-live-search="true" >
+                                <select  id="id_storage" name="id_storage" class=" selectpicker" data-live-search="true" >
                                     <option>Select Storage</option>
                                     {% for storage in storage %}
                                     <option value="{{ storage.pk }}">{{storage.storage_name}} - {{storage.pk }}</option>
@@ -303,8 +307,31 @@
                                     {% endif %}
                             </div>
                         </div>
-
-                        <div class="col-md-3 mb-2">  
+                        <div class="col-md-4 mb-2">
+                            <label for="id_crop">Crop<span class="asteriskField">*</span></label>
+                            <select name="id_crop" id="id_crop"  class="form-control " onchange="this.form.submit()">
+                                <option value="all" selected disabled>Select Crop</option>
+                                {% for crop in crops %}
+                                <option value="{{crop.code}}" {% if selected_crop == crop.code %}selected {% endif %}>{{crop.code}}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <div id="div_id_variety" class="form-group">
+                                <label for="id_variety" class=" requiredField">
+                                    Variety<span class="asteriskField">*</span>
+                                </label>
+                                <div>
+                                    <select name="variety" class="select form-control" required id="id_variety">
+                                        <option value="all" selected disabled>Select Variety</option>
+                                        {% for variety in varieties %}
+                                        <option value="{{variety}}" {% if variety == variety %}selected {% endif %}>{{variety}}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-2">  
                             <label for="">Receiver Storage Bin Id (SKU ID)<span class="asteriskField">*</span></label>
                             <input type="text" name="receiver_sku_id" id="storage_bin_id" class="textinput textInput form-control" list="suggestions2" autocomplete="off">
                             <datalist id="suggestions2">

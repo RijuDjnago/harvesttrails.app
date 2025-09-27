@@ -30,6 +30,10 @@
             padding-right: 10px;
             font-size: 16px;
         }
+        .bootstrap-select .dropdown-menu li.disabled.selected{display: none;}
+        .dropdown.bootstrap-select.form-control .btn{border: 1px solid #ddd; padding: 12px 8px; border-radius: 0;}
+        .bootstrap-select .dropdown-menu{max-width: 280px;}
+        .bootstrap-select .dropdown-menu li.selected.active .dropdown-item.active.selected{margin-left: 0;padding: 0;}
     </style>
     <main>
         {% include '_alerts.html' %}
@@ -140,7 +144,7 @@
                                         <td>{{farm.name}}</td>
                                         <td>{{farm.grower.name}}</td>
                                         <td class="text-center">
-                                            {% if 'Farm View' in request.user.get_role_perm or request.user.is_superuser %}
+                                            {% if 'Farm View' in request.user.get_role_perm or request.user.is_superuser  %}
                                             <a href="{% url 'farm-location-map-view' farm.pk farm.grower.id %}"
                                                 class="map-icon-link" alt="view farm location map" title="view farm location map">
                                                 <span class="fas fa-map-marked-alt map-Icon"></span></a>
@@ -149,14 +153,14 @@
                                             <a href="{% url 'farm-update' farm.pk %}" class="update-btn-link" alt="edit farm" title="edit farm"> <span
                                                     class="fas fa-edit"></span> </a>
                                             {% endif %}
-                                            {% if 'Farm Delete' in request.user.get_role_perm or request.user.is_superuser %}
+                                            {% if 'Farm Delete' in request.user.get_role_perm or request.user.is_superuser  %}
 
                                             <a onclick="delFarm('{% url 'farm-delete' farm.pk %}')"
                                                 href="{% url 'farm-delete' farm.pk %}" data-mdb-toggle="modal"
                                                 data-mdb-target="#deleteModal" alt="delete farm" title="delete farm">
                                                 <span class="fas fa-trash"></span></a>
                                             {% endif %}
-                                            {% if 'Farm View' in request.user.get_role_perm or request.user.is_superuser %}
+                                            {% if 'Farm View' in request.user.get_role_perm or request.user.is_superuser  %}
                                             <a href="{% url 'farm-detail' farm.pk %}" class="update-btn-link" alt="view farm" title="view farm"> <span
                                                     class="fas fa-eye"></span> </a>
                                             {% endif %}
@@ -167,41 +171,63 @@
                             </table>
                         </div>
                     </div>
-                    <div class="row align-items-center">
-
-                        <div class="col-md-8 col-sm-12 col-12 text-md-left text-center">
-                            {% if farms.has_other_pages %}
-                            <ul class="pagination">
-                                {% if farms.has_previous %}
-                                <li><a href="?page={{ farms.previous_page_number }}">&laquo;</a></li>
-                                {% else %}
-                                <li class="disabled"><span>&laquo;</span></li>
-                                {% endif %}
-                                {% for i in farms.paginator.page_range %}
-                                {% if farms.number == i %}
-                                <li class="active"><span>{{ i }} <span class="sr-only">(current)</span></span></li>
-                                {% else %}
-                                <li><a href="?page={{ i }}">{{ i }}</a></li>
-                                {% endif %}
-                                {% endfor %}
-                                {% if farms.has_next %}
-                                <li><a href="?page={{ farms.next_page_number }}">&raquo;</a></li>
-                                {% else %}
-                                <li class="disabled"><span>&raquo;</span></li>
-                                {% endif %}
-                            </ul>
-                            {% endif %}
-                        </div>
-                        <div class="col-md-4 col-sm-12 col-12 text-md-right text-center">
+                    <!-- Pagination controls -->
+                    <div class="row d-flex justify-content-center ">
+                        <div class="col-md-12 col-sm-12 col-12 text-center mt-2">
                             {% if user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
-                            <span>Showing {{ farms.start_index }} - {{ farms.end_index }} of {{ farms.paginator.count }} entries
-                            {% endif %}
-                            </span>
+                            <span>Showing {{ farms.start_index }} - {{ farms.end_index }} of {{ farms.paginator.count }} entries</span>
+                            {% endif %}                            
                         </div>
                     </div>
+                    <div class="row d-flex justify-content-center align-items-center">
+                        {% if farms.has_other_pages %}
+                        <nav aria-label="Page navigation">
+                            <ul class="pagination justify-content-center">
+                                <!-- Previous Page -->
+                                {% if farms.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ farms.previous_page_number }}" aria-label="Previous">
+                                        <span aria-hidden="true">&laquo;</span>
+                                    </a>
+                                </li>
+                                {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link" aria-hidden="true">&laquo;</span>
+                                </li>
+                                {% endif %}
+                    
+                                <!-- Page Numbers -->
+                                {% for i in farms.paginator.page_range %}
+                                {% if farms.number == i %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ i }}</span>
+                                </li>
+                                {% else %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ i }}">{{ i }}</a>
+                                </li>
+                                {% endif %}
+                                {% endfor %}
+                    
+                                <!-- Next Page -->
+                                {% if growers.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ farms.next_page_number }}" aria-label="Next">
+                                        <span aria-hidden="true">&raquo;</span>
+                                    </a>
+                                </li>
+                                {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link" aria-hidden="true">&raquo;</span>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                        {% endif %}
+                    </div>                    
                 </div>
             </div>
-
+        </div>
     </main>
     {% include 'footer.html' %}
 </div>
@@ -210,7 +236,6 @@
 <div class="modal fade" id="deleteModal" aria-hidden="true" aria-labelledby="exampleModalToggleLabel22" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-
             <div class="modal-body">
                 <button type="button" class="btn-close cust-close-ds-btn" data-mdb-dismiss="modal"
                     aria-label="Close"></button>
@@ -228,7 +253,6 @@
                             class="btn-save-submit">Delete</button></a>
                 </div>
             </div>
-
         </div>
     </div>
 </div>

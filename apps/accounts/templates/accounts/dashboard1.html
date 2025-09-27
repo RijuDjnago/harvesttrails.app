@@ -665,7 +665,7 @@ border-radius: 0;
 <!-- end -->
 {% endif %}
     
-    {% if 'Grower' in request.user.get_role and not request.user.is_superuser %}
+    {% if 'Grower' in request.user.get_role and not request.user.is_superuser  %}
     {% block scripts %}
     <script>
       function resetfunc(){

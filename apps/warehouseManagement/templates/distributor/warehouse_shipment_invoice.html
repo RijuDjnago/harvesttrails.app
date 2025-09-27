@@ -100,7 +100,7 @@
             <div class="flex-header-btn">
                 {% if request.user.is_customer %} 
                 {% if not shipment.is_paid %}
-                <form action="{% url 'create_payment_for_shipment' shipment.id 'warehouse' %}" method="POST">
+                <form action="{% url 'create_payment_for_shipment' shipment.id type %}" method="POST">
                     {% csrf_token %}
                     <button type="submit" class="btn-close-cancel me-3">Pay Now</button>
                 </form>
@@ -168,14 +168,18 @@
                         </tr>
                     </thead>
                     <tbody>
+                        {% for crop in shipment_crops %}
                         <tr>
                             <td>{{shipment.date_pulled.date}}</td>
-                            <td>{{crop.crop_type}} {{crop.crop}}</td>
+                            <td>
+                                {{crop.crop_type}} {{crop.crop}}
+                            </td>
                             <td></td>
-                            <td>{{shipment.net_weight}} {{shipment.weight_unit}}</td>
+                            <td>{{crop.net_weight}} {{crop.weight_unit}}</td>
                             <td>&#36; {{crop.per_unit_rate}}</td>
-                            <td>&#36; {{shipment.total_payment}}</td>
+                            <td>&#36; {{crop.payment_amount}}</td>
                         </tr>
+                        {% endfor %}
                         {% if customer.is_tax_payable %}
                         <tr>
                             <td>{{shipment.date_pulled.date}}</td>

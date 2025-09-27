@@ -53,6 +53,13 @@ import shapefile
 from mimetypes import guess_type
 from django.contrib.auth.hashers import make_password
 from apps.processor.views import get_sku_list, create_sku_list, calculate_milled_volume, generate_random_password
+from apps.warehouseManagement.models import *
+from apps.accounts.models import ShowNotification
+from apps.warehouseManagement.views import find_changes, find_changes_for_customer_shipment
+import stripe
+import pdfkit
+from django.core.mail import EmailMessage
+from django.core.exceptions import ObjectDoesNotExist
 # Create your views here.
 
 
@@ -165,8 +172,7 @@ def login_user_api(request):
     user = authenticate(username=username, password=password)
   
     if user is not None and user.is_processor:
-        p = ProcessorUser.objects.get(contact_email=user.email)
-        processor_name = p.contact_name
+        p = ProcessorUser.objects.get(contact_email=user.email)       
         payload = {
             'id': user.id
         }
@@ -176,14 +182,16 @@ def login_user_api(request):
             'status': 1,
             "message":"Successfully logged in as processor",
             "type":"processor",
+            "processor_type": "Tier 1 Processor",
             "userid":user.id,
             "username":user.username,
-            "processor_name":processor_name,
+            "processor_name":p.processor.entity_name,
             "email":user.email,
         }
         return Response(data)
     
     elif user is not None and 'Grower' in user.get_role() and not user.is_superuser:
+        grower = Grower.objects.get(id=user.grower_id)
         payload = {
             'id': user.id
         }
@@ -193,13 +201,78 @@ def login_user_api(request):
             'status': 1,
             "message":"Successfully logged in as grower",
             "type":"grower",
+            "processor_type": None,
             "userid":user.id,
             "username":user.username,
+            "grower_name":grower.name,
             "email":user.email,
         }
         return Response(data)
-    # 23-05-23 Login For Tier2 Procesor
+    
     elif user is not None and 'Processor' in user.get_role() and user.is_processor2 and not user.is_superuser:
+        payload = {
+            'id': user.id
+        }
+        token = jwt.encode(payload, 'secret', algorithm='HS256')
+        p = ProcessorUser2.objects.get(contact_email=user.email)
+        
+        if p.processor2.processor_type.all().first().type_name == "T2":
+            data = {
+                'jwt': token,
+                'status': 1,
+                "message":"Successfully logged in as Tier 2 Processor",
+                "type":"tier2_processor",
+                "processor_type": "Tier 2 Processor",
+                "userid":user.id,
+                "username":user.username,
+                "processor_name":p.processor2.entity_name,
+                "email":user.email,
+                "full_name":user.first_name,
+            }
+        
+        elif p.processor2.processor_type.all().first().type_name == "T3":
+            data = {
+                'jwt': token,
+                'status': 1,
+                "message":"Successfully logged in as Tier 3 Processor",
+                "type":"tier2_processor",
+                "processor_type": "Tier 3 Processor",
+                "userid":user.id,
+                "username":user.username,
+                "processor_name":p.processor2.entity_name,
+                "email":user.email,
+                "full_name":user.first_name,
+            }
+        
+        elif p.processor2.processor_type.all().first().type_name == "T4": 
+            data = {
+                'jwt': token,
+                'status': 1,
+                "message":"Successfully logged in as Tier 4 Processor",
+                "type":"tier2_processor",
+                "processor_type": "Tier 4 Processor",
+                "userid":user.id,
+                "username":user.username,
+                "processor_name":p.processor2.entity_name,
+                "email":user.email,
+                "full_name":user.first_name,
+            }
+        else:
+            data = {
+                'jwt': None,
+                'status': 0,
+                "message":"Processor does not exist",
+                "type":None,
+                "processor_type": None,
+                "userid":None,
+                "username":None,
+                "email":None,
+                "full_name":None,
+            }
+        return Response(data)
+    
+    elif user.is_distributor:
+        d = DistributorUser.objects.get(contact_email=user.email)        
         payload = {
             'id': user.id
         }
@@ -207,19 +280,60 @@ def login_user_api(request):
         data = {
             'jwt': token,
             'status': 1,
-            "message":"Successfully logged in as Tier 2 Processor",
-            "type":"tier2_processor",
+            "message":"Successfully logged in as distributor",
+            "type":"distributor",
+            "processor_type": None,
             "userid":user.id,
-            "username":user.username,
+            "username":user.username, 
+            "distributor_name":d.distributor.entity_name,          
             "email":user.email,
-            "full_name":user.first_name,
         }
         return Response(data)
+    
+    elif user.is_warehouse_manager:
+        w = WarehouseUser.objects.get(contact_email=user.email)        
+        payload = {
+            'id': user.id
+        }
+        token = jwt.encode(payload, 'secret', algorithm='HS256')
+        data = {
+            'jwt': token,
+            'status': 1,
+            "message":"Successfully logged in as warehouse manager",
+            "type":"warehouse_manager",
+            "processor_type": None,
+            "userid":user.id,
+            "username":user.username, 
+            "warehouse_name":w.warehouse.name,           
+            "email":user.email,
+        }
+        return Response(data)
+    
+    elif user.is_customer:        
+        c = CustomerUser.objects.get(contact_email=user.email)        
+        payload = {
+            'id': user.id
+        }
+        token = jwt.encode(payload, 'secret', algorithm='HS256')
+        data = {
+            'jwt': token,
+            'status': 1,
+            "message":"Successfully logged in as customer",
+            "type":"customer",
+            "processor_type": None,
+            "userid":user.id,
+            "username":user.username, 
+            "customer_name":c.customer.name,           
+            "email":user.email,
+        }
+        return Response(data)
+
     elif user is None:
         return Response({"message":"Auth Failed"})
     
     else:
         return Response({"message":"Auth Failed",'status': 1})
+
 
 # @api_view(('POST',))
 # def grower_dashboard_api(request):
@@ -389,10 +503,10 @@ def grower_shipment_list_search_api(request):
     serializer = GrowerShipmentSerializer(grower_shipment, many=True)
     return Response({"data":serializer.data})
 
-@api_view(('GET',))
+@api_view(('POST',))
 def grower_shipment_qrcode_api(request):
-    shipment_id = request.GET.get('shipment_id')
-    userid = request.GET.get("userid")
+    shipment_id = request.data.get('shipment_id')
+    userid = request.data.get("userid")
     user = User.objects.get(id=userid)
     if user.is_processor:
         qr = qr_code_view(shipment_id)
@@ -541,12 +655,11 @@ def grower_send_shipment_api(request):
             field = Field.objects.get(id=field_id)
             field_eschlon_id = field.eschlon_id
             crop = field.crop
-            if crop == "RICE":
-                status = ""
-            if crop == "WHEAT":
-                status = ""
+            
             if crop == "COTTON":
                 status = "APPROVED"
+            else:
+                status = ""
             
             variety = field.variety 
             shipment_id = generate_shipment_id()
@@ -1097,28 +1210,31 @@ def processor_linked_grower_api(request):
     userid = request.data['userid']
     user = User.objects.get(id=userid)
     user_email = user.email
-    p = ProcessorUser.objects.get(contact_email=user_email)
-    processor_id = Processor.objects.get(id=p.processor_id).id
-    procesoor_grower = LinkGrowerToProcessor.objects.filter(processor_id=processor_id)
-    # shipment = GrowerShipment.objects.filter(processor_id = processor_id)
-    # var_id = []
-    # for i in range(len(shipment)):
-    #     location = shipment[i].location
-    #     if location == None:
-    #         var = shipment[i].id
-    #         var_id.append(var)
+    p = ProcessorUser.objects.filter(contact_email=user_email).first()
+    if p:
+        processor_id = p.processor.id
+        procesoor_grower = LinkGrowerToProcessor.objects.filter(processor_id=processor_id)
+        # shipment = GrowerShipment.objects.filter(processor_id = processor_id)
+        # var_id = []
+        # for i in range(len(shipment)):
+        #     location = shipment[i].location
+        #     if location == None:
+        #         var = shipment[i].id
+        #         var_id.append(var)
 
-    grower_id = [i.grower_id for i in procesoor_grower]
+        grower_id = [i.grower_id for i in procesoor_grower]
 
-    grower = Grower.objects.filter(id__in=grower_id)
-    lst = []
-    for i in grower:
-        data = {
-            "grower_name":i.name,
-            "grower_id":i.id,
-        }
-        lst.append(data)
-    return Response({'data':lst})
+        grower = Grower.objects.filter(id__in=grower_id)
+        lst = []
+        for i in grower:
+            data = {
+                "grower_name":i.name,
+                "grower_id":i.id,
+            }
+            lst.append(data)
+        return Response({'status':'200', 'message':'Linked grower fteched successfully.', 'data':lst})
+    else:
+        return Response({'status':'200', 'message':'Processor not found.', 'data':[]})
 
 @api_view(('POST',))
 def processor_linked_grower_field_api(request):
@@ -1270,11 +1386,10 @@ def processor_receive_delivery_api(request):
             field = Field.objects.get(id=field_id)
             field_eschlon_id = field.eschlon_id
             crop = field.crop
-            if crop == "RICE":
-                status = "APPROVED"
+            
             if crop == "WHEAT":
                 status = ""
-            if crop == "COTTON":
+            else:
                 status = "APPROVED"
             variety = field.variety 
             shipment_id = generate_shipment_id()
@@ -1285,8 +1400,8 @@ def processor_receive_delivery_api(request):
                 id_storage = id_storage
             
             shipment = GrowerShipment(status=status,total_amount=get_output,unit_type2=id_unit2,amount2=amount2,echelon_id=field.eschlon_id,
-                                                            sustainability_score=surveyscore,amount=amount1,variety=field.variety,crop=field.crop,shipment_id=shipment_id,processor_id=processor_id,grower_id=grower_id,
-                                                            storage_id=id_storage,field_id=field_id,module_number=module_number,unit_type=id_unit1,received_amount =received_weight,sku = sku_id,token_id=ticket_number,
+                                                            sustainability_score=surveyscore,amount=amount1,shipment_id=shipment_id,processor_id=processor_id,grower_id=grower_id,
+                                                            storage_id=id_storage,field_id=field_id,variety=field.variety,crop=field.crop,module_number=module_number,unit_type=id_unit1,received_amount =received_weight,sku = sku_id,token_id=ticket_number,
                                                             approval_date = approval_date,moisture_level=moisture_level,fancy_count=fancy_count,head_count=head_count,bin_location_processor=bin_location_processor)
             shipment.save()
             for file in files:
@@ -1318,6 +1433,8 @@ def processor_receive_delivery_api(request):
         selected_processor_id = request.data.get("selected_processor_id")
         selected_processor_type = request.data.get("selected_processor_type")
         selected_processor_name = request.data.get("selected_processor_name")
+        selected_crop = request.data.get('selected_crop')
+        variety = request.data.get('variety')
         milled_volume = request.data.get("milled_volume")
         sender_sku_id = request.data.get("sender_sku_id")
         receiver_sku_id = request.data.get("receiver_sku_id")
@@ -1361,7 +1478,7 @@ def processor_receive_delivery_api(request):
             volume_left = float(milled_volume) - float(volume_shipped)
             shipment_id = generate_shipment_id()
             
-            save_shipment_management = ShipmentManagement(shipment_id=shipment_id,processor_idd=selected_processor_id,processor_e_name=selected_processor_name, sender_processor_type=selected_processor_type, bin_location=selected_processor_id,
+            save_shipment_management = ShipmentManagement(shipment_id=shipment_id,processor_idd=selected_processor_id,processor_e_name=selected_processor_name, sender_processor_type=selected_processor_type, bin_location=selected_processor_id,crop=selected_crop, variety=variety,
                     equipment_type=equipment_type,equipment_id=equipment_id,storage_bin_send=sender_sku_id,moisture_percent = moist_percentage,weight_of_product_raw = weight_product,
                     weight_of_product=cal_weight,weight_of_product_unit=weight_prod_unit, excepted_yield_raw =exp_yield,excepted_yield=cal_exp_yield,excepted_yield_unit=exp_yield_unit,recive_delivery_date=approval_date,
                     purchase_order_number=purchase_number,lot_number=lot_number,volume_shipped=volume_shipped,milled_volume=milled_volume,volume_left=volume_left,editable_obj=True,status=status,
@@ -2671,7 +2788,7 @@ def grower_grower_payments_view(request):
         #                                     'payment_confirmation')
         if gpay.crop == "COTTON" :
             delivery_date = gpay.delivery_date
-        elif gpay.crop == "RICE" :
+        else :
             if GrowerShipment.objects.filter(shipment_id=delivery_id).exists():
                 get_shipment = GrowerShipment.objects.get(shipment_id=delivery_id)
                 delivery_date = get_shipment.approval_date.strftime("%m/%d/%y")
@@ -2873,7 +2990,7 @@ def grower_dashboard_graph_api(request):
             if get_crop == 'COTTON':
                     data['shipment']+=[{'per_lls':shipment['per_lls'],'per_gold':shipment['per_gold'],'per_silver':shipment['per_silver'],'per_bronze':shipment['per_bronze'],
                                         'per_nonee':shipment['per_nonee'],'per_delivered':shipment['per_delivered']}]
-            elif get_crop == 'RICE':
+            else:
                 data['shipment']+=[{'per_approved_shipment':shipment['per_approved_shipment'],'per_disapproved_shipment':shipment['per_disapproved_shipment'],
                                     'per_noStatus__shipment':shipment['per_noStatus__shipment'],'shipment_paid_amount':shipment['shipment_paid_amount']}]
             # survey_summary details ...
@@ -2925,32 +3042,8 @@ def grower_dashboard_graph_api(request):
 def grower_Field_Shipment_Chart(f_id):
     field = Field.objects.get(id=f_id)
     name = field.name
-    if field.crop == 'RICE' :
-        shipment = GrowerShipment.objects.filter(field_id=f_id)
-        res = []
-        for i in shipment :
-            finale_date = i.date_time
-            if GrowerPayments.objects.filter(delivery_id=i.shipment_id).exists():
-                payment_status = 'Paid'
-                payment_amount = f'$ {[i.payment_amount for i in GrowerPayments.objects.filter(delivery_id=i.shipment_id)][0]}'
-            elif i.status == "DISAPPROVED" :
-                payment_status = 'N/A ( DISAPPROVED )'
-                payment_amount = 'N/A'
-            else:
-                payment_status = 'Due'
-                payment_amount = 'Due'
-
-            if i.status == "APPROVED" :
-                shipment_wt = i.received_amount
-            else :
-                shipment_wt = i.total_amount
-
-            res.append({'name':name,'shipment_wt':shipment_wt,'shipment_dt':i.approval_date,
-                        'payment_status':payment_status,'payment_amount':payment_amount,
-                        'stats':i.status,'shipment_id':i.shipment_id,"finale_date":finale_date})
-        return res
     
-    elif field.crop == 'COTTON' :
+    if field.crop == 'COTTON' :
         shipment = BaleReportFarmField.objects.filter(ob4=f_id).order_by('-id')
         res = []
         for i in shipment :
@@ -2996,8 +3089,31 @@ def grower_Field_Shipment_Chart(f_id):
                         "yyyy":yyyy,"mm":mm,"dd":dd})
         return res
     
-    else:
-        return [{'name':name}]
+    else:        
+        shipment = GrowerShipment.objects.filter(field_id=f_id)
+        res = []
+        for i in shipment :
+            finale_date = i.date_time
+            if GrowerPayments.objects.filter(delivery_id=i.shipment_id).exists():
+                payment_status = 'Paid'
+                payment_amount = f'$ {[i.payment_amount for i in GrowerPayments.objects.filter(delivery_id=i.shipment_id)][0]}'
+            elif i.status == "DISAPPROVED" :
+                payment_status = 'N/A ( DISAPPROVED )'
+                payment_amount = 'N/A'
+            else:
+                payment_status = 'Due'
+                payment_amount = 'Due'
+
+            if i.status == "APPROVED" :
+                shipment_wt = i.received_amount
+            else :
+                shipment_wt = i.total_amount
+
+            res.append({'name':name,'shipment_wt':shipment_wt,'shipment_dt':i.approval_date,
+                        'payment_status':payment_status,'payment_amount':payment_amount,
+                        'stats':i.status,'shipment_id':i.shipment_id,"finale_date":finale_date})
+        return res
+    
 
 
 def grower_Field_Shipment_Details(f_id) :
@@ -3010,51 +3126,8 @@ def grower_Field_Shipment_Details(f_id) :
     lien_holder_count = g_payee.filter(lien_holder_status='YES').count()
     payment_split_count = g_payee.filter(payment_split_status='YES').count()
     # shipment_delivered_count
-    if field.crop == 'RICE' :
-        shipment = GrowerShipment.objects.filter(field_id=f_id)
-        approved_shipment = shipment.filter(status='APPROVED')
-        disapproved_shipment = shipment.filter(status='DISAPPROVED')
-        noStatus__shipment = shipment.filter(status='')
-
-        count_shipment = shipment.count()
-        count_approved_shipment = approved_shipment.count()
-        count_disapproved_shipment = disapproved_shipment.count()
-        count_noStatus__shipment = noStatus__shipment.count()
-
-        per_approved_shipment = round((count_approved_shipment / count_shipment), 4) * 100 if count_approved_shipment !=0 else 0
-        per_disapproved_shipment = round((count_disapproved_shipment / count_shipment), 4) * 100 if count_disapproved_shipment !=0 else 0
-        per_noStatus__shipment = round((count_noStatus__shipment / count_shipment), 4) * 100 if count_noStatus__shipment !=0 else 0
-
-        shipment_wt = []
-        for i in shipment :
-            if i.total_amount :
-                shipment_wt.append(int(float(i.total_amount)))
-
-        if projected_yield :
-            actual_yield = sum(shipment_wt)
-            yield_delta =  float(actual_yield) - float(projected_yield)
-
-        else:
-            projected_yield = None
-            actual_yield = sum(shipment_wt)
-            yield_delta = 'N/A'
-
-        shipment_delivered_wt = [int(float(i.received_amount)) for i in approved_shipment]
-
-        g_payment = GrowerPayments.objects.filter(field_name=name)
-
-        shipment_paid_amount = f'$ {sum([int(float(i.payment_amount)) for i in g_payment])}'
-
-        shipmentLevelText = "Shipments Info - Status (APPROVED vs DISAPPROVED vs PENDING)"
-        res = {"name":name,"crop":"RICE","shipmentLevelText":shipmentLevelText,"per_approved_shipment":per_approved_shipment,
-               "per_disapproved_shipment":per_disapproved_shipment,"per_noStatus__shipment":per_noStatus__shipment,
-               "shipment_wt": f'{sum(shipment_wt)} LBS',"shipment_count":count_shipment,"shipment_approved":count_approved_shipment,
-               "shipment_disapproved":count_disapproved_shipment,"shipment_pending":count_noStatus__shipment,
-               "shipment_delivered_wt":f'{sum(shipment_delivered_wt)} LBS',"shipment_paid_amount":shipment_paid_amount,
-               "projected_yield":projected_yield,"actual_yield":actual_yield,"yield_delta":yield_delta,"g_payee_count":g_payee_count,
-               "lien_holder_count":lien_holder_count,"payment_split_count":payment_split_count,"shipment_delivered_count":count_approved_shipment}
-        return res
-    elif field.crop == 'COTTON' :
+    
+    if field.crop == 'COTTON' :
         shipment = BaleReportFarmField.objects.filter(ob4=f_id)
         shipment_wt = [float(i.net_wt) for i in shipment]
         lls = shipment.filter(level='Llano Super').count()
@@ -3096,8 +3169,52 @@ def grower_Field_Shipment_Details(f_id) :
                "yield_delta":yield_delta,"g_payee_count":g_payee_count,"lien_holder_count":lien_holder_count,"payment_split_count":payment_split_count}
                
         return res
-    else:
-        return [{'name':name}]
+    
+    else:        
+        shipment = GrowerShipment.objects.filter(field_id=f_id)
+        approved_shipment = shipment.filter(status='APPROVED')
+        disapproved_shipment = shipment.filter(status='DISAPPROVED')
+        noStatus__shipment = shipment.filter(status='')
+
+        count_shipment = shipment.count()
+        count_approved_shipment = approved_shipment.count()
+        count_disapproved_shipment = disapproved_shipment.count()
+        count_noStatus__shipment = noStatus__shipment.count()
+
+        per_approved_shipment = round((count_approved_shipment / count_shipment), 4) * 100 if count_approved_shipment !=0 else 0
+        per_disapproved_shipment = round((count_disapproved_shipment / count_shipment), 4) * 100 if count_disapproved_shipment !=0 else 0
+        per_noStatus__shipment = round((count_noStatus__shipment / count_shipment), 4) * 100 if count_noStatus__shipment !=0 else 0
+
+        shipment_wt = []
+        for i in shipment :
+            if i.total_amount :
+                shipment_wt.append(int(float(i.total_amount)))
+
+        if projected_yield :
+            actual_yield = sum(shipment_wt)
+            yield_delta =  float(actual_yield) - float(projected_yield)
+
+        else:
+            projected_yield = None
+            actual_yield = sum(shipment_wt)
+            yield_delta = 'N/A'
+
+        shipment_delivered_wt = [int(float(i.received_amount)) for i in approved_shipment]
+
+        g_payment = GrowerPayments.objects.filter(field_name=name)
+
+        shipment_paid_amount = f'$ {sum([int(float(i.payment_amount)) for i in g_payment])}'
+
+        shipmentLevelText = "Shipments Info - Status (APPROVED vs DISAPPROVED vs PENDING)"
+        res = {"name":name,"crop":field.crop,"shipmentLevelText":shipmentLevelText,"per_approved_shipment":per_approved_shipment,
+               "per_disapproved_shipment":per_disapproved_shipment,"per_noStatus__shipment":per_noStatus__shipment,
+               "shipment_wt": f'{sum(shipment_wt)} LBS',"shipment_count":count_shipment,"shipment_approved":count_approved_shipment,
+               "shipment_disapproved":count_disapproved_shipment,"shipment_pending":count_noStatus__shipment,
+               "shipment_delivered_wt":f'{sum(shipment_delivered_wt)} LBS',"shipment_paid_amount":shipment_paid_amount,
+               "projected_yield":projected_yield,"actual_yield":actual_yield,"yield_delta":yield_delta,"g_payee_count":g_payee_count,
+               "lien_holder_count":lien_holder_count,"payment_split_count":payment_split_count,"shipment_delivered_count":count_approved_shipment}
+        return res
+    
     
 def grower_Field_Vegetation_Chart(f_id):
     field = Field.objects.get(id=f_id)
@@ -3445,7 +3562,7 @@ def processor_profile_api(request):
         processor = Processor.objects.get(id=processorUser.processor_id)
         response = Response({'processor':[{'fein':processor.fein,'entity_name':processor.entity_name,
                                            'billing_address':processor.billing_address,'shipping_address':processor.shipping_address,
-                                           'main_number':processor.main_number,'main_fax':processor.main_fax,
+                                           'main_number':processor.main_number,'main_email': processor.main_email, 'main_fax':processor.main_fax,
                                            'website':processor.website}],
                              'processorUser':[{'contact_name':processorUser.contact_name,'contact_email':processorUser.contact_email,
                                                'contact_phone':processorUser.contact_phone,'contact_fax':processorUser.contact_fax}]})
@@ -3465,7 +3582,7 @@ def tier2_processor_profile_api(request):
         processor2 = Processor2.objects.get(id=processorUser2.processor2_id)
         response = Response({'processor':[{'fein':processor2.fein,'entity_name':processor2.entity_name,
                                            'billing_address':processor2.billing_address,'shipping_address':processor2.shipping_address,
-                                           'main_number':processor2.main_number,'main_fax':processor2.main_fax,
+                                           'main_number':processor2.main_number,'main_email': processor2.main_email,'main_fax':processor2.main_fax,
                                            'website':processor2.website}],
                              'processorUser2':[{'contact_name':processorUser2.contact_name,'contact_email':processorUser2.contact_email,
                                                'contact_phone':processorUser2.contact_phone,'contact_fax':processorUser2.contact_fax}]})
@@ -3766,62 +3883,151 @@ def grower_payments_list_fun2(grower_shipment):
 #-------------------------------------------------------------------
 
 
-@api_view(['POST',])
+# @api_view(['POST',])
+# def growerpaymentdetails_api(request):
+#     response = {"status": "", "message": "","count":"","current_link":"","previous_link":"","next_link":"","start_index":"","end_index":"", "summary": [], "data": []}
+#     userid = request.data.get('userid')
+#     get_page_no = request.query_params.get('page')
+
+#     try:
+#         user = User.objects.get(id=userid)
+#         grower_id = user.grower_id
+#         print(user.username)
+#         if grower_id is not None:
+#             if EntryFeeds.objects.filter(grower_id=grower_id).count() > 0:
+#                 bale = BaleReportFarmField.objects.filter(ob2=grower_id).exclude(level='None')
+#                 grower_shipment = GrowerShipment.objects.filter(grower_id=grower_id ,status='APPROVED')
+#                 total_obj_query = len(bale) + len(grower_shipment)
+#                 print(total_obj_query)
+#                 total_no_page = (total_obj_query // 100)+ 1
+
+#                 if get_page_no is not None:
+#                     if bale:
+#                         get_page_no = int(get_page_no)
+#                         paginator = PageNumberPagination()
+#                         paginator.page_size = 100  # per page 100
+#                         result_page = paginator.paginate_queryset(bale, request)
+#                         serializer = BaleReportFarmFieldSerializer(result_page, many=True)
+#                         summary_bale = grower_payments_list_fun1(bale)  
+#                         response['summary']= summary_bale
+#                     else: 
+#                         get_page_no = int(get_page_no)
+#                         paginator = PageNumberPagination()
+#                         paginator.page_size = 100  # per page 100
+#                         result_page = paginator.paginate_queryset(grower_shipment, request)
+#                         serializer = GrowerShipmentSerializer(result_page, many=True)
+#                         summary_shipment  = grower_payments_list_fun2(grower_shipment)
+#                         response['summary']= summary_shipment
+
+#                     start_index = (get_page_no - 1) * 100
+#                     end_index = start_index + len(result_page)
+
+#                     response["status"], response["message"] = 1, "Grower exists and showing all data"
+#                     response['count'] = total_obj_query
+#                     response['data'] = serializer.data
+#                     response['start_index'] = start_index + 1
+#                     response['end_index'] = end_index
+#                     response['current_link'] = reverse('growerpaymentdetails_api') + f"?page={get_page_no}"
+#                     response['previous_link'] = reverse('growerpaymentdetails_api') + f"?page={get_page_no - 1}" if get_page_no > 1 else None
+#                     response['next_link'] = reverse('growerpaymentdetails_api') + f"?page={get_page_no + 1}" if get_page_no < total_no_page else None
+#                     return Response(response)
+#             else:
+#                 response["status"], response["message"] = 0, "query does not exist"
+#                 return Response(response)
+#         else:
+#             response["status"], response["message"] = 0, "Grower does not exist"
+#             return Response(response)
+#     except Exception as e:
+#         response["status"], response["message"] = "500", f"500, {e}"
+#         return Response(response)
+
+
+@api_view(['POST'])
 def growerpaymentdetails_api(request):
-    response = {"status": "", "message": "","count":"","current_link":"","previous_link":"","next_link":"","start_index":"","end_index":"", "summary": [], "data": []}
+    response = {
+        "status": "",
+        "message": "",
+        "count": "",
+        "current_link": "",
+        "previous_link": "",
+        "next_link": "",
+        "start_index": "",
+        "end_index": "",
+        "summary": [],
+        "data": []
+    }
+
     userid = request.data.get('userid')
-    get_page_no = request.query_params.get('page')
+    get_page_no = request.query_params.get('page', 1)  # Default to page 1
 
     try:
         user = User.objects.get(id=userid)
         grower_id = user.grower_id
-        # print(user.username)
-        if grower_id is not None:
-            if EntryFeeds.objects.filter(grower_id=grower_id).count() > 0:
-                bale = BaleReportFarmField.objects.filter(ob2=grower_id).exclude(level='None')
-                grower_shipment = GrowerShipment.objects.filter(grower_id=grower_id , crop='RICE' ,status='APPROVED')
-                total_obj_query = len(bale) + len(grower_shipment)
-                total_no_page = (total_obj_query // 100)+ 1
+        print(user.username)
 
-                if get_page_no is not None:
+        if grower_id:
+            if EntryFeeds.objects.filter(grower_id=grower_id).exists():
+                bale = BaleReportFarmField.objects.filter(ob2=grower_id).exclude(level='None')
+                grower_shipment = GrowerShipment.objects.filter(grower_id=grower_id, status='APPROVED')
+
+                total_obj_query = len(bale) + len(grower_shipment)
+                print(total_obj_query)
+
+                if total_obj_query > 0:
+                    total_no_page = (total_obj_query // 100) + (1 if total_obj_query % 100 != 0 else 0)
+                    get_page_no = int(get_page_no)
+
+                    paginator = PageNumberPagination()
+                    paginator.page_size = 100  # Items per page
+
                     if bale:
-                        get_page_no = int(get_page_no)
-                        paginator = PageNumberPagination()
-                        paginator.page_size = 100  # per page 100
                         result_page = paginator.paginate_queryset(bale, request)
                         serializer = BaleReportFarmFieldSerializer(result_page, many=True)
-                        summary_bale = grower_payments_list_fun1(bale)  
-                        response['summary']= summary_bale
-                    else: 
-                        get_page_no = int(get_page_no)
-                        paginator = PageNumberPagination()
-                        paginator.page_size = 100  # per page 100
+                        summary_bale = grower_payments_list_fun1(bale)
+                        response['summary'] = summary_bale
+                    else:
                         result_page = paginator.paginate_queryset(grower_shipment, request)
                         serializer = GrowerShipmentSerializer(result_page, many=True)
-                        summary_shipment  = grower_payments_list_fun2(grower_shipment)
-                        response['summary']= summary_shipment
+                        summary_shipment = grower_payments_list_fun2(grower_shipment)
+                        response['summary'] = summary_shipment
 
-                    start_index = (get_page_no - 1) * 100
+                    start_index = (get_page_no - 1) * paginator.page_size
                     end_index = start_index + len(result_page)
 
-                    response["status"], response["message"] = 1, "Grower exists and showing all data"
-                    response['count'] = total_obj_query
-                    response['data'] = serializer.data
-                    response['start_index'] = start_index + 1
-                    response['end_index'] = end_index
-                    response['current_link'] = reverse('growerpaymentdetails_api') + f"?page={get_page_no}"
-                    response['previous_link'] = reverse('growerpaymentdetails_api') + f"?page={get_page_no - 1}" if get_page_no > 1 else None
-                    response['next_link'] = reverse('growerpaymentdetails_api') + f"?page={get_page_no + 1}" if get_page_no < total_no_page else None
+                    response.update({
+                        "status": 1,
+                        "message": "Grower exists and showing all data",
+                        "count": total_obj_query,
+                        "data": serializer.data,
+                        "start_index": start_index + 1,
+                        "end_index": end_index,
+                        "current_link": reverse('growerpaymentdetails_api') + f"?page={get_page_no}",
+                        "previous_link": (
+                            reverse('growerpaymentdetails_api') + f"?page={get_page_no - 1}"
+                            if get_page_no > 1 else None
+                        ),
+                        "next_link": (
+                            reverse('growerpaymentdetails_api') + f"?page={get_page_no + 1}"
+                            if get_page_no < total_no_page else None
+                        )
+                    })
+                    return Response(response)
+                else:
+                    response["status"], response["message"] = 0, "No data available for the grower."
                     return Response(response)
             else:
-                response["status"], response["message"] = 0, "query does not exist"
+                response["status"], response["message"] = 0, "Query does not exist."
                 return Response(response)
         else:
-            response["status"], response["message"] = 0, "Grower does not exist"
+            response["status"], response["message"] = 0, "Grower does not exist."
             return Response(response)
-    except Exception as e:
-        response["status"], response["message"] = "500", f"500, {e}"
+    except ObjectDoesNotExist:
+        response["status"], response["message"] = 0, "User does not exist."
         return Response(response)
+    except Exception as e:
+        response["status"], response["message"] = "500", f"Internal server error: {e}"
+        return Response(response)
+    
 
 #---------------------------------------------------------------------------------
 @api_view(['POST',])
@@ -3836,7 +4042,7 @@ def growerbale_list_api(request):
             if EntryFeeds.objects.filter(grower_id=grower_id).count() > 0:
                 
                 bale = BaleReportFarmField.objects.filter(ob2=grower_id).exclude(level='None').values('bale_id')
-                grower_shipment = GrowerShipment.objects.filter(grower_id=grower_id , crop='RICE' ,status='APPROVED').values('shipment_id')
+                grower_shipment = GrowerShipment.objects.filter(grower_id=grower_id  ,status='APPROVED').values('shipment_id')
                 if bale.exists():
                     count = len(bale)
                     grower_bale_id=[i['bale_id'] for i in bale]
@@ -3870,7 +4076,7 @@ def growerbale_details_api(request):
         if grower_id is not None:
             if EntryFeeds.objects.filter(grower_id=grower_id).count() > 0:
                 bale = BaleReportFarmField.objects.filter(ob2=grower_id, bale_id=delivery_id).exclude(level='None')
-                grower_shipment = GrowerShipment.objects.filter(grower_id=grower_id ,shipment_id=delivery_id, crop='RICE' ,status='APPROVED')
+                grower_shipment = GrowerShipment.objects.filter(grower_id=grower_id ,shipment_id=delivery_id ,status='APPROVED')
                 if bale.exists():
                     paginator = PageNumberPagination()
                     result_page = paginator.paginate_queryset(bale, request)
@@ -4029,6 +4235,8 @@ def processor_outbound_shipment_view_api(request):
             "receiver_processor_id":shipment.processor2_idd,
             "receiver_processor_name":shipment.processor2_name,
             "receiver_processor_type":shipment.receiver_processor_type,
+            "crop": shipment.crop,
+            "variety":shipment.variety,
             "milled_volume":shipment.milled_volume,
             "volume_shipped":shipment.volume_shipped,
             "volume_left":shipment.volume_left,
@@ -4121,6 +4329,7 @@ def add_outbound_shipment_processor_destination_api(request):
 
     return Response(response)
 
+
 @api_view(("GET",))
 def processor_details_api(request):
     response = {"status": "", "message": "", "data": []}
@@ -4147,12 +4356,13 @@ def processor_details_api(request):
         response["status"], response["message"], response["data"] = "400", f"Processor not found.", data
     return Response(response)
 
+
 @api_view(["GET",])
 def add_outbound_shipment_processor_squ_list_api(request):
     response = {"status": "", "message": "", "data": []}
     processor_id = request.GET.get("processor_id")
     processor_type = request.GET.get("processor_type")
-    try:     
+    try:    
         
         data = get_sku_list(int(processor_id), processor_type)["data"]
 
@@ -4167,11 +4377,12 @@ def add_outbound_shipment_processor_squ_list_api(request):
 @api_view(["GET",])
 def add_outbound_shipment_processor_milled_volume(request):
     response = {"status": "", "message": "", "data": []}
+    selected_crop = request.GET.get("selected_crop")
     processor_id = request.GET.get("processor_id")
     processor_type = request.GET.get("processor_type")
     sku_id = request.GET.get("sku_id")
     try:                 
-        data = calculate_milled_volume(int(processor_id), processor_type, sku_id)
+        data = calculate_milled_volume(selected_crop, int(processor_id), processor_type, sku_id)
         response["status"] = "200"
         response["message"] = "Milled volume fetched successfully."
         response["data"] = data
@@ -4184,7 +4395,9 @@ def add_outbound_shipment_processor_milled_volume(request):
 def add_outbound_shipment_processor_api(request):
     response = {"status": "", "message": ""}
     userid = request.data.get("userid")
-    processor2_id = request.data.get("processor2_id") 
+    processor2_id = request.data.get("processor2_id")
+    selected_crop = request.data.get('selected_crop'),
+    variety = request.data.get('variety') 
     sender_sku_id = request.data.get("sender_sku_id") 
     milled_volume = request.data.get("milled_volume")
     volume_shipped = request.data.get("volume_shipped")
@@ -4228,7 +4441,7 @@ def add_outbound_shipment_processor_api(request):
             volume_left = float(milled_value) - float(volume_shipped)
             shipment_id = generate_shipment_id()
 
-            save_shipment_management = ShipmentManagement(shipment_id=shipment_id,processor_idd=processor_id,processor_e_name=processor_name, sender_processor_type=sender_processor_type, bin_location=processor_id,
+            save_shipment_management = ShipmentManagement(shipment_id=shipment_id,processor_idd=processor_id,processor_e_name=processor_name, sender_processor_type=sender_processor_type, bin_location=processor_id,crop=selected_crop, variety=variety,
                             equipment_type=equipment_type,equipment_id=equipment_id,storage_bin_send=sender_sku_id,moisture_percent = moist_percentage,
                             weight_of_product_raw = weight_product,weight_of_product=cal_weight,weight_of_product_unit=weight_prod_unit_id, excepted_yield_raw =exp_yield,excepted_yield=cal_exp_yield,
                             excepted_yield_unit=exp_yield_unit_id,purchase_order_number=purchase_number,lot_number=lot_number,volume_shipped=volume_shipped,milled_volume=milled_volume,
@@ -4296,7 +4509,7 @@ def add_outbound_shipment_processor_api(request):
             volume_left = float(milled_value) - float(volume_shipped)
             shipment_id = generate_shipment_id()
 
-            save_shipment_management = ShipmentManagement(shipment_id=shipment_id,processor_idd=processor_id,processor_e_name=processor_name, sender_processor_type=sender_processor_type, bin_location=processor_id,
+            save_shipment_management = ShipmentManagement(shipment_id=shipment_id,processor_idd=processor_id,processor_e_name=processor_name, sender_processor_type=sender_processor_type, bin_location=processor_id,crop=selected_crop, variety=variety,
                             equipment_type=equipment_type,equipment_id=equipment_id,storage_bin_send=sender_sku_id,moisture_percent = moist_percentage,
                             weight_of_product_raw = weight_product,weight_of_product=cal_weight,weight_of_product_unit=weight_prod_unit_id, excepted_yield_raw =exp_yield,excepted_yield=cal_exp_yield,
                             excepted_yield_unit=exp_yield_unit_id,purchase_order_number=purchase_number,lot_number=lot_number,volume_shipped=volume_shipped,milled_volume=milled_volume,
@@ -4544,6 +4757,7 @@ def processor_edit_api(request):
     billing_add = request.data.get("billing_add")
     shipping_add = request.data.get("shipping_add")
     main_phn_number = request.data.get("main_phn_number")
+    main_email = request.data.get('main_email')
     main_fax = request.data.get("main_fax")
     website = request.data.get("website")
     contact_email = request.data.get("contact_email")
@@ -4563,6 +4777,7 @@ def processor_edit_api(request):
             p.processor.billing_address = billing_add
             p.processor.shipping_address = shipping_add
             p.processor.main_number = main_phn_number
+            p.processor.main_email = main_email
             p.processor.main_fax = main_fax
             p.processor.website = website
             p.processor.save()
@@ -4607,6 +4822,7 @@ def processor_edit_api(request):
             p.processor2.billing_address = billing_add
             p.processor2.shipping_address = shipping_add
             p.processor2.main_number = main_phn_number
+            p.processor2.main_email = main_email
             p.processor2.main_fax = main_fax
             p.processor2.website = website
             p.processor2.save()
@@ -5157,4 +5373,1629 @@ def update_version(request):
     response["message"] = "Version updated succesfully."
     return Response(response)
 
+
+@api_view(('GET',))
+def distributor_profile_api(request):
+    response = Response({'data':[]})
+    userid = request.GET.get('userid')
+    try:
+        user = User.objects.get(id=userid)
+        user_email = user.email
+        distributorUser = DistributorUser.objects.get(contact_email=user_email)
+        distributor = distributorUser.distributor
+        response = Response({'distributor':[{'entity_name':distributor.entity_name,
+                                           'billing_address':distributor.location, 'warehouses': distributor.warehouse.all().values()}],
+                             'distributorUser':[{'contact_name':distributorUser.contact_name,'contact_email':distributorUser.contact_email,
+                                               'contact_phone':distributorUser.contact_phone,'contact_fax':distributorUser.contact_fax}]})
+    except:
+        pass
+    return response
+
+
+@api_view(('GET',))
+def warehouse_manager_profile_api(request):
+    response = Response({'data':[]})
+    userid = request.GET.get('userid')
+    try:
+        user = User.objects.get(id=userid)
+        user_email = user.email
+        warehouseUser = WarehouseUser.objects.get(contact_email=user_email)
+        warehouse = warehouseUser.warehouse
+        distributors = Distributor.objects.filter(warehouse=warehouse)
+        distributor_data = [
+            {
+                'entity_name': distributor.entity_name,
+                'location': distributor.location,
+                'latitude': distributor.latitude,
+                'longitude': distributor.longitude,
+            }
+            for distributor in distributors
+        ]
+        response = Response({'warehouse':[{'entity_name':warehouse.name,
+                                           'billing_address':warehouse.location, 'account_number':warehouse.account_number, 'distributors': distributor_data}],
+                             'warehouseUser':[{'contact_name':warehouseUser.contact_name,'contact_email':warehouseUser.contact_email,
+                                               'contact_phone':warehouseUser.contact_phone,'contact_fax':warehouseUser.contact_fax}]})
+    except:
+        pass
+    return response
+
+
+@api_view(('GET',))
+def customer_profile_api(request):
+    response = Response({'data':[]})
+    userid = request.GET.get('userid')
+    try:
+        user = User.objects.get(id=userid)
+        user_email = user.email
+        customerUser = CustomerUser.objects.get(contact_email=user_email)
+        customer = customerUser.customer
+        warehouse_data = {
+                'id': customer.warehouse.id,
+                'name': customer.warehouse.name,
+                'location': customer.warehouse.location,
+                'latitude': customer.warehouse.latitude,
+                'longitude': customer.warehouse.longitude                
+            }
+        
+        response = Response({'customer':[{'entity_name':customer.name, 'billing_address':customer.billing_address,
+                                          'shipping_address':customer.shipping_address, 'credit_terms':customer.credit_terms, 
+                                          'tax_payable':customer.is_tax_payable, 'tax_percentage': customer.tax_percentage, 'warehouse':warehouse_data}],
+                             'customerUser':[{'contact_name':customerUser.contact_name,'contact_email':customerUser.contact_email,
+                                               'contact_phone':customerUser.contact_phone,'contact_fax':customerUser.contact_fax,"location":customer.location, 'latitude': customer.latitude, 'longitude': customer.longitude }]})
+    except Exception as e:
+        return Response({"data":[], "message":str(e)})
+    return response
+
+
+@api_view(('POST',))
+def add_distributor_user(request):
+    response = {"status": "", "message": "", "data": []}
+    userid = request.data.get("userid")
+    contact_name = request.data.get("contact_name")
+    contact_email = request.data.get("contact_email")
+    contact_phone = request.data.get("contact_phone")
+    contact_fax = request.data.get("contact_fax")
+    try:
+        user = User.objects.get(id=userid)
+        if user.is_distributor:
+            d = DistributorUser.objects.filter(contact_email=user.email).first()
+            distributor_id = d.distributor.id
+            if User.objects.filter(email=contact_email).exists():
+                response["status"], response["message"] = "400", f"User with this email already exists."
+
+            password = generate_random_password()                            
+            distributor_user = DistributorUser(distributor=d.distributor, contact_name=contact_name,contact_email=contact_email,contact_phone=contact_phone,contact_fax=contact_fax,p_password_raw=password)
+            distributor_user.save()
+            user = User.objects.create(email=contact_email, username=contact_email,first_name=contact_name)
+            user.role.add(Role.objects.get(role='Distributor'))
+            user.is_distributor=True
+            user.is_active=True
+            user.set_password(password)
+            user.password_raw = password
+            user.save()
+
+            # 07-04-23 Log Table
+            log_type, log_status, log_device = "DistributorUser", "Added", "App"
+            log_idd, log_name = distributor_user.id, contact_name
+            log_email = contact_email
+            log_details = f"disttributor_id = {distributor_id} | distributor = {distributor_user.distributor.entity_name}  | contact_name= {contact_name} | contact_email = {contact_email} | contact_phone = {contact_phone} | contact_fax = {contact_fax}"
+            
+            action_by_userid = user.id
+            userr = User.objects.get(pk=action_by_userid)
+            user_role = userr.role.all()
+            action_by_username = f'{userr.first_name} {userr.last_name}'
+            action_by_email = userr.username
+            if user.id == 1 :
+                action_by_role = "superuser"
+            else:
+                action_by_role = str(','.join([str(i.role) for i in user_role]))
+            logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+                                action_by_userid=action_by_userid,action_by_username=action_by_username,
+                                action_by_email=action_by_email,action_by_role=action_by_role,log_email=log_email,
+                                log_details=log_details,log_device=log_device)
+            logtable.save()
+            response["status"], response["message"] = "200", f"Distributor User added successfully."
+            return Response(response)
+        else:
+            response["status"], response["message"] = "400", f"400, User is not a distributor."
+            return Response(response)
+    except Exception as e:
+        response["status"], response["message"] = "500", f"500, {e}"
+        return Response(response)
+
+
+@api_view(('POST',))
+def edit_distributor_api(request):
+    response = {"status": "", "message": "", "data": []}
+    userid = request.data.get("userid")
+    entity_name = request.data.get("entity_name")
+    warehouse_ids  = request.data.getlist('warehouse_ids')
+    location = request.data.get('location')
+    latitude  = request.data.get('latitude ')
+    longitude = request.data.get('longitude')
+
+    contact_email = request.data.get("contact_email")
+    contact_name = request.data.get("contact_name")
+    contact_phone = request.data.get("contact_phone")
+    contact_fax = request.data.get("contact_fax")
+    try:
+        user = User.objects.get(id=userid)
+        if user.is_distributor:
+            distributor_user = DistributorUser.objects.filter(contact_email=user.email).first()
+            distributor_user.contact_email = contact_email
+            distributor_user.contact_name = contact_name
+            distributor_user.contact_phone = contact_phone
+            distributor_user.contact_fax = contact_fax
+            distributor_user.distributor.entity_name = entity_name
+            distributor_user.distributor.location = location
+            distributor_user.distributor.longitude = longitude
+            distributor_user.distributor.latitude = latitude
+            
+            distributor_user.distributor.save()
+            distributor_user.save()
+            for warehouse_id in warehouse_ids:
+                try:
+                    warehouse = Warehouse.objects.get(id=warehouse_id)
+                    distributor_user.distributor.warehouse.add(warehouse)
+                except Warehouse.DoesNotExist:
+                    pass
+
+            if contact_email != user.email:
+                f_name = contact_name
+                user.email = contact_email
+                user.username = contact_email
+                user.first_name = f_name
+                user.save()
+            
+            else :
+                f_name = contact_name
+                user.first_name = f_name
+                user.save()
+            log_type, log_status, log_device = "DistributorUser", "Edited", "Web"
+            log_idd, log_name, log_email = distributor_user.id, contact_name, contact_email
+            log_details = f"distributor_id = {distributor_user.distributor.id} | distributor = {distributor_user.distributor.entity_name} | contact_name= {contact_name} | contact_email = {contact_email} | contact_phone = {contact_phone} | contact_fax = {contact_fax}"
+            action_by_userid = user.id
+            userr = User.objects.get(pk=action_by_userid)
+            user_role = userr.role.all()
+            action_by_username = f'{userr.first_name} {userr.last_name}'
+            action_by_email = userr.username
+            if user.id == 1 :
+                action_by_role = "superuser"
+            else:
+                action_by_role = str(','.join([str(i.role) for i in user_role]))
+            logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+                                action_by_userid=action_by_userid,action_by_username=action_by_username,
+                                action_by_email=action_by_email,action_by_role=action_by_role,log_email=log_email,
+                                log_details=log_details,log_device=log_device)
+            logtable.save()
+            response["status"], response["message"] = "200", f"Distributor Updated successfully."
+            return Response(response)
+        else:
+            response["status"], response["message"] = "400", f"400, User is not a distributor."
+            return Response(response)
+    except Exception as e:
+        response["status"], response["message"] = "500", f"500, {e}"
+    return Response(response)
+
+
+@api_view(('POST',))
+def edit_warehouse_api(request):
+    response = {"status": "", "message": "", "data": []}
+    userid = request.data.get("userid")
+    entity_name = request.data.get("entity_name")
+    distributor_ids  = request.data.getlist('distributor_ids')
+    customer_ids  = request.data.getlist('customer_ids')
+    location = request.data.get('location')
+    latitude  = request.data.get('latitude ')
+    longitude = request.data.get('longitude')
+
+    contact_email = request.data.get("contact_email")
+    contact_name = request.data.get("contact_name")
+    contact_phone = request.data.get("contact_phone")
+    contact_fax = request.data.get("contact_fax")
+    try:
+        user = User.objects.get(id=userid)
+        if user.is_warehouse_manager:
+            warehouse_user = WarehouseUser.objects.filter(contact_email=user.email).first()
+            warehouse_user.contact_email = contact_email
+            warehouse_user.contact_name = contact_name
+            warehouse_user.contact_phone = contact_phone
+            warehouse_user.contact_fax = contact_fax
+            warehouse_user.warehouse.name = entity_name
+            warehouse_user.warehouse.location = location
+            warehouse_user.warehouse.longitude = longitude
+            warehouse_user.warehouse.latitude = latitude
+            
+            warehouse_user.warehouse.save()
+            warehouse_user.save()
+            customers = Customer.objects.filter(id__in=customer_ids)
+            distributors = Distributor.objects.filter(id__in=distributor_ids)
+
+            Customer.objects.filter(warehouse=warehouse_user.warehouse).exclude(id__in=[customer.id for customer in customers]).update(warehouse=None)
+            
+            # Then, set the current warehouse for each selected customer
+            for customer in customers:
+                customer.warehouse = warehouse_user.warehouse
+                customer.save()                     
+            
+            current_distributors = warehouse_user.warehouse.distributor_set.all()
+
+            for distributor in current_distributors:
+                if distributor not in distributors:
+                    distributor.warehouse.remove(warehouse_user.warehouse)
+
+            for distributor in distributors:
+                distributor.warehouse.add(warehouse_user.warehouse)
+
+            if contact_email != user.email:
+                f_name = contact_name
+                user.email = contact_email
+                user.username = contact_email
+                user.first_name = f_name
+                user.save()
+            
+            else :
+                f_name = contact_name
+                user.first_name = f_name
+                user.save()
+
+            log_type, log_status, log_device = "WarehouseUser", "Edited", "Web"
+            log_idd, log_name, log_email = warehouse_user.id, contact_name, contact_email
+            log_details = f"warehouse_id = {warehouse_user.warehouse.id} | warehouse = {warehouse_user.warehouse.name} | contact_name= {contact_name} | contact_email = {contact_email} | contact_phone = {contact_phone} | contact_fax = {contact_fax}"
+            action_by_userid = user.id
+            userr = User.objects.get(pk=action_by_userid)
+            user_role = userr.role.all()
+            action_by_username = f'{userr.first_name} {userr.last_name}'
+            action_by_email = userr.username
+            if user.id == 1 :
+                action_by_role = "superuser"
+            else:
+                action_by_role = str(','.join([str(i.role) for i in user_role]))
+            logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+                                action_by_userid=action_by_userid,action_by_username=action_by_username,
+                                action_by_email=action_by_email,action_by_role=action_by_role,log_email=log_email,
+                                log_details=log_details,log_device=log_device)
+            logtable.save()
+            response["status"], response["message"] = "200", f"Warehouse Updated successfully."
+            return Response(response)
+        else:
+            response["status"], response["message"] = "400", f"400, User is not a warehouse manager."
+            return Response(response)
+    except Exception as e:
+        response["status"], response["message"] = "500", f"500, {e}"
+    return Response(response)
+
+
+@api_view(('POST',))
+def edit_customer_api(request):
+    response = {"status": "", "message": "", "data": []}
+    userid = request.data.get("userid")
+    entity_name = request.data.get("entity_name")
+    warehouse_id = request.data.get('warehouse_id')
+    credit_terms = request.data.get('credit_terms')
+    is_taxable = request.data.get('is_taxable')
+    tax_percentage = request.data.get('tax_percentage')
+    location = request.data.get('location')
+    latitude  = request.data.get('latitude')
+    longitude = request.data.get('longitude')
+    contact_email = request.data.get("contact_email")
+    contact_name = request.data.get("contact_name")
+    contact_phone = request.data.get("contact_phone")
+    contact_fax = request.data.get("contact_fax")
+    try:
+        user = User.objects.get(id=userid)
+        if user.is_customer:
+            customer_user = CustomerUser.objects.filter(contact_email=user.email).first()
+            customer_user.contact_email = contact_email
+            customer_user.contact_name = contact_name
+            customer_user.contact_phone = contact_phone
+            customer_user.contact_fax = contact_fax
+            customer_user.customer.name = entity_name
+            customer_user.customer.location = location
+            customer_user.customer.longitude = longitude
+            customer_user.customer.latitude = latitude
+            customer_user.customer.is_tax_payable = is_taxable
+            customer_user.customer.credit_terms = credit_terms
+            customer_user.customer.tax_percentage = tax_percentage          
+            
+            if warehouse_id not in [None, "", "null", " "]:
+                warehouse = Warehouse.objects.filter(id=int(warehouse_id)).first()
+                if customer_user.customer.warehouse_id != int(warehouse_id):
+                    customer_user.customer.warehouse = warehouse
+
+            customer_user.customer.save()
+            customer_user.save()
+
+            if contact_email != user.email:
+                f_name = contact_name
+                user.email = contact_email
+                user.username = contact_email
+                user.first_name = f_name
+                user.save()
+            
+            else :
+                f_name = contact_name
+                user.first_name = f_name
+                user.save()
+
+            log_type, log_status, log_device = "CustomerUser", "Edited", "Web"
+            log_idd, log_name, log_email = customer_user.id, contact_name, contact_email
+            log_details = f"customer_id = {customer_user.customer.id} | customer = {customer_user.customer.name} | contact_name= {contact_name} | contact_email = {contact_email} | contact_phone = {contact_phone} | contact_fax = {contact_fax}"
+            action_by_userid = user.id
+            userr = User.objects.get(pk=action_by_userid)
+            user_role = userr.role.all()
+            action_by_username = f'{userr.first_name} {userr.last_name}'
+            action_by_email = userr.username
+            if user.id == 1 :
+                action_by_role = "superuser"
+            else:
+                action_by_role = str(','.join([str(i.role) for i in user_role]))
+            logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+                                action_by_userid=action_by_userid,action_by_username=action_by_username,
+                                action_by_email=action_by_email,action_by_role=action_by_role,log_email=log_email,
+                                log_details=log_details,log_device=log_device)
+            logtable.save()
+            response["status"], response["message"] = "200", f"Warehouse Updated successfully."
+            return Response(response)
+        else:
+            response["status"], response["message"] = "400", f"400, User is not a customer"
+            return Response(response)
+    except Exception as e:
+        response["status"], response["message"] = "500", f"500, {e}"
+    return Response(response)
+
+
+@api_view(("GET",))
+def get_distributor_list(request):
+    response = {"status": "", "message": "", "data": []}
+    userid = request.GET.get("userid")
+    try:
+        user = User.objects.get(id=int(userid))
+        distributor_list = Distributor.objects.all().values()    
+        response["status"], response["message"], response["data"] = "200", "Distributor List fetched successfully.", distributor_list   
+    except Exception as e:
+        response["status"], response["message"], response["data"] = "500", f"500, {e}", []
+    return Response(response)
+
+
+@api_view(("GET",))
+def get_processor_contracts(request):
+    response = {"status": "", "message": "", "data": []}
+    userid = request.GET.get("userid")
+    try:
+        user = User.objects.get(id=int(userid))
+        if user.is_processor:
+            p = ProcessorUser.objects.get(contact_email=user.email) 
+            processor_id = p.processor.id
+            processor_name = p.processor.entity_name
+            processor_type = "T1"
+        elif user.is_processor2:
+            p = ProcessorUser2.objects.get(contact_email=user.email) 
+            processor_id = p.processor2.id
+            processor_name = p.processor2.entity_name
+            processor_type = Processor2.objects.filter(id=processor_id).first().processor_type.all().first().type_name
+
+        contracts = AdminProcessorContract.objects.filter(processor_id=processor_id, processor_type=processor_type, processor_entity_name=processor_name).values()
+        serializer = AdminProcessorContractSerializer(contracts, many=True)
+
+        response["status"], response["message"], response["data"] = "200", "Contracts fetched successfully.", serializer.data
+    except Exception as e:
+        response["status"], response["message"] = "500", f"500, {e}"
+    return Response(response)
+
+
+@api_view(("GET",))
+def get_selected_processor(request):
+    response = {"status": "", "message": "", "data": None}
+    selected_contract = request.GET.get('selected_contract')
+    if not selected_contract:
+        response["status"], response["message"] = "400", f"400, No contract selected"
+        return Response(response)     
+    contract = AdminProcessorContract.objects.filter(id=selected_contract).first()
+    if contract:
+        data = {"processor_id":contract.processor_id, "processor_type":contract.processor_type, "processor_entity_name":contract.processor_entity_name}
+        response["status"], response["message"], response["data"] = "200", "Selected Processor fetched successfully", data
+        return Response(response)
+    else:
+        response["status"], response["message"] = "400", f"400"
+        return Response(response)
+
+
+@api_view(("GET",))
+def get_destination_list(request):
+    response = {"status": "", "message": "", "data": []}
+    destination_type = request.GET.get('destination_type')
+    if not destination_type:
+        response["status"], response["message"] = "400", f"400, Destination type is not selected."
+        return Response(response)
+    if destination_type == 'warehouse':
+        destination_list = list(Warehouse.objects.all().values('id','name'))
+    if destination_type == 'customer':
+        destination_list = list(Customer.objects.filter(is_active=True).values('id','name'))
+    if destination_list:
+        response["status"], response["message"], response["data"] = "200", "Destination fetched successfully", destination_list
+        return Response(response)
+    else:
+        response["status"], response["message"] = "400", f"400"
+        return Response(response)
+
+
+@api_view(("GET",))
+def get_processor_contract_crops(request):
+    response = {"status": "", "message": "", "data": []}
+    selected_contract_id = request.GET.get('selected_contract')
+    if not selected_contract_id:
+        response["status"], response["message"] = "400", f"400, No contract selected"
+        return Response(response)
     
+    contract = AdminProcessorContract.objects.filter(id=int(selected_contract_id)).first()
+    crops = list(CropDetails.objects.filter(contract=contract).values('id', 'crop', 'crop_type'))
+    if crops:
+        response["status"], response["message"], response["data"] = "200", "Crops fetched successfully", crops
+        return Response(response)
+    else:
+        response["status"], response["message"] = "400", f"400"
+        return Response(response)
+
+
+@api_view(('POST',))
+def create_processor_shipment_api(request):
+    response = {"status": "", "message": "", "data": []}
+    userid = request.data.get("userid")
+
+    selected_contract_id = request.data.get("selected_contract")
+    outbound_type = request.data.get('outbound_type')
+    carrier_type = request.data.get('carrier_type')
+    carrier_id = request.data.get('carrier_id')
+    purchase_order_name = request.data.get('purchase_order_name')
+    purchase_order_number = request.data.get('purchase_order_number')
+    
+    shipment_type = request.data.get('shipment_type')
+    destination_type = request.data.get('selected_destination')
+    destination_id = request.data.get('destination_id') 
+    customer_contract = request.data.get('customer_contract')
+    crop_ids = request.data.getlist('crop_id[]')
+    gross_weights = request.data.getlist('gross_weight[]')
+    weights = request.data.getlist('weight[]')
+    amount_unit = request.data.get('amount_unit')
+    ship_weights = request.data.getlist('ship_weight[]')
+    ship_quantities = request.data.getlist('ship_quantity[]')
+    lot_numbers = request.data.getlist('lot_number[]')
+
+    status = request.data.get('status')
+    files = request.FILES.getlist('files')
+    final_payment_date = request.data.get('final_payment_date')
+    try:
+        user = User.objects.get(id=userid)      
+        contract = AdminProcessorContract.objects.filter(id=int(selected_contract_id)).first()  
+                    
+        if destination_type == 'warehouse':
+            warehouse_id = Warehouse.objects.get(id=int(destination_id)).id
+            warehouse_name = Warehouse.objects.get(id=int(destination_id)).name
+            customer_id = None
+            customer_name = None
+            customer_contract = None
+        else:
+            warehouse_id = None
+            warehouse_name = None
+            customer_id = Customer.objects.get(id=int(destination_id)).id
+            customer_name = Customer.objects.get(id=int(destination_id)).name            
+            customer_contract = AdminCustomerContract.objects.filter(id=int(customer_contract)).first()
+
+        shipment = ProcessorWarehouseShipment(
+            contract=contract,
+            processor_id=contract.processor_id,
+            processor_type=contract.processor_type,
+            processor_entity_name=contract.processor_entity_name,
+            
+            carrier_type=carrier_type,
+            outbound_type=outbound_type,
+            purchase_order_name=purchase_order_name,
+            purchase_order_number=purchase_order_number,           
+            shipment_type=shipment_type,          
+            
+            status=status,
+            customer_id=customer_id,
+            warehouse_id=warehouse_id,
+            customer_name=customer_name,
+            warehouse_name=warehouse_name,
+            customer_contract=customer_contract
+        )
+        shipment.save()
+
+        for i, crop_id in enumerate(crop_ids):
+            crop = CropDetails.objects.filter(id=int(crop_id)).first()
+            gross_weight = float(gross_weights[i]) if carrier_type == 'Truck/Trailer' else 0
+            ship_weight = float(ship_weights[i]) if carrier_type == 'Truck/Trailer' else 0
+            ship_quantity = int(ship_quantities[i]) if carrier_type == 'Truck/Trailer' else 1
+            weight = float(weights[i]) if carrier_type == 'Rail Car' else 0
+            lot_number = lot_numbers[i]
+            
+            if carrier_type == 'Truck/Trailer':
+                net_weight = gross_weight - (ship_weight * ship_quantity)
+            elif carrier_type == 'Rail Car':
+                net_weight = weight
+
+            shipment_amount_unit = amount_unit  
+            if crop.amount_unit == shipment_amount_unit:
+                contract_weight_left = float(crop.left_amount) - float(net_weight)
+            else:
+                if crop.amount_unit == "LBS" and shipment_amount_unit == "MT":
+                    net_weight_lbs = float(net_weight) * 2204.62
+                    contract_weight_left = float(crop.left_amount) - net_weight_lbs
+                elif crop.amount_unit == "MT" and shipment_amount_unit == "LBS":
+                    net_weight_mt = float(net_weight) * 0.000453592
+                    contract_weight_left = float(crop.left_amount) - net_weight_mt
+                else:
+                    raise ValueError(f"Unsupported conversion from {crop.amount_unit} to {shipment_amount_unit}")
+
+            ProcessorShipmentCrops.objects.create(
+                shipment=shipment,
+                crop_id=crop_id,
+                crop=crop.crop,
+                crop_type=crop.crop_type,
+                net_weight=net_weight,
+                gross_weight=gross_weight,
+                ship_weight=ship_weight,
+                ship_quantity=ship_quantity,
+                weight_unit=shipment_amount_unit,
+                contract_weight_left=contract_weight_left,
+                lot_number=lot_number
+            )
+        if final_payment_date not in [None, '', ' ', 'null']:            
+            shipment.final_payment_date=final_payment_date  
+        shipment.save()
+
+        if carrier_id:
+            CarrierDetails.objects.create(shipment=shipment, carrier_id=carrier_id)      
+        
+        for file in files:
+            ProcessorWarehouseShipmentDocuments.objects.create(shipment=shipment, document_file=file)   
+
+        if shipment.warehouse_id not in [None, 'null', ' ', '']:                            
+            all_user = WarehouseUser.objects.filter(warehouse_id=shipment.warehouse_id)                         
+            distributors = Distributor.objects.filter(warehouse__id=shipment.warehouse_id)                         
+            distributor_users = DistributorUser.objects.filter(distributor__in=distributors)
+        else:                            
+            all_user = CustomerUser.objects.filter(customer_id=shipment.customer_id)
+            distributor_users = []                          
+        all_users = list(all_user) + list(distributor_users)
+
+        for user in all_users :
+            msg = f'A shipment has been sent  under Contract ID - {shipment.contract.secret_key}'
+            get_user = User.objects.get(username=user.contact_email)
+            notification_reason = 'New Shipment'
+            redirect_url = "/warehouse/list-processor-shipment/"
+            save_notification = ShowNotification(user_id_to_show=get_user.id,msg=msg,status="UNREAD",redirect_url=redirect_url,
+                notification_reason=notification_reason)
+            save_notification.save()
+
+        response["status"] = "200"
+        response["message"] = f"Processor shipment created successfully."
+        return Response(response)
+    except Exception as e:
+        response["status"], response["message"] = "500", f"500, {e}"
+    return Response(response)
+
+
+@api_view(("GET",))
+def processor_shipment_list_api(request):
+    response = {"status": "", "message": "", "data": []}
+    userid = request.GET.get("userid")
+    try:
+        user = User.objects.get(id=int(userid))
+        if user.is_processor:
+            p = ProcessorUser.objects.get(contact_email=user.email) 
+            processor_id = p.processor.id
+            processor_name = p.processor.entity_name
+            processor_type = "T1"
+            shipments = ProcessorWarehouseShipment.objects.filter(processor_id=processor_id, processor_type=processor_type, processor_entity_name=processor_name)
+        elif user.is_processor2:
+            p = ProcessorUser2.objects.get(contact_email=user.email) 
+            processor_id = p.processor2.id
+            processor_name = p.processor2.entity_name
+            processor_type = Processor2.objects.filter(id=processor_id).first().processor_type.all().first().type_name
+            shipments = ProcessorWarehouseShipment.objects.filter(processor_id=processor_id, processor_type=processor_type, processor_entity_name=processor_name)
+        elif user.is_customer:
+            customer = CustomerUser.objects.filter(contact_email=user.email).first()
+            shipments = ProcessorWarehouseShipment.objects.filter(customer_id=customer.customer.id)
+            print("shipments", shipments)
+        else:
+            shipments = []
+        serializer = ProcessorWarehouseShipmentSerializer(shipments, many=True)
+        response["status"], response["message"], response["data"] = "200", "Processor shipments fetched successfully", serializer.data
+        return Response(response)
+
+    except Exception as e:
+        response["status"], response["message"] = "500", f"500, {e}"
+    return Response(response)
+
+
+@api_view(("GET",))
+def processor_shipment_view_api(request):
+    response = {"status": "", "message": "", "data": []}
+    shipment_id = request.GET.get("shipment_id")
+    try:
+        check_shipment = ProcessorWarehouseShipment.objects.filter(id=int(shipment_id))
+        if check_shipment.exists():
+            shipment = check_shipment.first()
+            serializer = ProcessorWarehouseShipmentSerializer(shipment)
+            response["status"], response["message"], response["data"] = "200", "Processor shipment data fetched successfully", serializer.data
+            return Response(response)
+        else:
+            response["status"], response["message"] = "400", f"400"
+            return Response(response)
+    except Exception as e:
+        response["status"], response["message"] = "500", f"500, {e}"
+    return Response(response)
+
+
+@api_view(("POST", ))
+def edit_processor_shipment_api(request):
+    response = {"status": "", "message": "", "data": []}
+    shipment_id = request.data.get("shipment_id")
+
+    selected_contract_id = request.data.get("selected_contract")
+    outbound_type = request.data.get('outbound_type')
+    carrier_type = request.data.get('carrier_type')
+    carrier_id = request.data.get('carrier_id')
+    purchase_order_name = request.data.get('purchase_order_name')
+    purchase_order_number = request.data.get('purchase_order_number')
+    
+    shipment_type = request.data.get('shipment_type')
+    destination_type = request.data.get('selected_destination')
+    destination_id = request.data.get('destination_id') 
+    customer_contract = request.data.get('customer_contract')
+    status = request.data.get('status')
+    files = request.FILES.getlist('files')
+    final_payment_date = request.data.get('final_payment_date')
+
+    crop_ids = request.data.getlist('crop_id[]')
+    gross_weights = request.data.getlist('gross_weight[]')
+    weights = request.data.getlist('weight[]')
+    amount_unit = request.data.get('amount_unit')
+    ship_weights = request.data.getlist('ship_weight[]')
+    ship_quantities = request.data.getlist('ship_quantity[]')
+    lot_numbers = request.data.getlist('lot_number[]')   
+
+    border_receive_date = request.data.get('border_receive_date')
+    border_leaving_date = request.data.get('border_leaving_date') 
+    final_receive_date = request.data.get('final_receive_date')
+    final_leaving_date = request.data.get('final_leaving_date')
+    border_receive_date2 = request.data.get('border_receive_date2')  
+    border_leaving_date2 = request.data.get('border_leaving_date2') 
+    processor_receive_date = request.data.get('processor_receive_date')
+
+    crops = request.data.getlist('crop[]')
+    additional_lot_numbers = request.data.getlist('additional_lot_number[]')
+    addresses = request.data.getlist('address[]')
+    descriptions = request.data.getlist('description[]')
+
+    try:
+        check_shipment = ProcessorWarehouseShipment.objects.filter(id=int(shipment_id))
+        if check_shipment.exists():
+            shipment = check_shipment.first()
+            changes = find_changes(request.data, shipment)
+            contract = AdminProcessorContract.objects.filter(id=int(selected_contract_id)).first()
+            if shipment.processor_type == "T1": 
+                processor = Processor.objects.filter(processor_id=int(shipment.processor_id)).first()
+                processor_location = Location.objects.filter(processor=processor).first()
+                if processor_location:
+                    location = processor_location.name
+                else:
+                    location = "Origin location"
+            else:
+                processor = Processor2.objects.filter(processor_id=int(shipment.processor_id)).first()
+                processor_location = Processor2Location.objects.filter(processor=processor).first()
+                if processor_location:
+                    location = processor_location.name
+                else:
+                    location = "Origin location"           
+
+            if destination_type == 'warehouse':
+                warehouse_id = Warehouse.objects.get(id=int(destination_id)).id
+                warehouse_name = Warehouse.objects.get(id=int(destination_id)).name
+                customer_id = None
+                customer_name = None
+                customer_contract = None
+            else:
+                warehouse_id = None
+                warehouse_name = None
+                customer_id = Customer.objects.get(id=int(destination_id)).id
+                customer_name = Customer.objects.get(id=int(destination_id)).name            
+                customer_contract = AdminCustomerContract.objects.filter(id=int(customer_contract)).first()
+
+            shipment.contract=contract,
+            shipment.processor_id=contract.processor_id,
+            shipment.processor_type=contract.processor_type,
+            shipment.processor_entity_name=contract.processor_entity_name,
+            
+            shipment.carrier_type=carrier_type,
+            shipment.outbound_type=outbound_type,
+            shipment.purchase_order_name=purchase_order_name,
+            shipment.purchase_order_number=purchase_order_number,           
+            shipment.shipment_type=shipment_type,          
+            
+            shipment.status=status,
+            shipment.customer_id=customer_id,
+            shipment.warehouse_id=warehouse_id,
+            shipment.customer_name=customer_name,
+            shipment.warehouse_name=warehouse_name,
+            shipment.customer_contract=customer_contract
+
+            if final_payment_date not in [None, '', ' ', 'null']:            
+                shipment.final_payment_date=final_payment_date 
+
+            if border_receive_date not in [None, '', ' ', 'null']:            
+                shipment.border_receive_date=border_receive_date 
+
+            if border_leaving_date not in [None, '', ' ', 'null']:            
+                shipment.border_leaving_date=border_leaving_date 
+
+            if final_receive_date not in [None, '', ' ', 'null']:            
+                shipment.distributor_receive_date=final_receive_date 
+
+            if final_leaving_date not in [None, '', ' ', 'null']:            
+                shipment.distributor_leaving_date=final_leaving_date 
+
+            if border_receive_date2 not in [None, '', ' ', 'null']:            
+                shipment.border_back_receive_date=border_receive_date2 
+
+            if border_leaving_date2 not in [None, '', ' ', 'null']:            
+                shipment.border_back_leaving_date=border_leaving_date2 
+
+            if processor_receive_date not in [None, '', ' ', 'null']:            
+                shipment.processor_receive_date=processor_receive_date 
+            shipment.save()
+            
+            ProcessorShipmentCrops.objects.filter(shipment=shipment).delete()
+
+            for i, crop_id in enumerate(crop_ids):
+                crop = CropDetails.objects.filter(id=int(crop_id)).first()
+                gross_weight = float(gross_weights[i]) if carrier_type == 'Truck/Trailer' else 0
+                ship_weight = float(ship_weights[i]) if carrier_type == 'Truck/Trailer' else 0
+                ship_quantity = int(ship_quantities[i]) if carrier_type == 'Truck/Trailer' else 1
+                weight = float(weights[i]) if carrier_type == 'Rail Car' else 0
+                lot_number = lot_numbers[i]
+                
+                if carrier_type == 'Truck/Trailer':
+                    net_weight = gross_weight - (ship_weight * ship_quantity)
+                elif carrier_type == 'Rail Car':
+                    net_weight = weight
+
+                shipment_amount_unit = amount_unit  
+                if crop.amount_unit == shipment_amount_unit:
+                    contract_weight_left = float(crop.left_amount) - float(net_weight)
+                else:
+                    if crop.amount_unit == "LBS" and shipment_amount_unit == "MT":
+                        net_weight_lbs = float(net_weight) * 2204.62
+                        contract_weight_left = float(crop.left_amount) - net_weight_lbs
+                    elif crop.amount_unit == "MT" and shipment_amount_unit == "LBS":
+                        net_weight_mt = float(net_weight) * 0.000453592
+                        contract_weight_left = float(crop.left_amount) - net_weight_mt
+                    else:
+                        raise ValueError(f"Unsupported conversion from {crop.amount_unit} to {shipment_amount_unit}")
+
+                ProcessorShipmentCrops.objects.create(
+                    shipment=shipment,
+                    crop_id=crop_id,
+                    crop=crop.crop,
+                    crop_type=crop.crop_type,
+                    net_weight=net_weight,
+                    gross_weight=gross_weight,
+                    ship_weight=ship_weight,
+                    ship_quantity=ship_quantity,
+                    weight_unit=shipment_amount_unit,
+                    contract_weight_left=contract_weight_left,
+                    lot_number=lot_number
+                )
+            if carrier_id:                     
+                carrier_details, created = CarrierDetails.objects.update_or_create(
+                    shipment=shipment,
+                    defaults={'carrier_id': carrier_id}
+                )
+            else:                      
+                CarrierDetails.objects.filter(shipment=shipment).delete()      
+            
+            ProcessorWarehouseShipmentDocuments.objects.filter(shipment=shipment).delete()
+            for file in files:
+                ProcessorWarehouseShipmentDocuments.objects.create(shipment=shipment, document_file=file) 
+
+            existing_lot_entries = ProcessorShipmentLotNumberTracking.objects.filter(shipment=shipment).select_related('crop')
+            existing_lot_mapping = {
+                entry.crop.id: {
+                    "additional_lot_number": entry.additional_lot_number,
+                    "address": entry.address
+                } 
+                for entry in existing_lot_entries if entry.crop
+            }
+
+            ProcessorShipmentLotNumberTracking.objects.filter(shipment=shipment).delete()
+            for crop_id, lot_number, address, description in zip(crops, additional_lot_numbers, addresses, descriptions):
+                
+                crop = ProcessorShipmentCrops.objects.filter(id=int(crop_id)).first()
+                if not crop:
+                    continue  
+
+                old_lot_number = existing_lot_mapping.get(crop.id, {}).get("additional_lot_number", crop.lot_number)
+                old_address = existing_lot_mapping.get(crop.id, {}).get("address", location)
+
+                new_tracking_entry = ProcessorShipmentLotNumberTracking(
+                    shipment=shipment,
+                    crop=crop,
+                    additional_lot_number=lot_number,
+                    address=address,
+                    description=description
+                )
+                new_tracking_entry.save()
+
+                if lot_number != old_lot_number:
+                    changes.append({
+                        "field": f"Lot Number of {crop}",
+                        "old": old_lot_number,
+                        "new": lot_number
+                    })
+
+                if address != old_address:
+                    changes.append({
+                        "field": "Address",
+                        "old": old_address,
+                        "new": address
+                    })
+            descriptions = request.data.getlist('description')
+
+            for  description in  descriptions:
+                if  description:                    
+                    ProcessorShipmentLog.objects.create(
+                        shipment=shipment,                           
+                        description=description,
+                        changes = {"changes":changes},
+                        updated_by = request.user
+                    )
+            response["status"], response["message"] = "200", "Processor shipment is updated successfully."
+            return Response(response)
+        else:
+            response["status"], response["message"] = "400", "Processor shipment not found."
+            return Response(response)
+                            
+    except Exception as e:
+        response["status"], response["message"] = "500", f"500, {e}"
+    return Response(response)
+
+
+@api_view(("POST",))
+def delete_processor_shipment_api(request):
+    response = {"status": "", "message": "", "data": []}
+    shipment_id = request.data.get("shipment_id")
+    try:
+        check_shipment = ProcessorWarehouseShipment.objects.filter(id=int(shipment_id))
+        if check_shipment.exists():
+            shipment = check_shipment.first()
+            shipment.delete()
+            response["status"], response["message"] = "200", "Processor shipment deleted successfully."
+            return Response(response)
+        else:
+            response["status"], response["message"] = "400", "Processor shipment not found."
+            return Response(response)
+                            
+    except Exception as e:
+        response["status"], response["message"] = "500", f"500, {e}"
+    return Response(response)
+
+
+@api_view(("GET",))
+def get_customer_contracts(request):
+    response = {"status": "", "message": "", "data": []}
+    userid = request.GET.get("userid")
+    try:
+        user = User.objects.get(id=int(userid))
+        if user.is_warehouse_manager:
+            w = WarehouseUser.objects.get(contact_email=user.email)             
+            customers = Customer.objects.filter(warehouse=w.warehouse)  
+            contracts = AdminCustomerContract.objects.filter(customer_id__in=list(customers.values_list('id', flat=True))).values().order_by('-id')
+
+        elif user.is_distributor:
+            d = DistributorUser.objects.get(contact_email=user.email)             
+            warehouses = d.distributor.warehouse.all().values('id', 'name') 
+            warehouse_ids = [warehouse['id'] for warehouse in warehouses]
+            customers = Customer.objects.filter(warehouse__id__in=warehouse_ids)  
+            contracts = AdminCustomerContract.objects.filter(customer_id__in=list(customers.values_list('id', flat=True))).values().order_by('-id')        
+        
+        elif user.is_customer:
+            c = CustomerUser.objects.get(contact_email=user.email)
+            customer_id = Customer.objects.get(id=c.customer.id).id
+            contracts = AdminCustomerContract.objects.filter(customer_id=customer_id)
+
+        serializer = AdminCustomerContractSerializer(contracts, many=True)    
+        response["status"], response["message"], response["data"] = "200", "Contracts fetched successfully.", serializer.data
+    except Exception as e:
+        response["status"], response["message"] = "500", f"500, {e}"
+    return Response(response)
+
+
+@api_view(("GET",))
+def get_warehouse_list(request):
+    response = {"status": "", "message": "", "data": []}
+    userid = request.GET.get("userid")
+    try:
+        user = User.objects.get(id=int(userid))
+        if user.is_warehouse_manager:
+            warehouse_user = WarehouseUser.objects.get(contact_email=user.email) 
+            warehouse = warehouse_user.warehouse
+            data = {"id":warehouse.id, "name":warehouse.name}
+            response["status"], response["message"], response["data"] = "200", f"Warehouse List fetched successfully", data
+            return Response(response)
+        
+        if user.is_distributor:
+            distributor_user = DistributorUser.objects.get(contact_email=user.email) 
+            distributor = Distributor.objects.get(id=distributor_user.distributor.id)
+            warehouses = distributor.warehouse.all().values('id', 'name')
+            response["status"], response["message"], response["data"] = "200", "Warehouse List fetched successfully", warehouses
+            return Response(response)
+        
+    except Exception as e:
+        response["status"], response["message"], response["data"] = "500", f"500, {e}", []
+    return Response(response)
+
+
+@api_view(("GET",))
+def get_selected_customer(request):
+    response = {"status": "", "message": "", "data": None}
+    selected_contract = request.GET.get('selected_contract')
+    if not selected_contract:
+        response["status"], response["message"] = "400", f"400, No contract selected"
+        return Response(response)     
+    contract = AdminCustomerContract.objects.filter(id=selected_contract).first()
+    if contract:
+        data = {"customer_id":contract.customer_id, "customer_name":contract.customer_name}
+        response["status"], response["message"], response["data"] = "200", "Selected Customer fetched successfully", data
+        return Response(response)
+    else:
+        response["status"], response["message"] = "400", f"400"
+        return Response(response)
+
+
+@api_view(("GET",))
+def get_customer_contract_crops(request):
+    response = {"status": "", "message": "", "data": []}
+    selected_contract_id = request.GET.get('selected_contract')
+    if not selected_contract_id:
+        response["status"], response["message"] = "400", f"400, No contract selected"
+        return Response(response)
+    
+    contract = AdminCustomerContract.objects.filter(id=int(selected_contract_id)).first()
+    crops = list(CustomerContractCropDetails.objects.filter(contract=contract).values('id', 'crop', 'crop_type'))
+    if crops:
+        response["status"], response["message"], response["data"] = "200", "Crops fetched successfully", crops
+        return Response(response)
+    else:
+        response["status"], response["message"] = "400", f"400"
+        return Response(response)
+
+
+@api_view(("POST",))
+def create_warehouse_shipment_api(request):
+    response = {"status": "", "message": "", "data": []}
+    userid = request.data.get("userid")
+
+    selected_contract_id = request.data.get("selected_contract")
+    selected_warehouse = request.data.get('selected_warehouse')
+    outbound_type = request.data.get('outbound_type')
+    carrier_type = request.data.get('carrier_type')
+    carrier_id = request.data.get('carrier_id')
+    purchase_order_name = request.data.get('purchase_order_name')
+    purchase_order_number = request.data.get('purchase_order_number')
+
+    shipment_type = request.data.get('shipment_type')  
+
+    crop_ids = request.data.getlist('crop_id[]')
+    gross_weights = request.data.getlist('gross_weight[]')
+    weights = request.data.getlist('weight[]')
+    amount_unit = request.data.get('amount_unit')
+    ship_weights = request.data.getlist('ship_weight[]')
+    ship_quantities = request.data.getlist('ship_quantity[]')
+    lot_numbers = request.data.getlist('lot_number[]')
+
+    status = request.data.get('status')
+    files = request.FILES.getlist('files')
+    final_payment_date = request.data.get('final_payment_date') 
+    try:
+        user = User.objects.get(id=userid)      
+        contract = AdminCustomerContract.objects.filter(id=int(selected_contract_id)).first()
+        warehouse = Warehouse.objects.filter(id=int(selected_warehouse)).first()
+
+        shipment = WarehouseCustomerShipment(
+            contract=contract,
+            warehouse_id=selected_warehouse, 
+            warehouse_name = warehouse.name,                                             
+            carrier_type=carrier_type,
+            outbound_type=outbound_type,
+            shipment_type=shipment_type,
+            purchase_order_name=purchase_order_name,
+            purchase_order_number=purchase_order_number,                                                
+            status=status,
+            customer_id=contract.customer_id,                        
+            customer_name=contract.customer_name,                        
+        )
+        shipment.save()
+
+        for i, crop_id in enumerate(crop_ids):
+            crop = CustomerContractCropDetails.objects.filter(id=int(crop_id)).first()
+            gross_weight = float(gross_weights[i]) if carrier_type == 'Truck/Trailer' else 0
+            ship_weight = float(ship_weights[i]) if carrier_type == 'Truck/Trailer' else 0
+            ship_quantity = int(ship_quantities[i]) if carrier_type == 'Truck/Trailer' else 1
+            weight = float(weights[i]) if carrier_type == 'Rail Car' else 0
+            lot_number = lot_numbers[i]
+            
+            if carrier_type == 'Truck/Trailer':
+                net_weight = gross_weight - (ship_weight * ship_quantity)
+            elif carrier_type == 'Rail Car':
+                net_weight = weight
+            
+            if crop.amount_unit == amount_unit:
+                contract_weight_left = float(crop.left_amount) - float(net_weight)
+            else:
+                if crop.amount_unit == "LBS" and amount_unit == "MT":
+                    net_weight_lbs = float(net_weight) * 2204.62
+                    contract_weight_left = float(crop.left_amount) - net_weight_lbs
+                elif crop.amount_unit == "MT" and amount_unit == "LBS":
+                    net_weight_mt = float(net_weight) * 0.000453592
+                    contract_weight_left = float(crop.left_amount) - net_weight_mt
+                else:
+                    raise ValueError(f"Unsupported conversion from {crop.amount_unit} to {amount_unit}")
+
+            WarehouseShipmentCrops.objects.create(
+                shipment=shipment,
+                crop_id=crop_id,
+                crop=crop.crop,
+                crop_type=crop.crop_type,
+                net_weight=net_weight,
+                gross_weight=gross_weight,
+                ship_weight=ship_weight,
+                ship_quantity=ship_quantity,
+                weight_unit=amount_unit,
+                contract_weight_left=contract_weight_left,
+                lot_number=lot_number
+            )                       
+            
+        if final_payment_date not in [None, '', ' ', 'null']:                       
+            shipment.final_payment_date=final_payment_date  
+        shipment.save()                      
+        
+        if carrier_id:
+            CarrierDetails2.objects.create(shipment=shipment, carrier_id=carrier_id)
+        
+        for file in files:
+            WarehouseCustomerShipmentDocuments.objects.create(shipment=shipment, document_file=file)
+
+        all_users = CustomerUser.objects.filter(customer_id=shipment.customer_id)
+                    
+        for user in all_users :
+            msg = f'A shipment has been sent under Contract ID - {shipment.contract.secret_key}'
+            get_user = User.objects.get(username=user.contact_email)
+            notification_reason = 'New Shipment'
+            redirect_url = "/warehouse/list-warehouse-shipment/"
+            save_notification = ShowNotification(user_id_to_show=get_user.id,msg=msg,status="UNREAD",redirect_url=redirect_url,
+                notification_reason=notification_reason)
+            save_notification.save()
+        response["status"], response["message"] = "200", "Warehouse Shipment created successfully."
+        return Response(response)        
+                     
+    except Exception as e:
+        response["status"], response["message"] = "500", f"500, {e}"
+    return Response(response)
+
+
+@api_view(("GET",))
+def warehouse_shipment_list_api(request):
+    response = {"status": "", "message": "", "data": []}
+    userid = request.GET.get("userid")
+    try:
+        user = User.objects.get(id=int(userid))
+        if user.is_warehouse_manager:
+            w = WarehouseUser.objects.get(contact_email=user.email)
+            warehouse_id = Warehouse.objects.get(id=w.warehouse.id).id
+            shipments = WarehouseCustomerShipment.objects.filter(warehouse_id=warehouse_id)
+        elif user.is_distributor:
+            d = DistributorUser.objects.get(contact_email=user.email)
+            distributor = Distributor.objects.get(id=d.distributor.id)
+            warehouses = distributor.warehouse.all().values_list('id', flat=True)
+            shipments = []
+            for warehouse_id in warehouses:
+                check_shipment = WarehouseCustomerShipment.objects.filter(warehouse_id=warehouse_id).order_by('-id')
+                if check_shipment:
+                    shipments = shipments + list(check_shipment)
+
+        elif user.is_customer:
+            customer = CustomerUser.objects.filter(contact_email=user.email).first()
+            shipments = WarehouseCustomerShipment.objects.filter(customer_id=customer.customer.id)
+
+        else:
+            shipments = []
+
+        serializer = WarehouseCustomerShipmentSerializer(shipments, many=True)
+        response["status"], response["message"], response["data"] = "200", "Warehouse shipments fetched successfully", serializer.data
+        return Response(response)
+
+    except Exception as e:
+        response["status"], response["message"] = "500", f"500, {e}"
+    return Response(response)
+
+
+@api_view(("GET",))
+def warehouse_shipment_view_api(request):
+    response = {"status": "", "message": "", "data": []}
+    shipment_id = request.GET.get("shipment_id")
+    try:
+        check_shipment = WarehouseCustomerShipment.objects.filter(id=int(shipment_id))
+        if check_shipment.exists():
+            shipment = check_shipment.first()
+            serializer = WarehouseCustomerShipmentSerializer(shipment)
+            response["status"], response["message"], response["data"] = "200", "Warehouse shipment data fetched successfully", serializer.data
+            return Response(response)
+        else:
+            response["status"], response["message"] = "400", f"400"
+            return Response(response)
+    except Exception as e:
+        response["status"], response["message"] = "500", f"500, {e}"
+    return Response(response)
+
+
+@api_view(("POST",))
+def edit_warehouse_shipment_api(request):
+    response = {"status": "", "message": "", "data": []}
+    shipment_id = request.data.get("shipment_id")
+
+    selected_contract_id = request.data.get("selected_contract")
+    outbound_type = request.data.get('outbound_type')
+    carrier_type = request.data.get('carrier_type')
+    carrier_id = request.data.get('carrier_id')
+    purchase_order_name = request.data.get('purchase_order_name')
+    purchase_order_number = request.data.get('purchase_order_number')
+    
+    shipment_type = request.data.get('shipment_type')
+    selected_warehouse = request.data.get('selected_warehouse')
+    status = request.data.get('status')
+    files = request.FILES.getlist('files')
+    final_payment_date = request.data.get('final_payment_date')
+
+    crop_ids = request.data.getlist('crop_id[]')
+    gross_weights = request.data.getlist('gross_weight[]')
+    weights = request.data.getlist('weight[]')
+    amount_unit = request.data.get('amount_unit')
+    ship_weights = request.data.getlist('ship_weight[]')
+    ship_quantities = request.data.getlist('ship_quantity[]')
+    lot_numbers = request.data.getlist('lot_number[]')   
+
+    border_receive_date = request.data.get('border_receive_date')
+    border_leaving_date = request.data.get('border_leaving_date') 
+    final_receive_date = request.data.get('final_receive_date')
+    final_leaving_date = request.data.get('final_leaving_date')
+    border_receive_date2 = request.data.get('border_receive_date2')  
+    border_leaving_date2 = request.data.get('border_leaving_date2') 
+    processor_receive_date = request.data.get('processor_receive_date')
+
+    crops = request.data.getlist('crop[]')
+    additional_lot_numbers = request.data.getlist('additional_lot_number[]')
+    addresses = request.data.getlist('address[]')
+    descriptions = request.data.getlist('description[]')
+
+    try:
+        check_shipment = WarehouseCustomerShipment.objects.filter(id=int(shipment_id))
+        if check_shipment.exists():
+
+            shipment = check_shipment.first()
+            changes = find_changes_for_customer_shipment(request.data, shipment)
+
+            contract = AdminCustomerContract.objects.filter(id=int(selected_contract_id)).first()
+            warehouse = Warehouse.objects.filter(id=int(selected_warehouse)).first()
+            shipment.contract=contract,
+            shipment.warehouse_id=warehouse.id,            
+            shipment.warehouse_name=warehouse.name,
+            
+            shipment.carrier_type=carrier_type,
+            shipment.outbound_type=outbound_type,
+            shipment.purchase_order_name=purchase_order_name,
+            shipment.purchase_order_number=purchase_order_number,           
+            shipment.shipment_type=shipment_type,          
+            
+            shipment.status=status,
+            shipment.customer_id=contract.customer_id,            
+            shipment.customer_name=contract.customer_name,
+            
+            if final_payment_date not in [None, '', ' ', 'null']:            
+                shipment.final_payment_date=final_payment_date 
+
+            if border_receive_date not in [None, '', ' ', 'null']:            
+                shipment.border_receive_date=border_receive_date 
+
+            if border_leaving_date not in [None, '', ' ', 'null']:            
+                shipment.border_leaving_date=border_leaving_date 
+
+            if final_receive_date not in [None, '', ' ', 'null']:            
+                shipment.customer_receive_date=final_receive_date 
+
+            if final_leaving_date not in [None, '', ' ', 'null']:            
+                shipment.customer_leaving_date=final_leaving_date 
+
+            if border_receive_date2 not in [None, '', ' ', 'null']:            
+                shipment.border_back_receive_date=border_receive_date2 
+
+            if border_leaving_date2 not in [None, '', ' ', 'null']:            
+                shipment.border_back_leaving_date=border_leaving_date2 
+
+            if processor_receive_date not in [None, '', ' ', 'null']:            
+                shipment.warehouse_receive_date=processor_receive_date 
+            shipment.save()
+            
+            WarehouseShipmentCrops.objects.filter(shipment=shipment).delete()
+
+            for i, crop_id in enumerate(crop_ids):
+                crop = CustomerContractCropDetails.objects.filter(id=int(crop_id)).first()
+                gross_weight = float(gross_weights[i]) if carrier_type == 'Truck/Trailer' else 0
+                ship_weight = float(ship_weights[i]) if carrier_type == 'Truck/Trailer' else 0
+                ship_quantity = int(ship_quantities[i]) if carrier_type == 'Truck/Trailer' else 1
+                weight = float(weights[i]) if carrier_type == 'Rail Car' else 0
+                lot_number = lot_numbers[i]
+                
+                if carrier_type == 'Truck/Trailer':
+                    net_weight = gross_weight - (ship_weight * ship_quantity)
+                elif carrier_type == 'Rail Car':
+                    net_weight = weight
+
+                shipment_amount_unit = amount_unit  
+                if crop.amount_unit == shipment_amount_unit:
+                    contract_weight_left = float(crop.left_amount) - float(net_weight)
+                else:
+                    if crop.amount_unit == "LBS" and shipment_amount_unit == "MT":
+                        net_weight_lbs = float(net_weight) * 2204.62
+                        contract_weight_left = float(crop.left_amount) - net_weight_lbs
+                    elif crop.amount_unit == "MT" and shipment_amount_unit == "LBS":
+                        net_weight_mt = float(net_weight) * 0.000453592
+                        contract_weight_left = float(crop.left_amount) - net_weight_mt
+                    else:
+                        raise ValueError(f"Unsupported conversion from {crop.amount_unit} to {shipment_amount_unit}")
+
+                WarehouseShipmentCrops.objects.create(
+                    shipment=shipment,
+                    crop_id=crop_id,
+                    crop=crop.crop,
+                    crop_type=crop.crop_type,
+                    net_weight=net_weight,
+                    gross_weight=gross_weight,
+                    ship_weight=ship_weight,
+                    ship_quantity=ship_quantity,
+                    weight_unit=shipment_amount_unit,
+                    contract_weight_left=contract_weight_left,
+                    lot_number=lot_number
+                )
+            if carrier_id:                     
+                carrier_details, created = CarrierDetails2.objects.update_or_create(
+                    shipment=shipment,
+                    defaults={'carrier_id': carrier_id}
+                )
+            else:                      
+                CarrierDetails2.objects.filter(shipment=shipment).delete()      
+            
+            WarehouseCustomerShipmentDocuments.objects.filter(shipment=shipment).delete()
+            for file in files:
+                WarehouseCustomerShipmentDocuments.objects.create(shipment=shipment, document_file=file) 
+
+            existing_lot_entries = WarehouseShipmentLotNumberTracking.objects.filter(shipment=shipment).select_related('crop')
+            existing_lot_mapping = {
+                entry.crop.id: {
+                    "additional_lot_number": entry.additional_lot_number,
+                    "address": entry.address
+                } 
+                for entry in existing_lot_entries if entry.crop
+            }
+
+            WarehouseShipmentLotNumberTracking.objects.filter(shipment=shipment).delete()
+            for crop_id, lot_number, address, description in zip(crops, additional_lot_numbers, addresses, descriptions):
+                
+                crop = WarehouseShipmentCrops.objects.filter(id=int(crop_id)).first()
+                if not crop:
+                    continue  
+
+                old_lot_number = existing_lot_mapping.get(crop.id, {}).get("additional_lot_number", crop.lot_number)
+                old_address = existing_lot_mapping.get(crop.id, {}).get("address", warehouse.location)
+
+                new_tracking_entry = WarehouseShipmentLotNumberTracking(
+                    shipment=shipment,
+                    crop=crop,
+                    additional_lot_number=lot_number,
+                    address=address,
+                    description=description
+                )
+                new_tracking_entry.save()
+
+                if lot_number != old_lot_number:
+                    changes.append({
+                        "field": f"Lot Number of {crop}",
+                        "old": old_lot_number,
+                        "new": lot_number
+                    })
+
+                if address != old_address:
+                    changes.append({
+                        "field": "Address",
+                        "old": old_address,
+                        "new": address
+                    })
+            descriptions = request.data.getlist('description')
+
+            for  description in  descriptions:
+                if  description:                    
+                    WarehouseShipmentLog.objects.create(
+                        shipment=shipment,                           
+                        description=description,
+                        changes = {"changes":changes},
+                        updated_by = request.user
+                    )
+            response["status"], response["message"] = "200", "Warehouse shipment is updated successfully."
+            return Response(response)
+        else:
+            response["status"], response["message"] = "400", "Warehouse shipment not found."
+            return Response(response)
+                            
+    except Exception as e:
+        response["status"], response["message"] = "500", f"500, {e}"
+    return Response(response)
+
+
+@api_view(("POST",))
+def delete_warehouse_shipment_api(request):
+    response = {"status": "", "message": "", "data": []}
+    shipment_id = request.data.get("shipment_id")
+    try:
+        check_shipment = WarehouseCustomerShipment.objects.filter(id=int(shipment_id))
+        if check_shipment.exists():
+            shipment = check_shipment.first()
+            shipment.delete()
+            response["status"], response["message"] = "200", "Warehouse shipment deleted successfully."
+            return Response(response)
+        else:
+            response["status"], response["message"] = "400", "Warehouse shipment not found."
+            return Response(response)
+                            
+    except Exception as e:
+        response["status"], response["message"] = "500", f"500, {e}"
+    return Response(response)
+
+
+@api_view(("GET",))
+def processor_shipment_invoice(request):
+    response = {"status": "", "message": "", "data": []}
+    shipment_id = request.GET.get("shipment_id")
+    try:
+        check_shipment = ProcessorWarehouseShipment.objects.filter(id=int(shipment_id))
+        if check_shipment.exists():
+            shipment = check_shipment.first()
+            if shipment.customer_id not in ["null", None, " ", ""]:
+                customer = Customer.objects.filter(id=shipment.customer_id).first()
+                customer_user = CustomerUser.objects.filter(customer=customer).first()
+                payment_details = PaymentForShipment.objects.filter(shipment_type='processor', processor_shipment=shipment, status=True).first()
+                
+                data = {}
+                data["shipment"] = check_shipment.values()
+                data["payment"] = payment_details       
+                data['customer'] = customer
+                data['total_amount'] = float(shipment.total_payment)
+                data['customer_user'] = customer_user
+                shipment_crops = ProcessorShipmentCrops.objects.filter(shipment=shipment).values()           
+                
+                for crop in shipment_crops:
+                    crop_ =CropDetails.objects.filter(id=int(crop["crop_id"])).first()
+                    crop["per_unit_rate"] = crop_.per_unit_rate
+                data["shipment_crops"] = shipment_crops
+                
+                due_date = shipment.final_payment_date if shipment.final_payment_date else (shipment.approval_time + timedelta(days=int(customer.credit_terms)))
+                data['due_date'] = due_date
+
+                response["status"], response["message"], response["data"] = "200", f"Invoice data fetched successfully.", data
+                return Response(response)
+            else:
+                response["status"], response["message"] = "400", f"400, Invoice not available."
+                return Response(response)
+        else:
+            response["status"], response["message"] = "400", f"400, Shipment not found."
+            return Response(response)
+    except Exception as e:
+        response["status"], response["message"] = "500", f"500, {e}"
+    return Response(response)
+
+
+@api_view(("GET",))
+def warehouse_shipment_invoice(request):
+    response = {"status": "", "message": "", "data": []}
+    shipment_id = request.GET.get("shipment_id")
+    try:
+        check_shipment = WarehouseCustomerShipment.objects.filter(id=int(shipment_id))
+        if check_shipment.exists():
+            shipment = check_shipment.first()
+            
+            customer = Customer.objects.filter(id=shipment.customer_id).first()
+            customer_user = CustomerUser.objects.filter(customer=customer).first()
+            payment_details = PaymentForShipment.objects.filter(shipment_type='warehouse', warehouse_shipment=shipment, status=True).first()
+            
+            data = {}
+            data["shipment"] = check_shipment.values()
+            data["payment"] = payment_details       
+            data['customer'] = customer
+            data['total_amount'] = float(shipment.total_payment)
+            data['customer_user'] = customer_user
+            shipment_crops = WarehouseShipmentCrops.objects.filter(shipment=shipment).values()           
+            
+            for crop in shipment_crops:
+                crop_ = CustomerContractCropDetails.objects.filter(id=int(crop["crop_id"])).first()
+                crop["per_unit_rate"] = crop_.per_unit_rate
+            data["shipment_crops"] = shipment_crops
+            
+            due_date = shipment.final_payment_date if shipment.final_payment_date else (shipment.approval_time + timedelta(days=int(customer.credit_terms)))
+            data['due_date'] = due_date
+
+            response["status"], response["message"], response["data"] = "200", f"Invoice data fetched successfully.", data
+            return Response(response)
+            
+        else:
+            response["status"], response["message"] = "400", f"400, Shipment not found."
+            return Response(response)
+    except Exception as e:
+        response["status"], response["message"] = "500", f"500, {e}"
+    return Response(response)
+
+
+@api_view(("POST",))
+def create_payment_for_shipment(request):
+    response = {"status": "", "message": "", "data": []}
+    type = request.data.get('type')
+    shipment_id = request.data.get("shipment_id")
+    userid = request.data.get("userid")
+    try:
+        user = User.objects.get(id=int(userid))
+        if type == 'warehouse':
+            warehouse_shipment = WarehouseCustomerShipment.objects.get(id=int(shipment_id)) 
+            customer = Customer.objects.get(id=int(warehouse_shipment.customer_id))     
+            amount = float(warehouse_shipment.total_payment)
+            currency = 'USD'          
+        else:
+            processor_shipment = ProcessorWarehouseShipment.objects.get(id=int(shipment_id))  
+            customer = Customer.objects.get(id=int(processor_shipment.customer_id))     
+            amount = float(processor_shipment.total_payment) 
+            currency = 'USD'        
+
+        # Create a Stripe Checkout session
+        host = request.get_host()
+        current_site = f"http://{host}"
+        main_url = f'{current_site}/farmsmart/checkout/{shipment_id}/{type}/'
+        user_email = user.email
+        customer_user = CustomerUser.objects.filter(contact_email=user_email).first()
+        if customer_user.stripe_id :
+                stripe_customer_id = customer_user.stripe_id
+        else:
+            customer = stripe.Customer.create(email=user_email).to_dict()
+            stripe_customer_id = customer["id"]
+            customer_user.stripe_id = stripe_customer_id
+            customer_user.save()
+        session = stripe.checkout.Session.create(
+            payment_method_types=['card'],
+            customer=stripe_customer_id,
+            line_items=[
+                {
+                    'price_data': {
+                        'currency': currency.lower(),
+                        'product_data': {
+                            'name': f"Shipment Payment for {type.capitalize()}",
+                        },
+                        'unit_amount': int(amount * 100), 
+                    },
+                    'quantity': 1,
+                },
+            ],
+            mode='payment',
+        
+            success_url=main_url + "{CHECKOUT_SESSION_ID}" + "/",
+            cancel_url=f"{request.build_absolute_uri('/payment-cancelled/')}",
+        )
+        return Response({"stripe_url":session.url})
+    except Exception as e:
+        response["status"], response["message"] = "500", f"500, {e}"
+    return Response(response)
+
+
+@api_view(("POST","GET"))
+def checkout(request, pk, type, checkout_session_id):
+    stripe.api_key = settings.STRIPE_SECRET_KEY
+    pay = stripe.checkout.Session.retrieve(checkout_session_id).to_dict()
+    payment_intent = stripe.PaymentIntent.retrieve(pay['payment_intent'])
+    charge = stripe.Charge.retrieve(payment_intent['latest_charge'])
+    
+    if type == 'warehouse':
+        shipment = WarehouseCustomerShipment.objects.get(id=pk)
+        customer = Customer.objects.filter(id=int(shipment.customer_id)).first()
+        amount = shipment.total_payment
+        currency = 'USD'
+        payment_recived_by = User.objects.filter(is_superuser=True, is_staff=True).first()
+        payment_recived_user_type = 'Admin'
+    else:
+        shipment = ProcessorWarehouseShipment.objects.get(id=pk)
+        customer = Customer.objects.filter(id=int(shipment.customer_id)).first()
+        amount = shipment.total_payment
+        currency = 'USD'
+        payment_recived_by = User.objects.filter(is_superuser=True, is_staff=True).first()
+        payment_recived_user_type = 'Admin'
+
+    customer = Customer.objects.filter(id=shipment.customer_id).first()
+    invoice = Invoice.objects.filter(shipment_invoice_id=shipment.invoice_id, customer=customer).first()
+    
+    payment = PaymentForShipment.objects.create(
+        warehouse_shipment=shipment if type == 'warehouse' else None,
+        processor_shipment=shipment if type == 'processor' else None,
+        shipment_type=type,
+        amount=amount,
+        currency=currency,
+        payment_id=checkout_session_id,
+        payment_by=request.user,
+        user_type='Customer',
+        payment_recived_by=payment_recived_by,
+        payment_recived_user_type=payment_recived_user_type,
+        invoice_id = shipment.invoice_id
+    )
+    receipt_url = charge.get('receipt_url')
+    print(receipt_url)
+
+    if receipt_url:
+        wkhtmltopdf_path = r"C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe"  
+
+        # Configuration for pdfkit
+        pdfkit_config = pdfkit.configuration(wkhtmltopdf=wkhtmltopdf_path)
+        try:
+            response = requests.get(receipt_url) 
+            print(response.text)          
+            if response.status_code == 200:
+                html_content = response.text              
+                pdf = pdfkit.from_string(html_content, False, configuration=pdfkit_config)
+                file_name = f"payment_proof_{payment.id}.pdf"
+                payment.payment_proof.save(file_name, ContentFile(pdf))
+                if invoice:
+                    invoice.payment_proof.save(file_name, ContentFile(pdf))
+                    invoice.save()
+            else:
+                print(f"Failed to fetch receipt content, status: {response.status_code}")
+        
+        except Exception as e:
+            print(f"Error generating PDF from receipt URL: {e}")      
+
+    if payment_intent.status == 'succeeded':
+        payment.status = True
+        shipment.is_paid = True
+        payment.save()
+        shipment.save()
+        customer_user = CustomerUser.objects.filter(contact_email=request.user.email).first()
+        customer_name = Customer.objects.filter(id=customer_user.customer.id).first()
+        msg_subject = 'New Payment received.'
+        msg_body = f'Dear Admin,\n\nA new payment has been received from customer {customer_name}.\n\nThe details of the same are as below: \n\nInvoice ID: {shipment.invoice_id} \nShipment ID: {shipment.shipment_id} \nContract ID: {shipment.contract.secret_key}  \nPayment Amount: ${payment.amount} \nReceived date: {payment.paid_at} \n\nRegards\nCustomer Service\nAgreeta'
+        from_email = 'rijughosh.claymindsolution@gmail.com'
+        to_email = ['piu.de1996@gmail.com']
+
+        email = EmailMessage(
+            subject=msg_subject,
+            body=msg_body,
+            from_email=from_email,
+            to=to_email,
+        )
+     
+        if payment.payment_proof:
+            email.attach(f"payment_proof_{payment.id}.pdf", payment.payment_proof.read(), 'application/pdf')
+        try:
+            email.send(fail_silently=False)
+            print("Payment receipt email sent successfully.")
+        except Exception as e:
+            print(f"Error sending email: {e}")
+        return render(request, "distributor/success_payment.html")
+    else:
+        payment.status = False
+        payment.save()
+        message = f"Payment failed: {payment_intent.last_payment_error.message}" if payment_intent.last_payment_error else "Payment failed"
+        return render(request, "distributor/failed_payment.html", {'error_message': message})
+

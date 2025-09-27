@@ -1,4 +1,6 @@
 from django.shortcuts import render,HttpResponse,redirect
+from django.urls import reverse
+from django.utils.http import urlencode
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from .models import *
@@ -7,7 +9,7 @@ from apps.accounts.models import *
 import string
 import random,time, json
 from django.core.mail import send_mail
-from datetime import date
+from datetime import date, timedelta
 from django.db.models import Q
 import csv
 import pandas as pd
@@ -24,6 +26,7 @@ from django.core.files.base import ContentFile
 from apps.processor2.forms import *
 from apps.processor.views import calculate_milled_volume
 from apps.processor.views import create_sku_list, get_sku_list
+from django.conf import settings
 
 
 # Create your views here.
@@ -39,31 +42,206 @@ def generate_random_password():
     return "".join(password)    
 
 
+# @login_required()
+# def add_processor3(request):
+#     context = {}
+#     try:
+#         # Superuser.............
+#         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+#             try:
+#                 from apps.quickbooks_integration.models import QuickBooksToken
+#                 from apps.quickbooks_integration.views import refresh_quickbooks_token, create_vendor, update_vendor, get_vendor_data
+#                 token_instance = QuickBooksToken.objects.first()                                    
+#                 refresh_token = token_instance.refresh_token
+#                 if token_instance.is_token_expired():
+#                     print("Token expired, refreshing...")
+#                     new_access_token = refresh_quickbooks_token(refresh_token)
+#                     if not new_access_token:
+#                         return redirect(f"{reverse('quickbooks_login')}?next=add_processor3")
+#                     token_instance.access_token = new_access_token
+#                     token_instance.expires_at = timezone.now() + timedelta(seconds=settings.SESSION_COOKIE_AGE)
+#                     token_instance.save()
+#             except QuickBooksToken.DoesNotExist:
+#                 return redirect(f"{reverse('quickbooks_login')}?next=add_processor3")
+#             form = ProcessorForm2()
+#             context['form'] = form
+#             if request.method == 'POST':
+#                     fein = request.POST.get('fein')
+#                     entity_name = request.POST.get('entity_name')
+#                     billing_address = request.POST.get('billing_address')
+#                     shipping_address = request.POST.get('shipping_address')
+#                     main_email = request.POST.get('main_email')
+#                     main_number = request.POST.get('main_number')
+#                     main_fax = request.POST.get('main_fax')
+#                     website = request.POST.get('website')
+#                     counter = request.POST.get('counter')
+#                     processor_type = request.POST.getlist('processor_type')                
+#                     if not counter:
+#                         counter = 0      
+#                     processor2 = Processor2(
+#                         fein=fein,
+#                         entity_name=entity_name,
+#                         billing_address=billing_address,
+#                         shipping_address=shipping_address,
+#                         main_email=main_email,
+#                         main_number=main_number,
+#                         main_fax=main_fax,
+#                         website=website
+#                         )
+#                     processor2.save()
+#                     for type in processor_type:
+#                         check_type = ProcessorType.objects.filter(id=type).first()
+#                         processor2.processor_type.add(check_type)                    
+                    
+#                     # 20-04-23 Log Table
+#                     log_type, log_status, log_device = "Processor2", "Added", "Web"
+#                     log_idd, log_name = processor2.id, entity_name
+#                     log_email = None
+#                     log_details = f"fein = {fein} | entity_name= {entity_name} | billing_address = {billing_address} | shipping_address = {shipping_address} | main_number = {main_number} | main_fax = {main_fax} | website = {website}"
+#                     action_by_userid = request.user.id
+#                     userr = User.objects.get(pk=action_by_userid)
+#                     user_role = userr.role.all()
+#                     action_by_username = f'{userr.first_name} {userr.last_name}'
+#                     action_by_email = userr.username
+#                     if request.user.id == 1 :
+#                         action_by_role = "superuser"
+#                     else:
+#                         action_by_role = str(','.join([str(i.role) for i in user_role]))
+#                     logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+#                                         action_by_userid=action_by_userid,action_by_username=action_by_username,
+#                                         action_by_email=action_by_email,action_by_role=action_by_role,log_email=log_email,
+#                                         log_details=log_details,log_device=log_device)
+#                     logtable.save()
+#                     # counter = counter + 1
+#                     for i in range(1, int(counter)+1):
+#                         contact_name = request.POST.get('contact_name{}'.format(i))
+#                         contact_email = request.POST.get('contact_email{}'.format(i))
+#                         contact_phone = request.POST.get('contact_phone{}'.format(i))
+#                         contact_fax = request.POST.get('contact_fax{}'.format(i))
+#                         if User.objects.filter(email=contact_email).exists():
+#                             messages.error(request,'email already exists')
+#                         else:
+#                             password = generate_random_password()
+#                             processor_user = ProcessorUser2(processor2_id = processor2.id,contact_name=contact_name,contact_email=contact_email,contact_phone=contact_phone,contact_fax=contact_fax,p_password_raw=password)
+#                             processor_user.save()
+#                             user = User.objects.create(email=contact_email, username=contact_email,first_name=contact_name)
+#                             user.role.add(Role.objects.get(role='Processor'))
+#                             user.is_processor2=True
+#                             user.is_active=True
+#                             user.set_password(password)
+#                             user.password_raw = password
+#                             user.save()
+#                             log_type, log_status, log_device = "ProcessorUser2", "Added", "Web"
+#                             log_idd, log_name = processor_user.id , contact_name
+#                             log_email = contact_email
+#                             log_details = f"processor2_id = {processor2.id}| processor2 = {processor2.entity_name} | contact_name= {contact_name} | contact_email = {contact_email} | contact_phone = {contact_phone} | contact_fax = {contact_fax} | p_password_raw = {password}"
+#                             action_by_userid = request.user.id
+#                             userr = User.objects.get(pk=action_by_userid)
+#                             user_role = userr.role.all()
+#                             action_by_username = f'{userr.first_name} {userr.last_name}'
+#                             action_by_email = userr.username
+#                             if request.user.id == 1 :
+#                                 action_by_role = "superuser"
+#                             else:
+#                                 action_by_role = str(','.join([str(i.role) for i in user_role]))
+#                             logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+#                                                 action_by_userid=action_by_userid,action_by_username=action_by_username,
+#                                                 action_by_email=action_by_email,action_by_role=action_by_role,log_email=log_email,
+#                                                 log_details=log_details,log_device=log_device)
+#                             logtable.save()
+                    
+#                     try:
+#                         if website and not website.startswith('http://') and not website.startswith('https://'):
+#                             website = f"https://{website}"
+#                         vendor_data = {
+#                             "PrimaryEmailAddr": {
+#                                 "Address": main_email
+#                             }, 
+#                             "WebAddr": {
+#                                 "URI": website
+#                             }, 
+#                             "PrimaryPhone": {
+#                                 "FreeFormNumber": main_number
+#                             },
+#                             "Fax": {
+#                                 "FreeFormNumber":main_fax
+#                             }, 
+#                             "DisplayName": entity_name,                             
+#                             "Mobile": {
+#                                 "FreeFormNumber": main_number
+#                             }, 
+#                             "FamilyName": entity_name, 
+#                             "TaxIdentifier": "", 
+#                             "AcctNum": "", 
+#                             "CompanyName": entity_name, 
+#                             "BillAddr": {
+#                                 "City": "", 
+#                                 "Country": "", 
+#                                 "Line3": "", 
+#                                 "Line2": "", 
+#                                 "Line1": billing_address, 
+#                                 "PostalCode": "", 
+#                                 "CountrySubDivisionCode": ""
+#                             }, 
+#                             "GivenName": entity_name, 
+#                             "Suffix": "T3"
+                            
+#                             }
+                                               
+#                         created_vendor = create_vendor(token_instance.realm_id, token_instance.access_token, vendor_data)                        
+#                         if created_vendor:                                
+#                             messages.success(request, "Vendor added successfully and synced with QuickBooks.")
+#                         else:
+#                             messages.error(request, "Failed to sync with QuickBooks.")
+#                     except Exception as qb_error:
+#                         messages.error(request, f"Error creating vendor in QuickBooks: {str(qb_error)}")
+#                         return render(request, 'processor3/add_processor3.html', {'form': form})
+#                     return redirect('list_processor3')
+#             return render(request, 'processor3/add_processor3.html',context)
+#         else:
+#             return redirect("dashboard")
+#     except Exception as e:
+#         context["error_messages"] = str(e)
+#         return render(request, 'processor3/add_processor3.html',context)
+
+
 @login_required()
 def add_processor3(request):
     context = {}
     try:
         # Superuser.............
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
-            form = ProcessorForm2()
+            
+            form = ProcessorForm2(processor_type_name="T3")
             context['form'] = form
             if request.method == 'POST':
                     fein = request.POST.get('fein')
                     entity_name = request.POST.get('entity_name')
                     billing_address = request.POST.get('billing_address')
                     shipping_address = request.POST.get('shipping_address')
+                    main_email = request.POST.get('main_email')
                     main_number = request.POST.get('main_number')
                     main_fax = request.POST.get('main_fax')
                     website = request.POST.get('website')
                     counter = request.POST.get('counter')
-                    processor_type = request.POST.getlist('processor_type')                
+                    processor_type = request.POST.get('processor_type')                
                     if not counter:
                         counter = 0      
-                    processor2 = Processor2(fein=fein,entity_name=entity_name,billing_address=billing_address,shipping_address=shipping_address,main_number=main_number,main_fax=main_fax,website=website)
+                    processor2 = Processor2(
+                        fein=fein,
+                        entity_name=entity_name,
+                        billing_address=billing_address,
+                        shipping_address=shipping_address,
+                        main_email=main_email,
+                        main_number=main_number,
+                        main_fax=main_fax,
+                        website=website
+                        )
                     processor2.save()
-                    for type in processor_type:
-                        check_type = ProcessorType.objects.filter(id=type).first()
-                        processor2.processor_type.add(check_type)
+                    if processor_type:
+                        check_type = ProcessorType.objects.filter(id=processor_type).first()
+                        processor2.processor_type.add(check_type)                    
+                    
                     # 20-04-23 Log Table
                     log_type, log_status, log_device = "Processor2", "Added", "Web"
                     log_idd, log_name = processor2.id, entity_name
@@ -120,6 +298,7 @@ def add_processor3(request):
                                                 action_by_email=action_by_email,action_by_role=action_by_role,log_email=log_email,
                                                 log_details=log_details,log_device=log_device)
                             logtable.save()
+                
                     return redirect('list_processor3')
             return render(request, 'processor3/add_processor3.html',context)
         else:
@@ -127,7 +306,7 @@ def add_processor3(request):
     except Exception as e:
         context["error_messages"] = str(e)
         return render(request, 'processor3/add_processor3.html',context)
-              
+               
                         
 @login_required()  # show processor3 list
 def processor3_list(request):
@@ -155,12 +334,161 @@ def processor3_list(request):
         return render(request,'processor3/list_processor3.html',context) 
             
     
+# @login_required()
+# def processor3_update(request,pk):
+#     context = {}
+#     try:        
+#         # superadmin and others ................
+#         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+#             try:
+#                 from apps.quickbooks_integration.models import QuickBooksToken
+#                 from apps.quickbooks_integration.views import refresh_quickbooks_token, create_vendor, update_vendor, get_vendor_data
+#                 success_url = reverse('update_processor3', kwargs={'pk': pk})
+#                 next_url = f"{success_url}"
+#                 redirect_url = f"{reverse('quickbooks_login')}?{urlencode({'next': next_url})}"
+#                 token_instance = QuickBooksToken.objects.first()                                    
+#                 refresh_token = token_instance.refresh_token
+#                 if token_instance.is_token_expired():
+#                     print("Token expired, refreshing...")
+#                     new_access_token = refresh_quickbooks_token(refresh_token)
+#                     if not new_access_token:
+#                         return redirect(redirect_url)
+#                     token_instance.access_token = new_access_token
+#                     token_instance.expires_at = timezone.now() + timedelta(seconds=settings.SESSION_COOKIE_AGE)
+#                     token_instance.save()
+#             except QuickBooksToken.DoesNotExist:
+#                 return redirect(redirect_url)
+#             obj_id = ProcessorUser2.objects.get(id=pk)
+#             context['p_user'] = obj_id
+#             processor2 = Processor2.objects.get(id=obj_id.processor2_id)
+#             context['form'] = ProcessorForm2(instance=processor2)
+#             processor_email = obj_id.contact_email
+#             user = User.objects.get(email=processor_email)
+#             if request.method == 'POST':
+#                 form = ProcessorForm2( request.POST,instance=processor2)
+#                 if form.is_valid():
+#                     entity_name = form.cleaned_data.get('entity_name')
+#                     main_email = form.cleaned_data.get('main_email')
+#                     main_number = form.cleaned_data.get('main_number')
+#                     main_fax = form.cleaned_data.get('main_fax')
+#                     billing_address = form.cleaned_data.get('billing_address')
+#                     shipping_address = form.cleaned_data.get('shipping_address')
+#                     website = form.cleaned_data.get('website')
+
+#                     email_update = request.POST.get('contact_email1')
+#                     name_update = request.POST.get('contact_name1')
+#                     phone_update = request.POST.get('contact_phone1')
+#                     fax_update = request.POST.get('contact_fax1')
+#                     obj_id.contact_name = name_update
+#                     obj_id.contact_email = email_update
+#                     obj_id.contact_phone = phone_update
+#                     obj_id.contact_fax = fax_update
+#                     obj_id.save()
+#                     log_email = ''
+#                     if email_update != processor_email:
+#                         f_name = name_update
+#                         user.email = email_update
+#                         user.username = email_update
+#                         user.first_name = f_name
+#                         user.save()
+#                         form.save()
+#                         log_email = email_update
+#                     else :
+#                         f_name = name_update
+#                         user.first_name = f_name
+#                         user.save()
+#                         form.save()
+#                         log_email = obj_id.contact_email                  
+                    
+                    
+#                     vendorId = processor2.quickbooks_id
+#                     print(vendorId, "vendorId")
+#                     vendor_data = get_vendor_data(vendorId)
+#                     sync_token = vendor_data.get("Vendor", {}).get("SyncToken")
+#                     print('sync_token', sync_token)
+                    
+#                     if sync_token:
+#                         if website and not website.startswith('http://') and not website.startswith('https://'):
+#                             website = f"https://{website}"
+#                         vendor_data = {
+#                             "PrimaryEmailAddr": {
+#                                 "Address": main_email
+#                             }, 
+#                             "WebAddr": {
+#                                 "URI": website
+#                             }, 
+#                             "PrimaryPhone": {
+#                                 "FreeFormNumber": main_number
+#                             }, 
+#                             "Fax": {
+#                                 "FreeFormNumber":main_fax
+#                             },
+#                             "DisplayName": entity_name,                             
+#                             "Mobile": {
+#                                 "FreeFormNumber": main_number
+#                             }, 
+#                             "FamilyName": entity_name, 
+#                             "TaxIdentifier": "", 
+#                             "AcctNum": "", 
+#                             "CompanyName": entity_name, 
+#                             "BillAddr": {
+#                                 "City": "", 
+#                                 "Country": "", 
+#                                 "Line3": "", 
+#                                 "Line2": "", 
+#                                 "Line1": billing_address, 
+#                                 "PostalCode": "", 
+#                                 "CountrySubDivisionCode": ""
+#                             }, 
+#                             "GivenName": entity_name, 
+#                             "Suffix": "T3"
+                            
+#                             }
+#                         update_response = update_vendor(
+#                             token_instance.realm_id, token_instance.access_token, vendorId, sync_token, vendor_data
+#                         )
+
+#                         if update_response:
+#                             print("Vendor updated successfully in QuickBooks.")
+#                         else:
+#                             print("Failed to update vendor in QuickBooks.")
+#                     else:
+#                         print("Failed to retrieve SyncToken for updating QuickBooks vendor.")
+#                     # 07-04-23 Log Table
+#                     log_type, log_status, log_device = "ProcessorUser2", "Edited", "Web"
+#                     log_idd, log_name = obj_id.id, name_update
+#                     log_details = f"processor2_id = {obj_id.processor2.id} | processor2 = {obj_id.processor2.entity_name} | contact_name= {name_update} | contact_email = {email_update} | contact_phone = {phone_update} | contact_fax = {fax_update}"
+#                     action_by_userid = request.user.id
+#                     userr = User.objects.get(pk=action_by_userid)
+#                     user_role = userr.role.all()
+#                     action_by_username = f'{userr.first_name} {userr.last_name}'
+#                     action_by_email = userr.username
+#                     if request.user.id == 1 :
+#                         action_by_role = "superuser"
+#                     else:
+#                         action_by_role = str(','.join([str(i.role) for i in user_role]))
+#                     logtable = LogTable(log_type=log_type,log_status=log_status,log_idd=log_idd,log_name=log_name,
+#                                         action_by_userid=action_by_userid,action_by_username=action_by_username,
+#                                         action_by_email=action_by_email,action_by_role=action_by_role,log_email=log_email,
+#                                         log_details=log_details,log_device=log_device)
+#                     logtable.save()
+#                     return redirect('list_processor3')
+#             return render(request, 'processor3/update_processor3.html',context)
+#         else:
+#             return redirect('dashboard')
+#     except Exception as e:
+#         context["error_messages"] = str(e)
+#         return render(request, 'processor3/update_processor3.html',context)
+  
+ 
+
 @login_required()
 def processor3_update(request,pk):
     context = {}
     try:        
         # superadmin and others ................
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+            
             obj_id = ProcessorUser2.objects.get(id=pk)
             context['p_user'] = obj_id
             processor2 = Processor2.objects.get(id=obj_id.processor2_id)
@@ -170,6 +498,14 @@ def processor3_update(request,pk):
             if request.method == 'POST':
                 form = ProcessorForm2( request.POST,instance=processor2)
                 if form.is_valid():
+                    entity_name = form.cleaned_data.get('entity_name')
+                    main_email = form.cleaned_data.get('main_email')
+                    main_number = form.cleaned_data.get('main_number')
+                    main_fax = form.cleaned_data.get('main_fax')
+                    billing_address = form.cleaned_data.get('billing_address')
+                    shipping_address = form.cleaned_data.get('shipping_address')
+                    website = form.cleaned_data.get('website')
+
                     email_update = request.POST.get('contact_email1')
                     name_update = request.POST.get('contact_name1')
                     phone_update = request.POST.get('contact_phone1')
@@ -193,7 +529,8 @@ def processor3_update(request,pk):
                         user.first_name = f_name
                         user.save()
                         form.save()
-                        log_email = obj_id.contact_email
+                        log_email = obj_id.contact_email                
+                    
                     # 07-04-23 Log Table
                     log_type, log_status, log_device = "ProcessorUser2", "Edited", "Web"
                     log_idd, log_name = obj_id.id, name_update
@@ -219,8 +556,8 @@ def processor3_update(request,pk):
     except Exception as e:
         context["error_messages"] = str(e)
         return render(request, 'processor3/update_processor3.html',context)
-    
  
+
 @login_required()
 def processor3_change_password(request,pk):
     context={}
@@ -371,7 +708,13 @@ def inbound_shipment_list(request):
     context = {}
     try:
         # Superuser.............
-        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():           
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role(): 
+            first_grower_shipment = GrowerShipment.objects.order_by('date_time').first()
+            if first_grower_shipment:
+                from_date = first_grower_shipment.date_time.date() 
+            else:
+                from_date = None  
+            to_date = date.today()          
             context["processor3"] = Processor2.objects.filter(processor_type__type_name="T3")            
             search_name = request.GET.get("search_name", "")
             context["search_name"] = search_name  
@@ -399,6 +742,8 @@ def inbound_shipment_list(request):
                 table_data = paginator.page(paginator.num_pages)
 
             context["table_data"] = table_data
+            context["from_date"] = from_date
+            context["to_date"] = to_date
             return render(request, 'processor3/inbound_management_table.html', context)
         else:
             return redirect('dashboard') 
@@ -591,7 +936,7 @@ def rejected_shipments_csv_download_for_t3(request) :
         writer = csv.writer(response)
         writer.writerow(['Shipment ID','Lot Number #','Shipment Date', 'Send Processor','Recive Processor','Total Weight (LBS)','Disapproval Date','Reason For Disapproval','Moisture Level'])
         output = ShipmentManagement.objects.filter(status='DISAPPROVED', receiver_processor_type="T3").order_by('-id').values('shipment_id','lot_number','date_pulled','processor_e_name','processor2_name',
-                                                                                            'weight_of_product','recive_delivery_date','reason_for_disapproval','moisture_percent')
+                                                                                            'volume_shipped','recive_delivery_date','reason_for_disapproval','moisture_percent')
         for i in output:
             writer.writerow([
                 i['shipment_id'], 
@@ -599,7 +944,7 @@ def rejected_shipments_csv_download_for_t3(request) :
                 i['date_pulled'].strftime("%m-%d-%Y"),
                 i['processor_e_name'], 
                 i['processor2_name'], 
-                i['weight_of_product'],
+                i['volume_shipped'],
                 i['recive_delivery_date'], 
                 i['reason_for_disapproval'], 
                 i['moisture_percent']])
@@ -689,6 +1034,8 @@ def receive_shipment(request):
                 my_dict["entity_name"] = i["entity_name"]
                 my_dict["type"] = "T2"
                 processor.append(my_dict)
+            crops = Crop.objects.all()
+            context["crops"] = crops
 
             context["processor"] = processor
             context.update({
@@ -698,13 +1045,15 @@ def receive_shipment(request):
                 "sender_sku_id_list":[],
                 "receiver_sku_id_list":[],
                 "selected_destination": None,
-                "selected_destination_name": None
+                "selected_destination_name": None,
+                "selected_crop":None
             })
 
             if request.method == "POST":
                 data = request.POST
                 get_bin_pull = data.get("bin_pull")
                 sku = data.get("storage_bin_id")
+                selected_crop = data.get("id_crop")
                 bin_pull, bin_pull_type = get_bin_pull.split("_")[0], get_bin_pull.split("_")[1]
                 if bin_pull_type == "T1":
                     select_pro_id = Processor.objects.filter(id=int(bin_pull)).first().id
@@ -743,10 +1092,11 @@ def receive_shipment(request):
 
                 if bin_pull and not data.get("save"):               
                     if sku:
-                        context["milled_value"] =  calculate_milled_volume(int(bin_pull), bin_pull_type, sku) 
+                        context["milled_value"] =  calculate_milled_volume(selected_crop, int(bin_pull), bin_pull_type, sku) 
                         context["selected_sku"] = sku
                     else:
-                        context["milled_value"] =  calculate_milled_volume(int(bin_pull), bin_pull_type, sku)             
+                        context["milled_value"] =  calculate_milled_volume(selected_crop, int(bin_pull), bin_pull_type, sku)  
+                    context["varieties"] = CropVariety.objects.filter(crop__code=selected_crop).values_list("variety_code", flat=True)           
                     if bin_pull_type == "T1":
                         processor = list(LinkProcessor1ToProcessor.objects.filter(processor1_id=bin_pull, processor2__processor_type__type_name="T3").values("processor2__id", "processor2__entity_name"))
                         processor3 = []
@@ -798,7 +1148,7 @@ def receive_shipment(request):
                         volume_left = float(context["milled_value"]) - float(context["volume_shipped"])
                         shipment_id = generate_shipment_id()
                     
-                        save_shipment_management = ShipmentManagement(shipment_id=shipment_id,processor_idd=bin_pull,processor_e_name=select_processor_name, sender_processor_type=bin_pull_type, bin_location=bin_pull,
+                        save_shipment_management = ShipmentManagement(shipment_id=shipment_id,processor_idd=bin_pull,processor_e_name=select_processor_name, sender_processor_type=bin_pull_type, bin_location=bin_pull,crop=selected_crop, variety=context.get("variety"),
                                 equipment_type=context["equipment_type"],equipment_id=context["equipment_id"],storage_bin_send=context["storage_bin_id"],moisture_percent = context["moist_percentage"],weight_of_product_raw = context["weight_prod"],
                                 weight_of_product=cal_weight,weight_of_product_unit=context["weight_prod_unit_id"], excepted_yield_raw =context["exp_yield"],excepted_yield=cal_exp_yield,excepted_yield_unit=context["exp_yield_unit_id"],recive_delivery_date=context["approval_date"],
                                 purchase_order_number=context["purchase_number"],lot_number=context["lot_number"],volume_shipped=context["volume_shipped"],milled_volume=milled_volume,volume_left=volume_left,editable_obj=True,status=context["status"],
@@ -857,11 +1207,13 @@ def add_outbound_shipment_processor3(request):
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
             
             context["processor"] = list(Processor2.objects.filter(processor_type__type_name="T3").values("id", "entity_name"))
-            
+            crops = Crop.objects.all()
+            context["crops"] = crops
             context.update({
                 "select_processor_name": None,
                 "select_processor_id": None,
                 "milled_value": "None",
+                "selected_crop":None
             })
 
             if request.method == "POST":
@@ -869,6 +1221,7 @@ def add_outbound_shipment_processor3(request):
                 bin_pull = data.get("bin_pull")
                 sku = data.get("storage_bin_id")
                 milled_value = data.get("milled_value")
+                selected_crop = data.get("id_crop")
                 context.update({
                     "select_processor_name": Processor2.objects.filter(id=int(bin_pull)).first().entity_name,
                     "select_processor_id": bin_pull,
@@ -883,17 +1236,19 @@ def add_outbound_shipment_processor3(request):
                     "equipment_id": data.get("equipment_id"),
                     "equipment_type": data.get("equipment_type"),
                     "lot_number": data.get("lot_number"),
-                    "volume_shipped": data.get("volume_shipped"),
-                    # "files": data.get("files"),
-                    "milled_value":data.get('milled_value')
+                    "volume_shipped": data.get("volume_shipped"),                    
+                    "milled_value":data.get('milled_value'),
+                    "selected_crop":data.get('id_crop'),
+                    "variety":data.get('variety')
                 })
 
                 if bin_pull and not data.get("save"):
                     if sku:
-                        context["milled_value"] =  calculate_milled_volume(int(bin_pull), "T3", sku)
+                        context["milled_value"] =  calculate_milled_volume(selected_crop, int(bin_pull), "T3", sku)
                         context["selected_sku"] = sku
                     else:
-                        context["milled_value"] =  calculate_milled_volume(int(bin_pull), "T3", sku)
+                        context["milled_value"] =  calculate_milled_volume(selected_crop, int(bin_pull), "T3", sku)
+                    context["varieties"] = CropVariety.objects.filter(crop__code=selected_crop).values_list("variety_code", flat=True)
                     processor3 = LinkProcessorToProcessor.objects.filter(processor_id=bin_pull, linked_processor__processor_type__type_name = "T3").values("linked_processor__id", "linked_processor__entity_name")
                     processor4 = LinkProcessorToProcessor.objects.filter(processor_id=bin_pull, linked_processor__processor_type__type_name = "T4").values("linked_processor__id", "linked_processor__entity_name")
                     context["processor3"] = processor3
@@ -921,7 +1276,7 @@ def add_outbound_shipment_processor3(request):
                     shipment_id = generate_shipment_id()
                     
                     processor_e_name = Processor2.objects.filter(id=int(bin_pull)).first().entity_name
-                    save_shipment_management = ShipmentManagement(shipment_id=shipment_id,processor_idd=bin_pull,processor_e_name=processor_e_name, sender_processor_type="T3", bin_location=bin_pull,
+                    save_shipment_management = ShipmentManagement(shipment_id=shipment_id,processor_idd=bin_pull,processor_e_name=processor_e_name, sender_processor_type="T3", bin_location=bin_pull,crop=selected_crop, variety=context.get("variety"),
                             equipment_type=context["equipment_type"],equipment_id=context["equipment_id"],storage_bin_send=context["storage_bin_id"],moisture_percent = context["moist_percentage"],weight_of_product_raw = context["weight_prod"],
                             weight_of_product=cal_weight,weight_of_product_unit=context["weight_prod_unit_id"], excepted_yield_raw =context["exp_yield"],excepted_yield=cal_exp_yield,excepted_yield_unit=context["exp_yield_unit_id"],
                             purchase_order_number=context["purchase_number"],lot_number=context["lot_number"],volume_shipped=context["volume_shipped"],milled_volume=milled_volume,volume_left=volume_left,editable_obj=True,
@@ -978,6 +1333,12 @@ def outbound_shipment_list_processor3(request):
     try:
         # Superuser......................
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+            first_grower_shipment = GrowerShipment.objects.order_by('date_time').first()
+            if first_grower_shipment:
+                from_date = first_grower_shipment.date_time.date() 
+            else:
+                from_date = None  
+            to_date = date.today()
             output = ShipmentManagement.objects.filter(sender_processor_type="T3")
             processors = Processor2.objects.filter(processor_type__type_name="T3")
             context['processors'] = processors
@@ -1005,6 +1366,8 @@ def outbound_shipment_list_processor3(request):
             except EmptyPage:
                 report = paginator.page(paginator.num_pages)
             context["table_data"] = report
+            context["from_date"] = from_date
+            context["to_date"] = to_date
             return render (request, 'processor3/outbound_shipment_list.html', context)
        
         else:

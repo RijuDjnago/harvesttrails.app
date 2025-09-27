@@ -18,4 +18,15 @@ class FieldResource(resources.ModelResource):
         import_id_fields = ('id',)
         exclude = ('id', 'farm', 'grower', )
 
-admin.site.register(models.Crop)
+class CropVarietyInline(admin.TabularInline): 
+    model = models.CropVariety
+    extra = 0  # No extra empty form by default
+
+class CropTypeInline(admin.TabularInline): 
+    model = models.CropType
+    extra = 0  # No extra empty form by default
+
+@admin.register(models.Crop)
+class CropAdmin(admin.ModelAdmin):
+    inlines = [CropVarietyInline, CropTypeInline]
+    list_display = ('name', 'code')

@@ -1,0 +1,288 @@
+""
+Shipment ID = TgMr1p9Ija7N
+""
+Shipped To Customer: Shipment ID,Crop,Weight,Transit ID,New Lot Number,Date,Received By Customer: Customer Name,Customer ID,Receive Date,Crop,Weight,Shipment ID
+""
+TgMr1p9Ija7N,"PEANUT
+BEANS","3700.0 LBS
+5750.0 LBS",Rail2556,"None
+None","22nd April, 2025",Demo Customer,1,,"PEANUT
+BEANS","3700.0 LBS
+5750.0 LBS",TgMr1p9Ija7N
+""
+Shipment ID = TgMr1p9Ija7N
+""
+Shipped To Customer: Shipment ID,Crop,Weight,Transit ID,New Lot Number,Date,Received By Customer: Customer Name,Customer ID,Receive Date,Crop,Weight,Shipment ID
+""
+TgMr1p9Ija7N,"PEANUT
+BEANS","3700.0 LBS
+5750.0 LBS",Rail2556,"None
+None","22nd April, 2025",Demo Customer,1,,"PEANUT
+BEANS","3700.0 LBS
+5750.0 LBS",TgMr1p9Ija7N
+""
+Shipment ID = CEcG1oSCOKNh
+""
+Origin: Field,Grower,Inbound Mill: Shipment ID,Crop,Weight,Date,Grower,Assigned Lot Number: Mill,Crop,Weight,Lot Number,Shipment ID,Shipped To Warehouse/Customer: Shipment ID,Crop,Weight,Transit ID,New Lot Number,Date,Received By Warehouse: Warehouse Name,Warehouse ID,Receive Date,Crop,Weight,Shipment ID,Shipped To Customer: Shipment ID,Crop,Weight,Transit ID,New Lot Number,Date,Received By Customer: Customer Name,Customer ID,Receive Date,Crop,Weight,Shipment ID
+""
+test rice f,App Test Grower,biDn1KgKx191,RICE,96 LBS,"23rd September, 2024",App Test Grower,App Test Processor,"RICE
+WHEAT","5000.0 LBS
+5500.0 LBS","465436
+23123",CEcG1oSCOKNh,CEcG1oSCOKNh,"RICE
+WHEAT","5000.0 LBS
+5500.0 LBS",RAIL1234,"None
+48489","22nd April, 2025",Demo Warehouse,11,,"RICE
+WHEAT","5000.0 LBS
+5500.0 LBS",CEcG1oSCOKNh,TgMr1p9Ija7N,"PEANUT
+BEANS","3700.0 LBS
+5750.0 LBS",Rail2556,"None
+None","22nd April, 2025",Demo Customer,1,,"PEANUT
+BEANS","3700.0 LBS
+5750.0 LBS",TgMr1p9Ija7N
+test rice f,App Test Grower,mmFZynK7P0xG,RICE,65 LBS,"26th June, 2024",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,PTg1YDyJH1qL,RICE,52 LBS,"13th June, 2024",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,TH92IlRCUToc,RICE,65 LBS,"13th June, 2024",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,GqjY12U49ODi,RICE,33 LBS,"13th June, 2024",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,BTguWtr0lKZn,RICE,50 LBS,"3rd April, 2023",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,5YcDjiOsIWNm,RICE,25 LBS,"23rd February, 2023",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,MjpLRf3IFRbm,RICE,25 LBS,"23rd February, 2023",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,YRb6CaYKz6M2,RICE,30 LBS,"22nd February, 2023",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,fAg5ileEDEkp,RICE,34 LBS,"23rd February, 2023",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,OZoDzJUr6sAj,RICE,25 LBS,"23rd February, 2023",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,IS34Pb2NpXa1,RICE,13 LBS,"6th June, 2024",Debashis,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,0fOZsTunWjby,WHEAT,195 LBS,"12th December, 2024",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,ex0fgXXdRGnV,WHEAT,123 LBS,"20th May, 2024",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,9gQwiky6F7Dw,WHEAT,22 LBS,"20th May, 2024",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test debashis,Debashis,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+T F 123,App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+T F 123,App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+T F 123,App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+new gg field 2022,Debashis,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+""
+Shipment ID = CEcG1oSCOKNh
+""
+Origin: Field,Grower,Inbound Mill: Shipment ID,Crop,Weight,Date,Grower,Assigned Lot Number: Mill,Crop,Weight,Lot Number,Shipment ID,Shipped To Warehouse/Customer: Shipment ID,Crop,Weight,Transit ID,New Lot Number,Date,Received By Warehouse: Warehouse Name,Warehouse ID,Receive Date,Crop,Weight,Shipment ID,Shipped To Customer: Shipment ID,Crop,Weight,Transit ID,New Lot Number,Date,Received By Customer: Customer Name,Customer ID,Receive Date,Crop,Weight,Shipment ID
+""
+test rice f,App Test Grower,biDn1KgKx191,RICE,96 LBS,"23rd September, 2024",App Test Grower,App Test Processor,"RICE
+WHEAT","5000.0 LBS
+5500.0 LBS","465436
+23123",CEcG1oSCOKNh,CEcG1oSCOKNh,"RICE
+WHEAT","5000.0 LBS
+5500.0 LBS",RAIL1234,"None
+48489","22nd April, 2025",Demo Warehouse,11,,"RICE
+WHEAT","5000.0 LBS
+5500.0 LBS",CEcG1oSCOKNh,TgMr1p9Ija7N,"PEANUT
+BEANS","3700.0 LBS
+5750.0 LBS",Rail2556,"None
+None","22nd April, 2025",Demo Customer,1,,"PEANUT
+BEANS","3700.0 LBS
+5750.0 LBS",TgMr1p9Ija7N
+test rice f,App Test Grower,mmFZynK7P0xG,RICE,65 LBS,"26th June, 2024",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,PTg1YDyJH1qL,RICE,52 LBS,"13th June, 2024",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,TH92IlRCUToc,RICE,65 LBS,"13th June, 2024",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,GqjY12U49ODi,RICE,33 LBS,"13th June, 2024",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,BTguWtr0lKZn,RICE,50 LBS,"3rd April, 2023",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,5YcDjiOsIWNm,RICE,25 LBS,"23rd February, 2023",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,MjpLRf3IFRbm,RICE,25 LBS,"23rd February, 2023",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,YRb6CaYKz6M2,RICE,30 LBS,"22nd February, 2023",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,fAg5ileEDEkp,RICE,34 LBS,"23rd February, 2023",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,OZoDzJUr6sAj,RICE,25 LBS,"23rd February, 2023",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,IS34Pb2NpXa1,RICE,13 LBS,"6th June, 2024",Debashis,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,0fOZsTunWjby,WHEAT,195 LBS,"12th December, 2024",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,ex0fgXXdRGnV,WHEAT,123 LBS,"20th May, 2024",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,9gQwiky6F7Dw,WHEAT,22 LBS,"20th May, 2024",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test debashis,Debashis,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+T F 123,App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+T F 123,App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+T F 123,App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+new gg field 2022,Debashis,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+""
+Shipment ID = CEcG1oSCOKNh
+""
+Origin: Field,Grower,Inbound Mill: Shipment ID,Crop,Weight,Date,Grower,Assigned Lot Number: Mill,Crop,Weight,Lot Number,Shipment ID,Shipped To Warehouse/Customer: Shipment ID,Crop,Weight,Transit ID,New Lot Number,Date,Received By Warehouse: Warehouse Name,Warehouse ID,Receive Date,Crop,Weight,Shipment ID,Shipped To Customer: Shipment ID,Crop,Weight,Transit ID,New Lot Number,Date,Received By Customer: Customer Name,Customer ID,Receive Date,Crop,Weight,Shipment ID
+""
+test rice f,App Test Grower,biDn1KgKx191,RICE,96 LBS,"23rd September, 2024",App Test Grower,App Test Processor,"RICE
+WHEAT","5000.0 LBS
+5500.0 LBS","465436
+23123",CEcG1oSCOKNh,CEcG1oSCOKNh,"RICE
+WHEAT","5000.0 LBS
+5500.0 LBS",RAIL1234,"None
+48489","22nd April, 2025",Demo Warehouse,11,,"RICE
+WHEAT","5000.0 LBS
+5500.0 LBS",CEcG1oSCOKNh,TgMr1p9Ija7N,"PEANUT
+BEANS","3700.0 LBS
+5750.0 LBS",Rail2556,"None
+None","22nd April, 2025",Demo Customer,1,,"PEANUT
+BEANS","3700.0 LBS
+5750.0 LBS",TgMr1p9Ija7N
+test rice f,App Test Grower,mmFZynK7P0xG,RICE,65 LBS,"26th June, 2024",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,PTg1YDyJH1qL,RICE,52 LBS,"13th June, 2024",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,TH92IlRCUToc,RICE,65 LBS,"13th June, 2024",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,GqjY12U49ODi,RICE,33 LBS,"13th June, 2024",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,BTguWtr0lKZn,RICE,50 LBS,"3rd April, 2023",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,5YcDjiOsIWNm,RICE,25 LBS,"23rd February, 2023",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,MjpLRf3IFRbm,RICE,25 LBS,"23rd February, 2023",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,YRb6CaYKz6M2,RICE,30 LBS,"22nd February, 2023",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,fAg5ileEDEkp,RICE,34 LBS,"23rd February, 2023",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,OZoDzJUr6sAj,RICE,25 LBS,"23rd February, 2023",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,IS34Pb2NpXa1,RICE,13 LBS,"6th June, 2024",Debashis,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,0fOZsTunWjby,WHEAT,195 LBS,"12th December, 2024",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,ex0fgXXdRGnV,WHEAT,123 LBS,"20th May, 2024",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,9gQwiky6F7Dw,WHEAT,22 LBS,"20th May, 2024",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test debashis,Debashis,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+T F 123,App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+T F 123,App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+T F 123,App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+new gg field 2022,Debashis,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+""
+Shipment ID = COvbX5qrbYYe
+""
+Origin: Field,Grower,Inbound Mill: Shipment ID,Crop,Weight,Date,Grower,In Mill: Mill,Shipment ID,Crop,Weight,Lot Number,Assigned Lot Number: Mill,Crop,Weight,Lot Number,Shipment ID,Shipped To Warehouse/Customer: Shipment ID,Crop,Weight,Transit ID,New Lot Number,Date,Received By Warehouse: Warehouse Name,Warehouse ID,Receive Date,Crop,Weight,Shipment ID,Shipped To Customer: Shipment ID,Crop,Weight,Transit ID,New Lot Number,Date,Received By Customer: Customer Name,Customer ID,Receive Date,Crop,Weight,Shipment ID
+""
+test rice f,App Test Grower,biDn1KgKx191,RICE,96 LBS,"23rd September, 2024",App Test Grower,Tier4 test processor,COvbX5qrbYYe,RICE,5 LBS,102,App Test Processor,"RICE
+WHEAT","5000.0 LBS
+5500.0 LBS","465436
+23123",CEcG1oSCOKNh,CEcG1oSCOKNh,"RICE
+WHEAT","5000.0 LBS
+5500.0 LBS",RAIL1234,"None
+48489","22nd April, 2025",Demo Warehouse,11,,"RICE
+WHEAT","5000.0 LBS
+5500.0 LBS",CEcG1oSCOKNh,TgMr1p9Ija7N,"PEANUT
+BEANS","3700.0 LBS
+5750.0 LBS",Rail2556,"None
+None","22nd April, 2025",Demo Customer,1,,"PEANUT
+BEANS","3700.0 LBS
+5750.0 LBS",TgMr1p9Ija7N
+test rice f,App Test Grower,mmFZynK7P0xG,RICE,65 LBS,"26th June, 2024",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,PTg1YDyJH1qL,RICE,52 LBS,"13th June, 2024",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,TH92IlRCUToc,RICE,65 LBS,"13th June, 2024",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,GqjY12U49ODi,RICE,33 LBS,"13th June, 2024",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,BTguWtr0lKZn,RICE,50 LBS,"3rd April, 2023",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,5YcDjiOsIWNm,RICE,25 LBS,"23rd February, 2023",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,MjpLRf3IFRbm,RICE,25 LBS,"23rd February, 2023",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,YRb6CaYKz6M2,RICE,30 LBS,"22nd February, 2023",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,fAg5ileEDEkp,RICE,34 LBS,"23rd February, 2023",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,OZoDzJUr6sAj,RICE,25 LBS,"23rd February, 2023",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,IS34Pb2NpXa1,RICE,13 LBS,"6th June, 2024",Debashis,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test debashis,Debashis,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+""
+Shipment ID = LjLViMbXCWMH
+""
+Origin: Field,Grower,Inbound Mill: Shipment ID,Crop,Weight,Date,Grower,In Mill: Mill,Shipment ID,Crop,Weight,Lot Number,Assigned Lot Number: Mill,Crop,Weight,Lot Number,Shipment ID,Shipped To Warehouse/Customer: Shipment ID,Crop,Weight,Transit ID,New Lot Number,Date,Received By Warehouse: Warehouse Name,Warehouse ID,Receive Date,Crop,Weight,Shipment ID,Shipped To Customer: Shipment ID,Crop,Weight,Transit ID,New Lot Number,Date,Received By Customer: Customer Name,Customer ID,Receive Date,Crop,Weight,Shipment ID
+""
+test rice f,App Test Grower,biDn1KgKx191,RICE,96 LBS,"23rd September, 2024",App Test Grower,Tier4 test processor,COvbX5qrbYYe,RICE,5 LBS,102,App Test Processor,"RICE
+WHEAT","5000.0 LBS
+5500.0 LBS","465436
+23123",CEcG1oSCOKNh,CEcG1oSCOKNh,"RICE
+WHEAT","5000.0 LBS
+5500.0 LBS",RAIL1234,"None
+48489","22nd April, 2025",Demo Warehouse,11,,"RICE
+WHEAT","5000.0 LBS
+5500.0 LBS",CEcG1oSCOKNh,TgMr1p9Ija7N,"PEANUT
+BEANS","3700.0 LBS
+5750.0 LBS",Rail2556,"None
+None","22nd April, 2025",Demo Customer,1,,"PEANUT
+BEANS","3700.0 LBS
+5750.0 LBS",TgMr1p9Ija7N
+test rice f,App Test Grower,mmFZynK7P0xG,RICE,65 LBS,"26th June, 2024",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,PTg1YDyJH1qL,RICE,52 LBS,"13th June, 2024",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,TH92IlRCUToc,RICE,65 LBS,"13th June, 2024",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,GqjY12U49ODi,RICE,33 LBS,"13th June, 2024",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,BTguWtr0lKZn,RICE,50 LBS,"3rd April, 2023",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,5YcDjiOsIWNm,RICE,25 LBS,"23rd February, 2023",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,MjpLRf3IFRbm,RICE,25 LBS,"23rd February, 2023",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,YRb6CaYKz6M2,RICE,30 LBS,"22nd February, 2023",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,fAg5ileEDEkp,RICE,34 LBS,"23rd February, 2023",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,OZoDzJUr6sAj,RICE,25 LBS,"23rd February, 2023",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,IS34Pb2NpXa1,RICE,13 LBS,"6th June, 2024",Debashis,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test debashis,Debashis,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+""
+Shipment ID = XETm0qNBSmAz
+""
+Origin: Field,Grower,Inbound Mill: Shipment ID,Crop,Weight,Date,Grower,In Mill: Mill,Shipment ID,Crop,Weight,Lot Number,Assigned Lot Number: Mill,Crop,Weight,Lot Number,Shipment ID,Shipped To Warehouse/Customer: Shipment ID,Crop,Weight,Transit ID,New Lot Number,Date,Received By Warehouse: Warehouse Name,Warehouse ID,Receive Date,Crop,Weight,Shipment ID,Shipped To Customer: Shipment ID,Crop,Weight,Transit ID,New Lot Number,Date,Received By Customer: Customer Name,Customer ID,Receive Date,Crop,Weight,Shipment ID
+""
+test rice f,App Test Grower,biDn1KgKx191,RICE,96 LBS,"23rd September, 2024",App Test Grower,Tier4 test processor,COvbX5qrbYYe,RICE,5 LBS,102,App Test Processor,"RICE
+WHEAT","5000.0 LBS
+5500.0 LBS","465436
+23123",CEcG1oSCOKNh,CEcG1oSCOKNh,"RICE
+WHEAT","5000.0 LBS
+5500.0 LBS",RAIL1234,"None
+48489","22nd April, 2025",Demo Warehouse,11,,"RICE
+WHEAT","5000.0 LBS
+5500.0 LBS",CEcG1oSCOKNh,TgMr1p9Ija7N,"PEANUT
+BEANS","3700.0 LBS
+5750.0 LBS",Rail2556,"None
+None","22nd April, 2025",Demo Customer,1,,"PEANUT
+BEANS","3700.0 LBS
+5750.0 LBS",TgMr1p9Ija7N
+test rice f,App Test Grower,mmFZynK7P0xG,RICE,65 LBS,"26th June, 2024",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,PTg1YDyJH1qL,RICE,52 LBS,"13th June, 2024",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,TH92IlRCUToc,RICE,65 LBS,"13th June, 2024",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,GqjY12U49ODi,RICE,33 LBS,"13th June, 2024",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,BTguWtr0lKZn,RICE,50 LBS,"3rd April, 2023",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,5YcDjiOsIWNm,RICE,25 LBS,"23rd February, 2023",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,MjpLRf3IFRbm,RICE,25 LBS,"23rd February, 2023",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,YRb6CaYKz6M2,RICE,30 LBS,"22nd February, 2023",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,fAg5ileEDEkp,RICE,34 LBS,"23rd February, 2023",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,OZoDzJUr6sAj,RICE,25 LBS,"23rd February, 2023",App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,IS34Pb2NpXa1,RICE,13 LBS,"6th June, 2024",Debashis,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test rice f,App Test Grower,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+test debashis,Debashis,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+""
+Shipment ID = 0fOZsTunWjby
+""
+Origin: Field,Grower,Inbound Mill: Shipment ID,Crop,Weight,Date,Grower,In Mill: Mill,Shipment ID,Crop,Weight,Lot Number,Assigned Lot Number: Mill,Crop,Weight,Lot Number,Shipment ID,Shipped To Warehouse/Customer: Shipment ID,Crop,Weight,Transit ID,New Lot Number,Date,Received By Warehouse: Warehouse Name,Warehouse ID,Receive Date,Crop,Weight,Shipment ID,Shipped To Customer: Shipment ID,Crop,Weight,Transit ID,New Lot Number,Date,Received By Customer: Customer Name,Customer ID,Receive Date,Crop,Weight,Shipment ID
+""
+T F 123,App Test Grower,0fOZsTunWjby,WHEAT,195 LBS,"12th December, 2024",App Test Grower,Tier4 test processor,COvbX5qrbYYe,RICE,5 LBS,102,App Test Processor,"RICE
+WHEAT","5000.0 LBS
+5500.0 LBS","465436
+23123",CEcG1oSCOKNh,CEcG1oSCOKNh,"RICE
+WHEAT","5000.0 LBS
+5500.0 LBS",RAIL1234,"None
+48489","22nd April, 2025",Demo Warehouse,11,,"RICE
+WHEAT","5000.0 LBS
+5500.0 LBS",CEcG1oSCOKNh,TgMr1p9Ija7N,"PEANUT
+BEANS","3700.0 LBS
+5750.0 LBS",Rail2556,"None
+None","22nd April, 2025",Demo Customer,1,,"PEANUT
+BEANS","3700.0 LBS
+5750.0 LBS",TgMr1p9Ija7N
+""
+Shipment ID = biDn1KgKx191
+""
+Origin: Field,Grower,Inbound Mill: Shipment ID,Crop,Weight,Date,Grower,In Mill: Mill,Shipment ID,Crop,Weight,Lot Number,Assigned Lot Number: Mill,Crop,Weight,Lot Number,Shipment ID,Shipped To Warehouse/Customer: Shipment ID,Crop,Weight,Transit ID,New Lot Number,Date,Received By Warehouse: Warehouse Name,Warehouse ID,Receive Date,Crop,Weight,Shipment ID,Shipped To Customer: Shipment ID,Crop,Weight,Transit ID,New Lot Number,Date,Received By Customer: Customer Name,Customer ID,Receive Date,Crop,Weight,Shipment ID
+""
+test rice f,App Test Grower,biDn1KgKx191,RICE,96 LBS,"23rd September, 2024",App Test Grower,Tier4 test processor,COvbX5qrbYYe,RICE,5 LBS,102,App Test Processor,"RICE
+WHEAT","5000.0 LBS
+5500.0 LBS","465436
+23123",CEcG1oSCOKNh,CEcG1oSCOKNh,"RICE
+WHEAT","5000.0 LBS
+5500.0 LBS",RAIL1234,"None
+48489","22nd April, 2025",Demo Warehouse,11,,"RICE
+WHEAT","5000.0 LBS
+5500.0 LBS",CEcG1oSCOKNh,TgMr1p9Ija7N,"PEANUT
+BEANS","3700.0 LBS
+5750.0 LBS",Rail2556,"None
+None","22nd April, 2025",Demo Customer,1,,"PEANUT
+BEANS","3700.0 LBS
+5750.0 LBS",TgMr1p9Ija7N

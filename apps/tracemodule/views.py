@@ -7,10 +7,34 @@ from apps.grower.models import *
 from apps.processor.models import *
 from apps.processor2.models import *
 import csv
-from django.db.models import Q
+from django.db.models import Q, Case, When, Value, F, OuterRef, Subquery, CharField, BigIntegerField
+from itertools import chain
+from operator import itemgetter
+from django.db.models.functions import Cast
 import datetime
 import requests
+from datetime import date
+from apps.warehouseManagement.models import *
+from django.conf import settings
 
+from django.utils.timezone import make_aware, is_naive
+from datetime import datetime
+
+def format_date(date_input):
+    if not date_input:
+        return ""
+    try:
+        # Handle naive datetime
+        if isinstance(date_input, datetime) and is_naive(date_input):
+            date_input = make_aware(date_input)
+        
+        # Format date to "25th August, 2024"
+        day = date_input.day
+        suffix = "th" if 11 <= day <= 13 else {1: "st", 2: "nd", 3: "rd"}.get(day % 10, "th")
+        return f"{day}{suffix} {date_input.strftime('%B, %Y')}"
+    except Exception as e:
+        return str(date_input)
+    
 
 def get_Origin_deliveryid(crop,field_id,field_name,bale_id,warehouse_wh_id) :
     if type(field_id) != None and field_id !=  None :
@@ -48,15 +72,16 @@ def get_Origin_deliveryid(crop,field_id,field_name,bale_id,warehouse_wh_id) :
     else:
         surveyscore3 = 0
     composite_score = round((surveyscore1*0.25)+(surveyscore2*0.50)+(surveyscore3*0.25),2)
-    if crop == "RICE":
-        if composite_score >= 70:
-            pf_sus = "Pass"
-        elif composite_score < 70:
-            pf_sus = "Fail"
-    elif crop == "COTTON":
+    
+    if crop == "COTTON":
         if composite_score >= 75:
             pf_sus = "Pass"
         elif composite_score < 75:
+            pf_sus = "Fail"
+    else:        
+        if composite_score >= 70:
+            pf_sus = "Pass"
+        elif composite_score < 70:
             pf_sus = "Fail"
 
     if crop == 'COTTON' :
@@ -98,10 +123,10 @@ def get_Origin_deliveryid(crop,field_id,field_name,bale_id,warehouse_wh_id) :
             strength = ''
             mic = ''
             storage_quanitty = ''
-    if crop == 'RICE' :
-        shipment = GrowerShipment.objects.filter(shipment_id=bale_id)
+    else :
+        shipment = GrowerShipment.objects.filter(shipment_id=bale_id, crop=crop)
         if shipment.exists() :
-            shipment = GrowerShipment.objects.get(shipment_id=bale_id)
+            shipment = GrowerShipment.objects.get(shipment_id=bale_id, crop=crop)
             variety = shipment.variety
             field_name = shipment.field.name
             field_id = shipment.field.id
@@ -172,16 +197,18 @@ def Origin_searchby_Grower(crop,search_text,*grower_field_ids):
             else:
                 surveyscore3 = 0
             composite_score = round((surveyscore1*0.25)+(surveyscore2*0.50)+(surveyscore3*0.25),2)
-            if crop == "RICE":
-                if composite_score >= 70:
-                    pf_sus = "Pass"
-                elif composite_score < 70:
-                    pf_sus = "Fail"
-            elif crop == "COTTON":
+            
+            if crop == "COTTON":
                 if composite_score >= 75:
                     pf_sus = "Pass"
                 elif composite_score < 75:
                     pf_sus = "Fail"
+            else:
+                if composite_score >= 70:
+                    pf_sus = "Pass"
+                elif composite_score < 70:
+                    pf_sus = "Fail"
+
             if projected_yeild :
                 projected_yeild = float(get_field.total_yield)
                 bale = BaleReportFarmField.objects.filter(ob4=get_field.id)
@@ -207,11 +234,11 @@ def Origin_searchby_Grower(crop,search_text,*grower_field_ids):
                 yield_delta = 'None'
             return_lst.extend([{"get_select_crop":'COTTON', "variety":variety, "field_name":field_name, "field_id":field_id, 
                                 "grower_name":grower_name, "grower_id":grower_id, "farm_name":farm_name, "farm_id":farm_id,
-                                "harvest_date":harvest_date, "projected_yeild":projected_yeild, "reported_yeild":reported_yeild,
+                                "harvest_date":harvest_date if harvest_date else '', "projected_yeild":projected_yeild, "reported_yeild":reported_yeild,
                                 "yield_delta":yield_delta, "storage_quanitty":storage_quanitty,"pf_sus":pf_sus,"water_savings":water_savings,"water_per_pound_savings":water_per_pound_savings,"land_use":land_use,
                                 "less_GHG":less_GHG,"co2_eQ_footprint":co2_eQ_footprint,"premiums_to_growers":premiums_to_growers}])
-    if crop == 'RICE' :
-        print(grower_field_ids)
+    else:
+        
         for i in grower_field_ids :
             get_field = Field.objects.get(id=i)
             grower_name = get_field.grower.name
@@ -248,19 +275,21 @@ def Origin_searchby_Grower(crop,search_text,*grower_field_ids):
             else:
                 surveyscore3 = 0
             composite_score = round((surveyscore1*0.25)+(surveyscore2*0.50)+(surveyscore3*0.25),2)
-            if crop == "RICE":
-                if composite_score >= 70:
-                    pf_sus = "Pass"
-                elif composite_score < 70:
-                    pf_sus = "Fail"
-            elif crop == "COTTON":
+            
+            if crop == "COTTON":
                 if composite_score >= 75:
                     pf_sus = "Pass"
                 elif composite_score < 75:
                     pf_sus = "Fail"
+            else:
+                if composite_score >= 70:
+                    pf_sus = "Pass"
+                elif composite_score < 70:
+                    pf_sus = "Fail"
+
             if projected_yeild :
                 projected_yeild = float(get_field.total_yield)
-                bale = GrowerShipment.objects.filter(field_id=get_field,status="APPROVED")
+                bale = GrowerShipment.objects.filter(field_id=get_field,status="APPROVED", crop=crop)
                 if bale.exists() :
                     reported_yeild_lst = []
                     for j in bale :
@@ -279,10 +308,10 @@ def Origin_searchby_Grower(crop,search_text,*grower_field_ids):
                 projected_yeild = 'None'
                 reported_yeild = 'None'
                 yield_delta = 'None'
-            return_lst.extend([{"get_select_crop":'RICE', "variety":variety, "field_name":field_name, "field_id":field_id, 
+            return_lst.extend([{"get_select_crop":crop, "variety":variety, "field_name":field_name, "field_id":field_id, 
                                 "grower_name":grower_name, "grower_id":grower_id, "farm_name":farm_name, "farm_id":farm_id,
-                                "harvest_date":harvest_date, "projected_yeild":projected_yeild, "reported_yeild":reported_yeild,
-                                "yield_delta":yield_delta, "storage_quanitty":storage_quanitty,"pf_sus":pf_sus,"water_savings":water_savings,"water_per_pound_savings":water_per_pound_savings,"land_use":land_use,
+                                "harvest_date":harvest_date if harvest_date else '', "projected_yeild":projected_yeild, "reported_yeild":reported_yeild,
+                                "yield_delta":yield_delta, "storage_quanitty":storage_quanitty if storage_quanitty else '',"pf_sus":pf_sus,"water_savings":water_savings,"water_per_pound_savings":water_per_pound_savings,"land_use":land_use,
                                 "less_GHG":less_GHG,"co2_eQ_footprint":co2_eQ_footprint,"premiums_to_growers":premiums_to_growers}])
     return return_lst
 
@@ -338,16 +367,18 @@ def Origin_searchby_Processor(crop,*bale_id):
                     else:
                         surveyscore3 = 0
                     composite_score = round((surveyscore1*0.25)+(surveyscore2*0.50)+(surveyscore3*0.25),2)
-                    if crop == "RICE":
-                        if composite_score >= 70:
-                            pf_sus = "Pass"
-                        elif composite_score < 70:
-                            pf_sus = "Fail"
-                    elif crop == "COTTON":
+
+                    if crop == "COTTON":
                         if composite_score >= 75:
                             pf_sus = "Pass"
                         elif composite_score < 75:
                             pf_sus = "Fail"
+
+                    else:
+                        if composite_score >= 70:
+                            pf_sus = "Pass"
+                        elif composite_score < 70:
+                            pf_sus = "Fail"                    
 
                     if projected_yeild :
                         reported_yeild = float(reported_yeild)
@@ -362,7 +393,7 @@ def Origin_searchby_Processor(crop,*bale_id):
                                 "yield_delta":yield_delta, "storage_quanitty":storage_quanitty, "water_savings":water_savings,
                                 "water_per_pound_savings":water_per_pound_savings, "land_use":land_use, "less_GHG":less_GHG,
                                 "co2_eQ_footprint":co2_eQ_footprint, "premiums_to_growers":premiums_to_growers,"pf_sus":pf_sus}])
-    if crop == 'RICE' :
+    else:
         for i in bale_id :
             get_bale = GrowerShipment.objects.get(id=i)
             field_id = get_bale.field.id
@@ -401,15 +432,16 @@ def Origin_searchby_Processor(crop,*bale_id):
             else:
                 surveyscore3 = 0
             composite_score = round((surveyscore1*0.25)+(surveyscore2*0.50)+(surveyscore3*0.25),2)
-            if crop == "RICE":
-                if composite_score >= 70:
-                    pf_sus = "Pass"
-                elif composite_score < 70:
-                    pf_sus = "Fail"
-            elif crop == "COTTON":
+            
+            if crop == "COTTON":
                 if composite_score >= 75:
                     pf_sus = "Pass"
                 elif composite_score < 75:
+                    pf_sus = "Fail"
+            else:
+                if composite_score >= 70:
+                    pf_sus = "Pass"
+                elif composite_score < 70:
                     pf_sus = "Fail"
             try :
                 reported_yeild = float(reported_yeild)
@@ -417,14 +449,14 @@ def Origin_searchby_Processor(crop,*bale_id):
                 yield_delta = reported_yeild - projected_yeild
             except:
                 pass          
-            return_lst.extend([{"get_select_crop":'RICE', "variety":variety, "field_name":field_name, "field_id":field_id, 
+            return_lst.extend([{"get_select_crop":crop, "variety":variety, "field_name":field_name, "field_id":field_id, 
                                 "grower_name":grower_name, "grower_id":grower_id, "farm_name":farm_name, "farm_id":farm_id,
                                 "harvest_date":harvest_date, "projected_yeild":projected_yeild, "reported_yeild":reported_yeild,
                                 "yield_delta":yield_delta, "storage_quanitty":storage_quanitty, "water_savings":water_savings,
                                 "water_per_pound_savings":water_per_pound_savings, "land_use":land_use, "less_GHG":less_GHG,
                                 "co2_eQ_footprint":co2_eQ_footprint, "premiums_to_growers":premiums_to_growers,"pf_sus":pf_sus}])
-            # #print(return_lst,return_lst)
-
+            
+    
     return return_lst
 
 
@@ -433,9 +465,9 @@ def outbound1_Wip_Grower(crop,search_text,from_date,to_date,*grower_field_ids) :
     return_lst = []
     if crop == 'COTTON' :
         pass
-    if crop == 'RICE' :
+    else:
         # orders = GrowerShipment.objects.filter(Q(process_date__gte=from_date), Q(process_date__lte=to_date))
-        get_shipment = GrowerShipment.objects.filter(field_id__in=grower_field_ids,status='').filter(Q(process_date__gte=from_date), Q(process_date__lte=to_date)).order_by('-id').values('id')
+        get_shipment = GrowerShipment.objects.filter(field_id__in=grower_field_ids,status='', crop=crop).filter(Q(process_date__gte=from_date), Q(process_date__lte=to_date)).order_by('-id').values('id')
         if get_shipment.exists() :
             for i in get_shipment :
                 get_shipment = GrowerShipment.objects.get(id=i['id'])
@@ -446,7 +478,7 @@ def outbound1_Wip_Grower(crop,search_text,from_date,to_date,*grower_field_ids) :
                 transportation = ''
                 destination = get_shipment.processor.entity_name
                 grower_name = get_shipment.grower.name
-                return_lst.extend([{"deliveryid":deliveryid,"source":grower_name,"skuid":skuid,"date":process_date,"quantity":quantity,"transportation":transportation,"destination":destination}])
+                return_lst.extend([{"shipment_id":deliveryid,"source":grower_name,"skuid":skuid,"date":process_date,"quantity":quantity,"transportation":transportation,"destination":destination}])
         
     return return_lst
 
@@ -456,8 +488,8 @@ def outbound1_Wip_field(crop,search_text,from_date,to_date,field_id):
     if crop == 'COTTON' :
         pass
         
-    if crop == 'RICE' :
-        get_shipment = GrowerShipment.objects.filter(field_id=field_id,status="").filter(Q(process_date__gte=from_date), Q(process_date__lte=to_date)).order_by('-id').values("id")
+    else :
+        get_shipment = GrowerShipment.objects.filter(field_id=field_id,status="", crop=crop).filter(Q(process_date__gte=from_date), Q(process_date__lte=to_date)).order_by('-id').values("id")
         if get_shipment.exists :
             for i in get_shipment :
                 get_shipment_id = i["id"]
@@ -469,7 +501,7 @@ def outbound1_Wip_field(crop,search_text,from_date,to_date,field_id):
                 transportation = ''
                 destination = get_shipment.processor.entity_name
                 grower_name = get_shipment.grower.name
-                return_lst.extend([{"deliveryid":deliveryid,"source":grower_name,"skuid":skuid,"date":shipment_date,"quantity":quantity,"transportation":transportation,"destination":destination}])
+                return_lst.extend([{"shipment_id":deliveryid,"source":grower_name,"skuid":skuid,"date":shipment_date,"quantity":quantity,"transportation":transportation,"destination":destination}])
     return return_lst
 
 
@@ -477,8 +509,8 @@ def outbound1_Wip_Processor(crop,from_date,to_date,processorid):
     return_lst = []
     if crop == 'COTTON' :
         pass
-    if crop == 'RICE' :
-        get_shipment = GrowerShipment.objects.filter(processor_id=processorid,status="").filter(Q(process_date__gte=from_date), Q(process_date__lte=to_date)).order_by('-id').values("id")
+    else :
+        get_shipment = GrowerShipment.objects.filter(processor_id=processorid,status="", crop=crop).filter(Q(process_date__gte=from_date), Q(process_date__lte=to_date)).order_by('-id').values("id")
         for i in get_shipment :
             get_shipment = GrowerShipment.objects.get(id=i["id"])
             shipment_date = get_shipment.process_date
@@ -490,7 +522,7 @@ def outbound1_Wip_Processor(crop,from_date,to_date,processorid):
             # module_tag = get_shipment.module_number   # add module tag
             transportation = ''
             destination = get_shipment.processor.entity_name
-            return_lst.extend([{"deliveryid":deliveryid,"source":grower_name,"date":shipment_date,"quantity":quantity,"transportation":transportation,"destination":destination}])
+            return_lst.extend([{"shipment_id":deliveryid,"source":grower_name,"date":shipment_date,"quantity":quantity,"transportation":transportation,"destination":destination}])
     return return_lst
 
 
@@ -503,9 +535,9 @@ def outbound1_Wip_deliveryid(crop,search_text,warehouse_wh_id,from_date,to_date)
             get_bale = BaleReportFarmField.objects.get(id=get_bale_id)
             dt_class = get_bale.dt_class
             transportation = ''
-            return_lst.extend([{"deliveryid":search_text,"date":dt_class,"transportation":transportation}])
-    if crop == 'RICE' :
-        get_shipment = GrowerShipment.objects.filter(shipment_id=search_text,status="").filter(Q(process_date__gte=from_date), Q(process_date__lte=to_date))
+            return_lst.extend([{"shipment_id":search_text,"date":dt_class,"transportation":transportation}])
+    else :
+        get_shipment = GrowerShipment.objects.filter(shipment_id=search_text,status="", crop=crop).filter(Q(process_date__gte=from_date), Q(process_date__lte=to_date))
         if len(get_shipment) == 1 :
             get_shipment_id = [i.id for i in get_shipment][0]
             get_shipment = GrowerShipment.objects.get(id=get_shipment_id)
@@ -515,7 +547,7 @@ def outbound1_Wip_deliveryid(crop,search_text,warehouse_wh_id,from_date,to_date)
             quantity = get_shipment.total_amount
             destination = get_shipment.processor.entity_name
             grower_name = get_shipment.grower.name
-            return_lst.extend([{"deliveryid":search_text,"source":grower_name,"skuid":skuid,"date":shipment_date,"quantity":quantity,"transportation":transportation,"destination":destination}])
+            return_lst.extend([{"shipment_id":search_text,"source":grower_name,"skuid":skuid,"date":shipment_date,"quantity":quantity,"transportation":transportation,"destination":destination}])
     return return_lst
 
 
@@ -592,10 +624,10 @@ def t1_Processor_grower(crop,check_grower_id,from_date,to_date) :
                 pounds_delta = float(pounds_shipped) - float(pounds_received)
             except:
                 pounds_delta = ''
-            return_lst.extend([{"processor_name":processor_name,"grower":grower,"farm":farm,"field":field,"processor_id":processor_id,"deliveryid":deliveryid,
+            return_lst.extend([{"processor_name":processor_name,"grower":grower,"farm":farm,"field":field,"processor_id":processor_id,"shipment_id":deliveryid,
                                 "date":dt_class,"pounds_shipped":pounds_shipped,"pounds_received":pounds_received,"pounds_delta":pounds_delta}])
-    if crop == 'RICE' :
-        get_shipment = GrowerShipment.objects.filter(grower_id=check_grower_id,status="APPROVED").filter(Q(approval_date__gte=from_date), Q(approval_date__lte=to_date)).values("id")
+    else :
+        get_shipment = GrowerShipment.objects.filter(grower_id=check_grower_id,status="APPROVED", crop=crop).filter(Q(approval_date__gte=from_date), Q(approval_date__lte=to_date)).values("id")
         for i in get_shipment :
             get_shipment = GrowerShipment.objects.get(id=i["id"])
             processor_name = get_shipment.processor.entity_name
@@ -615,7 +647,7 @@ def t1_Processor_grower(crop,check_grower_id,from_date,to_date) :
                 pounds_delta = float(pounds_shipped) - float(pounds_received)
             except:
                 pounds_delta = ''
-            return_lst.extend([{"processor_name":processor_name,"grower":grower,"farm":farm,"field":field,"processor_id":processor_id,"deliveryid":deliveryid,"skuid":skuid,
+            return_lst.extend([{"processor_name":processor_name,"grower":grower,"farm":farm,"field":field,"processor_id":processor_id,"shipment_id":deliveryid,"skuid":skuid,
                                 "date":dt_class,"pounds_shipped":pounds_shipped,"pounds_received":pounds_received,"pounds_delta":pounds_delta}])
                                 
     return return_lst
@@ -693,11 +725,11 @@ def t1_Processor_field(crop,field_name,field_id,from_date,to_date) :
                     pounds_delta = float(pounds_shipped) - float(pounds_received)
                 except:
                     pounds_delta = ''
-                return_lst.extend([{"processor_name":processor_name,"processor_id":processor_id,"deliveryid":deliveryid,"date":shipment_date,
+                return_lst.extend([{"processor_name":processor_name,"processor_id":processor_id,"shipment_id":deliveryid,"date":shipment_date,
                                     "pounds_shipped":pounds_shipped,"pounds_received":pounds_received,"pounds_delta":pounds_delta,
                                     "grower":grower,"farm":farm,"field":field}])
-    if crop == 'RICE' :
-        get_shipment = GrowerShipment.objects.filter(field_id=field_id,status="APPROVED").filter(Q(approval_date__gte=from_date), Q(approval_date__lte=to_date)).values("id")
+    else :
+        get_shipment = GrowerShipment.objects.filter(field_id=field_id,status="APPROVED", crop=crop).filter(Q(approval_date__gte=from_date), Q(approval_date__lte=to_date)).values("id")
         if get_shipment.exists :
             for i in get_shipment :
                 get_shipment_id = i["id"]
@@ -719,7 +751,7 @@ def t1_Processor_field(crop,field_name,field_id,from_date,to_date) :
                     pounds_delta = float(pounds_shipped) - float(pounds_received)
                 except:
                     pounds_delta = ''
-                return_lst.extend([{"processor_name":processor_name,"processor_id":processor_id,"deliveryid":deliveryid,"skuid":skuid,"date":shipment_date,
+                return_lst.extend([{"processor_name":processor_name,"processor_id":processor_id,"shipment_id":deliveryid,"skuid":skuid,"date":shipment_date,
                                     "pounds_shipped":pounds_shipped,"pounds_received":pounds_received,"pounds_delta":pounds_delta,
                                     "grower":grower,"farm":farm,"field":field,}])
     return return_lst
@@ -737,6 +769,7 @@ def t1_Processor_Processor(crop,processor_id,from_date,to_date,*bale_id) :
             deliveryid = get_bale.bale_id
             shipment_date = get_bale.dt_class
             dt_class = get_bale.dt_class
+            unit = ''
             if dt_class :
                 str_date = str(dt_class)
                 if '-' in str_date :
@@ -784,6 +817,7 @@ def t1_Processor_Processor(crop,processor_id,from_date,to_date,*bale_id) :
             grower = get_bale.ob3
             field = get_bale.field_name
             field_id = get_bale.ob4
+            id = get_bale.id
             farm = ''
             if field_id :
                 try:
@@ -796,12 +830,12 @@ def t1_Processor_Processor(crop,processor_id,from_date,to_date,*bale_id) :
                 pounds_delta = float(pounds_shipped) - float(pounds_received)
             except:
                 pounds_delta = ''
-            return_lst.extend([{"processor_name":processor_name,"processor_id":processor_id,"deliveryid":deliveryid,"date":shipment_date,
-                                "pounds_shipped":pounds_shipped,"pounds_received":pounds_received,"pounds_delta":pounds_delta,
-                                "grower":grower,"farm":farm,"field":field}])
-    if crop == 'RICE' :
+            return_lst.extend([{"processor_name":processor_name,"processor_id":processor_id,"shipment_id":deliveryid,"date":shipment_date,
+                                "pounds_shipped":pounds_shipped,"pounds_received":pounds_received,"unit":unit,"crop":"COTTON", "pounds_delta":pounds_delta,
+                                "grower":grower,"farm":farm,"field":field, "id":id}])
+    else :
         check_shipment = list(bale_id)
-        get_shipment = GrowerShipment.objects.filter(id__in=check_shipment,status='APPROVED').filter(Q(approval_date__gte=from_date), Q(approval_date__lte=to_date)).values('id')
+        get_shipment = GrowerShipment.objects.filter(id__in=check_shipment,status='APPROVED', crop=crop).filter(Q(approval_date__gte=from_date), Q(approval_date__lte=to_date)).values('id')
         for i in get_shipment :
             get_shipment = GrowerShipment.objects.get(id=i['id'])
             processor_name = get_shipment.processor.entity_name
@@ -817,13 +851,16 @@ def t1_Processor_Processor(crop,processor_id,from_date,to_date,*bale_id) :
             farm = get_field.farm.name
             skuid = get_shipment.sku   # add sku_id
             pounds_delta = ''
+            unit = get_shipment.unit_type
+            crop = get_shipment.crop
+            id = get_shipment.id
             try:
                 pounds_delta = float(pounds_shipped) - float(pounds_received)
             except:
                 pounds_delta = ''
-            return_lst.extend([{"processor_name":processor_name,"processor_id":processor_id,"deliveryid":deliveryid,"skuid":skuid,"date":shipment_date,
-                                "pounds_shipped":pounds_shipped,"pounds_received":pounds_received,"pounds_delta":pounds_delta,
-                                "grower":grower,"farm":farm,"field":field,}])      
+            return_lst.extend([{"processor_name":processor_name,"processor_id":processor_id,"shipment_id":deliveryid,"skuid":skuid,"date":shipment_date,
+                                "pounds_shipped":pounds_shipped,"pounds_received":pounds_received, "unit":unit,"crop":crop, "pounds_delta":pounds_delta,
+                                "grower":grower,"farm":farm,"field":field,"id":id}])      
     return return_lst
 
 
@@ -854,8 +891,7 @@ def t1_Processor_deliveryid(crop,search_text,warehouse_wh_id,from_date,to_date) 
                     to_date = datetime.datetime.strptime(to_date, format).date()
 
                     if finale_date >= from_date and finale_date <= to_date:
-                        res = True
-                        #print("res",res)
+                        res = True                       
                     else:
                         return return_lst
 
@@ -875,7 +911,7 @@ def t1_Processor_deliveryid(crop,search_text,warehouse_wh_id,from_date,to_date) 
 
                     if finale_date >= from_date and finale_date <= to_date:
                         res = True
-                        #print("res",res)
+                        
                     else:
                         return return_lst
                 else:
@@ -899,11 +935,11 @@ def t1_Processor_deliveryid(crop,search_text,warehouse_wh_id,from_date,to_date) 
                 pounds_delta = float(pounds_shipped) - float(pounds_received)
             except:
                 pounds_delta = ''
-            return_lst.extend([{"processor_name":processor_name,"processor_id":processor_id,"deliveryid":search_text,"date":dt_class,
+            return_lst.extend([{"processor_name":processor_name,"processor_id":processor_id,"shipment_id":search_text,"date":dt_class,
                                 "pounds_shipped":pounds_shipped,"pounds_received":pounds_received,"pounds_delta":pounds_delta,
                                 "grower":grower,"farm":farm,"field":field}])
-    if crop == 'RICE' :
-        get_shipment = GrowerShipment.objects.filter(shipment_id=search_text,status="APPROVED").filter(Q(approval_date__gte=from_date), Q(approval_date__lte=to_date))
+    else :
+        get_shipment = GrowerShipment.objects.filter(shipment_id=search_text,status="APPROVED", crop=crop).filter(Q(approval_date__gte=from_date), Q(approval_date__lte=to_date))
         if len(get_shipment) == 1 :
             get_shipment_id = [i.id for i in get_shipment][0]
             get_shipment = GrowerShipment.objects.get(id=get_shipment_id)
@@ -923,7 +959,7 @@ def t1_Processor_deliveryid(crop,search_text,warehouse_wh_id,from_date,to_date) 
                 pounds_delta = float(pounds_shipped) - float(pounds_received)
             except:
                 pounds_delta = ''
-            return_lst.extend([{"processor_name":processor_name,"processor_id":processor_id,"deliveryid":search_text,"skuid":skuid,"date":shipment_date,
+            return_lst.extend([{"processor_name":processor_name,"processor_id":processor_id,"shipment_id":search_text,"skuid":skuid,"date":shipment_date,
                                     "pounds_shipped":pounds_shipped,"pounds_received":pounds_received,"pounds_delta":pounds_delta,
                                     "grower":grower,"farm":farm,"field":field}])
     return return_lst
@@ -934,13 +970,13 @@ def outbound2_Wip_Grower(crop,check_grower_id,from_date,to_date,*grower_field_id
     return_lst = []
     if crop == 'COTTON' :
         pass
-    if crop == 'RICE' :
-        get_processor = GrowerShipment.objects.filter(grower_id=check_grower_id).values('processor_id')
+    else :
+        get_processor = GrowerShipment.objects.filter(grower_id=check_grower_id, crop=crop).values('processor_id')
         if get_processor.exists():
             processor_id = [i['processor_id'] for i in get_processor][0]
         else:
             processor_id = ''
-        get_shipment = ShipmentManagement.objects.filter(processor_idd=processor_id).filter(Q(date_pulled__gte=from_date), Q(date_pulled__lte=to_date)).values('id').order_by('-id')
+        get_shipment = ShipmentManagement.objects.filter(processor_idd=processor_id, crop=crop).filter(Q(date_pulled__date__gte=from_date), Q(date_pulled__date__lte=to_date)).values('id').order_by('-id')
         for i in get_shipment :
             get_shipment = ShipmentManagement.objects.get(id=i['id'])
             purchase_order_number = get_shipment.purchase_order_number
@@ -951,7 +987,7 @@ def outbound2_Wip_Grower(crop,check_grower_id,from_date,to_date,*grower_field_id
             storage_skuid = get_shipment.storage_bin_send
             receiver_skuid = get_shipment.storage_bin_recive
             destination = get_shipment.processor2_name
-            return_lst.extend([{"deliveryid":purchase_order_number,"storage_skuid":storage_skuid,"date":date_pulled,"quantity":volume_shipped,"transportation":equipment_type,"destination":destination}])
+            return_lst.extend([{"shipment_id":purchase_order_number,"storage_skuid":storage_skuid,"date":date_pulled,"quantity":volume_shipped,"transportation":equipment_type,"destination":destination}])
     return return_lst
 
 
@@ -959,13 +995,13 @@ def outbound2_Wip_Field(crop,field_name,field_id,from_date,to_date):
     return_lst = []
     if crop == 'COTTON' :
         pass
-    if crop == 'RICE' :
-        get_processor = GrowerShipment.objects.filter(field_id=field_id).values('processor_id')
+    else :
+        get_processor = GrowerShipment.objects.filter(field_id=field_id, crop=crop).values('processor_id')
         if get_processor.exists() :
             processor_id = [i['processor_id'] for i in get_processor][0]
         else:
             processor_id = ''
-        get_shipment = ShipmentManagement.objects.filter(processor_idd=processor_id).filter(Q(date_pulled__gte=from_date), Q(date_pulled__lte=to_date)).values('id').order_by('-id')
+        get_shipment = ShipmentManagement.objects.filter(processor_idd=processor_id, crop=crop).filter(Q(date_pulled__date__gte=from_date), Q(date_pulled__date__lte=to_date)).values('id').order_by('-id')
         for i in get_shipment :
             get_shipment = ShipmentManagement.objects.get(id=i['id'])
             purchase_order_number = get_shipment.purchase_order_number
@@ -974,7 +1010,7 @@ def outbound2_Wip_Field(crop,field_name,field_id,from_date,to_date):
             equipment_type = get_shipment.equipment_type
             bin_location = get_shipment.bin_location
             storage_skuid = get_shipment.storage_bin_send  # add storage_bin
-            return_lst.extend([{"deliveryid":purchase_order_number,"storage_skuid":storage_skuid,"date":date_pulled,"quantity":volume_shipped,"transportation":equipment_type,"destination":bin_location}])
+            return_lst.extend([{"shipment_id":purchase_order_number,"storage_skuid":storage_skuid,"date":date_pulled,"quantity":volume_shipped,"transportation":equipment_type,"destination":bin_location}])
     return return_lst
 
 
@@ -982,19 +1018,19 @@ def outbound_Wip_Processor(crop,processor_id,processor_type,from_date,to_date) :
     return_lst = []
     if crop == 'COTTON' :
         pass
-    if crop == 'RICE' :
+    else :
         if processor_type == "T1":
-            get_shipment = ShipmentManagement.objects.filter(sender_processor_type="T1", processor_idd = processor_id, date_pulled__gte = from_date, date_pulled__lte = to_date).values()
-            #print(get_shipment, "shipmenttttttttt", processor_type)
+            get_shipment = ShipmentManagement.objects.filter(sender_processor_type="T1", processor_idd = processor_id, date_pulled__date__gte = from_date, date_pulled__date__lte = to_date, crop=crop).values()
+           
         elif processor_type == "T2":            
-            get_shipment = ShipmentManagement.objects.filter(sender_processor_type="T2", processor_idd = processor_id, date_pulled__gte = from_date, date_pulled__lte = to_date).values()
-            #print(get_shipment, "shipmenttttttttt", processor_type)
+            get_shipment = ShipmentManagement.objects.filter(sender_processor_type="T2", processor_idd = processor_id, date_pulled__date__gte = from_date, date_pulled__date__lte = to_date, crop=crop).values()
+           
         elif processor_type == "T3":
-            get_shipment = ShipmentManagement.objects.filter(sender_processor_type="T3", processor_idd = processor_id, date_pulled__gte = from_date, date_pulled__lte = to_date).values()
-            # #print(get_shipment, "shipmenttttttttt", processor_type)
+            get_shipment = ShipmentManagement.objects.filter(sender_processor_type="T3", processor_idd = processor_id, date_pulled__date__gte = from_date, date_pulled__date__lte = to_date, crop=crop).values()
+            
         elif processor_type == "T4":
-            get_shipment = ShipmentManagement.objects.filter(sender_processor_type="T4", processor_idd = processor_id, date_pulled__gte = from_date, date_pulled__lte = to_date, status = None).values()
-            # #print(get_shipment, "shipmenttttttttt", processor_type)
+            get_shipment = ShipmentManagement.objects.filter(sender_processor_type="T4", processor_idd = processor_id, date_pulled__date__gte = from_date, date_pulled__date__lte = to_date, status = None, crop=crop).values()
+           
     return list(get_shipment)
 
 
@@ -1002,17 +1038,17 @@ def inbound_Wip_Processor(crop,processor_id,processor_type,from_date,to_date) :
     return_lst = []
     if crop == 'COTTON' :
         pass
-    if crop == 'RICE' :
+    else :
         get_shipment = []
         if processor_type == "T2":
-            get_shipment = ShipmentManagement.objects.filter(receiver_processor_type="T2", processor2_idd = processor_id, date_pulled__gte = from_date, date_pulled__lte = to_date, status="APPROVED").values()
-            # print(get_shipment,"shipmentttttttttttttttt")
+            get_shipment = ShipmentManagement.objects.filter(receiver_processor_type="T2", processor2_idd = processor_id, date_pulled__date__gte = from_date, date_pulled__date__lte = to_date, status="APPROVED", crop=crop).values()
+           
         elif processor_type == "T3":
-            get_shipment = ShipmentManagement.objects.filter(receiver_processor_type="T3", processor2_idd = processor_id, date_pulled__gte = from_date, date_pulled__lte = to_date, status="APPROVED").values()
-            # print(get_shipment,"shipmentttttttttttttttt")
+            get_shipment = ShipmentManagement.objects.filter(receiver_processor_type="T3", processor2_idd = processor_id, date_pulled__date__gte = from_date, date_pulled__date__lte = to_date, status="APPROVED", crop=crop).values()
+           
         elif processor_type == "T4":
-            get_shipment = ShipmentManagement.objects.filter(receiver_processor_type="T4", processor2_idd = processor_id, date_pulled__gte = from_date, date_pulled__lte = to_date, status="APPROVED").values()
-            # print(get_shipment,"shipmentttttttttttttttt")
+            get_shipment = ShipmentManagement.objects.filter(receiver_processor_type="T4", processor2_idd = processor_id, date_pulled__date__gte = from_date, date_pulled__date__lte = to_date, status="APPROVED", crop=crop).values()
+          
     return list(get_shipment)
 
 
@@ -1020,10 +1056,10 @@ def outbound2_Wip_deliveryid(crop,search_text,rice_shipment_id,from_date,to_date
     return_lst = []
     if crop == 'COTTON' :
         pass
-    if crop == 'RICE' :
-        get_processor = GrowerShipment.objects.filter(shipment_id=rice_shipment_id).values('processor_id')
+    else :
+        get_processor = GrowerShipment.objects.filter(shipment_id=rice_shipment_id, crop=crop).values('processor_id')
         processor_id = [i['processor_id'] for i in get_processor][0]
-        get_shipment = ShipmentManagement.objects.filter(processor_idd=processor_id).filter(Q(date_pulled__gte=from_date), Q(date_pulled__lte=to_date)).values('id').order_by('-id')
+        get_shipment = ShipmentManagement.objects.filter(processor_idd=processor_id, crop=crop).filter(Q(date_pulled__date__gte=from_date), Q(date_pulled__date__lte=to_date)).values('id').order_by('-id')
         for i in get_shipment :
             get_shipment = ShipmentManagement.objects.get(id=i['id'])
             purchase_order_number = get_shipment.purchase_order_number
@@ -1032,7 +1068,7 @@ def outbound2_Wip_deliveryid(crop,search_text,rice_shipment_id,from_date,to_date
             equipment_type = get_shipment.equipment_type
             bin_location = get_shipment.bin_location
             storage_skuid = get_shipment.storage_bin_send  # add storage_bin
-            return_lst.extend([{"deliveryid":purchase_order_number,"storage_skuid":storage_skuid,"date":date_pulled,"quantity":volume_shipped,"transportation":equipment_type,"destination":bin_location}])
+            return_lst.extend([{"shipment_id":purchase_order_number,"storage_skuid":storage_skuid,"date":date_pulled,"quantity":volume_shipped,"transportation":equipment_type,"destination":bin_location}])
     return return_lst
 
 
@@ -1063,8 +1099,7 @@ def t2_Processor_grower(crop,check_grower_id,from_date,to_date) :
                     to_date = datetime.datetime.strptime(to_date, format).date()
 
                     if finale_date >= from_date and finale_date <= to_date:
-                        res = True
-                        # #print("res",res)
+                        res = True                       
                     else:
                         continue
                 elif '/' in str_date :
@@ -1082,8 +1117,7 @@ def t2_Processor_grower(crop,check_grower_id,from_date,to_date) :
                     to_date = datetime.datetime.strptime(to_date, format).date()
 
                     if finale_date >= from_date and finale_date <= to_date:
-                        res = True
-                        #print("res",res)
+                        res = True                      
                     else:
                         continue
                 else:
@@ -1107,10 +1141,10 @@ def t2_Processor_grower(crop,check_grower_id,from_date,to_date) :
                 pounds_delta = float(pounds_shipped) - float(pounds_received)
             except:
                 pounds_delta = ''
-            return_lst.extend([{"processor_name":processor_name,"processor_id":processor_id,"deliveryid":deliveryid,
+            return_lst.extend([{"processor_name":processor_name,"processor_id":processor_id,"shipment_id":deliveryid,
                                 "grower":grower,"farm":farm,"field":field,"date":dt_class,"pounds_shipped":pounds_shipped,
                                 "pounds_received":pounds_received,"pounds_delta":pounds_delta}])
-    if crop == 'RICE' :
+    else :
         # pass
     #     get_shipment = GrowerShipment.objects.filter(grower_id=check_grower_id,status="APPROVED").values("id")
     #     for i in get_shipment :
@@ -1131,12 +1165,12 @@ def t2_Processor_grower(crop,check_grower_id,from_date,to_date) :
     #                             "pounds_shipped":pounds_shipped,"pounds_received":pounds_received,"pounds_delta":pounds_delta,}])
     # return return_lst
         
-        get_grower = GrowerShipment.objects.filter(grower_id=check_grower_id,status="APPROVED")
+        get_grower = GrowerShipment.objects.filter(grower_id=check_grower_id,status="APPROVED", crop=crop)
         if get_grower.exists():
-            shipment = ShipmentManagement.objects.all()
+            shipment = ShipmentManagement.objects.filter(crop=crop)
             for i in range(len(shipment)):
                 var = shipment[i].storage_bin_send
-                grower_shipment = GrowerShipment.objects.filter(sku = var).filter(grower_id=check_grower_id)
+                grower_shipment = GrowerShipment.objects.filter(sku = var, crop=crop).filter(grower_id=check_grower_id)
                 for r in grower_shipment :
                     del_id = r.shipment_id
                     shipment_date = r.approval_date
@@ -1151,7 +1185,7 @@ def t2_Processor_grower(crop,check_grower_id,from_date,to_date) :
                         pounds_delta = float(pounds_shipped) - float(pounds_received)
                     except:
                         pounds_delta = ''
-                    return_lst.extend([{"processor_name":processor_name,"processor_id":processor_id,"deliveryid":del_id,"date":shipment_date,
+                    return_lst.extend([{"processor_name":processor_name,"processor_id":processor_id,"shipment_id":del_id,"date":shipment_date,
                                 "pounds_shipped":pounds_shipped,"pounds_received":pounds_received,"pounds_delta":pounds_delta,"skuid":sku_id}])
 
         return return_lst
@@ -1188,7 +1222,7 @@ def t2_Processor_field(crop,field_name,field_id,from_date,to_date) :
 
                         if finale_date >= from_date and finale_date <= to_date:
                             res = True
-                            #print("res",res)
+                            
                         else:
                             continue
                     elif '/' in str_date :
@@ -1207,7 +1241,7 @@ def t2_Processor_field(crop,field_name,field_id,from_date,to_date) :
 
                         if finale_date >= from_date and finale_date <= to_date:
                             res = True
-                            #print("res",res)
+                           
                         else:
                             continue
                     else:
@@ -1231,10 +1265,10 @@ def t2_Processor_field(crop,field_name,field_id,from_date,to_date) :
                     pounds_delta = float(pounds_shipped) - float(pounds_received)
                 except:
                     pounds_delta = ''
-                return_lst.extend([{"processor_name":processor_name,"processor_id":processor_id,"deliveryid":deliveryid,"date":shipment_date,
+                return_lst.extend([{"processor_name":processor_name,"processor_id":processor_id,"shipment_id":deliveryid,"date":shipment_date,
                                     "pounds_shipped":pounds_shipped,"pounds_received":pounds_received,"pounds_delta":pounds_delta,
                                     "grower":grower,"farm":farm,"field":field}])
-    if crop == 'RICE' :
+    else :
         pass
     #     get_shipment = GrowerShipment.objects.filter(field_id=field_id,status="APPROVED").values("id")
     #     if get_shipment.exists :
@@ -1256,9 +1290,9 @@ def t2_Processor_field(crop,field_name,field_id,from_date,to_date) :
     #                                 "pounds_shipped":pounds_shipped,"pounds_received":pounds_received,"pounds_delta":pounds_delta}])
     # return return_lst
     
-        get_shipment_data = GrowerShipment.objects.filter(field_id=field_id,status="APPROVED")
+        get_shipment_data = GrowerShipment.objects.filter(field_id=field_id,status="APPROVED", crop=crop)
         if get_shipment_data.exists():    
-            shipment = ShipmentManagement.objects.all()
+            shipment = ShipmentManagement.objects.filter(crop=crop)
             for i in range(len(shipment)):
                 var = shipment[i].storage_bin_send
                 grower_shipment = GrowerShipment.objects.filter(sku = var).filter(field_id=field_id)
@@ -1276,7 +1310,7 @@ def t2_Processor_field(crop,field_name,field_id,from_date,to_date) :
                         pounds_delta = float(pounds_shipped) - float(pounds_received)
                     except:
                         pounds_delta = ''
-                    return_lst.extend([{"processor_name":processor_name,"processor_id":processor_id,"deliveryid":del_id,"date":shipment_date,
+                    return_lst.extend([{"processor_name":processor_name,"processor_id":processor_id,"shipment_id":del_id,"date":shipment_date,
                                 "pounds_shipped":pounds_shipped,"pounds_received":pounds_received,"pounds_delta":pounds_delta,"skuid":sku_id}])
 
         return return_lst
@@ -1312,7 +1346,7 @@ def t2_Processor_Processor(crop,processor_id,from_date,to_date,*bale_id) :
 
                     if finale_date >= from_date and finale_date <= to_date:
                         res = True
-                        #print("res",res)
+                       
                     else:
                         continue
                 elif '/' in str_date :
@@ -1331,7 +1365,7 @@ def t2_Processor_Processor(crop,processor_id,from_date,to_date,*bale_id) :
 
                     if finale_date >= from_date and finale_date <= to_date:
                         res = True
-                        #print("res",res)
+                      
                     else:
                         continue
                 else:
@@ -1355,18 +1389,16 @@ def t2_Processor_Processor(crop,processor_id,from_date,to_date,*bale_id) :
                 pounds_delta = float(pounds_shipped) - float(pounds_received)
             except:
                 pounds_delta = ''
-            return_lst.extend([{"processor_name":processor_name,"processor_id":processor_id,"deliveryid":deliveryid,"date":shipment_date,
+            return_lst.extend([{"processor_name":processor_name,"processor_id":processor_id,"shipment_id":deliveryid,"date":shipment_date,
                                 "pounds_shipped":pounds_shipped,"pounds_received":pounds_received,"pounds_delta":pounds_delta,
                                 "grower":grower,"farm":farm,"field":field}])
-    if crop == 'RICE' :
-        
-        
+    else :      
         check_shipment = list(bale_id)
-        get_shipment_data = GrowerShipment.objects.filter(id__in=check_shipment,status='APPROVED')
+        get_shipment_data = GrowerShipment.objects.filter(id__in=check_shipment,status='APPROVED', crop=crop)
         if get_shipment_data.exists():
-            # shipment = ShipmentManagement.objects.all()
-            shipment = ShipmentManagement.objects.filter(processor_idd = processor_id)
-            # #print("shipment============",shipment)
+            
+            shipment = ShipmentManagement.objects.filter(processor_idd = processor_id, crop=crop)
+            
             for i in range(len(shipment)):
                 var = shipment[i].storage_bin_send
                 grower_shipment = GrowerShipment.objects.filter(sku = var)
@@ -1384,7 +1416,7 @@ def t2_Processor_Processor(crop,processor_id,from_date,to_date,*bale_id) :
                         pounds_delta = float(pounds_shipped) - float(pounds_received)
                     except:
                         pounds_delta = ''
-                    return_lst.extend([{"processor_name":processor_name,"processor_id":processor_id,"deliveryid":del_id,"date":shipment_date,
+                    return_lst.extend([{"processor_name":processor_name,"processor_id":processor_id,"shipment_id":del_id,"date":shipment_date,
                                 "pounds_shipped":pounds_shipped,"pounds_received":pounds_received,"pounds_delta":pounds_delta,"skuid":sku_id}])
         
         return return_lst
@@ -1418,7 +1450,7 @@ def t2_Processor_deliveryid(crop,search_text,warehouse_wh_id,from_date,to_date) 
 
                     if finale_date >= from_date and finale_date <= to_date:
                         res = True
-                        #print("res",res)
+                       
                     else:
                         return return_lst
                 elif '/' in str_date :
@@ -1437,7 +1469,7 @@ def t2_Processor_deliveryid(crop,search_text,warehouse_wh_id,from_date,to_date) 
 
                     if finale_date >= from_date and finale_date <= to_date:
                         res = True
-                        #print("res",res)
+                       
                     else:
                         return return_lst
                 else:
@@ -1460,10 +1492,10 @@ def t2_Processor_deliveryid(crop,search_text,warehouse_wh_id,from_date,to_date) 
                 pounds_delta = float(pounds_shipped) - float(pounds_received)
             except:
                 pounds_delta = ''
-            return_lst.extend([{"processor_name":processor_name,"processor_id":processor_id,"deliveryid":search_text,"date":dt_class,
+            return_lst.extend([{"processor_name":processor_name,"processor_id":processor_id,"shipment_id":search_text,"date":dt_class,
                                 "pounds_shipped":pounds_shipped,"pounds_received":pounds_received,"pounds_delta":pounds_delta,
                                 "grower":grower,"farm":farm,"field":field}])
-    if crop == 'RICE' :
+    else :
         # pass
     #     get_shipment = GrowerShipment.objects.filter(shipment_id=search_text,status="APPROVED")
     #     if len(get_shipment) == 1 :
@@ -1484,12 +1516,12 @@ def t2_Processor_deliveryid(crop,search_text,warehouse_wh_id,from_date,to_date) 
     #                                 "pounds_shipped":pounds_shipped,"pounds_received":pounds_received,"pounds_delta":pounds_delta}])
     # return return_lst
     
-        get_shipment_data = GrowerShipment.objects.filter(shipment_id=search_text,status="APPROVED")
+        get_shipment_data = GrowerShipment.objects.filter(shipment_id=search_text,status="APPROVED", crop=crop)
         if get_shipment_data.exists():    
-            shipment = ShipmentManagement.objects.all()
+            shipment = ShipmentManagement.objects.filter(crop=crop)
             for i in range(len(shipment)):
                 var = shipment[i].storage_bin_send
-                grower_shipment = GrowerShipment.objects.filter(sku = var,).filter(shipment_id=search_text)
+                grower_shipment = GrowerShipment.objects.filter(sku = var,crop=crop).filter(shipment_id=search_text)
                 for r in grower_shipment :
                     del_id = r.shipment_id
                     shipment_date = r.approval_date
@@ -1504,7 +1536,7 @@ def t2_Processor_deliveryid(crop,search_text,warehouse_wh_id,from_date,to_date) 
                         pounds_delta = float(pounds_shipped) - float(pounds_received)
                     except:
                         pounds_delta = ''
-                    return_lst.extend([{"processor_name":processor_name,"processor_id":processor_id,"deliveryid":del_id,"date":shipment_date,
+                    return_lst.extend([{"processor_name":processor_name,"processor_id":processor_id,"shipment_id":del_id,"date":shipment_date,
                                 "pounds_shipped":pounds_shipped,"pounds_received":pounds_received,"pounds_delta":pounds_delta,"skuid":sku_id}])
 
         return return_lst
@@ -1520,7 +1552,7 @@ def get_processor_type(processor_name):
         if get_processor:
             processor = get_processor.first()
             processor_type = processor.processor_type.all().first().type_name
-            #print("type", processor_type)
+           
             processor_details = {'id':processor.id,
                              'type':processor_type}
         else:
@@ -1528,48 +1560,134 @@ def get_processor_type(processor_name):
     return processor_details
 
 
-def processor_traceability_report_response(processor_id,processor_type, from_date, to_date, search_text):
+def get_outbound5_wip(crop, outbound_wip, from_date, to_date):
+    processor_ids = []  
+    unique_processors = set()  
+
+    for outbound in outbound_wip:        
+        processor_tuple = (outbound["processor_idd"], outbound["sender_processor_type"])
+        if processor_tuple not in unique_processors:
+            unique_processors.add(processor_tuple)
+            processor_ids.append({"id": outbound["processor_idd"], "type": outbound["sender_processor_type" ]})
+
+        if outbound["status"] == "APPROVED":
+            processor_tuple = (outbound["processor2_idd"], outbound["receiver_processor_type"])
+
+            if processor_tuple not in unique_processors:                
+                unique_processors.add(processor_tuple)
+                processor_ids.append({"id": outbound["processor2_idd"], "type": outbound["receiver_processor_type"]})
+
+            if ShipmentManagement.objects.filter(crop=crop, processor_idd=int(outbound["processor2_idd"]), status="APPROVED").exists():
+                shipments = ShipmentManagement.objects.filter(crop=crop, processor_idd=int(outbound["processor2_idd"]), status="APPROVED")
+                for ship in shipments:
+                    processor_tuple = (ship.processor2_idd, ship.receiver_processor_type)
+
+                    if processor_tuple not in unique_processors:
+                        unique_processors.add(processor_tuple)
+                        processor_ids.append({"id": ship.processor2_idd, "type": ship.receiver_processor_type})
+
+                    if ship.receiver_processor_type == "T4":
+                        break
+
+                    elif ShipmentManagement.objects.filter(crop=crop, processor_idd=int(ship.processor2_idd), status="APPROVED").exists():
+                        shipments_2 = ShipmentManagement.objects.filter(crop=crop, processor_idd=int(ship.processor2_idd), status="APPROVED")
+                        for shipment in shipments_2:
+                            processor_tuple = (shipment.processor2_idd, shipment.receiver_processor_type)
+
+                            if processor_tuple not in unique_processors:
+                                unique_processors.add(processor_tuple)
+                                processor_ids.append({"id": shipment.processor2_idd, "type": shipment.receiver_processor_type})
+
+    outbound5_wip = []    
+
+    for processor in processor_ids:      
+
+        shipments = ProcessorWarehouseShipment.objects.filter(
+            processor_shipment_crop__crop=crop,
+            processor_id=int(processor["id"]),
+            processor_type=processor["type"],
+            date_pulled__date__gte=from_date,
+            date_pulled__date__lte=to_date
+        ).values("id", "contract__secret_key","contract_id","processor_shipment_crop__crop", "processor_entity_name","processor_type", "processor_id", "shipment_id", "warehouse_id", "warehouse_name","customer_name","customer_id", "date_pulled","status", "carrier_type", "distributor_receive_date")
+
+        for shipment in shipments: 
+            if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+             
+            carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+            shipment["carrier_id"] = carrier.carrier_id  
+            outbound5_wip.append(shipment)
+
+
+    return outbound5_wip
+
+
+def get_inbound5_wip(outbound_wip):
+    inbound5_wip = []
+    for shipment in outbound_wip:       
+        if shipment["warehouse_id"] not in [None, "null", "", " "]:          
+            
+            inbound5_wip.append(shipment)   
+    return inbound5_wip
+
+
+def get_outbound6_wip(crop, outbound_wip, from_date, to_date):    
+    outbound6_wip = []
+    for shipment in outbound_wip:     
+        
+        if shipment["warehouse_id"] not in [None, "null", "", " "] and WarehouseCustomerShipment.objects.filter( warehouse_shipment_crop__crop=crop, warehouse_id=int(shipment["warehouse_id"]), date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).exists():
+            shipments = WarehouseCustomerShipment.objects.filter(warehouse_shipment_crop__crop=crop, warehouse_id=int(shipment["warehouse_id"]), date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values("id", "contract__secret_key","warehouse_shipment_crop__crop","contract_id", "shipment_id", "warehouse_id", "customer_id","warehouse_name","customer_name",  "date_pulled", "status", "carrier_type", "customer_receive_date")
+            
+            for shipment in shipments :
+                if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                    shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                  
+                carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                shipment["carrier_id"] = carrier.carrier_id               
+                outbound6_wip.append(shipment)   
+    return outbound6_wip
+
+
+def processor_traceability_report_response(crop, processor_id,processor_type, from_date, to_date, search_text):
     context = {}
-    if processor_type in ["T1"]:
+    if processor_type in ["T1"]:        
         check_processor = Processor.objects.filter(entity_name__icontains=search_text)
-        if check_processor.exists() :
-            get_shipment = GrowerShipment.objects.filter(processor_id=processor_id,crop='RICE').values("id")
+
+        if check_processor.exists():            
+            get_shipment = GrowerShipment.objects.filter(processor_id=processor_id,crop=crop).values("id")
             if get_shipment.exists() :
                 bale_id = [i["id"] for i in get_shipment]  
-                get_Origin_Processor = Origin_searchby_Processor('RICE',*bale_id)        
+                get_Origin_Processor = Origin_searchby_Processor(crop, *bale_id)        
                 context["origin_context"] = get_Origin_Processor
                 context["search_by"] = "processor"
-                outbound1_wip = outbound1_Wip_Processor('RICE',from_date,to_date,processor_id)
+                outbound1_wip = outbound1_Wip_Processor(crop, from_date,to_date,processor_id)
                 context["outbound1_wip"] = outbound1_wip
-                t1_processor = t1_Processor_Processor('RICE',processor_id,from_date,to_date,*bale_id)
+                t1_processor = t1_Processor_Processor(crop, processor_id,from_date,to_date,*bale_id)
                 context["t1_processor"] = t1_processor
-                # 20-03-23
-                ### outbound 
+               
                 # T1 to T2
-                outbound2_wip = outbound_Wip_Processor('RICE',processor_id,processor_type,from_date,to_date)         
-                context["outbound2_wip"] = outbound2_wip                                        
-                
-                # T2 to T3
-                
+                outbound2_wip = outbound_Wip_Processor(crop, processor_id,processor_type,from_date,to_date)         
+                context["outbound2_wip"] = outbound2_wip
+                                                             
+                # T2 to T3                
                 processor_type = "T2"
                 link_t2_processor_id_list = list(LinkProcessor1ToProcessor.objects.filter(processor1=processor_id, processor2__processor_type__type_name = "T2").values_list("processor2_id", flat=True))
                 unique_link_t2_processor_id_list = list(set(link_t2_processor_id_list))
                 outbound3_wip = []
                 for t2_id in unique_link_t2_processor_id_list:
-                    outbound_wip = outbound_Wip_Processor('RICE',t2_id,processor_type,from_date,to_date)         
+                    outbound_wip = outbound_Wip_Processor(crop, t2_id,processor_type,from_date,to_date)         
                     outbound3_wip = outbound3_wip + outbound_wip
                 context["outbound3_wip"] = outbound3_wip
-                
+
                 # T3 to T4
                 processor_type = "T3"
                 link_t3_processor_id_list = list(LinkProcessorToProcessor.objects.filter(processor_id__in = link_t2_processor_id_list, linked_processor__processor_type__type_name = "T3").values_list("linked_processor_id", flat=True))
                 unique_link_t3_processor_id_list = list(set(link_t3_processor_id_list))
                 outbound4_wip = []
                 for t3_id in unique_link_t3_processor_id_list:
-                    outbound2_wip = outbound_Wip_Processor('RICE',t3_id,processor_type,from_date,to_date)         
-                    outbound4_wip = outbound4_wip + outbound2_wip
-                context["outbound4_wip"] = outbound4_wip
-
+                    outbound4_wip_ = outbound_Wip_Processor(crop, t3_id,processor_type,from_date,to_date)         
+                    outbound4_wip = outbound4_wip + outbound4_wip_
+                context["outbound4_wip"] = outbound4_wip                
                 
                 # T2 to T3
                 processor_type = "T2"
@@ -1577,10 +1695,9 @@ def processor_traceability_report_response(processor_id,processor_type, from_dat
                 unique_link_t2_processor_id_list = list(set(link_t2_processor_id_list))
                 inbound2_wip = []
                 for t2_id in unique_link_t2_processor_id_list:
-                    inbound_wip = inbound_Wip_Processor('RICE',t2_id,processor_type,from_date,to_date)         
+                    inbound_wip = inbound_Wip_Processor(crop, t2_id,processor_type,from_date,to_date)         
                     inbound2_wip = inbound2_wip + inbound_wip
-                context["inbound2_wip"] = inbound2_wip
-                
+                context["inbound2_wip"] = inbound2_wip               
 
                 # T3 to T4
                 processor_type = "T3"
@@ -1588,20 +1705,35 @@ def processor_traceability_report_response(processor_id,processor_type, from_dat
                 unique_link_t3_processor_id_list = list(set(link_t3_processor_id_list))
                 inbound3_wip = []
                 for t3_id in unique_link_t3_processor_id_list:
-                    inbound_wip = inbound_Wip_Processor('RICE',t3_id,processor_type,from_date,to_date)         
+                    inbound_wip = inbound_Wip_Processor(crop, t3_id,processor_type,from_date,to_date)         
                     inbound3_wip = inbound3_wip + inbound_wip
-                context["inbound3_wip"] = inbound3_wip
-                
+                context["inbound3_wip"] = inbound3_wip                
                 
                 processor_type = "T4"
                 link_t4_processor_id_list = list(LinkProcessorToProcessor.objects.filter(processor_id__in = link_t3_processor_id_list, linked_processor__processor_type__type_name = "T4").values_list("linked_processor_id", flat=True))
                 unique_link_t4_processor_id_list = list(set(link_t4_processor_id_list))
                 inbound4_wip = []
                 for t4_id in unique_link_t4_processor_id_list:
-                    inbound2_wip = inbound_Wip_Processor('RICE',t4_id,processor_type,from_date,to_date)         
+                    inbound2_wip = inbound_Wip_Processor(crop, t4_id,processor_type,from_date,to_date)         
                     inbound4_wip = inbound4_wip + inbound2_wip
-                context["inbound4_wip"] = inbound4_wip                                      
+                context["inbound4_wip"] = inbound4_wip           
 
+                outbound5_wip = get_outbound5_wip(crop, outbound2_wip, from_date, to_date)
+                context["outbound5_wip"] = outbound5_wip 
+
+                inbound5_wip = get_inbound5_wip(outbound5_wip)     
+                context["inbound5_wip"] = inbound5_wip
+
+                outbound6_wip = get_outbound6_wip(crop, outbound5_wip, from_date, to_date) 
+                context["outbound6_wip"] = outbound6_wip 
+
+                inbound6_wip = []  
+                for shipment in outbound5_wip:                    
+                    if shipment["customer_id"] not in [None, "null" ,"", " "]:                        
+                        inbound6_wip.append(shipment)
+                inbound6_wip.extend(outbound6_wip) 
+                context["inbound6_wip"] = inbound6_wip                                
+                
     elif processor_type in ["T2", "T3", "T4"]:        
         if processor_type == "T2":            
             linked_t1 = list(LinkProcessor1ToProcessor.objects.filter(processor2_id=processor_id).values_list("processor1_id", flat=True))
@@ -1610,18 +1742,18 @@ def processor_traceability_report_response(processor_id,processor_type, from_dat
             outbound1 = []
             inbound1 = []
             for t1_id in linked_t1:
-                get_shipment = GrowerShipment.objects.filter(processor_id=t1_id,crop='RICE').values("id")
+                get_shipment = GrowerShipment.objects.filter(processor_id=t1_id,crop=crop).values("id")
                 if get_shipment.exists():
                     bale_id = [i["id"] for i in get_shipment]  
-                    get_Origin_Processor = Origin_searchby_Processor('RICE',*bale_id) 
+                    get_Origin_Processor = Origin_searchby_Processor(crop,*bale_id) 
                     grower_list = grower_list + get_Origin_Processor
-                    outbound1_wip = outbound1_Wip_Processor('RICE',from_date,to_date,processor_id)
+                    outbound1_wip = outbound1_Wip_Processor(crop,from_date,to_date,processor_id)
                     outbound1 = outbound1 + outbound1_wip
-                    t1_processor = t1_Processor_Processor('RICE',t1_id,from_date,to_date,*bale_id)
+                    t1_processor = t1_Processor_Processor(crop,t1_id,from_date,to_date,*bale_id)
                     inbound1 = inbound1 + t1_processor
 
                     processor_type = "T1"
-                    outbound2_wip_ = outbound_Wip_Processor('RICE',t1_id,processor_type,from_date,to_date)         
+                    outbound2_wip_ = outbound_Wip_Processor(crop,t1_id,processor_type,from_date,to_date)         
                     outbound2_wip = outbound2_wip + outbound2_wip_
             context["outbound2_wip"] = outbound2_wip
                     
@@ -1631,7 +1763,7 @@ def processor_traceability_report_response(processor_id,processor_type, from_dat
             context["t1_processor"] = inbound1            
 
             processor_type = "T2"  
-            outbound3_wip = outbound_Wip_Processor('RICE',processor_id,processor_type,from_date,to_date)  
+            outbound3_wip = outbound_Wip_Processor(crop,processor_id,processor_type,from_date,to_date)  
             context["outbound3_wip"] = outbound3_wip
 
             processor_type = "T3"
@@ -1639,12 +1771,12 @@ def processor_traceability_report_response(processor_id,processor_type, from_dat
             unique_link_t3_processor_id_list = list(set(link_t3_processor_id_list))
             outbound4_wip = []
             for t3_id in unique_link_t3_processor_id_list:
-                outbound2_wip = outbound_Wip_Processor('RICE',t3_id,processor_type,from_date,to_date)         
+                outbound2_wip = outbound_Wip_Processor(crop,t3_id,processor_type,from_date,to_date)         
                 outbound4_wip = outbound4_wip + outbound2_wip
             context["outbound4_wip"] = outbound4_wip
 
             processor_type = "T2"                                    
-            inbound2_wip = inbound_Wip_Processor('RICE',processor_id,processor_type,from_date,to_date)  
+            inbound2_wip = inbound_Wip_Processor(crop,processor_id,processor_type,from_date,to_date)  
             context["inbound2_wip"] = inbound2_wip
 
             processor_type = "T3"
@@ -1652,19 +1784,34 @@ def processor_traceability_report_response(processor_id,processor_type, from_dat
             unique_link_t3_processor_id_list = list(set(link_t3_processor_id_list))
             inbound3_wip = []
             for t3_id in unique_link_t3_processor_id_list:
-                inbound_wip = inbound_Wip_Processor('RICE',t3_id,processor_type,from_date,to_date)         
+                inbound_wip = inbound_Wip_Processor(crop,t3_id,processor_type,from_date,to_date)         
                 inbound3_wip = inbound3_wip + inbound_wip
-            context["inbound3_wip"] = inbound3_wip
-            
+            context["inbound3_wip"] = inbound3_wip           
             
             processor_type = "T4"
             link_t4_processor_id_list = list(LinkProcessorToProcessor.objects.filter(processor_id__in = link_t3_processor_id_list, linked_processor__processor_type__type_name = "T4").values_list("linked_processor_id", flat=True))
             unique_link_t4_processor_id_list = list(set(link_t4_processor_id_list))
             inbound4_wip = []
             for t4_id in unique_link_t4_processor_id_list:
-                inbound2_wip = inbound_Wip_Processor('RICE',t4_id,processor_type,from_date,to_date)         
+                inbound2_wip = inbound_Wip_Processor(crop,t4_id,processor_type,from_date,to_date)         
                 inbound4_wip = inbound4_wip + inbound2_wip
             context["inbound4_wip"] = inbound4_wip 
+
+            outbound5_wip = get_outbound5_wip(crop, outbound2_wip, from_date, to_date)
+            context["outbound5_wip"] = outbound5_wip 
+
+            inbound5_wip = get_inbound5_wip(outbound5_wip)     
+            context["inbound5_wip"] = inbound5_wip
+
+            outbound6_wip = get_outbound6_wip(crop,outbound5_wip, from_date, to_date) 
+            context["outbound6_wip"] = outbound6_wip 
+
+            inbound6_wip = []  
+            for shipment in outbound5_wip:                    
+                if shipment["customer_id"] not in [None, "null" ,"", " "]:                    
+                    inbound6_wip.append(shipment)
+            inbound6_wip.extend(outbound6_wip) 
+            context["inbound6_wip"] = inbound6_wip    
 
         elif processor_type == "T3":            
             linked_t2 = list(LinkProcessorToProcessor.objects.filter(linked_processor_id=processor_id, processor__processor_type__type_name="T2").values_list("processor_id", flat=True))
@@ -1682,29 +1829,29 @@ def processor_traceability_report_response(processor_id,processor_type, from_dat
                 linked_t1 = linked_t1 + linked_t1_
 
                 processor_type = "T2"  
-                outbound3_wip = outbound_Wip_Processor('RICE',t2_id,processor_type,from_date,to_date)  
+                outbound3_wip = outbound_Wip_Processor(crop,t2_id,processor_type,from_date,to_date)  
                 outbound3 =  outbound3 + outbound3_wip
 
                 processor_type = "T2"                                    
-                inbound2_wip = inbound_Wip_Processor('RICE',t2_id,processor_type,from_date,to_date)  
+                inbound2_wip = inbound_Wip_Processor(crop,t2_id,processor_type,from_date,to_date)  
                 inbound2 = inbound2 + inbound2_wip
 
             unique_linked_t1 = list(set(linked_t1))
             for t1_id in unique_linked_t1:
-                get_shipment = GrowerShipment.objects.filter(processor_id=t1_id,crop='RICE').values("id")
+                get_shipment = GrowerShipment.objects.filter(processor_id=t1_id,crop=crop).values("id")
                 if get_shipment.exists():
                     bale_id = [i["id"] for i in get_shipment]  
-                    get_Origin_Processor = Origin_searchby_Processor('RICE',*bale_id) 
+                    get_Origin_Processor = Origin_searchby_Processor(crop,*bale_id) 
                     grower_list = grower_list + get_Origin_Processor
 
-                    outbound1_wip = outbound1_Wip_Processor('RICE',from_date,to_date,t1_id)
+                    outbound1_wip = outbound1_Wip_Processor(crop,from_date,to_date,t1_id)
                     outbound1 = outbound1 + outbound1_wip
 
-                    t1_processor = t1_Processor_Processor('RICE',t1_id,from_date,to_date,*bale_id)
+                    t1_processor = t1_Processor_Processor(crop,t1_id,from_date,to_date,*bale_id)
                     inbound1 = inbound1 + t1_processor
             
                     processor_type = "T1"
-                    outbound2_wip = outbound_Wip_Processor('RICE',t1_id,processor_type,from_date,to_date)         
+                    outbound2_wip = outbound_Wip_Processor(crop,t1_id,processor_type,from_date,to_date)         
                     outbound2 = outbound2 + outbound2_wip
 
             context["origin_context"] = grower_list            
@@ -1713,12 +1860,13 @@ def processor_traceability_report_response(processor_id,processor_type, from_dat
             context["t1_processor"] = inbound1           
             context["outbound2_wip"] = outbound2           
             context["outbound3_wip"] = outbound3            
-            context["inbound2_wip"] = inbound2            
+            context["inbound2_wip"] = inbound2  
+
             processor_type = "T3"                                    
-            outbound4_wip = outbound_Wip_Processor('RICE',processor_id,processor_type,from_date,to_date)        
+            outbound4_wip = outbound_Wip_Processor(crop,processor_id,processor_type,from_date,to_date)        
             context["outbound4_wip"] = outbound4_wip            
             processor_type = "T3"                                    
-            inbound3_wip = inbound_Wip_Processor('RICE',processor_id,processor_type,from_date,to_date)       
+            inbound3_wip = inbound_Wip_Processor(crop,processor_id,processor_type,from_date,to_date)       
                 
             context["inbound3_wip"] = inbound3_wip          
             processor_type = "T4"
@@ -1727,9 +1875,26 @@ def processor_traceability_report_response(processor_id,processor_type, from_dat
             unique_link_t4_processor_id_list = list(set(link_t4_processor_id_list))
             inbound4_wip = []
             for t4_id in unique_link_t4_processor_id_list:
-                inbound2_wip = inbound_Wip_Processor('RICE',t4_id,processor_type,from_date,to_date)         
+                inbound2_wip = inbound_Wip_Processor(crop,t4_id,processor_type,from_date,to_date)         
                 inbound4_wip = inbound4_wip +inbound2_wip
-            context["inbound4_wip"] = inbound4_wip          
+            context["inbound4_wip"] = inbound4_wip
+
+            outbound5_wip = get_outbound5_wip(crop, outbound2, from_date, to_date)
+            context["outbound5_wip"] = outbound5_wip 
+
+            inbound5_wip = get_inbound5_wip(outbound5_wip)     
+            context["inbound5_wip"] = inbound5_wip
+
+            outbound6_wip = get_outbound6_wip(crop,outbound5_wip, from_date, to_date) 
+            context["outbound6_wip"] = outbound6_wip 
+
+            inbound6_wip = []  
+            for shipment in outbound5_wip:                    
+                if shipment["customer_id"] not in [None, "null" ,"", " "]:                    
+                    inbound6_wip.append(shipment)
+            inbound6_wip.extend(outbound6_wip) 
+            context["inbound6_wip"] = inbound6_wip 
+               
         elif processor_type == "T4":
             grower_list = []
             outbound1 = []
@@ -1743,18 +1908,18 @@ def processor_traceability_report_response(processor_id,processor_type, from_dat
             linked_t1 = []
             linked_t3 = list(LinkProcessorToProcessor.objects.filter(linked_processor_id=processor_id, processor__processor_type__type_name="T3").values_list("processor_id", flat=True))
             unique_linked_t3 = list(set(linked_t3))
-            print(unique_linked_t3, "3333333333")
+            
             for t3_id in unique_linked_t3:
                 linked_t2_ = list(LinkProcessorToProcessor.objects.filter(linked_processor_id=t3_id, processor__processor_type__type_name="T2").values_list("processor_id", flat=True))
                 linked_t2 = linked_t2 + linked_t2_
 
                 processor_type = "T3"                                    
-                outbound4_wip_ = outbound_Wip_Processor('RICE',t3_id,processor_type,from_date,to_date)        
+                outbound4_wip_ = outbound_Wip_Processor(crop,t3_id,processor_type,from_date,to_date)        
                 outbound4_wip = outbound4_wip + outbound4_wip_  
                 
 
                 processor_type = "T3"                                    
-                inbound3_wip_ = inbound_Wip_Processor('RICE',t3_id,processor_type,from_date,to_date)         
+                inbound3_wip_ = inbound_Wip_Processor(crop,t3_id,processor_type,from_date,to_date)         
                 inbound3_wip = inbound3_wip + inbound3_wip_
             unique_linked_t2 = list(set(linked_t2))
             
@@ -1763,29 +1928,29 @@ def processor_traceability_report_response(processor_id,processor_type, from_dat
                 linked_t1 = linked_t1 + linked_t1_
 
                 processor_type = "T2"  
-                outbound3_wip = outbound_Wip_Processor('RICE',t2_id,processor_type,from_date,to_date)  
+                outbound3_wip = outbound_Wip_Processor(crop,t2_id,processor_type,from_date,to_date)  
                 outbound3 =  outbound3 + outbound3_wip
 
                 processor_type = "T2"                                    
-                inbound2_wip = inbound_Wip_Processor('RICE',t2_id,processor_type,from_date,to_date)  
+                inbound2_wip = inbound_Wip_Processor(crop,t2_id,processor_type,from_date,to_date)  
                 inbound2 = inbound2 + inbound2_wip
 
             unique_linked_t1 = list(set(linked_t1))            
             for t1_id in unique_linked_t1:
-                get_shipment = GrowerShipment.objects.filter(processor_id=t1_id,crop='RICE').values("id")
+                get_shipment = GrowerShipment.objects.filter(processor_id=t1_id,crop=crop).values("id")
                 if get_shipment.exists():
                     bale_id = [i["id"] for i in get_shipment]  
-                    get_Origin_Processor = Origin_searchby_Processor('RICE',*bale_id) 
+                    get_Origin_Processor = Origin_searchby_Processor(crop,*bale_id) 
                     grower_list = grower_list + get_Origin_Processor
 
-                    outbound1_wip = outbound1_Wip_Processor('RICE',from_date,to_date,t1_id)
+                    outbound1_wip = outbound1_Wip_Processor(crop,from_date,to_date,t1_id)
                     outbound1 = outbound1 + outbound1_wip
 
-                    t1_processor = t1_Processor_Processor('RICE',t1_id,from_date,to_date,*bale_id)
+                    t1_processor = t1_Processor_Processor(crop,t1_id,from_date,to_date,*bale_id)
                     inbound1 = inbound1 + t1_processor
             
                     processor_type = "T1"
-                    outbound2_wip = outbound_Wip_Processor('RICE',t1_id,processor_type,from_date,to_date)         
+                    outbound2_wip = outbound_Wip_Processor(crop,t1_id,processor_type,from_date,to_date)         
                     outbound2 = outbound2 + outbound2_wip           
             
             context["origin_context"] = grower_list
@@ -1799,43 +1964,329 @@ def processor_traceability_report_response(processor_id,processor_type, from_dat
             context["inbound3_wip"] = inbound3_wip
             context["outbound4_wip"] = outbound4_wip
             processor_type = "T4"                                    
-            inbound4_wip = inbound_Wip_Processor('RICE',processor_id,processor_type,from_date,to_date)         
+            inbound4_wip = inbound_Wip_Processor(crop,processor_id,processor_type,from_date,to_date)         
                 
             context["inbound4_wip"] = inbound4_wip
+            outbound5_wip = ProcessorWarehouseShipment.objects.filter(processor_shipment_crop__crop = crop, processor_id=processor_id, processor_type=processor_type, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values("id", "processor_shipment_crop__crop","contract__secret_key","contract_id", "processor_entity_name", "processor_id","processor_type", "shipment_id","warehouse_id", "customer_id", "warehouse_name","customer_name",  "date_pulled", "carrier_type", "distributor_receive_date", "status")
+            for shipment in outbound5_wip:
+                if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                    shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                
+                carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                shipment["carrier_id"] = carrier.carrier_id  
+            context["outbound5_wip"] = outbound5_wip  
+
+            inbound5_wip = get_inbound5_wip(outbound5_wip)     
+            context["inbound5_wip"] = inbound5_wip
+
+            outbound6_wip = get_outbound6_wip(crop,outbound5_wip, from_date, to_date) 
+            context["outbound6_wip"] = outbound6_wip 
+
+            inbound6_wip = []  
+            for shipment in outbound5_wip:                    
+                if shipment["customer_id"] not in [None, "null" ,"", " "]:
+                    
+                    inbound6_wip.append(shipment)
+            inbound6_wip.extend(outbound6_wip) 
+            context["inbound6_wip"] = inbound6_wip         
     else:
         context['no_rec_found_msg'] = "No Records Found"
     return context
 
-
-def skuid_traceability_response(search_text):
+def t1_processor_shipments(crop, processor_id, from_date, to_date):
     context = {}
-    get_sku_id = GrowerShipment.objects.filter(sku=search_text)
+    get_shipment = GrowerShipment.objects.filter(processor_id=processor_id,crop=crop, date_time__date__gte=from_date, date_time__date__lte=to_date).values("id")
+    if get_shipment.exists() :
+        bale_id = [i["id"] for i in get_shipment]  
+        get_Origin_Processor = Origin_searchby_Processor(crop, *bale_id)        
+        context["origin_context"] = get_Origin_Processor
+        context["search_by"] = "processor"
+        outbound1_wip = outbound1_Wip_Processor(crop, from_date,to_date,processor_id)
+        context["outbound1_wip"] = outbound1_wip
+        t1_processor = t1_Processor_Processor(crop, processor_id,from_date,to_date,*bale_id)
+        context["t1_processor"] = t1_processor  
+    return context
+
+def t2_processor_shipments(crop, processor_id, from_date, to_date, search_text):
+    context = {}
+    shipments = ShipmentManagement.objects.filter(processor2_idd=processor_id, crop=crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date)                 
+
+    context["inbound2_wip"] = list(shipments.values())  
+    context["outbound2_wip"] = list(shipments.values())
+
+    processor_id_list = [i.processor_idd for i in shipments]
+    unique_processor_id_list = list(set(processor_id_list))
+    t1_processor_ = []
+    outbound1_wip_ = []
+    field_ids = []
+    for i in unique_processor_id_list:
+        # inbound
+        t1_processor = list(GrowerShipment.objects.filter(processor_id=i, status="APPROVED", crop=crop, date_time__date__gte=from_date, date_time__date__lte=to_date).values("id","processor__entity_name","shipment_id","sku","approval_date","grower__name","field__farm__name","field__name","total_amount","received_amount", "unit_type", "crop"))
+        if len(t1_processor) != 0:
+            for processor in t1_processor:
+                processor["processor_name"] = processor.get("processor__entity_name")
+                processor["shipment_id"] = processor.get("shipment_id")
+                processor["skuid"] = processor.get("sku")
+                processor["date"] = processor.get("approval_date")
+                processor["grower"] = processor.get("grower__name")
+                processor["farm"] = processor.get("field__farm__name")
+                processor["field"] = processor.get("field__name")
+                processor["pounds_received"] = processor.get("received_amount")
+                processor["pounds_shipped"] = processor.get("total_amount")
+                processor["unit"] = processor.get("unit_type")
+                processor["crop"] =  processor.get("crop")
+                processor["id"] =  processor.get("id")
+                try:
+                    processor["pounds_delta"] = float(processor["pounds_shipped"]) - float(processor["pounds_received"])
+                except (TypeError, ValueError):
+                    processor["pounds_delta"] = "Something is wrong"
+        t1_processor_ = t1_processor_ + t1_processor
+
+        #outbound
+        outbound1_wip = list(GrowerShipment.objects.filter(processor_id=i, crop=crop, date_time__date__gte=from_date, date_time__date__lte=to_date).values("shipment_id", "processor__entity_name", "date_time","total_amount"))
+        if len(outbound1_wip) != 0:
+            for item in outbound1_wip:
+                item["shipment_id"] = item.get("shipment_id")
+                item["destination"] = item.get("processor__entity_name")
+                item["date"] = item.get("date_time")
+                item["quantity"] = item.get("total_amount")
+                item["transportation"] = "" 
+        outbound1_wip_ = outbound1_wip_ + outbound1_wip
+
+        field_ids_ = list(GrowerShipment.objects.filter(processor_id=i, crop=crop, date_time__date__gte=from_date, date_time__date__lte=to_date).values_list("field_id", flat=True))
+        field_ids = field_ids + field_ids_
+    context["outbound1_wip"] = outbound1_wip_
+    context["t1_processor"] = t1_processor_
+    if len(outbound1_wip_) > 0:
+        get_Origin_Grower = Origin_searchby_Grower(crop,search_text,*field_ids)                                              
+        context["origin_context"] = get_Origin_Grower 
+    return context
+
+def t3_processor_shipments(crop, processor_id, from_date, to_date, search_text):
+    context = {}
+    shipments = ShipmentManagement.objects.filter(processor2_idd=processor_id, crop=crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values() 
+        
+    context["inbound3_wip"] = list(shipments.filter(status="APPROVED"))
+    outbound2_wip = []
+    outbound3_wip = []
+    for shipment in shipments:
+        if shipment["sender_processor_type"] == "T1":
+            outbound2_wip.append(shipment)
+        elif shipment["sender_processor_type"] == "T2":
+            outbound3_wip.append(shipment)
+
+    if outbound3_wip:
+        inbound2_wip = []
+        outbound2_wip = []
+        context["outbound3_wip"] = outbound3_wip
+        sender_processor_id_list = [i["processor_idd"] for i in outbound3_wip]                
+        for i in sender_processor_id_list:
+            #inbound 2
+            inbound2_wip_ = list(ShipmentManagement.objects.filter(processor2_idd=i, status="APPROVED", crop=crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values())
+            inbound2_wip = inbound2_wip + inbound2_wip_
+            #outbound 2
+            outbound2_wip_ = list(ShipmentManagement.objects.filter(processor2_idd=i, status="APPROVED", crop=crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values())
+            outbound2_wip = outbound2_wip + outbound2_wip_
+        context["inbound2_wip"] = inbound2_wip
+        context["outbound2_wip"] = outbound2_wip
+    else:
+        context["outbound3_wip"] = []
+        context["outbound2_wip"] = outbound2_wip                    
+        context["inbound2_wip"] = []
+
+    processor_id_list = [i["processor_idd"] for i in outbound2_wip]
+    unique_processor_id_list = list(set(processor_id_list))
+    t1_processor_ = []
+    outbound1_wip_ = []
+    field_ids = []
+    for i in unique_processor_id_list:
+        # inbound
+        t1_processor = list(GrowerShipment.objects.filter(processor_id=i, status="APPROVED", crop=crop, date_time__date__gte=from_date, date_time__date__lte=to_date).values("id","processor__entity_name","shipment_id","sku","approval_date","grower__name","field__farm__name","field__name","total_amount","received_amount", "unit_type", "crop"))
+        if len(t1_processor) != 0:
+            for processor in t1_processor:
+                processor["processor_name"] = processor.get("processor__entity_name")
+                processor["shipment_id"] = processor.get("shipment_id")
+                processor["skuid"] = processor.get("sku")
+                processor["date"] = processor.get("approval_date")
+                processor["grower"] = processor.get("grower__name")
+                processor["farm"] = processor.get("field__farm__name")
+                processor["field"] = processor.get("field__name")
+                processor["pounds_received"] = processor.get("received_amount")
+                processor["pounds_shipped"] = processor.get("total_amount")
+                processor["unit"] = processor.get("unit_type")
+                processor["crop"] =  processor.get("crop")
+                processor["id"] =  processor.get("id")
+                try:
+                    processor["pounds_delta"] = float(processor["pounds_shipped"]) - float(processor["pounds_received"])
+                except (TypeError, ValueError):
+                    processor["pounds_delta"] = "Something is wrong"
+        t1_processor_ = t1_processor_ + t1_processor
+
+        #outbound
+        outbound1_wip = list(GrowerShipment.objects.filter(processor_id=i, crop=crop, date_time__date__gte=from_date, date_time__date__lte=to_date).values("shipment_id", "processor__entity_name", "date_time","total_amount"))
+        if len(outbound1_wip) != 0:
+            for item in outbound1_wip:
+                item["shipment_id"] = item.get("shipment_id")
+                item["destination"] = item.get("processor__entity_name")
+                item["date"] = item.get("date_time")
+                item["quantity"] = item.get("total_amount")
+                item["transportation"] = "" 
+        outbound1_wip_ = outbound1_wip_ + outbound1_wip
+
+        field_ids_ = list(GrowerShipment.objects.filter(processor_id=i, crop=crop, date_time__date__gte=from_date, date_time__date__lte=to_date).values_list("field_id", flat=True))
+        field_ids = field_ids + field_ids_
+    context["outbound1_wip"] = outbound1_wip_
+    context["t1_processor"] = t1_processor_
+
+    if len(outbound1_wip_) > 0:
+        get_Origin_Grower = Origin_searchby_Grower(crop,search_text,*field_ids)                                              
+        context["origin_context"] = get_Origin_Grower 
+    return context
+
+def t4_processor_shipments(crop, processor_id, from_date, to_date, search_text):
+    context = {}
+    shipments = ShipmentManagement.objects.filter(processor2_idd=processor_id, crop=crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date) 
+    inbound4_wip = list(shipments.filter(status="APPROVED").values())
+    context["inbound4_wip"] = inbound4_wip
+    outbound2_wip = []
+    outbound3_wip = []
+    outbound4_wip = []
+    for shipment in inbound4_wip:
+        if shipment["sender_processor_type"] == "T1":
+            outbound2_wip.append(shipment)
+        elif shipment["sender_processor_type"] == "T2":
+            outbound3_wip.append(shipment)
+        elif shipment["sender_processor_type"] == "T3":
+            outbound4_wip.append(shipment)
+    
+    if outbound4_wip:
+        inbound3_wip = []
+        outbound3_wip = []
+        inbound2_wip = []
+        outbound2_wip = []
+        context["outbound4_wip"] = outbound4_wip
+        sender_processor_id_list = [i["processor_idd"] for i in outbound4_wip]                
+        for i in sender_processor_id_list:
+            
+            inbound3_wip_ = list(ShipmentManagement.objects.filter(processor2_idd=i, status="APPROVED", crop=crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values())
+            inbound3_wip = inbound3_wip + inbound3_wip_
+            
+            outbound3_wip_ = list(ShipmentManagement.objects.filter(processor2_idd=i, status="APPROVED", crop=crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values())
+            outbound3_wip = outbound3_wip + outbound3_wip_
+        
+        sender_processor_id_list2 = [i["processor_idd"] for i in outbound3_wip]                
+        for i in sender_processor_id_list2:
+            #inbound 2
+            inbound2_wip_ = list(ShipmentManagement.objects.filter(processor2_idd=i, status="APPROVED", crop=crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values())
+            inbound2_wip = inbound2_wip + inbound2_wip_
+            #outbound 2
+            outbound2_wip_ = list(ShipmentManagement.objects.filter(processor2_idd=i, status="APPROVED", crop=crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values())
+            outbound2_wip = outbound2_wip + outbound2_wip_
+
+        context["inbound2_wip"] = inbound2_wip
+        context["outbound2_wip"] = outbound2_wip
+        context["inbound3_wip"] = inbound3_wip
+        context["outbound3_wip"] = outbound3_wip
+
+    elif outbound3_wip:
+        context["outbound4_wip"] = []
+        context["outbound3_wip"] = outbound3_wip
+        sender_processor_id_list = [i["processor_idd"] for i in outbound3_wip]                
+        for i in sender_processor_id_list:
+            #inbound 2
+            inbound2_wip_ = list(ShipmentManagement.objects.filter(processor2_idd=i, status="APPROVED", crop=crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values())
+            inbound2_wip = inbound2_wip + inbound2_wip_
+            #outbound 2
+            outbound2_wip_ = list(ShipmentManagement.objects.filter(processor2_idd=i, status="APPROVED", crop=crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values())
+            outbound2_wip = outbound2_wip + outbound2_wip_
+        context["inbound2_wip"] = inbound2_wip
+        context["outbound2_wip"] = outbound2_wip
+    else:
+        context["outbound4_wip"] = []
+        context["outbound3_wip"] = []
+        context["outbound2_wip"] = outbound2_wip                    
+        context["inbound2_wip"] = []
+
+    processor_id_list = [i["processor_idd"] for i in outbound2_wip]
+    unique_processor_id_list = list(set(processor_id_list))
+    t1_processor_ = []
+    outbound1_wip_ = []
+    field_ids = []
+    for i in unique_processor_id_list:
+        # inbound
+        t1_processor = list(GrowerShipment.objects.filter(processor_id=i, status="APPROVED", crop=crop, date_time__date__gte=from_date, date_time__date__lte=to_date).values("id","processor__entity_name","shipment_id","sku","approval_date","grower__name","field__farm__name","field__name","total_amount","received_amount", "unit_type", "crop"))
+        if len(t1_processor) != 0:
+            for processor in t1_processor:
+                processor["processor_name"] = processor.get("processor__entity_name")
+                processor["shipment_id"] = processor.get("shipment_id")
+                processor["skuid"] = processor.get("sku")
+                processor["date"] = processor.get("approval_date")
+                processor["grower"] = processor.get("grower__name")
+                processor["farm"] = processor.get("field__farm__name")
+                processor["field"] = processor.get("field__name")
+                processor["pounds_received"] = processor.get("received_amount")
+                processor["pounds_shipped"] = processor.get("total_amount")
+                processor["unit"] = processor.get("unit_type")
+                processor["crop"] =  processor.get("crop")
+                processor["id"] =  processor.get("id")
+                try:
+                    processor["pounds_delta"] = float(processor["pounds_shipped"]) - float(processor["pounds_received"])
+                except (TypeError, ValueError):
+                    processor["pounds_delta"] = "Something is wrong"
+        t1_processor_ = t1_processor_ + t1_processor
+
+        #outbound
+        outbound1_wip = list(GrowerShipment.objects.filter(processor_id=i, crop=crop, date_time__date__gte=from_date, date_time__date__lte=to_date).values("shipment_id", "processor__entity_name", "date_time","total_amount"))
+        if len(outbound1_wip) != 0:
+            for item in outbound1_wip:
+                item["shipment_id"] = item.get("shipment_id")
+                item["destination"] = item.get("processor__entity_name")
+                item["date"] = item.get("date_time")
+                item["quantity"] = item.get("total_amount")
+                item["transportation"] = "" 
+        outbound1_wip_ = outbound1_wip_ + outbound1_wip
+
+        field_ids_ = list(GrowerShipment.objects.filter(processor_id=i, crop=crop, date_time__date__gte=from_date, date_time__date__lte=to_date).values_list("field_id", flat=True))
+        field_ids = field_ids + field_ids_
+    context["outbound1_wip"] = outbound1_wip_
+    context["t1_processor"] = t1_processor_
+
+    if len(outbound1_wip_) > 0:
+        get_Origin_Grower = Origin_searchby_Grower(crop,search_text,*field_ids)                                              
+        context["origin_context"] = get_Origin_Grower 
+    return context
+
+
+
+def skuid_traceability_response(crop, search_text, from_date, to_date):
+    context = {}
+    get_sku_id = GrowerShipment.objects.filter(sku=search_text, crop=crop, date_time__gte=from_date, date_time__lte=to_date)
     if get_sku_id.exists():                            
         field = list(get_sku_id.values_list('field_id', flat=True))
         sku_id = get_sku_id.first().sku                            
-        get_Origin_Grower = Origin_searchby_Grower('RICE',search_text,*field)                                              
+        get_Origin_Grower = Origin_searchby_Grower(crop,search_text,*field)                                              
         context["origin_context"] = get_Origin_Grower
         #
         if get_sku_id.first().status == "" or get_sku_id.first().status == None or get_sku_id.first().status == "DISAPPROVED":
             pass
         else:
-            # outbound one
+            # outbound 1
             outbound1_wip = list(get_sku_id.values("shipment_id", "processor__entity_name", "date_time","total_amount"))
             if len(outbound1_wip) != 0:
                 for item in outbound1_wip:
-                    item["deliveryid"] = item.get("shipment_id")
+                    item["shipment_id"] = item.get("shipment_id")
                     item["destination"] = item.get("processor__entity_name")
                     item["date"] = item.get("date_time")
                     item["quantity"] = item.get("total_amount")
                     item["transportation"] = ""
             context["outbound1_wip"] = outbound1_wip
             
-            # inbound one
-            t1_processor = list(get_sku_id.values("processor__entity_name","shipment_id","sku","approval_date","grower__name","field__farm__name","field__name","total_amount","received_amount"))
+            # inbound 1
+            t1_processor = list(get_sku_id.values("id","processor__entity_name","shipment_id","sku","approval_date","grower__name","field__farm__name","field__name","total_amount","received_amount", "unit_type", "crop"))
             if len(t1_processor) != 0:
                 for processor in t1_processor:
                     processor["processor_name"] = processor.get("processor__entity_name")
-                    processor["deliveryid"] = processor.get("shipment_id")
+                    processor["shipment_id"] = processor.get("shipment_id")
                     processor["skuid"] = processor.get("sku")
                     processor["date"] = processor.get("approval_date")
                     processor["grower"] = processor.get("grower__name")
@@ -1843,7 +2294,9 @@ def skuid_traceability_response(search_text):
                     processor["field"] = processor.get("field__name")
                     processor["pounds_received"] = processor.get("received_amount")
                     processor["pounds_shipped"] = processor.get("total_amount")
-
+                    processor["unit"] = processor.get("unit_type")
+                    processor["crop"] =  processor.get("crop")
+                    processor["id"] =  processor.get("id")
                     try:
                         processor["pounds_delta"] = float(processor["pounds_shipped"]) - float(processor["pounds_received"])
                     except (TypeError, ValueError):
@@ -1853,27 +2306,29 @@ def skuid_traceability_response(search_text):
 
             # outbound 2
             t1_sku_id = sku_id
-            outbound2_wip = list(ShipmentManagement.objects.filter(storage_bin_send=t1_sku_id).values())
+            outbound2_wip = list(ShipmentManagement.objects.filter(storage_bin_send=t1_sku_id, crop=crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values())
             context["outbound2_wip"] = outbound2_wip
 
             #inbound 2
             t1_sku_id = sku_id
-            inbound2_wip = list(ShipmentManagement.objects.filter(storage_bin_send=t1_sku_id, receiver_processor_type="T2", status="APPROVED").values())
+            inbound2_wip = list(ShipmentManagement.objects.filter(storage_bin_send=t1_sku_id,crop=crop, receiver_processor_type="T2", status="APPROVED", date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values())
             context["inbound2_wip"] = inbound2_wip
-
+            
             # outbound 3
-            t2_sku_id = [i["storage_bin_recive"] for i in inbound2_wip]
-            unique_t2_sku_id = list(set(t2_sku_id))
+            t2_sku_id = [i["storage_bin_recive"] for i in inbound2_wip]            
+            unique_t2_sku_id = list(set(t2_sku_id))            
             outbound3_wip = []
             for l_sku in unique_t2_sku_id:
-                outbound3_wip_ = list(ShipmentManagement.objects.filter(storage_bin_send=l_sku).values())
+                outbound3_wip_ = list(ShipmentManagement.objects.filter(storage_bin_send=l_sku, crop=crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values())
                 outbound3_wip = outbound3_wip + outbound3_wip_
             context["outbound3_wip"] = outbound3_wip
 
             #inbound 3
             inbound3_wip = []
+            
+            unique_t2_sku_id.append(t1_sku_id)
             for l_sku3 in unique_t2_sku_id:
-                inbound3_wip_ = list(ShipmentManagement.objects.filter(storage_bin_send=l_sku3, receiver_processor_type="T3", status="APPROVED").values())
+                inbound3_wip_ = list(ShipmentManagement.objects.filter(storage_bin_send=l_sku3, receiver_processor_type="T3", status="APPROVED", crop=crop,  date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values())
                 inbound3_wip = inbound3_wip + inbound3_wip_
             context["inbound3_wip"] = inbound3_wip
 
@@ -1882,36 +2337,52 @@ def skuid_traceability_response(search_text):
             unique_t3_sku_id = list(set(t3_sku_id))
             outbound4_wip = []
             for l_sku2 in unique_t3_sku_id:
-                outbound4_wip_ = list(ShipmentManagement.objects.filter(storage_bin_send=l_sku2).values())
+                outbound4_wip_ = list(ShipmentManagement.objects.filter(storage_bin_send=l_sku2, crop=crop,  date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values())
                 outbound4_wip = outbound4_wip + outbound4_wip_                
             context["outbound4_wip"] = outbound4_wip
 
             #inbound 4
             inbound4_wip = []
-            for l_sku4 in unique_t3_sku_id:
-                inbound4_wip_ = list(ShipmentManagement.objects.filter(storage_bin_send=l_sku4, receiver_processor_type="T4", status="APPROVED").values())
+            unique_t3_sku_id.extend(unique_t2_sku_id)
+            t3_sku_id_list = list(set(unique_t3_sku_id))
+            for l_sku4 in t3_sku_id_list:
+                inbound4_wip_ = list(ShipmentManagement.objects.filter(storage_bin_send=l_sku4, receiver_processor_type="T4", status="APPROVED", crop=crop,  date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values())
                 inbound4_wip = inbound4_wip + inbound4_wip_            
             context["inbound4_wip"] = inbound4_wip
-            
+
+            outbound5_wip = get_outbound5_wip(crop, outbound2_wip, from_date, to_date)
+            context["outbound5_wip"] = outbound5_wip 
+
+            inbound5_wip = get_inbound5_wip(outbound5_wip)     
+            context["inbound5_wip"] = inbound5_wip
+
+            outbound6_wip = get_outbound6_wip(crop,outbound5_wip, from_date, to_date) 
+            context["outbound6_wip"] = outbound6_wip 
+
+            inbound6_wip = []  
+            for shipment in outbound5_wip:                    
+                if shipment["customer_id"] not in [None, "null" ,"", " "]:
+                    inbound6_wip.append(shipment)
+            inbound6_wip.extend(outbound6_wip) 
+            context["inbound6_wip"] = inbound6_wip 
             
     elif not get_sku_id:        
-        sku_id = ShipmentManagement.objects.filter(storage_bin_send=search_text)
+        sku_id = ShipmentManagement.objects.filter(storage_bin_send=search_text, crop=crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date)
         
         if sku_id.exists():
-            get_sku_id = sku_id.first().storage_bin_send
-            sender_processor_id = sku_id.first().processor_idd
+            get_sku_id = sku_id.first().storage_bin_send            
             sender_processor_type = sku_id.first().sender_processor_type
             
             if sender_processor_type == "T1":
-                field_ids = list(GrowerShipment.objects.filter(sku=get_sku_id).values_list("field_id", flat=True))
-                get_Origin_Grower = Origin_searchby_Grower('RICE',search_text,*field_ids)                                              
+                field_ids = list(GrowerShipment.objects.filter(sku=get_sku_id, crop=crop, date_time__gte=from_date, date_time__lte=to_date).values_list("field_id", flat=True))
+                get_Origin_Grower = Origin_searchby_Grower(crop,search_text,*field_ids)                                              
                 context["origin_context"] = get_Origin_Grower
 
                 #outbound 1
-                outbound1_wip = list(GrowerShipment.objects.filter(sku=get_sku_id).values("shipment_id", "processor__entity_name", "date_time","total_amount"))
+                outbound1_wip = list(GrowerShipment.objects.filter(sku=get_sku_id, crop=crop, date_time__gte=from_date, date_time__lte=to_date).values("shipment_id", "processor__entity_name", "date_time","total_amount"))
                 if len(outbound1_wip) != 0:
                     for item in outbound1_wip:
-                        item["deliveryid"] = item.get("shipment_id")
+                        item["shipment_id"] = item.get("shipment_id")
                         item["destination"] = item.get("processor__entity_name")
                         item["date"] = item.get("date_time")
                         item["quantity"] = item.get("total_amount")
@@ -1919,11 +2390,11 @@ def skuid_traceability_response(search_text):
                 context["outbound1_wip"] = outbound1_wip
 
                 #inbound 1
-                t1_processor = list(GrowerShipment.objects.filter(sku=get_sku_id, status="APPROVED").values("processor__entity_name","shipment_id","sku","approval_date","grower__name","field__farm__name","field__name","total_amount","received_amount"))
+                t1_processor = list(GrowerShipment.objects.filter(sku=get_sku_id, status="APPROVED", crop=crop, date_time__gte=from_date, date_time__lte=to_date).values("id","processor__entity_name","shipment_id","sku","approval_date","grower__name","field__farm__name","field__name","total_amount","received_amount", "unit_type", "crop"))
                 if len(t1_processor) != 0:
                     for processor in t1_processor:
                         processor["processor_name"] = processor.get("processor__entity_name")
-                        processor["deliveryid"] = processor.get("shipment_id")
+                        processor["shipment_id"] = processor.get("shipment_id")
                         processor["skuid"] = processor.get("sku")
                         processor["date"] = processor.get("approval_date")
                         processor["grower"] = processor.get("grower__name")
@@ -1931,7 +2402,9 @@ def skuid_traceability_response(search_text):
                         processor["field"] = processor.get("field__name")
                         processor["pounds_received"] = processor.get("received_amount")
                         processor["pounds_shipped"] = processor.get("total_amount")
-
+                        processor["unit"] = processor.get("unit_type")
+                        processor["crop"] =  processor.get("crop")
+                        processor["id"] =  processor.get("id")
                         try:
                             processor["pounds_delta"] = float(processor["pounds_shipped"]) - float(processor["pounds_received"])
                         except (TypeError, ValueError):
@@ -1940,11 +2413,11 @@ def skuid_traceability_response(search_text):
                 context["t1_processor"] = t1_processor
 
                 #outbound 2
-                outbound2_wip = ShipmentManagement.objects.filter(storage_bin_send=get_sku_id).values()
+                outbound2_wip = ShipmentManagement.objects.filter(storage_bin_send=get_sku_id, crop=crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values()
                 context["outbound2_wip"] = outbound2_wip
 
                 #inbound 2
-                inbound2_wip = ShipmentManagement.objects.filter(storage_bin_send=get_sku_id, receiver_processor_type="T2",status="APPROVED").values()
+                inbound2_wip = ShipmentManagement.objects.filter(storage_bin_send=get_sku_id, receiver_processor_type="T2",status="APPROVED", crop=crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values()
                 context["inbound2_wip"] = inbound2_wip
 
                 #outbound 3
@@ -1952,14 +2425,15 @@ def skuid_traceability_response(search_text):
                 unique_t2_sku_id = list(set(t2_sku_id))
                 outbound3_wip = []
                 for l_sku in unique_t2_sku_id:
-                    outbound3_wip_ = list(ShipmentManagement.objects.filter(storage_bin_send=l_sku).values())
+                    outbound3_wip_ = list(ShipmentManagement.objects.filter(storage_bin_send=l_sku, crop=crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values())
                     outbound3_wip = outbound3_wip + outbound3_wip_
                 context["outbound3_wip"] = outbound3_wip
 
                 #inbound 3
                 inbound3_wip = []
+                unique_t2_sku_id.append(get_sku_id)
                 for l_sku3 in unique_t2_sku_id:
-                    inbound3_wip_ = list(ShipmentManagement.objects.filter(storage_bin_send=l_sku3, receiver_processor_type="T3", status="APPROVED").values())
+                    inbound3_wip_ = list(ShipmentManagement.objects.filter(storage_bin_send=l_sku3, receiver_processor_type="T3", status="APPROVED", crop=crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values())
                     inbound3_wip = inbound3_wip + inbound3_wip_
                 context["inbound3_wip"] = inbound3_wip
 
@@ -1968,32 +2442,51 @@ def skuid_traceability_response(search_text):
                 unique_t3_sku_id =list(set(t3_sku_id))
                 outbound4_wip = []
                 for l_sku2 in unique_t3_sku_id:
-                    outbound4_wip_ = list(ShipmentManagement.objects.filter(storage_bin_send=l_sku2).values())
+                    outbound4_wip_ = list(ShipmentManagement.objects.filter(storage_bin_send=l_sku2, crop=crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values())
                     outbound4_wip = outbound4_wip + outbound4_wip_
                 context["outbound4_wip"] = outbound4_wip
 
                 #inbound 4
                 inbound4_wip = []
-                for l_sku4 in unique_t3_sku_id:
-                    inbound4_wip_ = list(ShipmentManagement.objects.filter(storage_bin_send=l_sku4, receiver_processor_type="T4", status="APPROVED").values())
+                unique_t3_sku_id.extend(unique_t2_sku_id)
+                t3_sku_id_list = list(set(unique_t3_sku_id))
+                for l_sku4 in t3_sku_id_list:
+                    inbound4_wip_ = list(ShipmentManagement.objects.filter(storage_bin_send=l_sku4, receiver_processor_type="T4", status="APPROVED", crop=crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values())
                     inbound4_wip = inbound4_wip + inbound4_wip_
                 context["inbound4_wip"] = inbound4_wip
                 
+                outbound5_wip = get_outbound5_wip(crop, outbound2_wip, from_date, to_date)
+                context["outbound5_wip"] = outbound5_wip 
+
+                inbound5_wip = get_inbound5_wip(outbound5_wip)     
+                context["inbound5_wip"] = inbound5_wip
+
+                outbound6_wip = get_outbound6_wip(crop,outbound5_wip, from_date, to_date) 
+                context["outbound6_wip"] = outbound6_wip 
+
+                inbound6_wip = []  
+                for shipment in outbound5_wip:                    
+                    if shipment["customer_id"] not in [None, "null" ,"", " "]:
+                       
+                        inbound6_wip.append(shipment)
+                inbound6_wip.extend(outbound6_wip) 
+                context["inbound6_wip"] = inbound6_wip 
 
             if sender_processor_type == "T2":
                 #outbound 2
-                outbound2_wip = list(ShipmentManagement.objects.filter(storage_bin_recive=get_sku_id).values())
+                outbound2_wip = list(ShipmentManagement.objects.filter(storage_bin_recive=get_sku_id, crop=crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values())
                 context["outbound2_wip"] = outbound2_wip
+
                 #inbound 2
-                inbound2_wip = list(ShipmentManagement.objects.filter(storage_bin_recive=get_sku_id, receiver_processor_type="T2", status="APPROVED").values())
+                inbound2_wip = list(ShipmentManagement.objects.filter(storage_bin_recive=get_sku_id, receiver_processor_type="T2", status="APPROVED", crop=crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values())
                 context["inbound2_wip"] = inbound2_wip
 
                 #outbound 3
-                outbound3_wip = list(ShipmentManagement.objects.filter(storage_bin_send=get_sku_id).values())                                       
+                outbound3_wip = list(ShipmentManagement.objects.filter(storage_bin_send=get_sku_id, crop=crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values())                                       
                 context["outbound3_wip"] = outbound3_wip
 
                 #inbound 3
-                inbound3_wip = list(ShipmentManagement.objects.filter(storage_bin_send=get_sku_id, receiver_processor_type="T3", status="APPROVED").values()) 
+                inbound3_wip = list(ShipmentManagement.objects.filter(storage_bin_send=get_sku_id, receiver_processor_type="T3", status="APPROVED", crop=crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values()) 
                 context["inbound3_wip"] = inbound3_wip
 
                 #outbound 4
@@ -2001,16 +2494,17 @@ def skuid_traceability_response(search_text):
                 unique_t3_sku_id = list(set(t3_sku_id))
                 outbound4_wip = []
                 for l_sku2 in unique_t3_sku_id:
-                    outbound4_wip_ = list(ShipmentManagement.objects.filter(storage_bin_send=l_sku2).values())
+                    outbound4_wip_ = list(ShipmentManagement.objects.filter(storage_bin_send=l_sku2, crop=crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values())
                     outbound4_wip = outbound4_wip + outbound4_wip_
                 context["outbound4_wip"] = outbound4_wip
+
                 #inbound 4
                 inbound4_wip = []
+                unique_t3_sku_id.append(get_sku_id)
                 for l_sku4 in unique_t3_sku_id:
-                    inbound4_wip_ = list(ShipmentManagement.objects.filter(storage_bin_send=l_sku4, receiver_processor_type="T4", status="APPROVED").values())
+                    inbound4_wip_ = list(ShipmentManagement.objects.filter(storage_bin_send=l_sku4, receiver_processor_type="T4", status="APPROVED", crop=crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values())
                     inbound4_wip = inbound4_wip + inbound4_wip_
                 context["inbound4_wip"] = inbound4_wip
-
 
                 #inbound 1
                 sku_id_list = [i["storage_bin_send"] for i in inbound2_wip]
@@ -2019,11 +2513,11 @@ def skuid_traceability_response(search_text):
                 field_ids = []
                 for i in sku_id_list:
                     # inbound
-                    t1_processor = list(GrowerShipment.objects.filter(sku=i, status="APPROVED").values("processor__entity_name","shipment_id","sku","approval_date","grower__name","field__farm__name","field__name","total_amount","received_amount"))
+                    t1_processor = list(GrowerShipment.objects.filter(sku=i, status="APPROVED", crop=crop, date_time__gte=from_date, date_time__lte=to_date).values("id","processor__entity_name","shipment_id","sku","approval_date","grower__name","field__farm__name","field__name","total_amount","received_amount", "unit_type", "crop"))
                     if len(t1_processor) != 0:
                         for processor in t1_processor:
                             processor["processor_name"] = processor.get("processor__entity_name")
-                            processor["deliveryid"] = processor.get("shipment_id")
+                            processor["shipment_id"] = processor.get("shipment_id")
                             processor["skuid"] = processor.get("sku")
                             processor["date"] = processor.get("approval_date")
                             processor["grower"] = processor.get("grower__name")
@@ -2031,7 +2525,9 @@ def skuid_traceability_response(search_text):
                             processor["field"] = processor.get("field__name")
                             processor["pounds_received"] = processor.get("received_amount")
                             processor["pounds_shipped"] = processor.get("total_amount")
-
+                            processor["unit"] = processor.get("unit_type")
+                            processor["crop"] =  processor.get("crop")
+                            processor["id"] =  processor.get("id")
                             try:
                                 processor["pounds_delta"] = float(processor["pounds_shipped"]) - float(processor["pounds_received"])
                             except (TypeError, ValueError):
@@ -2039,39 +2535,54 @@ def skuid_traceability_response(search_text):
                     t1_processor_ = t1_processor_ + t1_processor
 
                     #outbound
-                    outbound1_wip = list(GrowerShipment.objects.filter(sku=i).values("shipment_id", "processor__entity_name", "date_time","total_amount"))
+                    outbound1_wip = list(GrowerShipment.objects.filter(sku=i, crop=crop, date_time__gte=from_date, date_time__lte=to_date).values("shipment_id", "processor__entity_name", "date_time","total_amount"))
                     if len(outbound1_wip) != 0:
                         for item in outbound1_wip:
-                            item["deliveryid"] = item.get("shipment_id")
+                            item["shipment_id"] = item.get("shipment_id")
                             item["destination"] = item.get("processor__entity_name")
                             item["date"] = item.get("date_time")
                             item["quantity"] = item.get("total_amount")
                             item["transportation"] = ""
                     outbound1_wip_ = outbound1_wip_ + outbound1_wip
-                    field_ids_ = list(GrowerShipment.objects.filter(sku=i).values_list("field_id", flat=True))
+                    field_ids_ = list(GrowerShipment.objects.filter(sku=i, crop=crop, date_time__gte=from_date, date_time__lte=to_date).values_list("field_id", flat=True))
                     field_ids = field_ids + field_ids_
                 context["outbound1_wip"] = outbound1_wip_
                 context["t1_processor"] = t1_processor_
-                get_Origin_Grower = Origin_searchby_Grower('RICE',search_text,*field_ids)                                              
+                get_Origin_Grower = Origin_searchby_Grower(crop,search_text,*field_ids)                                              
                 context["origin_context"] = get_Origin_Grower
-                
 
-            if sender_processor_type == "T3":
-                # print("enter2")
+                outbound5_wip = get_outbound5_wip(crop, outbound2_wip, from_date, to_date)
+                context["outbound5_wip"] = outbound5_wip 
+
+                inbound5_wip = get_inbound5_wip(outbound5_wip)     
+                context["inbound5_wip"] = inbound5_wip
+
+                outbound6_wip = get_outbound6_wip(crop,outbound5_wip, from_date, to_date) 
+                context["outbound6_wip"] = outbound6_wip 
+
+                inbound6_wip = []  
+                for shipment in outbound5_wip:                    
+                    if shipment["customer_id"] not in [None, "null" ,"", " "]:
+                        
+                        inbound6_wip.append(shipment)
+                inbound6_wip.extend(outbound6_wip) 
+                context["inbound6_wip"] = inbound6_wip 
+
+            if sender_processor_type == "T3":                
                 #outbound 4
-                outbound4_wip = list(ShipmentManagement.objects.filter(storage_bin_send=get_sku_id, receiver_processor_type="T4").values())
+                outbound4_wip = list(ShipmentManagement.objects.filter(storage_bin_send=get_sku_id, receiver_processor_type="T4", crop=crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values())
                 context["outbound4_wip"] = outbound4_wip
 
                 #inbound 4
-                inbound4_wip = list(ShipmentManagement.objects.filter(storage_bin_send=get_sku_id, receiver_processor_type="T4", status="APPROVED").values())
+                inbound4_wip = list(ShipmentManagement.objects.filter(storage_bin_send=get_sku_id, receiver_processor_type="T4", status="APPROVED", crop=crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values())
                 context["inbound4_wip"] = inbound4_wip                
 
                 #inbound 3
-                inbound3_wip = list(ShipmentManagement.objects.filter(storage_bin_recive=get_sku_id, receiver_processor_type="T3", status="APPROVED").values())
+                inbound3_wip = list(ShipmentManagement.objects.filter(storage_bin_recive=get_sku_id, receiver_processor_type="T3", status="APPROVED", crop=crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values())
                 context["inbound3_wip"] = inbound3_wip
 
                 #outbound 3
-                outbound3_wip = list(ShipmentManagement.objects.filter(storage_bin_recive=get_sku_id).values())
+                outbound3_wip = list(ShipmentManagement.objects.filter(storage_bin_recive=get_sku_id, crop=crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values())
                 context["outbound3_wip"] = outbound3_wip                                
                 
                 sku_id_list = [i["storage_bin_send"] for i in outbound3_wip]
@@ -2079,10 +2590,10 @@ def skuid_traceability_response(search_text):
                 outbound2_wip = []
                 for i in sku_id_list:
                     #inbound 2
-                    inbound2_wip_ = list(ShipmentManagement.objects.filter(storage_bin_recive=i, receiver_processor_type="T2", status="APPROVED").values())
+                    inbound2_wip_ = list(ShipmentManagement.objects.filter(storage_bin_recive=i, receiver_processor_type="T2", status="APPROVED", crop=crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values())
                     inbound2_wip = inbound2_wip + inbound2_wip_
                     #outbound 2
-                    outbound2_wip_ = list(ShipmentManagement.objects.filter(storage_bin_recive=i, status="APPROVED").values())
+                    outbound2_wip_ = list(ShipmentManagement.objects.filter(storage_bin_recive=i, status="APPROVED", crop=crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values())
                     outbound2_wip = outbound2_wip + outbound2_wip_
                 context["inbound2_wip"] = inbound2_wip
                 context["outbound2_wip"] = outbound2_wip
@@ -2094,11 +2605,11 @@ def skuid_traceability_response(search_text):
                 field_ids = []
                 for i in unique_grower_sku_id_list:
                     # inbound
-                    t1_processor = list(GrowerShipment.objects.filter(sku=i, status="APPROVED").values("processor__entity_name","shipment_id","sku","approval_date","grower__name","field__farm__name","field__name","total_amount","received_amount"))
+                    t1_processor = list(GrowerShipment.objects.filter(sku=i, status="APPROVED", crop=crop, date_time__gte=from_date, date_time__lte=to_date).values("id","processor__entity_name","shipment_id","sku","approval_date","grower__name","field__farm__name","field__name","total_amount","received_amount", "unit_type", "crop"))
                     if len(t1_processor) != 0:
                         for processor in t1_processor:
                             processor["processor_name"] = processor.get("processor__entity_name")
-                            processor["deliveryid"] = processor.get("shipment_id")
+                            processor["shipment_id"] = processor.get("shipment_id")
                             processor["skuid"] = processor.get("sku")
                             processor["date"] = processor.get("approval_date")
                             processor["grower"] = processor.get("grower__name")
@@ -2106,7 +2617,9 @@ def skuid_traceability_response(search_text):
                             processor["field"] = processor.get("field__name")
                             processor["pounds_received"] = processor.get("received_amount")
                             processor["pounds_shipped"] = processor.get("total_amount")
-
+                            processor["unit"] = processor.get("unit_type")
+                            processor["crop"] =  processor.get("crop")
+                            processor["id"] =  processor.get("id")
                             try:
                                 processor["pounds_delta"] = float(processor["pounds_shipped"]) - float(processor["pounds_received"])
                             except (TypeError, ValueError):
@@ -2114,59 +2627,130 @@ def skuid_traceability_response(search_text):
                     t1_processor_ = t1_processor_ + t1_processor
 
                     #outbound
-                    outbound1_wip = list(GrowerShipment.objects.filter(sku=i).values("shipment_id", "processor__entity_name", "date_time","total_amount"))
+                    outbound1_wip = list(GrowerShipment.objects.filter(sku=i, crop=crop, date_time__gte=from_date, date_time__lte=to_date).values("shipment_id", "processor__entity_name", "date_time","total_amount"))
                     if len(outbound1_wip) != 0:
                         for item in outbound1_wip:
-                            item["deliveryid"] = item.get("shipment_id")
+                            item["shipment_id"] = item.get("shipment_id")
                             item["destination"] = item.get("processor__entity_name")
                             item["date"] = item.get("date_time")
                             item["quantity"] = item.get("total_amount")
                             item["transportation"] = "" 
                     outbound1_wip_ = outbound1_wip_ + outbound1_wip
-                    field_ids_ = list(GrowerShipment.objects.filter(sku=i).values_list("field_id", flat=True))
+                    field_ids_ = list(GrowerShipment.objects.filter(sku=i, crop=crop, date_time__gte=from_date, date_time__lte=to_date).values_list("field_id", flat=True))
                     field_ids = field_ids + field_ids_
                 context["outbound1_wip"] = outbound1_wip_
                 context["t1_processor"] = t1_processor_
 
-                get_Origin_Grower = Origin_searchby_Grower('RICE',search_text,*field_ids)                                              
+                get_Origin_Grower = Origin_searchby_Grower(crop,search_text,*field_ids)                                              
                 context["origin_context"] = get_Origin_Grower
+
+                outbound5_wip = get_outbound5_wip(crop, outbound4_wip, from_date, to_date)
+                context["outbound5_wip"] = outbound5_wip
                                             
         elif not sku_id.exists():
-            get_sku = ShipmentManagement.objects.filter(storage_bin_recive=search_text)
-            if get_sku:
-                sender_processor_id = get_sku.first().processor_idd
+            get_sku = ShipmentManagement.objects.filter(storage_bin_recive=search_text, crop=crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date)
+            if get_sku:                
                 sender_processor_type = get_sku.first().sender_processor_type
                 sku_id = get_sku.first().storage_bin_recive
-                if sender_processor_type == "T3":
-                    inbound4_wip = list(ShipmentManagement.objects.filter(storage_bin_recive=sku_id, receiver_processor_type="T4", status="APPROVED").values())
+
+                if sender_processor_type == "T1":
+                    inbound4_wip = list(ShipmentManagement.objects.filter(storage_bin_recive=sku_id, receiver_processor_type="T4", sender_processor_type="T1", status="APPROVED", crop=crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values())
                     context["inbound4_wip"] = inbound4_wip
 
-                    outbound4_wip = list(ShipmentManagement.objects.filter(storage_bin_recive=sku_id, status="APPROVED").values())
-                    context["outbound4_wip"] = outbound4_wip
+                    outbound2_wip = list(ShipmentManagement.objects.filter(crop=crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date, sender_processor_type="T1", storage_bin_recive=sku_id).values())
+                    context["outbound2_wip"] = outbound2_wip
 
-                    inbound3_wip = []
-                    outbound3_wip = []
-                    sku_id_list = [i["storage_bin_send"] for i in outbound4_wip]
-                    unique_sku_id_list = list(set(sku_id_list))
-                    for i in unique_sku_id_list:
-                        inbound3_wip_ = list(ShipmentManagement.objects.filter(storage_bin_recive=i, receiver_processor_type="T3", status="APPROVED").values())
-                        inbound3_wip = inbound3_wip + inbound3_wip_
+                    context["inbound3_wip"] = []
+                    context["outbound3_wip"] = []
+                    context["inbound2_wip"] = []
+                    t1_processor_ = []
+                    outbound1_wip_ = []
+                    field_ids = []
+
+                    skuid_list = [i["storage_bin_send"] for i in outbound2_wip]
+                    unique_skuid_list = list(set(skuid_list))
+                    for i in unique_skuid_list:
+                        # inbound
+                        t1_processor = list(GrowerShipment.objects.filter(sku=i, status="APPROVED", crop=crop, date_time__gte=from_date, date_time__lte=to_date).values("id","processor__entity_name","shipment_id","sku","approval_date","grower__name","field__farm__name","field__name","total_amount","received_amount", "unit_type", "crop"))
+                        if len(t1_processor) != 0:
+                           for processor in t1_processor:
+                                processor["processor_name"] = processor.get("processor__entity_name")
+                                processor["shipment_id"] = processor.get("shipment_id")
+                                processor["skuid"] = processor.get("sku")
+                                processor["date"] = processor.get("approval_date")
+                                processor["grower"] = processor.get("grower__name")
+                                processor["farm"] = processor.get("field__farm__name")
+                                processor["field"] = processor.get("field__name")
+                                processor["pounds_received"] = processor.get("received_amount")
+                                processor["pounds_shipped"] = processor.get("total_amount")
+                                processor["unit"] = processor.get("unit_type")
+                                processor["crop"] =  processor.get("crop")
+                                processor["id"] =  processor.get("id")
+                                try:
+                                    processor["pounds_delta"] = float(processor["pounds_shipped"]) - float(processor["pounds_received"])
+                                except (TypeError, ValueError):
+                                    processor["pounds_delta"] = "Something is wrong"
+                        t1_processor_ = t1_processor_ + t1_processor
+
+                        #outbound
+                        outbound1_wip = list(GrowerShipment.objects.filter(sku=i, crop=crop, date_time__gte=from_date, date_time__lte=to_date).values("shipment_id", "processor__entity_name", "date_time","total_amount"))
+                        if len(outbound1_wip) != 0:
+                            for item in outbound1_wip:
+                                item["shipment_id"] = item.get("shipment_id")
+                                item["destination"] = item.get("processor__entity_name")
+                                item["date"] = item.get("date_time")
+                                item["quantity"] = item.get("total_amount")
+                                item["transportation"] = ""
+                        outbound1_wip_ = outbound1_wip_ + outbound1_wip
+                        field_ids_ = list(GrowerShipment.objects.filter(sku=i, crop=crop, date_time__gte=from_date, date_time__lte=to_date).values_list("field_id", flat=True))
+                        field_ids = field_ids + field_ids_
+                    context["outbound1_wip"] = outbound1_wip_
+                    context["t1_processor"] = t1_processor_
+
+                    get_Origin_Grower = Origin_searchby_Grower(crop,search_text,*field_ids)                                              
+                    context["origin_context"] = get_Origin_Grower
+
+                    outbound5_wip = ProcessorWarehouseShipment.objects.filter(processor_shipment_crop__crop=crop, processor_id=int(get_sku.first().processor2_idd), processor_type="T4", date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values("id", "processor_shipment_crop__crop","contract__secret_key","contract_id", "processor_entity_name", "processor_id","processor_type", "shipment_id", "warehouse_id", "customer_id", "warehouse_name","customer_name", "date_pulled", "carrier_type", "distributor_receive_date", "status")
+                    for shipment in outbound5_wip:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
                         
-                        outbound3_wip_ = list(ShipmentManagement.objects.filter(storage_bin_recive=i).values())
-                        outbound3_wip = outbound3_wip + outbound3_wip_
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    context["outbound5_wip"] = outbound5_wip
 
-                    context["inbound3_wip"] = inbound3_wip
+                    inbound5_wip = get_inbound5_wip(outbound5_wip)     
+                    context["inbound5_wip"] = inbound5_wip
+
+                    outbound6_wip = get_outbound6_wip(crop,outbound5_wip, from_date, to_date) 
+                    context["outbound6_wip"] = outbound6_wip 
+
+                    inbound6_wip = []  
+                    for shipment in outbound5_wip:                    
+                        if shipment["customer_id"] not in [None, "null" ,"", " "]:
+                           
+                            inbound6_wip.append(shipment)
+                    inbound6_wip.extend(outbound6_wip) 
+                    context["inbound6_wip"] = inbound6_wip 
+
+                if sender_processor_type == "T2":
+                    inbound4_wip = list(ShipmentManagement.objects.filter(storage_bin_recive=sku_id, receiver_processor_type="T4", sender_processor_type="T2", status="APPROVED", crop=crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values())
+                    context["inbound4_wip"] = inbound4_wip
+
+                    outbound3_wip = list(ShipmentManagement.objects.filter(storage_bin_recive=sku_id, sender_processor_type="T2", crop=crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values())
                     context["outbound3_wip"] = outbound3_wip
 
+                    context["inbound3_wip"] = []
                     inbound2_wip = []
                     outbound2_wip = []
+
                     sku_id_list_ = [i["storage_bin_send"] for i in outbound3_wip]
                     unique_sku_id_list_ = list(set(sku_id_list_))
                     for i in unique_sku_id_list_:
-                        inbound2_wip_ = list(ShipmentManagement.objects.filter(storage_bin_recive=i, receiver_processor_type="T2", status="APPROVED").values())
+                        inbound2_wip_ = list(ShipmentManagement.objects.filter(storage_bin_recive=i, receiver_processor_type="T2", status="APPROVED", crop=crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values())
                         inbound2_wip = inbound2_wip + inbound2_wip_
                         
-                        outbound2_wip_ = list(ShipmentManagement.objects.filter(storage_bin_recive=i).values())
+                        outbound2_wip_ = list(ShipmentManagement.objects.filter(storage_bin_recive=i, crop=crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values())
                         outbound2_wip = outbound2_wip + outbound2_wip_
 
                     context["inbound2_wip"] = inbound2_wip
@@ -2179,11 +2763,11 @@ def skuid_traceability_response(search_text):
                     unique_skuid_list = list(set(skuid_list))
                     for i in unique_skuid_list:
                         # inbound
-                        t1_processor = list(GrowerShipment.objects.filter(sku=i, status="APPROVED").values("processor__entity_name","shipment_id","sku","approval_date","grower__name","field__farm__name","field__name","total_amount","received_amount"))
+                        t1_processor = list(GrowerShipment.objects.filter(sku=i, status="APPROVED", crop=crop, date_time__gte=from_date, date_time__lte=to_date).values("id","processor__entity_name","shipment_id","sku","approval_date","grower__name","field__farm__name","field__name","total_amount","received_amount", "unit_type", "crop"))
                         if len(t1_processor) != 0:
                            for processor in t1_processor:
                                 processor["processor_name"] = processor.get("processor__entity_name")
-                                processor["deliveryid"] = processor.get("shipment_id")
+                                processor["shipment_id"] = processor.get("shipment_id")
                                 processor["skuid"] = processor.get("sku")
                                 processor["date"] = processor.get("approval_date")
                                 processor["grower"] = processor.get("grower__name")
@@ -2191,7 +2775,9 @@ def skuid_traceability_response(search_text):
                                 processor["field"] = processor.get("field__name")
                                 processor["pounds_received"] = processor.get("received_amount")
                                 processor["pounds_shipped"] = processor.get("total_amount")
-
+                                processor["unit"] = processor.get("unit_type")
+                                processor["crop"] =  processor.get("crop")
+                                processor["id"] =  processor.get("id")
                                 try:
                                     processor["pounds_delta"] = float(processor["pounds_shipped"]) - float(processor["pounds_received"])
                                 except (TypeError, ValueError):
@@ -2199,22 +2785,149 @@ def skuid_traceability_response(search_text):
                         t1_processor_ = t1_processor_ + t1_processor
 
                         #outbound
-                        outbound1_wip = list(GrowerShipment.objects.filter(sku=i).values("shipment_id", "processor__entity_name", "date_time","total_amount"))
+                        outbound1_wip = list(GrowerShipment.objects.filter(sku=i, crop=crop, date_time__gte=from_date, date_time__lte=to_date).values("shipment_id", "processor__entity_name", "date_time","total_amount"))
                         if len(outbound1_wip) != 0:
                             for item in outbound1_wip:
-                                item["deliveryid"] = item.get("shipment_id")
+                                item["shipment_id"] = item.get("shipment_id")
                                 item["destination"] = item.get("processor__entity_name")
                                 item["date"] = item.get("date_time")
                                 item["quantity"] = item.get("total_amount")
                                 item["transportation"] = ""
                         outbound1_wip_ = outbound1_wip_ + outbound1_wip
-                        field_ids_ = list(GrowerShipment.objects.filter(sku=i).values_list("field_id", flat=True))
+                        field_ids_ = list(GrowerShipment.objects.filter(sku=i, crop=crop, date_time__gte=from_date, date_time__lte=to_date).values_list("field_id", flat=True))
                         field_ids = field_ids + field_ids_
                     context["outbound1_wip"] = outbound1_wip_
                     context["t1_processor"] = t1_processor_
 
-                    get_Origin_Grower = Origin_searchby_Grower('RICE',search_text,*field_ids)                                              
+                    get_Origin_Grower = Origin_searchby_Grower(crop,search_text,*field_ids)                                              
                     context["origin_context"] = get_Origin_Grower
+
+                    outbound5_wip = ProcessorWarehouseShipment.objects.filter(processor_shipment_crop__crop=crop, processor_id=int(get_sku.first().processor2_idd), processor_type="T4", date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values("id", "processor_shipment_crop__crop","contract__secret_key","contract_id", "processor_entity_name", "processor_id", "processor_type","shipment_id", "warehouse_id", "customer_id", "warehouse_name","customer_name", "date_pulled", "carrier_type", "distributor_receive_date", "status")
+                    for shipment in outbound5_wip:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    context["outbound5_wip"] = outbound5_wip
+
+                    inbound5_wip = get_inbound5_wip(outbound5_wip)     
+                    context["inbound5_wip"] = inbound5_wip
+
+                    outbound6_wip = get_outbound6_wip(crop,outbound5_wip, from_date, to_date) 
+                    context["outbound6_wip"] = outbound6_wip 
+
+                    inbound6_wip = []  
+                    for shipment in outbound5_wip:                    
+                        if shipment["customer_id"] not in [None, "null" ,"", " "]:
+                            
+                            inbound6_wip.append(shipment)
+                    inbound6_wip.extend(outbound6_wip) 
+                    context["inbound6_wip"] = inbound6_wip 
+
+                if sender_processor_type == "T3":
+                    inbound4_wip = list(ShipmentManagement.objects.filter(storage_bin_recive=sku_id, receiver_processor_type="T4", status="APPROVED", crop=crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values())
+                    context["inbound4_wip"] = inbound4_wip
+
+                    outbound4_wip = list(ShipmentManagement.objects.filter(storage_bin_recive=sku_id, status="APPROVED", crop=crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values())
+                    context["outbound4_wip"] = outbound4_wip
+
+                    inbound3_wip = []
+                    outbound3_wip = []
+                    sku_id_list = [i["storage_bin_send"] for i in outbound4_wip]
+                    unique_sku_id_list = list(set(sku_id_list))
+                    for i in unique_sku_id_list:
+                        inbound3_wip_ = list(ShipmentManagement.objects.filter(storage_bin_recive=i, receiver_processor_type="T3", status="APPROVED", crop=crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values())
+                        inbound3_wip = inbound3_wip + inbound3_wip_
+                        
+                        outbound3_wip_ = list(ShipmentManagement.objects.filter(storage_bin_recive=i, crop=crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values())
+                        outbound3_wip = outbound3_wip + outbound3_wip_
+
+                    context["inbound3_wip"] = inbound3_wip
+                    context["outbound3_wip"] = outbound3_wip
+
+                    inbound2_wip = []
+                    outbound2_wip = []
+                    sku_id_list_ = [i["storage_bin_send"] for i in outbound3_wip]
+                    unique_sku_id_list_ = list(set(sku_id_list_))
+                    for i in unique_sku_id_list_:
+                        inbound2_wip_ = list(ShipmentManagement.objects.filter(storage_bin_recive=i, receiver_processor_type="T2", status="APPROVED", crop=crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values())
+                        inbound2_wip = inbound2_wip + inbound2_wip_
+                        
+                        outbound2_wip_ = list(ShipmentManagement.objects.filter(storage_bin_recive=i, crop=crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values())
+                        outbound2_wip = outbound2_wip + outbound2_wip_
+
+                    context["inbound2_wip"] = inbound2_wip
+                    context["outbound2_wip"] = outbound2_wip
+
+                    t1_processor_ = []
+                    outbound1_wip_ = []
+                    field_ids = []
+                    skuid_list = [i["storage_bin_send"] for i in outbound2_wip]
+                    unique_skuid_list = list(set(skuid_list))
+                    for i in unique_skuid_list:
+                        # inbound
+                        t1_processor = list(GrowerShipment.objects.filter(sku=i, status="APPROVED", crop=crop, date_time__gte=from_date, date_time__lte=to_date).values("id","processor__entity_name","shipment_id","sku","approval_date","grower__name","field__farm__name","field__name","total_amount","received_amount", "unit_type", "crop"))
+                        if len(t1_processor) != 0:
+                           for processor in t1_processor:
+                                processor["processor_name"] = processor.get("processor__entity_name")
+                                processor["shipment_id"] = processor.get("shipment_id")
+                                processor["skuid"] = processor.get("sku")
+                                processor["date"] = processor.get("approval_date")
+                                processor["grower"] = processor.get("grower__name")
+                                processor["farm"] = processor.get("field__farm__name")
+                                processor["field"] = processor.get("field__name")
+                                processor["pounds_received"] = processor.get("received_amount")
+                                processor["pounds_shipped"] = processor.get("total_amount")
+                                processor["unit"] = processor.get("unit_type")
+                                processor["crop"] =  processor.get("crop")
+                                processor["id"] =  processor.get("id")
+                                try:
+                                    processor["pounds_delta"] = float(processor["pounds_shipped"]) - float(processor["pounds_received"])
+                                except (TypeError, ValueError):
+                                    processor["pounds_delta"] = "Something is wrong"
+                        t1_processor_ = t1_processor_ + t1_processor
+
+                        #outbound
+                        outbound1_wip = list(GrowerShipment.objects.filter(sku=i, crop=crop, date_time__gte=from_date, date_time__lte=to_date).values("shipment_id", "processor__entity_name", "date_time","total_amount"))
+                        if len(outbound1_wip) != 0:
+                            for item in outbound1_wip:
+                                item["shipment_id"] = item.get("shipment_id")
+                                item["destination"] = item.get("processor__entity_name")
+                                item["date"] = item.get("date_time")
+                                item["quantity"] = item.get("total_amount")
+                                item["transportation"] = ""
+                        outbound1_wip_ = outbound1_wip_ + outbound1_wip
+                        field_ids_ = list(GrowerShipment.objects.filter(sku=i, crop=crop, date_time__gte=from_date, date_time__lte=to_date).values_list("field_id", flat=True))
+                        field_ids = field_ids + field_ids_
+                    context["outbound1_wip"] = outbound1_wip_
+                    context["t1_processor"] = t1_processor_
+
+                    get_Origin_Grower = Origin_searchby_Grower(crop,search_text,*field_ids)                                              
+                    context["origin_context"] = get_Origin_Grower
+
+                    outbound5_wip = ProcessorWarehouseShipment.objects.filter(processor_shipment_crop__crop=crop, processor_id=int(get_sku.first().processor2_idd), processor_type="T4", date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values("id", "processor_shipment_crop__crop","contract__secret_key","contract_id", "processor_entity_name", "processor_id","processor_type", "shipment_id", "warehouse_id", "customer_id", "warehouse_name","customer_name", "date_pulled", "carrier_type", "distributor_receive_date", "status")
+                    for shipment in outbound5_wip:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    context["outbound5_wip"] = outbound5_wip
+
+                    inbound5_wip = get_inbound5_wip(outbound5_wip)     
+                    context["inbound5_wip"] = inbound5_wip
+
+                    outbound6_wip = get_outbound6_wip(crop,outbound5_wip, from_date, to_date) 
+                    context["outbound6_wip"] = outbound6_wip 
+
+                    inbound6_wip = []  
+                    for shipment in outbound5_wip:                    
+                        if shipment["customer_id"] not in [None, "null" ,"", " "]:
+                            
+                            inbound6_wip.append(shipment)
+                    inbound6_wip.extend(outbound6_wip) 
+                    context["inbound6_wip"] = inbound6_wip 
                 else:
                     context['no_rec_found_msg'] = "No Records Found"
             else:
@@ -2226,28 +2939,313 @@ def skuid_traceability_response(search_text):
     
     return context
 
+def grower_shipment_response(crop, search_text, from_date, to_date):
+    context = {}
+    get_sku_id = GrowerShipment.objects.filter(shipment_id=search_text, crop=crop, date_time__gte=from_date, date_time__lte=to_date)
+    if get_sku_id.exists():                          
+        field = list(get_sku_id.values_list('field_id', flat=True))                                   
+        get_Origin_Grower = Origin_searchby_Grower(crop,search_text,*field)                                              
+        context["origin_context"] = get_Origin_Grower
+        #
+        if get_sku_id.first().status == "" or get_sku_id.first().status == None or get_sku_id.first().status == "DISAPPROVED":
+            pass
+        else:
+            # outbound 1
+            outbound1_wip = list(get_sku_id.values("shipment_id", "processor__entity_name", "date_time","total_amount"))
+            if len(outbound1_wip) != 0:
+                for item in outbound1_wip:
+                    item["shipment_id"] = item.get("shipment_id")
+                    item["destination"] = item.get("processor__entity_name")
+                    item["date"] = item.get("date_time")
+                    item["quantity"] = item.get("total_amount")
+                    item["transportation"] = ""
+            context["outbound1_wip"] = outbound1_wip
+            
+            # inbound 1
+            t1_processor = list(get_sku_id.values("id","processor__entity_name","shipment_id","sku","approval_date","grower__name","field__farm__name","field__name","total_amount","received_amount", "unit_type", "crop"))
+            if len(t1_processor) != 0:
+                for processor in t1_processor:
+                    processor["processor_name"] = processor.get("processor__entity_name")
+                    processor["shipment_id"] = processor.get("shipment_id")
+                    processor["skuid"] = processor.get("sku")
+                    processor["date"] = processor.get("approval_date")
+                    processor["grower"] = processor.get("grower__name")
+                    processor["farm"] = processor.get("field__farm__name")
+                    processor["field"] = processor.get("field__name")
+                    processor["pounds_received"] = processor.get("received_amount")
+                    processor["pounds_shipped"] = processor.get("total_amount")
+                    processor["unit"] = processor.get("unit_type")
+                    processor["crop"] =  processor.get("crop")
+                    processor["id"] =  processor.get("id")
+                    try:
+                        processor["pounds_delta"] = float(processor["pounds_shipped"]) - float(processor["pounds_received"])
+                    except (TypeError, ValueError):
+                        processor["pounds_delta"] = "Something is wrong"
+            
+            context["t1_processor"] = t1_processor
+    return context
 
-def generate_static_map_url(origin, destination):
-    # Construct the URL for embedding a map based on origin and destination
+
+def procesor_inbound_shipment_response(crop, search_text, from_date, to_date):
+    context= {}
+    sku_id = ShipmentManagement.objects.filter(shipment_id=search_text, crop=crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date)
+    if sku_id.exists():                      
+        sender_processor_type = sku_id.first().sender_processor_type
+        sender_processor_id = sku_id.first().processor_idd
+        receiver_processor_id = sku_id.first().processor2_idd
+        receiver_processor_type = sku_id.first().receiver_processor_type
+        
+        if sender_processor_type == "T1":
+            field_ids = list(GrowerShipment.objects.filter(processor_id=sender_processor_id, crop=crop, date_time__gte=from_date, date_time__lte=to_date).values_list("field_id", flat=True))
+            get_Origin_Grower = Origin_searchby_Grower(crop,search_text,*field_ids)                                              
+            context["origin_context"] = get_Origin_Grower
+
+            #outbound 1
+            outbound1_wip = list(GrowerShipment.objects.filter(processor_id=sender_processor_id, crop=crop, date_time__gte=from_date, date_time__lte=to_date).values("shipment_id", "processor__entity_name", "date_time","total_amount"))
+            if len(outbound1_wip) != 0:
+                for item in outbound1_wip:
+                    item["shipment_id"] = item.get("shipment_id")
+                    item["destination"] = item.get("processor__entity_name")
+                    item["date"] = item.get("date_time")
+                    item["quantity"] = item.get("total_amount")
+                    item["transportation"] = ""
+            context["outbound1_wip"] = outbound1_wip
+
+            #inbound 1
+            t1_processor = list(GrowerShipment.objects.filter(processor_id=sender_processor_id, status="APPROVED", crop=crop, date_time__gte=from_date, date_time__lte=to_date).values("id","processor__entity_name","shipment_id","sku","approval_date","grower__name","field__farm__name","field__name","total_amount","received_amount", "unit_type", "crop"))
+            if len(t1_processor) != 0:
+                for processor in t1_processor:
+                    processor["processor_name"] = processor.get("processor__entity_name")
+                    processor["shipment_id"] = processor.get("shipment_id")
+                    processor["skuid"] = processor.get("sku")
+                    processor["date"] = processor.get("approval_date")
+                    processor["grower"] = processor.get("grower__name")
+                    processor["farm"] = processor.get("field__farm__name")
+                    processor["field"] = processor.get("field__name")
+                    processor["pounds_received"] = processor.get("received_amount")
+                    processor["pounds_shipped"] = processor.get("total_amount")
+                    processor["unit"] = processor.get("unit_type")
+                    processor["crop"] =  processor.get("crop")
+                    processor["id"] =  processor.get("id")
+                    try:
+                        processor["pounds_delta"] = float(processor["pounds_shipped"]) - float(processor["pounds_received"])
+                    except (TypeError, ValueError):
+                        processor["pounds_delta"] = "Something is wrong"
+            
+            context["t1_processor"] = t1_processor
+
+            #outbound 2
+            outbound2_wip = ShipmentManagement.objects.filter(shipment_id=search_text, crop=crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values()
+            context["outbound2_wip"] = outbound2_wip               
+            
+            if receiver_processor_type == "T2":
+                context["inbound2_wip"] = outbound2_wip
+            elif receiver_processor_type == "T3":
+                context["inbound3_wip"] = outbound2_wip
+            elif receiver_processor_type == "T4":
+                context["inbound4_wip"] = outbound2_wip          
+                            
+        if sender_processor_type == "T2":
+            #outbound 2
+            outbound2_wip = list(ShipmentManagement.objects.filter(processor2_idd=sender_processor_id, crop=crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values())
+            context["outbound2_wip"] = outbound2_wip
+
+            #inbound 2
+            inbound2_wip = list(ShipmentManagement.objects.filter(processor2_idd=sender_processor_id, status="APPROVED", crop=crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values())
+            context["inbound2_wip"] = inbound2_wip
+
+            #outbound 3
+            outbound3_wip = list(ShipmentManagement.objects.filter(shipment_id=search_text, crop=crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values())                                       
+            context["outbound3_wip"] = outbound3_wip
+
+            if receiver_processor_type == "T3":
+                context["inbound3_wip"] = outbound3_wip
+            elif receiver_processor_type == "T4":
+                context["inbound4_wip"] = outbound3_wip 
+
+            #inbound 1
+            t1_processor_id_list = [i["processor_idd"] for i in inbound2_wip]
+            t1_processor_ = []
+            outbound1_wip_ = []
+            field_ids = []
+            for i in t1_processor_id_list:
+                # inbound
+                t1_processor = list(GrowerShipment.objects.filter(processor_id=i, status="APPROVED", crop=crop, date_time__gte=from_date, date_time__lte=to_date).values("id","processor__entity_name","shipment_id","sku","approval_date","grower__name","field__farm__name","field__name","total_amount","received_amount", "unit_type", "crop"))
+                if len(t1_processor) != 0:
+                    for processor in t1_processor:
+                        processor["processor_name"] = processor.get("processor__entity_name")
+                        processor["shipment_id"] = processor.get("shipment_id")
+                        processor["skuid"] = processor.get("sku")
+                        processor["date"] = processor.get("approval_date")
+                        processor["grower"] = processor.get("grower__name")
+                        processor["farm"] = processor.get("field__farm__name")
+                        processor["field"] = processor.get("field__name")
+                        processor["pounds_received"] = processor.get("received_amount")
+                        processor["pounds_shipped"] = processor.get("total_amount")
+                        processor["unit"] = processor.get("unit_type")
+                        processor["crop"] =  processor.get("crop")
+                        processor["id"] =  processor.get("id")
+                        try:
+                            processor["pounds_delta"] = float(processor["pounds_shipped"]) - float(processor["pounds_received"])
+                        except (TypeError, ValueError):
+                            processor["pounds_delta"] = "Something is wrong"
+                t1_processor_ = t1_processor_ + t1_processor
+
+                #outbound
+                outbound1_wip = list(GrowerShipment.objects.filter(processor_id=i, crop=crop, date_time__gte=from_date, date_time__lte=to_date).values("shipment_id", "processor__entity_name", "date_time","total_amount"))
+                if len(outbound1_wip) != 0:
+                    for item in outbound1_wip:
+                        item["shipment_id"] = item.get("shipment_id")
+                        item["destination"] = item.get("processor__entity_name")
+                        item["date"] = item.get("date_time")
+                        item["quantity"] = item.get("total_amount")
+                        item["transportation"] = ""
+                outbound1_wip_ = outbound1_wip_ + outbound1_wip
+                field_ids_ = list(GrowerShipment.objects.filter(processor_id=i, crop=crop, date_time__gte=from_date, date_time__lte=to_date).values_list("field_id", flat=True))
+                field_ids = field_ids + field_ids_
+
+            context["outbound1_wip"] = outbound1_wip_
+            context["t1_processor"] = t1_processor_
+            get_Origin_Grower = Origin_searchby_Grower(crop,search_text,*field_ids)                                              
+            context["origin_context"] = get_Origin_Grower                
+
+        if sender_processor_type == "T3":                
+            #outbound 4
+            outbound4_wip = list(ShipmentManagement.objects.filter(shipment_id=search_text, crop=crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values())
+            context["outbound4_wip"] = outbound4_wip
+
+            #inbound 4
+            if receiver_processor_type == "T4":
+                context["inbound4_wip"] = outbound4_wip                
+
+            #inbound 3
+            inbound3_wip = list(ShipmentManagement.objects.filter(processor2_idd=sender_processor_id, status="APPROVED", crop=crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values())
+            context["inbound3_wip"] = inbound3_wip
+            inbound2_wip = []
+            outbound2_wip = []
+            outbound3_wip = []
+
+            for shipment in inbound3_wip:
+                if shipment["sender_processor_type"] == "T1":
+                    outbound2_wip.append(shipment)
+                elif shipment["sender_processor_type"] == "T2":
+                    outbound3_wip.append(shipment)
+            if outbound3_wip:
+                inbound2_wip = []
+                outbound2_wip = []
+                context["outbound3_wip"] = outbound3_wip
+                sender_processor_id_list = [i["processor_idd"] for i in outbound3_wip]                
+                for i in sender_processor_id_list:
+                    #inbound 2
+                    inbound2_wip_ = list(ShipmentManagement.objects.filter(processor2_idd=i, status="APPROVED", crop=crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values())
+                    inbound2_wip = inbound2_wip + inbound2_wip_
+                    #outbound 2
+                    outbound2_wip_ = list(ShipmentManagement.objects.filter(processor2_idd=i, status="APPROVED", crop=crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values())
+                    outbound2_wip = outbound2_wip + outbound2_wip_
+                context["inbound2_wip"] = inbound2_wip
+                context["outbound2_wip"] = outbound2_wip
+            else:
+                context["outbound3_wip"] = []
+                context["outbound2_wip"] = outbound2_wip                    
+                context["inbound2_wip"] = []
+
+
+            processor_id_list = [i["processor_idd"] for i in outbound2_wip]
+            unique_processor_id_list = list(set(processor_id_list))
+            t1_processor_ = []
+            outbound1_wip_ = []
+            field_ids = []
+            for i in unique_processor_id_list:
+                # inbound
+                t1_processor = list(GrowerShipment.objects.filter(processor_id=i, status="APPROVED", crop=crop, date_time__gte=from_date, date_time__lte=to_date).values("id","processor__entity_name","shipment_id","sku","approval_date","grower__name","field__farm__name","field__name","total_amount","received_amount", "unit_type", "crop"))
+                if len(t1_processor) != 0:
+                    for processor in t1_processor:
+                        processor["processor_name"] = processor.get("processor__entity_name")
+                        processor["shipment_id"] = processor.get("shipment_id")
+                        processor["skuid"] = processor.get("sku")
+                        processor["date"] = processor.get("approval_date")
+                        processor["grower"] = processor.get("grower__name")
+                        processor["farm"] = processor.get("field__farm__name")
+                        processor["field"] = processor.get("field__name")
+                        processor["pounds_received"] = processor.get("received_amount")
+                        processor["pounds_shipped"] = processor.get("total_amount")
+                        processor["unit"] = processor.get("unit_type")
+                        processor["crop"] =  processor.get("crop")
+                        processor["id"] =  processor.get("id")
+                        try:
+                            processor["pounds_delta"] = float(processor["pounds_shipped"]) - float(processor["pounds_received"])
+                        except (TypeError, ValueError):
+                            processor["pounds_delta"] = "Something is wrong"
+                t1_processor_ = t1_processor_ + t1_processor
+
+                #outbound
+                outbound1_wip = list(GrowerShipment.objects.filter(processor_id=i, crop=crop, date_time__gte=from_date, date_time__lte=to_date).values("shipment_id", "processor__entity_name", "date_time","total_amount"))
+                if len(outbound1_wip) != 0:
+                    for item in outbound1_wip:
+                        item["shipment_id"] = item.get("shipment_id")
+                        item["destination"] = item.get("processor__entity_name")
+                        item["date"] = item.get("date_time")
+                        item["quantity"] = item.get("total_amount")
+                        item["transportation"] = "" 
+                outbound1_wip_ = outbound1_wip_ + outbound1_wip
+
+                field_ids_ = list(GrowerShipment.objects.filter(processor_id=i, crop=crop, date_time__gte=from_date, date_time__lte=to_date).values_list("field_id", flat=True))
+                field_ids = field_ids + field_ids_
+            context["outbound1_wip"] = outbound1_wip_
+            context["t1_processor"] = t1_processor_
+
+            get_Origin_Grower = Origin_searchby_Grower(crop,search_text,*field_ids)                                              
+            context["origin_context"] = get_Origin_Grower 
+    return context
+
+
+def get_lat_lng(address, api_key):    
+    url = f"https://maps.googleapis.com/maps/api/geocode/json?address={address}&key={api_key}"
+
+    response = requests.get(url)
+    data = response.json()
+
+    if data['status'] == 'OK':        
+        lat = data['results'][0]['geometry']['location']['lat']
+        lng = data['results'][0]['geometry']['location']['lng']
+        return lat, lng
+    else:      
+        return None
+    
+
+def generate_static_map_url(origin, destination, waypoints=None):
     base_url = "https://www.google.com/maps/embed/v1/directions"
-    api_key = "AIzaSyAQ_OGAb4yuL8g55IMufP3Dwd4yjrWxrdI"
+    api_key = "AIzaSyAfBo6-cZlOpKGrD1ZYwISIGjYvhH_wPmk"
+    
+    # Prepare parameters
     params = {
         "origin": origin,
         "destination": destination,
         "key": api_key
     }
+    
+    # Add waypoints if provided
+    if waypoints:
+        waypoints_str = "|".join([f"{point['lat']},{point['long']}" for point in waypoints])
+        params["waypoints"] = waypoints_str
+
     # Encode parameters and construct the complete URL
     encoded_params = "&".join([f"{k}={v}" for k, v in params.items()])
     embed_map_url = f"{base_url}?{encoded_params}"
+    
     return embed_map_url
 
 
 def grower_location(context):
     origin_context = context.get("origin_context", [])
+
     t1_processor = context.get("t1_processor",[])
     inbound2_wip = context.get("inbound2_wip", [])
     inbound3_wip = context.get("inbound3_wip", [])
     inbound4_wip = context.get("inbound4_wip", [])
+    inbound5_wip = context.get("inbound5_wip", [])
+    inbound6_wip = context.get("inbound6_wip", [])
+    
     field_location_list = []
     if origin_context:
         for i in context["origin_context"]:
@@ -2271,6 +3269,7 @@ def grower_location(context):
                 j["lat"] = 0.0
                 j["lng"] = 0.0
             field_location_list.append(j)    
+    
     t1_location_list = []
     if t1_processor:
         for i in context["t1_processor"]:
@@ -2285,11 +3284,13 @@ def grower_location(context):
                 except:
                     j["lat"] = 0.0
                     j["lng"] = 0.0
+                t1_location_list.append(j)
             else:
                 j["processor"] = None                
                 j["lat"] = 0.0
                 j["lng"] = 0.0
-            t1_location_list.append(j)
+            
+    
     t2_location_list = []
     if inbound2_wip:
         for i in context["inbound2_wip"]:
@@ -2305,11 +3306,13 @@ def grower_location(context):
                 except:
                     j["lat"] = 0.0
                     j["lng"] = 0.0
+                t2_location_list.append(j)
             else:
                 j["processor"] = None                
                 j["lat"] = 0.0
                 j["lng"] = 0.0
-            t2_location_list.append(j)
+            
+    
     t3_location_list = []
     if inbound3_wip:
         for i in context["inbound3_wip"]:
@@ -2325,13 +3328,15 @@ def grower_location(context):
                 except:
                     j["lat"] = 0.0
                     j["lng"] = 0.0
+                t3_location_list.append(j)
             else:
                 j["processor"] = None                
                 j["lat"] = 0.0
                 j["lng"] = 0.0
-            t3_location_list.append(j)
+            
+   
     t4_location_list = []
-    if inbound2_wip:
+    if inbound4_wip:
         for i in context["inbound4_wip"]:
             j = {"processor":"", "lat":0.0, "lng":0.0}
             processor_id = i["processor2_idd"]
@@ -2345,19 +3350,69 @@ def grower_location(context):
                 except:
                     j["lat"] = 0.0
                     j["lng"] = 0.0
+                t4_location_list.append(j)
             else:
                 j["processor"] = None                
                 j["lat"] = 0.0
                 j["lng"] = 0.0
-            t4_location_list.append(j)
+            
+
+    warehouse_location_list = []
+    if inbound5_wip:
+        
+        for i in context["inbound5_wip"]:            
+            j = {"warehouse":"", "lat":0.0, "lng":0.0}
+            warehouse_id = i["warehouse_id"]
+            warehouse_name = i["warehouse_name"]            
+            warehouse = Warehouse.objects.filter(id=int(warehouse_id)).first()
+            if warehouse:                
+                j["warehouse"] = warehouse_name
+                try:
+                    j["lat"] = float(warehouse.latitude)
+                    j["lng"] = float(warehouse.longitude)
+                except:
+                    j["lat"] = 0.0
+                    j["lng"] = 0.0
+                warehouse_location_list.append(j)
+            else:
+                j["warehouse"] = None                
+                j["lat"] = 0.0
+                j["lng"] = 0.0
+            
+            
+
+    customer_location_list = []
+    if inbound6_wip:
+        for i in context["inbound6_wip"]:
+            j = {"customer":"", "lat":0.0, "lng":0.0}
+            customer_id = i["customer_id"]
+            customer_name = i["customer_name"]
+            customer = Customer.objects.filter(id=int(customer_id)).first()
+            if customer:                
+                j["customer"] = customer_name
+                try:
+                    j["lat"] = float(customer.latitude)
+                    j["lng"] = float(customer.longitude)
+                except:
+                    j["lat"] = 0.0
+                    j["lng"] = 0.0
+                customer_location_list.append(j)
+            else:
+                j["customer"] = None                
+                j["lat"] = 0.0
+                j["lng"] = 0.0
+            
 
     context.update({
         "field_location_list":field_location_list,
         "t1_location_list":t1_location_list,
         "t2_location_list":t2_location_list,
         "t3_location_list":t3_location_list, 
-        "t4_location_list":t4_location_list
-        })       
+        "t4_location_list":t4_location_list,
+        "warehouse_location_list":warehouse_location_list,
+        "customer_location_list":customer_location_list
+        }) 
+        
     return context
 
 
@@ -2367,31 +3422,27 @@ def location_response(context):
             processor1 = i["processor_idd"]
             processor2 = i["processor2_idd"]
             check_processor1_location = Location.objects.filter(processor_id=processor1)
+            origin_name = Processor.objects.filter(id=int(processor1)).first().entity_name
 
             if check_processor1_location:
                 out2_processor1_lat = check_processor1_location.first().latitude
-                out2_processor1_long = check_processor1_location.first().longitude
-                try:
-                    org_lat = float(out2_processor1_lat)
-                    org_lng = float(out2_processor1_long)
-                except:
-                    org_lat = 0
-                    org_lng = 0
+                out2_processor1_long = check_processor1_location.first().longitude 
+
+                org_lat = float(out2_processor1_lat)
+                org_lng = float(out2_processor1_long)                
             else:
                 org_lat = 0
                 org_lng = 0
             
-            check_processor2_location = Processor2Location.objects.filter(processor_id=processor2, processor__processor_type__type_name="T2")
+            check_processor2_location = Processor2Location.objects.filter(processor_id=processor2)
+            destination_name = Processor2.objects.filter(id=int(processor2)).first().entity_name
 
             if check_processor2_location:
                 out2_processor2_lat = check_processor2_location.first().latitude
-                out2_processor2_long = check_processor2_location.first().longitude
-                try:
-                    des_lat = float(out2_processor2_lat)
-                    des_lng = float(out2_processor2_long)
-                except:
-                    des_lat = 0
-                    des_lng = 0
+                out2_processor2_long = check_processor2_location.first().longitude                
+                
+                des_lat = float(out2_processor2_lat)
+                des_lng = float(out2_processor2_long)               
             else:
                 des_lat = 0
                 des_lng = 0
@@ -2400,11 +3451,13 @@ def location_response(context):
             i["origin_lng"] = org_lng
             i["destination_lat"] = des_lat
             i["destination_lng"] = des_lng
+            i["origin_name"] = origin_name
+            i["destination_name"] = destination_name
 
             origin = f"{org_lat},{org_lng}"
             destination = f"{des_lat},{des_lng}"
             
-            i["map_url"] = generate_static_map_url(origin, destination)       
+            i["map_url"] = generate_static_map_url(origin, destination, waypoints=None)       
     else:
         pass
 
@@ -2413,43 +3466,40 @@ def location_response(context):
             processor1 = j["processor_idd"]
             processor2 = j["processor2_idd"]
             check_processor1_location = Processor2Location.objects.filter(processor_id=processor1, processor__processor_type__type_name="T2")
+            origin_name = Processor2.objects.filter(id=int(processor1)).first().entity_name
 
             if check_processor1_location:
                 out3_processor1_lat = check_processor1_location.first().latitude
-                out3_processor1_long = check_processor1_location.first().longitude
-                try:
-                    org_lat = float(out3_processor1_lat)
-                    org_lng = float(out3_processor1_long)
-                except:
-                    org_lat = 0
-                    org_lng = 0
+                out3_processor1_long = check_processor1_location.first().longitude               
+                
+                org_lat = float(out3_processor1_lat)
+                org_lng = float(out3_processor1_long)              
             else:
                 org_lat = 0
                 org_lng = 0
-            check_processor2_location = Processor2Location.objects.filter(processor_id=processor2, processor__processor_type__type_name="T3")
+            check_processor2_location = Processor2Location.objects.filter(processor_id=processor2)
+            destination_name = Processor2.objects.filter(id=int(processor2)).first().entity_name
 
             if check_processor2_location:
                 out3_processor2_lat = check_processor2_location.first().latitude
-                out3_processor2_long = check_processor2_location.first().longitude
-                try:
-                    des_lat = float(out3_processor2_lat)
-                    des_lng = float(out3_processor2_long)
-                except:
-                    des_lat = 0
-                    des_lng = 0
+                out3_processor2_long = check_processor2_location.first().longitude               
+                
+                des_lat = float(out3_processor2_lat)
+                des_lng = float(out3_processor2_long)                
             else:
                 des_lat = 0
                 des_lng = 0
-
 
             j["origin_lat"] = org_lat
             j["origin_lng"] = org_lng
             j["destination_lat"] = des_lat
             j["destination_lng"] = des_lng
+            j["origin_name"] = origin_name
+            j["destination_name"] = destination_name
             origin = f"{org_lat},{org_lng}"
             destination = f"{des_lat},{des_lng}"
             
-            j["map_url"] = generate_static_map_url(origin, destination)
+            j["map_url"] = generate_static_map_url(origin, destination, waypoints=None)
     else:
         pass
 
@@ -2458,30 +3508,26 @@ def location_response(context):
             processor1 = k["processor_idd"]
             processor2 = k["processor2_idd"]
             check_processor1_location = Processor2Location.objects.filter(processor_id=processor1, processor__processor_type__type_name="T3")
+            origin_name = Processor2.objects.filter(id=int(processor1)).first().entity_name
 
             if check_processor1_location:
                 out4_processor1_lat = check_processor1_location.first().latitude
                 out4_processor1_long = check_processor1_location.first().longitude
-                try:
-                    org_lat = float(out4_processor1_lat)
-                    org_lng = float(out4_processor1_long)
-                except:
-                    org_lat = 0
-                    org_lng = 0
+                
+                org_lat = float(out4_processor1_lat)
+                org_lng = float(out4_processor1_long)                
             else:
                 org_lat = 0
                 org_lng = 0
-            check_processor2_location = Processor2Location.objects.filter(processor_id=processor2, processor__processor_type__type_name="T4")
+            check_processor2_location = Processor2Location.objects.filter(processor_id=processor2)
+            destination_name = Processor2.objects.filter(id=int(processor2)).first().entity_name
 
             if check_processor2_location:
                 out4_processor2_lat = check_processor2_location.first().latitude
-                out4_processor2_long = check_processor2_location.first().longitude
-                try:
-                    des_lat = float(out4_processor2_lat)
-                    des_lng = float(out4_processor2_long)
-                except:
-                    des_lat = 0
-                    des_lng = 0
+                out4_processor2_long = check_processor2_location.first().longitude                
+                
+                des_lat = float(out4_processor2_lat)
+                des_lng = float(out4_processor2_long)                
             else:
                 des_lat = 0
                 des_lng = 0
@@ -2490,13 +3536,142 @@ def location_response(context):
             k["origin_lng"] = org_lng
             k["destination_lat"] = des_lat
             k["destination_lng"] = des_lng
+            k["origin_name"] = origin_name
+            k["destination_name"] = destination_name
 
             origin = f"{org_lat},{org_lng}"
             destination = f"{des_lat},{des_lng}"
-            k["map_url"] = generate_static_map_url(origin, destination)
+            k["map_url"] = generate_static_map_url(origin, destination, waypoints=None)
     else:
         pass
 
+    if context.get("outbound5_wip"):
+
+        for k in context["outbound5_wip"]:
+           
+            processor_id = k["processor_id"]
+            processor_type = k["processor_type"]
+            warehouse_id = k["warehouse_id"]
+            customer_id = k["customer_id"]
+            if processor_type == "T1":
+                origin_name = Processor.objects.filter(id=int(processor_id)).first().entity_name
+                processor_location = Location.objects.filter(processor_id=int(processor_id)).first()
+            else:
+                origin_name = Processor2.objects.filter(id=int(processor_id)).first().entity_name
+                processor_location = Processor2Location.objects.filter(processor_id=int(processor_id)).first()
+
+            if processor_location:
+                out5_processor_lat = processor_location.latitude
+                out5_processor_long = processor_location.longitude
+                
+                org_lat = float(out5_processor_lat)
+                org_lng = float(out5_processor_long)
+            else:   
+                org_lat = 0
+                org_lng = 0
+
+            if warehouse_id not in [None, "null", "", " "]:
+                warehouse = Warehouse.objects.filter(id=int(warehouse_id)).first()
+                destination_lat = warehouse.latitude
+                destination_long = warehouse.longitude
+                destination_name = warehouse.name
+            else:
+                customer = Customer.objects.filter(id=int(customer_id)).first()
+                destination_lat = customer.latitude
+                destination_long = customer.longitude
+                destination_name = customer.name
+
+            if destination_long and destination_lat:               
+                
+                des_lat = float(destination_lat)
+                des_lng = float(destination_long)                
+            else:
+                des_lat = 0
+                des_lng = 0
+
+            k["origin_lat"] = org_lat
+            k["origin_lng"] = org_lng
+            k["destination_lat"] = des_lat
+            k["destination_lng"] = des_lng
+            k["origin_name"] = origin_name
+            k["destination_name"] = destination_name
+
+            origin = f"{org_lat},{org_lng}"
+            destination = f"{des_lat},{des_lng}"
+
+            additional_lat_long = []
+            check_waybill_entries = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=k["id"])
+            if check_waybill_entries:
+                for entry in check_waybill_entries:
+                    additional_lat, additional_long = get_lat_lng(entry.address, settings.MAP_API_KEY)
+                    crop = ProcessorShipmentCrops.objects.filter(id=int(entry.crop.id)).first().crop
+                    previous_waybill_number = ProcessorShipmentCrops.objects.filter(id=int(entry.crop.id)).first().waybill_number
+                    if additional_lat and additional_long:
+                        info = f"Waybill number changed for {crop} from {previous_waybill_number} to {entry.waybill_number}"
+                        additional_lat_long.append({"lat":additional_lat, "long":additional_long,"info":info, "address": entry.address})
+
+            k["additional_lat_long"] = additional_lat_long
+
+            k["map_url"] = generate_static_map_url(origin, destination, additional_lat_long)
+    else:
+        pass
+
+    if context.get("outbound6_wip"):    
+        for k in context["outbound6_wip"]:            
+            warehouse_id = k["warehouse_id"]
+            customer_id = k["customer_id"]    
+            
+            warehouse = Warehouse.objects.filter(id=int(warehouse_id)).first()
+            origin_lat = warehouse.latitude
+            origin_long = warehouse.longitude
+
+            if origin_lat and origin_long:               
+                
+                org_lat = float(origin_lat)
+                org_lng = float(origin_long)                
+            else:
+                org_lat = 0
+                org_lng = 0
+            
+            customer = Customer.objects.filter(id=int(customer_id)).first()
+            destination_lat = customer.latitude
+            destination_long = customer.longitude
+
+            if destination_long and destination_lat:                
+                
+                des_lat = float(destination_lat)
+                des_lng = float(destination_long)               
+            else:
+                des_lat = 0
+                des_lng = 0
+
+            k["origin_lat"] = org_lat
+            k["origin_lng"] = org_lng
+            k["destination_lat"] = des_lat
+            k["destination_lng"] = des_lng
+            k["origin_name"] = warehouse.name
+            k["destination_name"] = customer.name
+
+            origin = f"{org_lat},{org_lng}"
+            destination = f"{des_lat},{des_lng}"
+            additional_lat_long = []
+
+            check_waybill_entries = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=k["id"]) 
+            if check_waybill_entries:
+                for entry in check_waybill_entries:
+                    additional_lat, additional_long = get_lat_lng(entry.address, settings.MAP_API_KEY)
+                    crop = WarehouseShipmentCrops.objects.filter(id=int(entry.crop.id)).first().crop
+                    previous_waybill_number = WarehouseShipmentCrops.objects.filter(id=int(entry.crop.id)).first().waybill_number
+                    if additional_lat and additional_long:
+                        info = f"Waybill number changed for {crop} from {previous_waybill_number} to {entry.waybill_number}"
+                        additional_lat_long.append({"lat":additional_lat, "long":additional_long, "info":info, "address": entry.address})
+
+            k["additional_lat_long"] = additional_lat_long
+
+            k["map_url"] = generate_static_map_url(origin, destination, additional_lat_long)
+    else:
+        pass
+    
     return context
 
    
@@ -2504,20 +3679,42 @@ def location_response(context):
 def traceability_report_list(request):
     context = {}
     if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+        crops = Crop.objects.all()
+        context["crops"] = crops
         if request.method == 'POST':
             select_crop= request.POST.get('select_crop')
-            crop_year= request.POST.get('crop_year')
-            from_date= request.POST.get('from_date')
-            to_date= request.POST.get('to_date')
-            search_text= request.POST.get('search_text')
             get_search_by= request.POST.get('get_search_by')
-            if select_crop and crop_year and from_date and to_date and search_text :
+            search_text= request.POST.get('search_text')
+            filter_type = request.POST.get('filter_type')            
+
+            from_date = None
+            to_date = None
+            crop_year = None
+            if filter_type == "date_range":
+                from_date = request.POST.get('from_date')
+                to_date = request.POST.get('to_date')
+            elif filter_type == "year":
+                crop_year = request.POST.get('crop_year')
+                if crop_year:  
+                    try:
+                        year = int(crop_year)
+                        from_date = date(year, 1, 1)  
+                        to_date = date(year, 12, 31) 
+                    except ValueError:                        
+                        pass
+            else:
+                from_date = date(2023, 4, 1)
+                to_date = date.today()            
+
+            if select_crop and search_text and get_search_by:
                 context['select_crop'] = select_crop
-                context['crop_year'] = crop_year
-                context['from_date'] = from_date
-                context['to_date'] = to_date
                 context['search_text'] = search_text
                 context['get_search_by'] = get_search_by
+                context['filter_type'] = filter_type
+                if crop_year or (from_date and to_date):
+                    context['crop_year'] = crop_year
+                    context['from_date'] = from_date
+                    context['to_date'] = to_date                
                 
                 if select_crop == 'COTTON' :
                     # Origin ........                   
@@ -2623,28 +3820,27 @@ def traceability_report_list(request):
                     else:
                         context['no_rec_found_msg'] = "No Records Found"
                     
-                if select_crop == 'RICE' :
-                    # Origin ........
+                else:                  
                     # search by Grower ....
                     if get_search_by and get_search_by == 'grower' :
                         check_grower = Grower.objects.filter(name__icontains=search_text)
                         if check_grower.exists() :
                             check_grower_id = check_grower.first().id
-                            check_grower_field_crop = Field.objects.filter(crop='RICE',grower_id=check_grower_id)
+                            check_grower_field_crop = Field.objects.filter(crop=select_crop,grower_id=check_grower_id)
                             if check_grower_field_crop.exists() :
                                 grower_field_ids = [i.id for i in check_grower_field_crop]
-                                get_Origin_Grower = Origin_searchby_Grower('RICE',search_text,*grower_field_ids)                                              
+                                get_Origin_Grower = Origin_searchby_Grower(select_crop,search_text,*grower_field_ids)                                              
                                 context["origin_context"] = get_Origin_Grower
                                 context["search_by"] = "grower"
 
                                 processor_id = LinkGrowerToProcessor.objects.filter(grower_id=check_grower_id).first().processor.id
                                 entity_name = LinkGrowerToProcessor.objects.filter(grower_id=check_grower_id).first().processor.entity_name
-                                t1_processor = list(GrowerShipment.objects.filter(processor_id=processor_id, grower_id=check_grower_id, status="APPROVED").values("processor__entity_name","shipment_id","sku","approval_date","grower__name","field__farm__name","field__name","total_amount","received_amount"))
+                                t1_processor = list(GrowerShipment.objects.filter(processor_id=processor_id, grower_id=check_grower_id,crop=select_crop, status="APPROVED").values("id","processor__entity_name","shipment_id","sku","approval_date","grower__name","field__farm__name","field__name","total_amount","received_amount", "unit_type", "crop"))
                                 
                                 if len(t1_processor) != 0:
                                     for entry in t1_processor:
                                         entry["processor_name"] = entry["processor__entity_name"]
-                                        entry["deliveryid"] = entry["shipment_id"]
+                                        entry["shipment_id"] = entry["shipment_id"]
                                         entry["skuid"] = entry["sku"]
                                         entry["date"] = entry["approval_date"]
                                         entry["grower"] = entry["grower__name"]
@@ -2652,6 +3848,9 @@ def traceability_report_list(request):
                                         entry["field"] = entry["field__name"]
                                         entry["pounds_received"] = entry["received_amount"]
                                         entry["pounds_shipped"] = entry["total_amount"]
+                                        entry["unit"] = entry["unit_type"]
+                                        entry["crop"] =  entry.get("crop")
+                                        entry["id"] =  entry.get("id")
                                         try:
                                             entry["pounds_delta"] = float(entry["total_amount"]) - float(entry["received_amount"])
                                         except (ValueError, TypeError):
@@ -2659,7 +3858,7 @@ def traceability_report_list(request):
                                 
                                 context["t1_processor"] = t1_processor                                
                                 processor_type = "T1"
-                                return_context = processor_traceability_report_response(processor_id, processor_type, from_date, to_date, entity_name)
+                                return_context = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, entity_name)
                                 new_context = location_response(return_context)                                
                                 del return_context["origin_context"]
                                 del return_context["t1_processor"]
@@ -2670,28 +3869,29 @@ def traceability_report_list(request):
                                 context['no_rec_found_msg'] = "No Records Found"
                         else:
                             context['no_rec_found_msg'] = "No Records Found"
+                    
                     # search by Field ....
                     elif get_search_by and get_search_by == 'field' :
-                        check_field = Field.objects.filter(name__icontains=search_text,crop='RICE')
+                        check_field = Field.objects.filter(name__icontains=search_text,crop=select_crop)
                         if check_field.exists() :
                             field_name = search_text
                             field_id = check_field.first().id
                             warehouse_wh_id = ''
-                            get_origin_details = get_Origin_deliveryid('RICE',field_id,field_name,'',warehouse_wh_id)
+                            get_origin_details = get_Origin_deliveryid(select_crop,field_id,field_name,'',warehouse_wh_id)
                             context["origin_context"] = get_origin_details
                             context["search_by"] = "field"
                             grower_id =  check_field.first().grower.id
                             
 
-                            outbound1_wip = outbound1_Wip_field('RICE',search_text,from_date,to_date,field_id)
+                            outbound1_wip = outbound1_Wip_field(select_crop,search_text,from_date,to_date,field_id)
                             context["outbound1_wip"] = outbound1_wip
-                            t1_processor = t1_Processor_field('RICE',search_text,field_id,from_date,to_date)
+                            t1_processor = t1_Processor_field(select_crop,search_text,field_id,from_date,to_date)
                             context["t1_processor"] = t1_processor
                             # 20-03-23
                             processor_id = LinkGrowerToProcessor.objects.filter(grower_id=grower_id).first().processor.id
                             entity_name = LinkGrowerToProcessor.objects.filter(grower_id=grower_id).first().processor.entity_name
                             processor_type = "T1"
-                            return_context = processor_traceability_report_response(processor_id, processor_type, from_date, to_date, entity_name)
+                            return_context = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, entity_name)
                             new_context = location_response(return_context)
                             del return_context["origin_context"]
                             del return_context["outbound1_wip"]
@@ -2702,22 +3902,24 @@ def traceability_report_list(request):
                             
                         else:
                             context['no_rec_found_msg'] = "No Records Found"
+                   
                     # search by Processor ....
                     elif get_search_by and get_search_by == 'processor' :
                         check_processor = get_processor_type(search_text)
                         if check_processor:
                             processor_type = check_processor["type"]
                             processor_id = check_processor["id"]
-                            context2 = processor_traceability_report_response(processor_id,processor_type, from_date, to_date, search_text)
+                            context2 = processor_traceability_report_response(select_crop, processor_id,processor_type, from_date, to_date, search_text)
                             new_context = location_response(context2)                           
                             context.update(context2)
                             context.update(new_context)
-                            # #print(context)
+                            
                         else:
                             context['no_rec_found_msg'] = "No Records Found"
    
+                    # search by SKU Id ....
                     elif get_search_by and get_search_by == 'sku_id':
-                        context_ = skuid_traceability_response(search_text)                        
+                        context_ = skuid_traceability_response(select_crop, search_text, from_date, to_date)                        
                         context["get_search_by"] = "sku_id" 
                         origin_context = context_.get("origin_context",[]) 
                         if origin_context:                                              
@@ -2726,13 +3928,18 @@ def traceability_report_list(request):
                             context.update(new_context)                                                     
                         else:
                             context["no_rec_found_msg"] = "Not Found Origin"
+                    
+                    # search by Delivery Id ....
                     elif get_search_by and get_search_by == 'deliveryid' :
+                        context["get_search_by"] = "deliveryid"
+                        check_shipment = GrowerShipment.objects.filter(shipment_id__icontains=search_text, crop=select_crop)
+                        
+                        if check_shipment.exists() :
+                            get_shipment = check_shipment.first()
+                            sku_id = get_shipment.sku
+                            context_ = skuid_traceability_response(select_crop, sku_id, from_date, to_date)
+                            
 
-                        get_delivery_id3 = GrowerShipment.objects.filter(shipment_id__icontains=search_text)
-                        if get_delivery_id3.exists() :
-                            sku_id = get_delivery_id3.first().sku
-                            context_ = skuid_traceability_response(sku_id)
-                            context["get_search_by"] = "deliveryid"
                             if len(context_["origin_context"]) == 0:
                                 context["no_rec_found_msg"] = "Not Found Origin"
                             else:
@@ -2740,22 +3947,350 @@ def traceability_report_list(request):
                                 new_context = location_response(context_)                                
                                 context.update(new_context)                               
 
-                        elif not get_delivery_id3:
-                            get_sku_id = ShipmentManagement.objects.filter(shipment_id__icontains=search_text)
-                            if get_sku_id:
-                                sku_id = get_sku_id.first().storage_bin_send
-                                context_ = skuid_traceability_response(sku_id)
-                                context["get_search_by"] = "deliveryid"
+                        elif not check_shipment and ShipmentManagement.objects.filter(shipment_id__icontains=search_text, crop=select_crop).exists():
+                            get_shipment = ShipmentManagement.objects.filter(shipment_id__icontains=search_text, crop=select_crop).first()
+                            
+                            if get_shipment and not get_shipment.receiver_processor_type == "T4":
+                                sku_id = get_shipment.storage_bin_send 
+                                context_ = skuid_traceability_response(select_crop, sku_id, from_date, to_date)
+                                
                                 if len(context_["origin_context"]) == 0:
                                     context["no_rec_found_msg"] = "Not Found Origin"
                                 else:                                    
                                     context.update(context_)                                    
                                     new_context = location_response(context_)
-                                    context.update(new_context)                                    
+                                    context.update(new_context)
+
+                            elif get_shipment and get_shipment.receiver_processor_type == "T4":
+                                sku_id = get_shipment.storage_bin_recive 
+                                context_ = skuid_traceability_response(select_crop, sku_id, from_date, to_date)
+                               
+                                if len(context_["origin_context"]) == 0:
+                                    context["no_rec_found_msg"] = "Not Found Origin"
+                                else:                                    
+                                    context.update(context_)                                    
+                                    new_context = location_response(context_)
+                                    context.update(new_context)
+
                             else:
                                 context['no_rec_found_msg'] = "No Records Found"
+
+                        elif not check_shipment and ProcessorWarehouseShipment.objects.filter(shipment_id__icontains=search_text, processor_shipment_crop__crop=select_crop).exists():
+                            
+                            shipments = ProcessorWarehouseShipment.objects.filter(shipment_id__icontains=search_text, processor_shipment_crop__crop=select_crop).values("id","processor_shipment_crop__crop", "contract__secret_key","contract_id", "processor_entity_name","processor_type", "processor_id", "shipment_id", "warehouse_id", "warehouse_name","customer_name","customer_id", "date_pulled", "carrier_type", "distributor_receive_date", "status")
+                            for shipment in shipments:
+                                if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                                    shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                                
+                                carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                                shipment["carrier_id"] = carrier.carrier_id  
+                            get_shipment = shipments.first()
+                            if get_shipment["warehouse_id"] not in [None, "null", "", " "]:
+                                inbound5 = list(shipments)
+                                context["inbound5_wip"] = inbound5
+                                context["outbound5_wip"] = inbound5
+                                crops = ProcessorShipmentCrops.objects.filter(shipment_id=get_shipment["id"])
+                                outbound6 = []
+                                for crop in crops:
+                                    
+                                    if WarehouseCustomerShipment.objects.filter(warehouse_id=get_shipment["warehouse_id"], warehouse_shipment_crop__crop=crop.crop, warehouse_shipment_crop__crop_type=crop.crop_type).exists():
+                                        shipments = WarehouseCustomerShipment.objects.filter(warehouse_id=get_shipment["warehouse_id"], warehouse_shipment_crop__crop=crop.crop, warehouse_shipment_crop__crop_type=crop.crop_type).values("id","warehouse_shipment_crop__crop","contract__secret_key","contract_id", "shipment_id", "warehouse_id", "customer_id","warehouse_name","customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status")
+                                        for shipment in shipments:
+                                            if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                                                shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                                            
+                                            carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                                            shipment["carrier_id"] = carrier.carrier_id  
+                                        outbound6.extend(list(shipments))
+                                context["outbound6_wip"] = outbound6
+                                context["inbound6_wip"] = outbound6
+                                processor_entity_name = get_shipment["processor_entity_name"]
+                                processor_id = get_shipment["processor_id"]
+                                processor_type = get_shipment["processor_type"]
+                                for crop in crops:
+                                    select_crop = crop.crop
+                                    return_context = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, processor_entity_name)
+                                    
+                                    del return_context["inbound5_wip"]
+                                    del return_context["inbound6_wip"]
+                                    del return_context["outbound5_wip"]
+                                    del return_context["outbound6_wip"]
+                                    
+                                    keys_to_extend = [
+                                        "origin_context",
+                                        "t1_processor",
+                                        "inbound2_wip",
+                                        "inbound3_wip",
+                                        "inbound4_wip",
+                                        "outbound2_wip",
+                                        "outbound3_wip",
+                                        "outbound4_wip",
+                                    ]
+
+                                    for key in keys_to_extend:
+                                        if return_context.get(key):
+                                            context[key] = context.get(key, [])
+                                            context[key].extend(return_context[key])                                      
+                                
+                                    new_context_ = location_response(context)                           
+                                    context.update(new_context_)
+                                
+                            else:
+                                inbound6 = shipments
+                                context["inbound6_wip"] = inbound6
+                                context["outbound5_wip"] = inbound6
+                                context["inbound5_wip"] = []
+                                context["outbound6_wip"] = []
+
+                                crops = ProcessorShipmentCrops.objects.filter(shipment_id=get_shipment["id"])
+
+                                processor_entity_name = get_shipment["processor_entity_name"]
+                                processor_id = get_shipment["processor_id"]
+                                processor_type = get_shipment["processor_type"]
+                                for crop in crops:
+                                    select_crop = crop.crop
+                                    return_context = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, processor_entity_name)
+                                    del return_context["inbound5_wip"]
+                                    del return_context["inbound6_wip"]
+                                    del return_context["outbound5_wip"]
+                                    del return_context["outbound6_wip"]
+                                    keys_to_extend = [
+                                        "origin_context",
+                                        "t1_processor",
+                                        "inbound2_wip",
+                                        "inbound3_wip",
+                                        "inbound4_wip",
+                                        "outbound2_wip",
+                                        "outbound3_wip",
+                                        "outbound4_wip",
+                                    ]
+
+                                    for key in keys_to_extend:
+                                        if return_context.get(key):
+                                            context[key] = context.get(key, [])
+                                            context[key].extend(return_context[key])                                      
+                                
+                                    new_context_ = location_response(context)                           
+                                    context.update(new_context_)
+                        
+                        elif not check_shipment and WarehouseCustomerShipment.objects.filter(shipment_id__icontains=search_text, warehouse_shipment_crop__crop=select_crop).exists():
+                            shipments = WarehouseCustomerShipment.objects.filter(shipment_id__icontains=search_text, warehouse_shipment_crop__crop=select_crop).values("id","warehouse_shipment_crop__crop","contract__secret_key","contract_id", "shipment_id", "warehouse_id","customer_id","warehouse_name","customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status")
+                            for shipment in shipments:
+                                if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                                    shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                                
+                                carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                                shipment["carrier_id"] = carrier.carrier_id  
+
+                            get_shipment = shipments.first()
+                            context["inbound6_wip"] = list(shipments)
+                            context["outbound6_wip"] = list(shipments)
+                            crops = WarehouseShipmentCrops.objects.filter(shipment_id=get_shipment["id"])
+                            outbound5_processor = []
+                            for crop in crops:
+                                select_crop = crop.crop
+                                check_processor_shipment = ProcessorWarehouseShipment.objects.filter(warehouse_id=get_shipment["warehouse_id"], processor_shipment_crop__crop=crop.crop, processor_shipment_crop__crop_type=crop.crop_type).values("id","processor_shipment_crop__crop", "contract__secret_key","contract_id", "processor_entity_name","processor_type", "processor_id", "shipment_id", "warehouse_id", "warehouse_name","customer_name","customer_id", "date_pulled", "carrier_type", "distributor_receive_date", "status")
+                                if check_processor_shipment:
+                                        for shipment in check_processor_shipment:
+                                            if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                                                shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                                           
+                                            carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                                            shipment["carrier_id"] = carrier.carrier_id                                 
+
+                                        outbound5_processor.extend(check_processor_shipment) 
+                                        processor_entity_name = shipment["processor_entity_name"]
+                                        processor_id = shipment["processor_id"]
+                                        processor_type = shipment["processor_type"]                             
+                                        return_context = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, processor_entity_name)
+                                        del return_context["inbound5_wip"]
+                                        del return_context["inbound6_wip"]
+                                        del return_context["outbound5_wip"]
+                                        del return_context["outbound6_wip"]
+                                        keys_to_extend = [
+                                            "origin_context",
+                                            "t1_processor",
+                                            "inbound2_wip",
+                                            "inbound3_wip",
+                                            "inbound4_wip",
+                                            "outbound2_wip",
+                                            "outbound3_wip",
+                                            "outbound4_wip",
+                                        ]
+
+                                        for key in keys_to_extend:
+                                            if return_context.get(key):
+                                                context[key] = context.get(key, [])
+                                                context[key].extend(return_context[key])                                      
+                                    
+                                        new_context_ = location_response(context)                           
+                                        context.update(new_context_)
+
+                            context["outbound5_wip"] = outbound5_processor
+                            context["inbound5_wip"] = outbound5_processor                        
                         else:
                             context['no_rec_found_msg'] = "No Records Found"    
+                    
+                    # search by Warehouse....
+                    elif get_search_by and get_search_by == 'warehouse':
+                        context["get_search_by"] = "warehouse"
+                        check_warehouse = Warehouse.objects.filter(name__icontains=search_text)
+                        if check_warehouse.exists():                            
+                            warehouse = check_warehouse.first()                            
+                            inbound5 = list(ProcessorWarehouseShipment.objects.filter(processor_shipment_crop__crop=select_crop, warehouse_id=warehouse.id, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values("id","processor_shipment_crop__crop", "contract__secret_key","contract_id", "processor_entity_name","processor_type", "processor_id", "shipment_id", "warehouse_id", "warehouse_name","customer_name","customer_id", "date_pulled", "carrier_type", "distributor_receive_date", "status"))
+                            for shipment in inbound5:
+                                if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                                    shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                                
+                                carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                                shipment["carrier_id"] = carrier.carrier_id  
+                            context["inbound5_wip"] = inbound5
+
+                            outbound6 = list(WarehouseCustomerShipment.objects.filter(warehouse_shipment_crop__crop=select_crop, warehouse_id=warehouse.id, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values("id","warehouse_shipment_crop__crop","contract__secret_key","contract_id", "shipment_id", "warehouse_id", "customer_id","warehouse_name","customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status"))
+                            for shipment in outbound6:
+                                if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                                    shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                                
+                                carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                                shipment["carrier_id"] = carrier.carrier_id  
+                            context["outbound6_wip"] = outbound6
+                            
+                            context["inbound6_wip"] = outbound6
+                            context["outbound5_wip"] = inbound5
+                            for shipment in inbound5:
+                                processor_id = shipment["processor_id"]
+                                processor_type = shipment["processor_type"]
+                                processor_entity_name = shipment["processor_entity_name"]
+                                return_context = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, processor_entity_name)
+                                del return_context["inbound5_wip"]
+                                del return_context["inbound6_wip"]
+                                del return_context["outbound5_wip"]
+                                del return_context["outbound6_wip"]
+                                keys_to_extend = [
+                                    "origin_context",
+                                    "t1_processor",
+                                    "inbound2_wip",
+                                    "inbound3_wip",
+                                    "inbound4_wip",
+                                    "outbound2_wip",
+                                    "outbound3_wip",
+                                    "outbound4_wip",
+                                ]
+
+                                for key in keys_to_extend:
+                                    if return_context.get(key):
+                                        context[key] = context.get(key, [])
+                                        context[key].extend(return_context[key])                                      
+                            
+                                new_context_ = location_response(context)                           
+                                context.update(new_context_)
+                        else:
+                            context['no_rec_found_msg'] = "No Records Found"
+                    
+                    # search by Customer....
+                    elif get_search_by and get_search_by == 'customer':
+                        context["get_search_by"] = "customer"
+                        check_customer = Customer.objects.filter(name__icontains=search_text)
+                        if check_customer.exists():
+                            customer = check_customer.first()
+                            inbound6 = []
+                            
+                            processor_shipments = list(ProcessorWarehouseShipment.objects.filter(
+                                processor_shipment_crop__crop=select_crop,
+                                customer_id=customer.id, 
+                                date_pulled__date__gte=from_date, 
+                                date_pulled__date__lte=to_date
+                            ).values(
+                                "id","processor_shipment_crop__crop", "contract__secret_key", "contract_id", "processor_entity_name",
+                                "processor_type", "processor_id", "shipment_id", "warehouse_id",
+                                "warehouse_name", "customer_name", "customer_id", 
+                                "date_pulled", "carrier_type", "distributor_receive_date", "status"
+                            ))
+                            for shipment in processor_shipments:
+                                if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                                    shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                               
+                                carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                                shipment["carrier_id"] = carrier.carrier_id  
+                                inbound6.append(shipment)
+
+                            warehouse_shipments = list(WarehouseCustomerShipment.objects.filter(
+                                warehouse_shipment_crop__crop=select_crop, 
+                                customer_id=customer.id, 
+                                date_pulled__date__gte=from_date, 
+                                date_pulled__date__lte=to_date
+                            ).values(
+                                "id", "warehouse_shipment_crop__crop","contract__secret_key", "contract_id", "shipment_id",
+                                "warehouse_id", "customer_id", "warehouse_name", "customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status"
+                            ))
+                            for shipment in warehouse_shipments:
+                                if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                                    shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                               
+                                carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                                shipment["carrier_id"] = carrier.carrier_id  
+                                inbound6.append(shipment)
+
+                            context["inbound6_wip"] = inbound6
+                            context["outbound6_wip"] = warehouse_shipments
+
+                            warehouse_ids = [shipment["warehouse_id"] for shipment in warehouse_shipments]
+                            
+                            inbound5 = list(ProcessorWarehouseShipment.objects.filter(
+                                processor_shipment_crop__crop=select_crop,
+                                warehouse_id__in=warehouse_ids,
+                                date_pulled__date__gte=from_date,
+                                date_pulled__date__lte=to_date
+                            ).values(
+                                "id","processor_shipment_crop__crop", "contract__secret_key", "contract_id", "processor_entity_name",
+                                "processor_type", "processor_id", "shipment_id", "warehouse_id",
+                                "warehouse_name", "customer_name", "customer_id", 
+                                "date_pulled", "carrier_type", "distributor_receive_date", "status"
+                            ))
+                            for shipment in inbound5:
+                                if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                                    shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                                
+                                carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                                shipment["carrier_id"] = carrier.carrier_id  
+                            context["inbound5_wip"] = inbound5
+                            outbound5 = inbound5 + processor_shipments
+                            context["outbound5_wip"] = outbound5
+
+                            for shipment in outbound5:
+                                processor_id = shipment.get("processor_id")
+                                processor_type = shipment.get("processor_type")
+                                processor_entity_name = shipment.get("processor_entity_name")
+                                
+                                return_context = processor_traceability_report_response(
+                                    select_crop, processor_id, processor_type, 
+                                    from_date, to_date, processor_entity_name
+                                )
+                                del return_context["inbound5_wip"]
+                                del return_context["inbound6_wip"]
+                                del return_context["outbound5_wip"]
+                                del return_context["outbound6_wip"]
+                                keys_to_extend = [
+                                    "origin_context",
+                                    "t1_processor",
+                                    "inbound2_wip",
+                                    "inbound3_wip",
+                                    "inbound4_wip",
+                                    "outbound2_wip",
+                                    "outbound3_wip",
+                                    "outbound4_wip",
+                                ]
+
+                                for key in keys_to_extend:
+                                    if return_context.get(key):
+                                        context[key] = context.get(key, [])
+                                        context[key].extend(return_context[key])                                      
+                            
+                                new_context_ = location_response(context)                           
+                                context.update(new_context_)                            
+                                
+                        else:
+                            context['no_rec_found_msg'] = "No Records Found" 
                     
                     else:
                         context['no_rec_found_msg'] = "No Records Found"
@@ -2766,15 +4301,15 @@ def traceability_report_list(request):
                 if map_show:
                     return render (request, 'tracemodule/traceability_map_show.html', context)
                 if table_show:
-                    return render (request, 'tracemodule/traceability_report_list.html', context)  
+                    return render (request, 'tracemodule/test_trace_module.html', context) 
 
-        return render (request, 'tracemodule/traceability_report_list.html', context)
+        return render (request, 'tracemodule/test_trace_module.html', context)
     else:
         return redirect ('dashboard')
 
 
 @login_required()
-def autocomplete_suggestions(request,select_search,select_crop_id):
+def autocomplete_suggestions(request, select_search):
     lst =[]
     if select_search == 'grower' :
         grower_name = Grower.objects.all().order_by('name').values('name')
@@ -2786,16 +4321,13 @@ def autocomplete_suggestions(request,select_search,select_crop_id):
         processor_name = list(Processor.objects.all().order_by('entity_name').values_list('entity_name', flat=True))
         processor2_name = list(Processor2.objects.all().order_by('entity_name').values_list('entity_name', flat=True))
         lst = processor_name + processor2_name    
-    elif select_search == 'deliveryid' :
-        if select_crop_id == 'RICE' :
-            deliveryid = GrowerShipment.objects.all().order_by('shipment_id').values('shipment_id')
-            lst = [i['shipment_id'] for i in deliveryid]
-        elif select_crop_id == 'COTTON' :
-            deliveryid = BaleReportFarmField.objects.all().order_by('bale_id').values('bale_id')
-            lst = [i['bale_id'] for i in deliveryid]
-
-    responce = {'select_search':lst}
-    # #print(responce)
+    
+    elif select_search == 'warehouse':
+        lst = list(Warehouse.objects.all().order_by('name').values_list('name', flat=True))
+        
+    elif select_search == 'customer':
+        lst = list(Customer.objects.all().order_by('name').values_list('name', flat=True))
+    responce = {'select_search':lst}   
     return JsonResponse(responce)
 
 
@@ -2836,15 +4368,17 @@ def showsustainability_metrics(request,get_search_by,field_id):
     else:
         surveyscore3 = 0
     composite_score = round((surveyscore1*0.25)+(surveyscore2*0.50)+(surveyscore3*0.25),2)
-    if crop == "RICE":
-        if composite_score >= 70:
-            pf_sus = "Pass"
-        elif composite_score < 70:
-            pf_sus = "Fail"
-    elif crop == "COTTON":
+    
+    if crop == "COTTON":
         if composite_score >= 75:
             pf_sus = "Pass"
         elif composite_score < 75:
+            pf_sus = "Fail"
+    
+    else:
+        if composite_score >= 70:
+            pf_sus = "Pass"
+        elif composite_score < 70:
             pf_sus = "Fail"
  
     
@@ -2953,7 +4487,7 @@ def traceability_report_Origin_csv_download(request,select_crop,get_search_by,se
                 i["projected_yeild"], i["reported_yeild"], i["yield_delta"],i["pf_sus"],i["water_savings"],i["land_use"],i["premiums_to_growers"],
                 i["co2_eQ_footprint"],i["water_per_pound_savings"]])
         # crop rice
-        if select_crop == 'RICE' :
+        else:
             writer.writerow(['CROP', 'VARIETY', 'FIELD', 'GROWER', 'FARM', 'HARVEST DATE', 
                             'PROJECTED YIELD', 'ACTUAL YIELD', 'YIELD  DELTA', 'Pass / Fail Sustainability','Water Savings %',
                             'Land Use Efficiency %', 'Less GHG % ', 'Premiums to Growers %', 'CO2 EQ Footprint #','Pounds of Water Per Pound Savings %'])
@@ -2962,22 +4496,22 @@ def traceability_report_Origin_csv_download(request,select_crop,get_search_by,se
                 check_grower = Grower.objects.filter(name__icontains=search_text)
                 if check_grower.exists() :
                     check_grower_id = check_grower.first().id
-                    check_grower_field_crop = Field.objects.filter(crop='RICE',grower_id=check_grower_id)
+                    check_grower_field_crop = Field.objects.filter(crop=select_crop,grower_id=check_grower_id)
                     if check_grower_field_crop.exists() :
                         grower_field_ids = [i.id for i in check_grower_field_crop]
-                        output = Origin_searchby_Grower('RICE',search_text,*grower_field_ids) 
+                        output = Origin_searchby_Grower(select_crop,search_text,*grower_field_ids) 
                     else:
                         output = []
                 else:
                     output = []
 
             elif get_search_by and get_search_by == 'field' :
-                check_field = Field.objects.filter(name__icontains=search_text,crop='RICE')
+                check_field = Field.objects.filter(name__icontains=search_text,crop=select_crop)
                 if check_field.exists() :
                     field_name = search_text
                     field_id = check_field.first().id
                     warehouse_wh_id = ''
-                    output = get_Origin_deliveryid('RICE',field_id,field_name,'',warehouse_wh_id)
+                    output = get_Origin_deliveryid(select_crop,field_id,field_name,'',warehouse_wh_id)
                 else:
                     output = []    
                     
@@ -2986,31 +4520,229 @@ def traceability_report_Origin_csv_download(request,select_crop,get_search_by,se
                 if check_processor:
                     processor_type = check_processor["type"]
                     processor_id = check_processor["id"]
-                    context_ = processor_traceability_report_response(processor_id,processor_type, from_date, to_date, search_text)
+                    context_ = processor_traceability_report_response(select_crop, processor_id,processor_type, from_date, to_date, search_text)
                     output = context_.get("origin_context")
                 else:
                     output = []
 
             elif get_search_by and get_search_by == 'sku_id' :
-                context_ = skuid_traceability_response(search_text)
+                context_ = skuid_traceability_response(select_crop, search_text, from_date, to_date)
                 output = context_.get("origin_context")
                               
-            elif get_search_by and get_search_by == 'deliveryid' :
-                get_delivery_id3 = GrowerShipment.objects.filter(shipment_id__icontains=search_text)
-                if get_delivery_id3.exists() :
-                    sku_id = get_delivery_id3.first().sku
-                    context_ = skuid_traceability_response(sku_id)
-                    output = context_.get("origin_context")
-                elif not get_delivery_id3:
-                    get_sku_id = ShipmentManagement.objects.filter(shipment_id__icontains=search_text)
-                    if get_sku_id:
-                        sku_id = get_sku_id.first().storage_bin_send
-                        context_ = skuid_traceability_response(sku_id)
+            elif get_search_by and get_search_by == 'deliveryid' :                
+                check_shipment = GrowerShipment.objects.filter(shipment_id__icontains=search_text, crop=select_crop)
+                        
+                if check_shipment.exists() :
+                    get_shipment = check_shipment.first()
+                    sku_id = get_shipment.sku
+                    context_ = skuid_traceability_response(select_crop, sku_id, from_date, to_date)
+                    output = context_.get("origin_context")      
+
+                elif not check_shipment and ShipmentManagement.objects.filter(shipment_id__icontains=search_text, crop=select_crop).exists():
+                    get_shipment = ShipmentManagement.objects.filter(shipment_id__icontains=search_text, crop=select_crop).first()
+                    
+                    if get_shipment and not get_shipment.receiver_processor_type == "T4":
+                        sku_id = get_shipment.storage_bin_send 
+                        context_ = skuid_traceability_response(select_crop, sku_id, from_date, to_date)
+                        output = context_.get("origin_context")                        
+
+                    elif get_shipment and get_shipment.receiver_processor_type == "T4":
+                        sku_id = get_shipment.storage_bin_recive 
+                        context_ = skuid_traceability_response(select_crop, sku_id, from_date, to_date)                        
                         output = context_.get("origin_context")
+
                     else:
                         output = []
+
+                elif not check_shipment and ProcessorWarehouseShipment.objects.filter(shipment_id__icontains=search_text, processor_shipment_crop__crop=select_crop).exists():
+                    output = []
+                    shipments = ProcessorWarehouseShipment.objects.filter(shipment_id__icontains=search_text, processor_shipment_crop__crop=select_crop).values("id","processor_shipment_crop__crop", "contract__secret_key","contract_id", "processor_entity_name","processor_type", "processor_id", "shipment_id", "warehouse_id","warehouse_name","customer_name","customer_id", "date_pulled", "carrier_type", "distributor_receive_date", "status")
+                    for shipment in shipments:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    get_shipment = shipments.first()
+
+                    if get_shipment["warehouse_id"] not in [None, "null", "", " "]:                                               
+                        crops = ProcessorShipmentCrops.objects.filter(shipment_id=get_shipment["id"])
+                        outbound6 = []
+                        for crop in crops:                            
+                            if WarehouseCustomerShipment.objects.filter(warehouse_id=get_shipment["warehouse_id"], warehouse_shipment_crop__crop=crop.crop, warehouse_shipment_crop__crop_type=crop.crop_type).exists():
+                                shipments = WarehouseCustomerShipment.objects.filter(warehouse_id=get_shipment["warehouse_id"], warehouse_shipment_crop__crop=crop.crop, warehouse_shipment_crop__crop_type=crop.crop_type).values("id","warehouse_shipment_crop__crop","contract__secret_key","contract_id", "shipment_id", "warehouse_id", "customer_id","warehouse_name","customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status")
+                                for shipment in shipments:
+                                    if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                                        shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                                    
+                                    carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                                    shipment["carrier_id"] = carrier.carrier_id  
+                                outbound6.extend(list(shipments))                        
+                        processor_entity_name = get_shipment["processor_entity_name"]
+                        processor_id = get_shipment["processor_id"]
+                        processor_type = get_shipment["processor_type"]
+                        for crop in crops:
+                            select_crop = crop.crop
+                            return_context = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, processor_entity_name)
+                        
+                            if return_context.get("origin_context"):                                
+                                output.extend(return_context["origin_context"])                                   
+                        
+                    else:  
+                        crops = ProcessorShipmentCrops.objects.filter(shipment_id=get_shipment["id"])
+                        processor_entity_name = get_shipment["processor_entity_name"]
+                        processor_id = get_shipment["processor_id"]
+                        processor_type = get_shipment["processor_type"]
+                        for crop in crops:
+                            select_crop = crop.crop
+                            return_context = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, processor_entity_name)
+                            
+                            if return_context.get("origin_context"):                                
+                                output.extend(return_context["origin_context"])                                      
+                               
+                elif not check_shipment and WarehouseCustomerShipment.objects.filter(shipment_id__icontains=search_text, warehouse_shipment_crop__crop=select_crop).exists():
+                    output = []
+                    shipments = WarehouseCustomerShipment.objects.filter(shipment_id__icontains=search_text, warehouse_shipment_crop__crop=select_crop).values("id","warehouse_shipment_crop__crop","contract__secret_key","contract_id", "shipment_id", "warehouse_id","customer_id","warehouse_name","customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status")
+                    for shipment in shipments:
+                        if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+
+                    get_shipment = shipments.first()                    
+                    crops = WarehouseShipmentCrops.objects.filter(shipment_id=get_shipment["id"])
+                    outbound5_processor = []
+                    for crop in crops:
+                        select_crop = crop.crop
+                        check_processor_shipment = ProcessorWarehouseShipment.objects.filter(warehouse_id=get_shipment["warehouse_id"], processor_shipment_crop__crop=crop.crop, processor_shipment_crop__crop_type=crop.crop_type).values("id","processor_shipment_crop__crop", "contract__secret_key","contract_id", "processor_entity_name","processor_type", "processor_id", "shipment_id", "warehouse_id", "warehouse_name","customer_name","customer_id", "date_pulled", "carrier_type", "distributor_receive_date", "status")
+                        if check_processor_shipment:
+                            for shipment in check_processor_shipment:
+                                if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                                    shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                                
+                                carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                                shipment["carrier_id"] = carrier.carrier_id                                 
+
+                            outbound5_processor.extend(check_processor_shipment) 
+                            processor_entity_name = shipment["processor_entity_name"]
+                            processor_id = shipment["processor_id"]
+                            processor_type = shipment["processor_type"]                             
+                            return_context = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, processor_entity_name)
+
+                            if return_context.get("origin_context"):                                
+                                output.extend(return_context["origin_context"])                      
                 else:
                     output = []
+            
+            elif get_search_by and get_search_by == 'warehouse': 
+                output = []                       
+                check_warehouse = Warehouse.objects.filter(name__icontains=search_text)
+                if check_warehouse.exists():                    
+                    warehouse = check_warehouse.first()                   
+                    inbound5 = list(ProcessorWarehouseShipment.objects.filter(processor_shipment_crop__crop=select_crop, warehouse_id=warehouse.id, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values("id","processor_shipment_crop__crop", "contract__secret_key","contract_id", "processor_entity_name","processor_type", "processor_id", "shipment_id", "warehouse_id", "warehouse_name","customer_name","customer_id", "date_pulled", "carrier_type", "distributor_receive_date", "status"))
+                    for shipment in inbound5:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id                     
+
+                    outbound6 = list(WarehouseCustomerShipment.objects.filter(warehouse_shipment_crop__crop=select_crop, warehouse_id=warehouse.id, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values("id","warehouse_shipment_crop__crop","contract__secret_key","contract_id", "shipment_id", "warehouse_id", "customer_id","warehouse_name","customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status"))
+                    for shipment in outbound6:
+                        if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    
+                    for shipment in inbound5:
+                        processor_id = shipment["processor_id"]
+                        processor_type = shipment["processor_type"]
+                        processor_entity_name = shipment["processor_entity_name"]
+                        return_context = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, processor_entity_name)
+                        if return_context.get("origin_context"):                                
+                            output.extend(return_context["origin_context"]) 
+                else:
+                    output = []
+                     
+            elif get_search_by and get_search_by == 'customer':
+                
+                check_customer = Customer.objects.filter(name__icontains=search_text)
+                if check_customer.exists():
+                    customer = check_customer.first()
+                    inbound6 = []
+                    
+                    processor_shipments = list(ProcessorWarehouseShipment.objects.filter(
+                        processor_shipment_crop__crop=select_crop,
+                        customer_id=customer.id, 
+                        date_pulled__date__gte=from_date, 
+                        date_pulled__date__lte=to_date
+                    ).values(
+                        "id","processor_shipment_crop__crop", "contract__secret_key", "contract_id", "processor_entity_name",
+                        "processor_type", "processor_id", "shipment_id", "warehouse_id",
+                        "warehouse_name", "customer_name", "customer_id", 
+                        "date_pulled", "carrier_type", "distributor_receive_date", "status"
+                    ))
+                    for shipment in processor_shipments:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    inbound6.extend(processor_shipments)
+
+                    warehouse_shipments = list(WarehouseCustomerShipment.objects.filter(
+                        warehouse_shipment_crop__crop=select_crop, 
+                        customer_id=customer.id, 
+                        date_pulled__date__gte=from_date, 
+                        date_pulled__date__lte=to_date
+                    ).values(
+                        "id", "warehouse_shipment_crop__crop","contract__secret_key", "contract_id", "shipment_id",
+                        "warehouse_id", "customer_id", "warehouse_name", "customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status"
+                    ))
+                    for shipment in warehouse_shipments:
+                        if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    inbound6.extend(warehouse_shipments)
+
+                    warehouse_ids = [shipment["warehouse_id"] for shipment in warehouse_shipments]
+                    inbound5 = list(ProcessorWarehouseShipment.objects.filter(
+                        processor_shipment_crop__crop=select_crop,
+                        warehouse_id__in=warehouse_ids,
+                        date_pulled__date__gte=from_date,
+                        date_pulled__date__lte=to_date
+                    ).values(
+                        "id","processor_shipment_crop__crop", "contract__secret_key", "contract_id", "processor_entity_name",
+                        "processor_type", "processor_id", "shipment_id", "warehouse_id",
+                        "warehouse_name", "customer_name", "customer_id", 
+                        "date_pulled", "carrier_type", "distributor_receive_date", "status"
+                    ))
+                    for shipment in inbound5:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+
+                    outbound5 = inbound5 + processor_shipments
+                    for shipment in outbound5:
+                        processor_id = shipment.get("processor_id")
+                        processor_type = shipment.get("processor_type")
+                        processor_entity_name = shipment.get("processor_entity_name")
+                        
+                        return_context = processor_traceability_report_response(
+                            select_crop, processor_id, processor_type, 
+                            from_date, to_date, processor_entity_name
+                        )                        
+                        if return_context.get("origin_context"):                                
+                            output.extend(return_context["origin_context"]) 
+                else:
+                    output = [] 
+                    
             else:
                 output = []
             for i in output:
@@ -3034,19 +4766,19 @@ def traceability_report_WIP1_csv_download(request,select_crop,get_search_by,sear
         writer = csv.writer(response)
         if select_crop == 'COTTON' :
             pass
-        if select_crop == 'RICE' :
+        else:
             writer.writerow(['DELIVERY ID OUTBOUND', 'DATE', 'QUANTITY POUNDS',  'DESTINATION'])
             if get_search_by and get_search_by == 'grower' :
                 check_grower = Grower.objects.filter(name__icontains=search_text)
                 if check_grower.exists() :
                     check_grower_id = check_grower.first().id
-                    check_grower_field_crop = Field.objects.filter(crop='RICE',grower_id=check_grower_id)
+                    check_grower_field_crop = Field.objects.filter(crop=select_crop,grower_id=check_grower_id)
                     if check_grower_field_crop.exists() :
                         processor_id = LinkGrowerToProcessor.objects.filter(grower_id=check_grower_id).first().processor.id
                         entity_name = LinkGrowerToProcessor.objects.filter(grower_id=check_grower_id).first().processor.entity_name
                                                        
                         processor_type = "T1"
-                        context_ = processor_traceability_report_response(processor_id, processor_type, from_date, to_date, entity_name)      
+                        context_ = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, entity_name)      
                         output = context_.get("outbound1_wip")
                     else:
                         output = []
@@ -3054,11 +4786,11 @@ def traceability_report_WIP1_csv_download(request,select_crop,get_search_by,sear
                     output = []
 
             elif get_search_by and get_search_by == 'field' :
-                check_field = Field.objects.filter(name__icontains=search_text,crop='RICE')
+                check_field = Field.objects.filter(name__icontains=search_text,crop=select_crop)
                 if check_field.exists() :
                     field_name = search_text
                     field_id = check_field.first().id                 
-                    output = outbound1_Wip_field('RICE',search_text,from_date,to_date,field_id)
+                    output = outbound1_Wip_field(select_crop,search_text,from_date,to_date,field_id)
                 else:
                     output = []
             elif get_search_by and get_search_by == 'processor' :
@@ -3066,35 +4798,234 @@ def traceability_report_WIP1_csv_download(request,select_crop,get_search_by,sear
                 if check_processor:
                     processor_type = check_processor["type"]
                     processor_id = check_processor["id"]
-                    context_ = processor_traceability_report_response(processor_id,processor_type, from_date, to_date, search_text)
+                    context_ = processor_traceability_report_response(select_crop,processor_id,processor_type, from_date, to_date, search_text)
                     output = context_.get("outbound1_wip")
                 else:
                     output = []
                     
             elif get_search_by and get_search_by == 'sku_id' :
-                context_ = skuid_traceability_response(search_text)  
+                context_ = skuid_traceability_response(select_crop, search_text, from_date, to_date)  
                 output = context_.get("outbound1_wip")
 
-            elif get_search_by and get_search_by == 'deliveryid' :
-                get_delivery_id3 = GrowerShipment.objects.filter(shipment_id__icontains=search_text)
-                if get_delivery_id3.exists() :
-                    sku_id = get_delivery_id3.first().sku
-                    context_ = skuid_traceability_response(sku_id)
-                    output = context_.get("outbound1_wip")
-                elif not get_delivery_id3:
-                    get_sku_id = ShipmentManagement.objects.filter(shipment_id__icontains=search_text)
-                    if get_sku_id:
-                        sku_id = get_sku_id.first().storage_bin_send
-                        context_ = skuid_traceability_response(sku_id)
+            elif get_search_by and get_search_by == 'deliveryid' :                
+                check_shipment = GrowerShipment.objects.filter(shipment_id__icontains=search_text, crop=select_crop)
+                        
+                if check_shipment.exists() :
+                    get_shipment = check_shipment.first()
+                    sku_id = get_shipment.sku
+                    context_ = skuid_traceability_response(select_crop, sku_id, from_date, to_date)
+                    output = context_.get("outbound1_wip")      
+
+                elif not check_shipment and ShipmentManagement.objects.filter(shipment_id__icontains=search_text, crop=select_crop).exists():
+                    get_shipment = ShipmentManagement.objects.filter(shipment_id__icontains=search_text, crop=select_crop).first()
+                    
+                    if get_shipment and not get_shipment.receiver_processor_type == "T4":
+                        sku_id = get_shipment.storage_bin_send 
+                        context_ = skuid_traceability_response(select_crop, sku_id, from_date, to_date)
+                        output = context_.get("outbound1_wip")                        
+
+                    elif get_shipment and get_shipment.receiver_processor_type == "T4":
+                        sku_id = get_shipment.storage_bin_recive 
+                        context_ = skuid_traceability_response(select_crop, sku_id, from_date, to_date)                        
                         output = context_.get("outbound1_wip")
+
                     else:
                         output = []
+
+                elif not check_shipment and ProcessorWarehouseShipment.objects.filter(shipment_id__icontains=search_text, processor_shipment_crop__crop=select_crop).exists():
+                    output = []
+                    shipments = ProcessorWarehouseShipment.objects.filter(shipment_id__icontains=search_text, processor_shipment_crop__crop=select_crop).values("id","processor_shipment_crop__crop", "contract__secret_key","contract_id", "processor_entity_name","processor_type", "processor_id", "shipment_id", "warehouse_id", "warehouse_name","customer_name","customer_id", "date_pulled", "carrier_type", "distributor_receive_date", "status")
+                    for shipment in shipments:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    get_shipment = shipments.first()
+
+                    if get_shipment["warehouse_id"] not in [None, "null", "", " "]:                                               
+                        crops = ProcessorShipmentCrops.objects.filter(shipment_id=get_shipment["id"])
+                        outbound6 = []
+                        for crop in crops:                            
+                            if WarehouseCustomerShipment.objects.filter(warehouse_id=get_shipment["warehouse_id"], warehouse_shipment_crop__crop=crop.crop, warehouse_shipment_crop__crop_type=crop.crop_type).exists():
+                                shipments = WarehouseCustomerShipment.objects.filter(warehouse_id=get_shipment["warehouse_id"], warehouse_shipment_crop__crop=crop.crop, warehouse_shipment_crop__crop_type=crop.crop_type).values("id","warehouse_shipment_crop__crop","contract__secret_key","contract_id", "shipment_id", "warehouse_id", "customer_id","warehouse_name","customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status")
+                                for shipment in shipments:
+                                    if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                                        shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                                    
+                                    carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                                    shipment["carrier_id"] = carrier.carrier_id  
+                                outbound6.extend(list(shipments))
+
+                        processor_entity_name = get_shipment["processor_entity_name"]
+                        processor_id = get_shipment["processor_id"]
+                        processor_type = get_shipment["processor_type"]
+                        for crop in crops:
+                            select_crop = crop.crop
+                            return_context = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, processor_entity_name)
+                        
+                            if return_context.get("outbound1_wip"):                                
+                                output.extend(return_context["outbound1_wip"])                                   
+                        
+                    else:  
+                        crops = ProcessorShipmentCrops.objects.filter(shipment_id=get_shipment["id"])
+                        processor_entity_name = get_shipment["processor_entity_name"]
+                        processor_id = get_shipment["processor_id"]
+                        processor_type = get_shipment["processor_type"]
+                        for crop in crops:
+                            select_crop = crop.crop
+                            return_context = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, processor_entity_name)
+                            
+                            if return_context.get("outbound1_wip"):                                
+                                output.extend(return_context["outbound1_wip"])                                      
+                               
+                elif not check_shipment and WarehouseCustomerShipment.objects.filter(shipment_id__icontains=search_text, warehouse_shipment_crop__crop=select_crop).exists():
+                    output = []
+                    shipments = WarehouseCustomerShipment.objects.filter(shipment_id__icontains=search_text, warehouse_shipment_crop__crop=select_crop).values("id","warehouse_shipment_crop__crop","contract__secret_key","contract_id", "shipment_id", "warehouse_id" ,"customer_id","warehouse_name","customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status")
+                    for shipment in shipments:
+                        if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+
+                    get_shipment = shipments.first()                    
+                    crops = WarehouseShipmentCrops.objects.filter(shipment_id=get_shipment["id"])
+                    outbound5_processor = []
+                    for crop in crops:
+                        select_crop = crop.crop
+                        check_processor_shipment = ProcessorWarehouseShipment.objects.filter(warehouse_id=get_shipment["warehouse_id"], processor_shipment_crop__crop=crop.crop, processor_shipment_crop__crop_type=crop.crop_type).values("id","processor_shipment_crop__crop", "contract__secret_key","contract_id", "processor_entity_name","processor_type", "processor_id", "shipment_id", "warehouse_id", "warehouse_name","customer_name","customer_id", "date_pulled", "carrier_type", "distributor_receive_date", "status")
+                        if check_processor_shipment:
+                            for shipment in check_processor_shipment:
+                                if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                                    shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                                
+                                carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                                shipment["carrier_id"] = carrier.carrier_id                                 
+
+                            outbound5_processor.extend(check_processor_shipment) 
+                            processor_entity_name = shipment["processor_entity_name"]
+                            processor_id = shipment["processor_id"]
+                            processor_type = shipment["processor_type"]                             
+                            return_context = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, processor_entity_name)
+
+                            if return_context.get("outbound1_wip"):                                
+                                output.extend(return_context["outbound1_wip"])                      
                 else:
                     output = []
+            
+            elif get_search_by and get_search_by == 'warehouse': 
+                output = []                       
+                check_warehouse = Warehouse.objects.filter(name__icontains=search_text)
+                if check_warehouse.exists():                    
+                    warehouse = check_warehouse.first()                   
+                    inbound5 = list(ProcessorWarehouseShipment.objects.filter(processor_shipment_crop__crop=select_crop, warehouse_id=warehouse.id, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values("id","processor_shipment_crop__crop", "contract__secret_key","contract_id", "processor_entity_name","processor_type", "processor_id", "shipment_id", "warehouse_id", "warehouse_name","customer_name","customer_id", "date_pulled", "carrier_type", "distributor_receive_date", "status"))
+                    for shipment in inbound5:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id                     
+
+                    outbound6 = list(WarehouseCustomerShipment.objects.filter(warehouse_shipment_crop__crop=select_crop, warehouse_id=warehouse.id, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values("id","warehouse_shipment_crop__crop","contract__secret_key","contract_id","shipment_id", "warehouse_id", "customer_id","warehouse_name","customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status"))
+                    for shipment in outbound6:
+                        if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    
+                    for shipment in inbound5:
+                        processor_id = shipment["processor_id"]
+                        processor_type = shipment["processor_type"]
+                        processor_entity_name = shipment["processor_entity_name"]
+                        return_context = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, processor_entity_name)
+                        if return_context.get("outbound1_wip"):                                
+                            output.extend(return_context["outbound1_wip"]) 
+                else:
+                    output = []
+                     
+            elif get_search_by and get_search_by == 'customer':
+                
+                check_customer = Customer.objects.filter(name__icontains=search_text)
+                if check_customer.exists():
+                    customer = check_customer.first()
+                    inbound6 = []
+                    
+                    processor_shipments = list(ProcessorWarehouseShipment.objects.filter(
+                        processor_shipment_crop__crop=select_crop,
+                        customer_id=customer.id, 
+                        date_pulled__date__gte=from_date, 
+                        date_pulled__date__lte=to_date
+                    ).values(
+                        "id","processor_shipment_crop__crop", "contract__secret_key", "contract_id", "processor_entity_name",
+                        "processor_type", "processor_id", "shipment_id", "warehouse_id",
+                        "warehouse_name", "customer_name", "customer_id", 
+                        "date_pulled", "carrier_type", "distributor_receive_date", "status"
+                    ))
+                    for shipment in processor_shipments:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    inbound6.extend(processor_shipments)
+
+                    warehouse_shipments = list(WarehouseCustomerShipment.objects.filter(
+                        warehouse_shipment_crop__crop=select_crop, 
+                        customer_id=customer.id, 
+                        date_pulled__date__gte=from_date, 
+                        date_pulled__date__lte=to_date
+                    ).values(
+                        "id", "warehouse_shipment_crop__crop","contract__secret_key", "contract_id", "shipment_id",
+                        "warehouse_id", "customer_id", "warehouse_name", "customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status"
+                    ))
+                    for shipment in warehouse_shipments:
+                        if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    inbound6.extend(warehouse_shipments)
+
+                    warehouse_ids = [shipment["warehouse_id"] for shipment in warehouse_shipments]
+                    inbound5 = list(ProcessorWarehouseShipment.objects.filter(
+                        processor_shipment_crop__crop=select_crop,
+                        warehouse_id__in=warehouse_ids,
+                        date_pulled__date__gte=from_date,
+                        date_pulled__date__lte=to_date
+                    ).values(
+                        "id","processor_shipment_crop__crop", "contract__secret_key", "contract_id", "processor_entity_name",
+                        "processor_type", "processor_id", "shipment_id", "warehouse_id",
+                        "warehouse_name", "customer_name", "customer_id", 
+                        "date_pulled", "carrier_type", "distributor_receive_date", "status"
+                    ))
+                    for shipment in inbound5:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+
+                    outbound5 = inbound5 + processor_shipments
+                    for shipment in outbound5:
+                        processor_id = shipment.get("processor_id")
+                        processor_type = shipment.get("processor_type")
+                        processor_entity_name = shipment.get("processor_entity_name")
+                        
+                        return_context = processor_traceability_report_response(
+                            select_crop, processor_id, processor_type, 
+                            from_date, to_date, processor_entity_name
+                        )                        
+                        if return_context.get("outbound1_wip"):                                
+                            output.extend(return_context["outbound1_wip"]) 
+                else:
+                    output = [] 
+             
             else:
                 output = []
             for i in output:
-                writer.writerow([i["deliveryid"], i["date"], i["quantity"], i["destination"]])
+                writer.writerow([i["shipment_id"], i["date"], i["quantity"], i["destination"]])
         return response
     else:
         return redirect ('dashboard')
@@ -3159,28 +5090,28 @@ def traceability_report_T1_Processor_csv_download(request,select_crop,get_search
             else:
                 output = []
             for i in output:
-                writer.writerow([i["processor_name"] , i["processor_id"], i["deliveryid"], i["grower"], i["farm"], i["field"], i["date"], i["pounds_shipped"], 
+                writer.writerow([i["processor_name"] , i["processor_id"], i["shipment_id"], i["grower"], i["farm"], i["field"], i["date"], i["pounds_shipped"], 
                                  i["pounds_received"], i["pounds_delta"]])
             
-        if select_crop == 'RICE' :
+        else :
             writer.writerow(['PROCESSOR NAME', 'DELIVERY ID', 'Grower', 'Farm', 'Field', 'DATE', 'QUANTITY POUNDS SHIPPED', 
                              'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
             if get_search_by and get_search_by == 'grower' :
                 check_grower = Grower.objects.filter(name__icontains=search_text)
                 if check_grower.exists() :
                     check_grower_id = check_grower.first().id
-                    check_grower_field_crop = Field.objects.filter(crop='RICE',grower_id=check_grower_id)
+                    check_grower_field_crop = Field.objects.filter(crop=select_crop,grower_id=check_grower_id)
                     if check_grower_field_crop.exists() :
                         grower_field_ids = [i.id for i in check_grower_field_crop]                       
 
                         processor_id = LinkGrowerToProcessor.objects.filter(grower_id=check_grower_id).first().processor.id
                         entity_name = LinkGrowerToProcessor.objects.filter(grower_id=check_grower_id).first().processor.entity_name
-                        t1_processor = list(GrowerShipment.objects.filter(processor_id=processor_id, grower_id=check_grower_id, status="APPROVED").values("processor__entity_name","shipment_id","approval_date","grower__name","field__farm__name","field__name","total_amount","received_amount"))
+                        t1_processor = list(GrowerShipment.objects.filter(processor_id=processor_id, grower_id=check_grower_id, status="APPROVED", crop=select_crop).values("processor__entity_name","shipment_id","approval_date","grower__name","field__farm__name","field__name","total_amount","received_amount"))
 
                         if len(t1_processor) != 0:
                             for entry in t1_processor:
                                 entry["processor_name"] = entry["processor__entity_name"]
-                                entry["deliveryid"] = entry["shipment_id"]
+                                entry["shipment_id"] = entry["shipment_id"]
                                 entry["date"] = entry["approval_date"]
                                 entry["grower"] = entry["grower__name"]
                                 entry["farm"] = entry["field__farm__name"]
@@ -3198,11 +5129,11 @@ def traceability_report_T1_Processor_csv_download(request,select_crop,get_search
                     output = []
             
             elif get_search_by and get_search_by == 'field' :
-                check_field = Field.objects.filter(name__icontains=search_text,crop='RICE')
+                check_field = Field.objects.filter(name__icontains=search_text,crop=select_crop)
                 if check_field.exists() :
                     field_name = search_text
                     field_id = check_field.first().id                    
-                    output = t1_Processor_field('RICE',search_text,field_id,from_date,to_date)
+                    output = t1_Processor_field(select_crop,search_text,field_id,from_date,to_date)
                 else:
                     output = []   
 
@@ -3211,35 +5142,234 @@ def traceability_report_T1_Processor_csv_download(request,select_crop,get_search
                 if check_processor:
                     processor_type = check_processor["type"]
                     processor_id = check_processor["id"]
-                    context_ = processor_traceability_report_response(processor_id,processor_type, from_date, to_date, search_text)
+                    context_ = processor_traceability_report_response(select_crop, processor_id,processor_type, from_date, to_date, search_text)
                     output = context_.get("t1_processor")
                 else:
                     output = []
             
             elif get_search_by and get_search_by == 'sku_id' :
-                context_ = skuid_traceability_response(search_text)  
+                context_ = skuid_traceability_response(select_crop, search_text, from_date, to_date)  
                 output = context_.get("t1_processor")  
 
-            elif get_search_by and get_search_by == 'deliveryid' :
-                get_delivery_id3 = GrowerShipment.objects.filter(shipment_id__icontains=search_text)
-                if get_delivery_id3.exists() :
-                    sku_id = get_delivery_id3.first().sku
-                    context_ = skuid_traceability_response(sku_id)
-                    output = context_.get("t1_processor")
-                elif not get_delivery_id3:
-                    get_sku_id = ShipmentManagement.objects.filter(shipment_id__icontains=search_text)
-                    if get_sku_id:
-                        sku_id = get_sku_id.first().storage_bin_send
-                        context_ = skuid_traceability_response(sku_id)
+            elif get_search_by and get_search_by == 'deliveryid' :                
+                check_shipment = GrowerShipment.objects.filter(shipment_id__icontains=search_text, crop=select_crop)
+                        
+                if check_shipment.exists() :
+                    get_shipment = check_shipment.first()
+                    sku_id = get_shipment.sku
+                    context_ = skuid_traceability_response(select_crop, sku_id, from_date, to_date)
+                    output = context_.get("t1_processor")      
+
+                elif not check_shipment and ShipmentManagement.objects.filter(shipment_id__icontains=search_text, crop=select_crop).exists():
+                    get_shipment = ShipmentManagement.objects.filter(shipment_id__icontains=search_text, crop=select_crop).first()
+                    
+                    if get_shipment and not get_shipment.receiver_processor_type == "T4":
+                        sku_id = get_shipment.storage_bin_send 
+                        context_ = skuid_traceability_response(select_crop, sku_id, from_date, to_date)
+                        output = context_.get("t1_processor")                        
+
+                    elif get_shipment and get_shipment.receiver_processor_type == "T4":
+                        sku_id = get_shipment.storage_bin_recive 
+                        context_ = skuid_traceability_response(select_crop, sku_id, from_date, to_date)                        
                         output = context_.get("t1_processor")
+
                     else:
                         output = []
+
+                elif not check_shipment and ProcessorWarehouseShipment.objects.filter(shipment_id__icontains=search_text, processor_shipment_crop__crop=select_crop).exists():
+                    output = []
+                    shipments = ProcessorWarehouseShipment.objects.filter(shipment_id__icontains=search_text, processor_shipment_crop__crop=select_crop).values("id","processor_shipment_crop__crop", "contract__secret_key","contract_id", "processor_entity_name","processor_type", "processor_id", "shipment_id", "warehouse_id", "warehouse_name","customer_name","customer_id", "date_pulled", "carrier_type", "distributor_receive_date", "status")
+                    for shipment in shipments:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    get_shipment = shipments.first()
+
+                    if get_shipment["warehouse_id"] not in [None, "null", "", " "]:                                               
+                        crops = ProcessorShipmentCrops.objects.filter(shipment_id=get_shipment["id"])
+                        outbound6 = []
+                        for crop in crops:                            
+                            if WarehouseCustomerShipment.objects.filter(warehouse_id=get_shipment["warehouse_id"], warehouse_shipment_crop__crop=crop.crop, warehouse_shipment_crop__crop_type=crop.crop_type).exists():
+                                shipments = WarehouseCustomerShipment.objects.filter(warehouse_id=get_shipment["warehouse_id"], warehouse_shipment_crop__crop=crop.crop, warehouse_shipment_crop__crop_type=crop.crop_type).values("id","warehouse_shipment_crop__crop","contract__secret_key","contract_id", "shipment_id", "warehouse_id","customer_id","warehouse_name","customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status")
+                                for shipment in shipments:
+                                    if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                                        shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                                    
+                                    carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                                    shipment["carrier_id"] = carrier.carrier_id  
+                                outbound6.extend(list(shipments))
+
+                        processor_entity_name = get_shipment["processor_entity_name"]
+                        processor_id = get_shipment["processor_id"]
+                        processor_type = get_shipment["processor_type"]
+                        for crop in crops:
+                            select_crop = crop.crop
+                            return_context = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, processor_entity_name)
+                        
+                            if return_context.get("t1_processor"):                                
+                                output.extend(return_context["t1_processor"])                                   
+                        
+                    else:  
+                        crops = ProcessorShipmentCrops.objects.filter(shipment_id=get_shipment["id"])
+                        processor_entity_name = get_shipment["processor_entity_name"]
+                        processor_id = get_shipment["processor_id"]
+                        processor_type = get_shipment["processor_type"]
+                        for crop in crops:
+                            select_crop = crop.crop
+                            return_context = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, processor_entity_name)
+                            
+                            if return_context.get("t1_processor"):                                
+                                output.extend(return_context["t1_processor"])                                      
+                               
+                elif not check_shipment and WarehouseCustomerShipment.objects.filter(shipment_id__icontains=search_text, warehouse_shipment_crop__crop=select_crop).exists():
+                    output = []
+                    shipments = WarehouseCustomerShipment.objects.filter(shipment_id__icontains=search_text, warehouse_shipment_crop__crop=select_crop).values("id","warehouse_shipment_crop__crop","contract__secret_key","contract_id", "shipment_id", "warehouse_id" ,"customer_id","warehouse_name","customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status")
+                    for shipment in shipments:
+                        if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+
+                    get_shipment = shipments.first()                    
+                    crops = WarehouseShipmentCrops.objects.filter(shipment_id=get_shipment["id"])
+                    outbound5_processor = []
+                    for crop in crops:
+                        select_crop = crop.crop
+                        check_processor_shipment = ProcessorWarehouseShipment.objects.filter(warehouse_id=get_shipment["warehouse_id"], processor_shipment_crop__crop=crop.crop, processor_shipment_crop__crop_type=crop.crop_type).values("id","processor_shipment_crop__crop", "contract__secret_key","contract_id", "processor_entity_name","processor_type", "processor_id", "shipment_id", "warehouse_id", "warehouse_name","customer_name","customer_id", "date_pulled", "carrier_type", "distributor_receive_date", "status")
+                        if check_processor_shipment:
+                            for shipment in check_processor_shipment:
+                                if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                                    shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                                
+                                carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                                shipment["carrier_id"] = carrier.carrier_id                                 
+
+                            outbound5_processor.extend(check_processor_shipment) 
+                            processor_entity_name = shipment["processor_entity_name"]
+                            processor_id = shipment["processor_id"]
+                            processor_type = shipment["processor_type"]                             
+                            return_context = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, processor_entity_name)
+
+                            if return_context.get("t1_processor"):                                
+                                output.extend(return_context["t1_processor"])                      
                 else:
                     output = []
+            
+            elif get_search_by and get_search_by == 'warehouse': 
+                output = []                       
+                check_warehouse = Warehouse.objects.filter(name__icontains=search_text)
+                if check_warehouse.exists():                    
+                    warehouse = check_warehouse.first()                   
+                    inbound5 = list(ProcessorWarehouseShipment.objects.filter(processor_shipment_crop__crop=select_crop, warehouse_id=warehouse.id, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values("id","processor_shipment_crop__crop", "contract__secret_key","contract_id", "processor_entity_name","processor_type", "processor_id", "shipment_id", "warehouse_id", "warehouse_name","customer_name","customer_id", "date_pulled", "carrier_type", "distributor_receive_date", "status"))
+                    for shipment in inbound5:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id                     
+
+                    outbound6 = list(WarehouseCustomerShipment.objects.filter(warehouse_shipment_crop__crop=select_crop, warehouse_id=warehouse.id, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values("id","warehouse_shipment_crop__crop","contract__secret_key","contract_id", "shipment_id", "warehouse_id", "customer_id","warehouse_name","customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status"))
+                    for shipment in outbound6:
+                        if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    
+                    for shipment in inbound5:
+                        processor_id = shipment["processor_id"]
+                        processor_type = shipment["processor_type"]
+                        processor_entity_name = shipment["processor_entity_name"]
+                        return_context = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, processor_entity_name)
+                        if return_context.get("t1_processor"):                                
+                            output.extend(return_context["t1_processor"]) 
+                else:
+                    output = []
+                     
+            elif get_search_by and get_search_by == 'customer':
+                
+                check_customer = Customer.objects.filter(name__icontains=search_text)
+                if check_customer.exists():
+                    customer = check_customer.first()
+                    inbound6 = []
+                    
+                    processor_shipments = list(ProcessorWarehouseShipment.objects.filter(
+                        processor_shipment_crop__crop=select_crop,
+                        customer_id=customer.id, 
+                        date_pulled__date__gte=from_date, 
+                        date_pulled__date__lte=to_date
+                    ).values(
+                        "id","processor_shipment_crop__crop", "contract__secret_key", "contract_id", "processor_entity_name",
+                        "processor_type", "processor_id", "shipment_id", "warehouse_id",
+                        "warehouse_name", "customer_name", "customer_id", 
+                        "date_pulled", "carrier_type", "distributor_receive_date", "status"
+                    ))
+                    for shipment in processor_shipments:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    inbound6.extend(processor_shipments)
+
+                    warehouse_shipments = list(WarehouseCustomerShipment.objects.filter(
+                        warehouse_shipment_crop__crop=select_crop, 
+                        customer_id=customer.id, 
+                        date_pulled__date__gte=from_date, 
+                        date_pulled__date__lte=to_date
+                    ).values(
+                        "id", "warehouse_shipment_crop__crop","contract__secret_key", "contract_id", "shipment_id",
+                        "warehouse_id", "customer_id", "warehouse_name", "customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status"
+                    ))
+                    for shipment in warehouse_shipments:
+                        if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    inbound6.extend(warehouse_shipments)
+
+                    warehouse_ids = [shipment["warehouse_id"] for shipment in warehouse_shipments]
+                    inbound5 = list(ProcessorWarehouseShipment.objects.filter(
+                        processor_shipment_crop__crop=select_crop,
+                        warehouse_id__in=warehouse_ids,
+                        date_pulled__date__gte=from_date,
+                        date_pulled__date__lte=to_date
+                    ).values(
+                        "id","processor_shipment_crop__crop", "contract__secret_key", "contract_id", "processor_entity_name",
+                        "processor_type", "processor_id", "shipment_id", "warehouse_id",
+                        "warehouse_name", "customer_name", "customer_id", 
+                        "date_pulled", "carrier_type", "distributor_receive_date", "status"
+                    ))
+                    for shipment in inbound5:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+
+                    outbound5 = inbound5 + processor_shipments
+                    for shipment in outbound5:
+                        processor_id = shipment.get("processor_id")
+                        processor_type = shipment.get("processor_type")
+                        processor_entity_name = shipment.get("processor_entity_name")
+                        
+                        return_context = processor_traceability_report_response(
+                            select_crop, processor_id, processor_type, 
+                            from_date, to_date, processor_entity_name
+                        )                        
+                        if return_context.get("t1_processor"):                                
+                            output.extend(return_context["t1_processor"]) 
+                else:
+                    output = [] 
+             
             else:
                 output = []
             for i in output:
-                writer.writerow([i["processor_name"] , i["deliveryid"], i["grower"], i["farm"], i["field"], i["date"], i["pounds_shipped"], 
+                writer.writerow([i["processor_name"] , i["shipment_id"], i["grower"], i["farm"], i["field"], i["date"], i["pounds_shipped"], 
                                  i["pounds_received"], i["pounds_delta"]])
         return response
     else:
@@ -3273,21 +5403,21 @@ def traceability_report_WIP2_csv_download(request,select_crop,get_search_by,sear
             else:
                 output = []
             for i in output:
-                writer.writerow([i["processor_name"] , i["processor_id"], i["deliveryid"], i["date"], i["pounds_shipped"], 
+                writer.writerow([i["processor_name"] , i["processor_id"], i["shipment_id"], i["date"], i["pounds_shipped"], 
                                  i["pounds_received"], i["pounds_delta"]])
             
-        if select_crop == 'RICE' :
+        else :
             if get_search_by and get_search_by == 'grower' :
                 check_grower = Grower.objects.filter(name__icontains=search_text)
                 if check_grower.exists() :
                     check_grower_id = check_grower.first().id
-                    check_grower_field_crop = Field.objects.filter(crop='RICE',grower_id=check_grower_id)
+                    check_grower_field_crop = Field.objects.filter(crop=select_crop,grower_id=check_grower_id)
                     if check_grower_field_crop.exists() :
                         processor_id = LinkGrowerToProcessor.objects.filter(grower_id=check_grower_id).first().processor.id
                         entity_name = LinkGrowerToProcessor.objects.filter(grower_id=check_grower_id).first().processor.entity_name
                                                        
                         processor_type = "T1"
-                        context_ = processor_traceability_report_response(processor_id, processor_type, from_date, to_date, entity_name)      
+                        context_ = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, entity_name)      
                         output = context_.get("outbound2_wip")
                     else:
                         output = []
@@ -3295,7 +5425,7 @@ def traceability_report_WIP2_csv_download(request,select_crop,get_search_by,sear
                     output = []               
             
             elif get_search_by and get_search_by == 'field' :
-                check_field = Field.objects.filter(name__icontains=search_text,crop='RICE')
+                check_field = Field.objects.filter(name__icontains=search_text,crop=select_crop)
                 if check_field.exists() :
                     field_name = search_text
                     field_id = check_field.first().id                    
@@ -3303,7 +5433,7 @@ def traceability_report_WIP2_csv_download(request,select_crop,get_search_by,sear
                     processor_id = LinkGrowerToProcessor.objects.filter(grower_id=grower_id).first().processor.id
                     entity_name = LinkGrowerToProcessor.objects.filter(grower_id=grower_id).first().processor.entity_name
                     processor_type = "T1"
-                    context_ = processor_traceability_report_response(processor_id, processor_type, from_date, to_date, entity_name)
+                    context_ = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, entity_name)
                     output = context_.get("outbound2_wip")
                 else:
                     output = []        
@@ -3313,29 +5443,227 @@ def traceability_report_WIP2_csv_download(request,select_crop,get_search_by,sear
                 if check_processor:
                     processor_type = check_processor["type"]
                     processor_id = check_processor["id"]
-                    context_ = processor_traceability_report_response(processor_id,processor_type, from_date, to_date, search_text)
+                    context_ = processor_traceability_report_response(select_crop, processor_id,processor_type, from_date, to_date, search_text)
                     output = context_.get("outbound2_wip")
                 else:
                     output = []
 
             elif get_search_by and get_search_by == 'sku_id' :
-                context_ = skuid_traceability_response(search_text)  
+                context_ = skuid_traceability_response(select_crop, search_text, from_date, to_date)  
                 output = context_.get("outbound2_wip") 
 
-            elif get_search_by and get_search_by == 'deliveryid' :
-                get_delivery_id3 = GrowerShipment.objects.filter(shipment_id__icontains=search_text)
-                if get_delivery_id3.exists() :
-                    sku_id = get_delivery_id3.first().sku
-                    context_ = skuid_traceability_response(sku_id)
-                    output = context_.get("outbound2_wip")
-                elif not get_delivery_id3:
-                    get_sku_id = ShipmentManagement.objects.filter(shipment_id__icontains=search_text)
-                    if get_sku_id:
-                        sku_id = get_sku_id.first().storage_bin_send
-                        context_ = skuid_traceability_response(sku_id)
+            elif get_search_by and get_search_by == 'deliveryid' :                
+                check_shipment = GrowerShipment.objects.filter(shipment_id__icontains=search_text, crop=select_crop)
+                        
+                if check_shipment.exists() :
+                    get_shipment = check_shipment.first()
+                    sku_id = get_shipment.sku
+                    context_ = skuid_traceability_response(select_crop, sku_id, from_date, to_date)
+                    output = context_.get("outbound2_wip")      
+
+                elif not check_shipment and ShipmentManagement.objects.filter(shipment_id__icontains=search_text, crop=select_crop).exists():
+                    get_shipment = ShipmentManagement.objects.filter(shipment_id__icontains=search_text, crop=select_crop).first()
+                    
+                    if get_shipment and not get_shipment.receiver_processor_type == "T4":
+                        sku_id = get_shipment.storage_bin_send 
+                        context_ = skuid_traceability_response(select_crop, sku_id, from_date, to_date)
+                        output = context_.get("outbound2_wip")                        
+
+                    elif get_shipment and get_shipment.receiver_processor_type == "T4":
+                        sku_id = get_shipment.storage_bin_recive 
+                        context_ = skuid_traceability_response(select_crop, sku_id, from_date, to_date)                        
                         output = context_.get("outbound2_wip")
+
                     else:
                         output = []
+
+                elif not check_shipment and ProcessorWarehouseShipment.objects.filter(shipment_id__icontains=search_text, processor_shipment_crop__crop=select_crop).exists():
+                    output = []
+                    shipments = ProcessorWarehouseShipment.objects.filter(shipment_id__icontains=search_text, processor_shipment_crop__crop=select_crop).values("id","processor_shipment_crop__crop", "contract__secret_key","contract_id", "processor_entity_name","processor_type", "processor_id", "shipment_id", "warehouse_id", "warehouse_name","customer_name","customer_id", "date_pulled", "carrier_type", "distributor_receive_date", "status")
+                    for shipment in shipments:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    get_shipment = shipments.first()
+
+                    if get_shipment["warehouse_id"] not in [None, "null", "", " "]:                                               
+                        crops = ProcessorShipmentCrops.objects.filter(shipment_id=get_shipment["id"])
+                        outbound6 = []
+                        for crop in crops:                            
+                            if WarehouseCustomerShipment.objects.filter(warehouse_id=get_shipment["warehouse_id"], warehouse_shipment_crop__crop=crop.crop, warehouse_shipment_crop__crop_type=crop.crop_type).exists():
+                                shipments = WarehouseCustomerShipment.objects.filter(warehouse_id=get_shipment["warehouse_id"], warehouse_shipment_crop__crop=crop.crop, warehouse_shipment_crop__crop_type=crop.crop_type).values("id","warehouse_shipment_crop__crop","contract__secret_key","contract_id", "shipment_id", "warehouse_id","customer_id","warehouse_name","customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status")
+                                for shipment in shipments:
+                                    if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                                        shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                                    
+                                    carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                                    shipment["carrier_id"] = carrier.carrier_id  
+                                outbound6.extend(list(shipments))
+
+                        processor_entity_name = get_shipment["processor_entity_name"]
+                        processor_id = get_shipment["processor_id"]
+                        processor_type = get_shipment["processor_type"]
+                        for crop in crops:
+                            select_crop = crop.crop
+                            return_context = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, processor_entity_name)
+                        
+                            if return_context.get("outbound2_wip"):                                
+                                output.extend(return_context["outbound2_wip"])                                   
+                        
+                    else:  
+                        crops = ProcessorShipmentCrops.objects.filter(shipment_id=get_shipment["id"])
+                        processor_entity_name = get_shipment["processor_entity_name"]
+                        processor_id = get_shipment["processor_id"]
+                        processor_type = get_shipment["processor_type"]
+                        for crop in crops:
+                            select_crop = crop.crop
+                            return_context = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, processor_entity_name)
+                            
+                            if return_context.get("outbound2_wip"):                                
+                                output.extend(return_context["outbound2_wip"])                                      
+                               
+                elif not check_shipment and WarehouseCustomerShipment.objects.filter(shipment_id__icontains=search_text, warehouse_shipment_crop__crop=select_crop).exists():
+                    output = []
+                    shipments = WarehouseCustomerShipment.objects.filter(shipment_id__icontains=search_text, warehouse_shipment_crop__crop=select_crop).values("id","warehouse_shipment_crop__crop","contract__secret_key","contract_id", "shipment_id", "warehouse_id" ,"customer_id","warehouse_name","customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status")
+                    for shipment in shipments:
+                        if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+
+                    get_shipment = shipments.first()                    
+                    crops = WarehouseShipmentCrops.objects.filter(shipment_id=get_shipment["id"])
+                    outbound5_processor = []
+                    for crop in crops:
+                        select_crop = crop.crop
+                        check_processor_shipment = ProcessorWarehouseShipment.objects.filter(warehouse_id=get_shipment["warehouse_id"], processor_shipment_crop__crop=crop.crop, processor_shipment_crop__crop_type=crop.crop_type).values("id","processor_shipment_crop__crop", "contract__secret_key","contract_id", "processor_entity_name","processor_type", "processor_id", "shipment_id", "warehouse_id", "warehouse_name","customer_name","customer_id", "date_pulled", "carrier_type", "distributor_receive_date", "status")
+                        if check_processor_shipment:
+                            for shipment in check_processor_shipment:
+                                if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                                    shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                                
+                                carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                                shipment["carrier_id"] = carrier.carrier_id                                 
+
+                            outbound5_processor.extend(check_processor_shipment) 
+                            processor_entity_name = shipment["processor_entity_name"]
+                            processor_id = shipment["processor_id"]
+                            processor_type = shipment["processor_type"]                             
+                            return_context = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, processor_entity_name)
+
+                            if return_context.get("outbound2_wip"):                                
+                                output.extend(return_context["outbound2_wip"])                      
+                else:
+                    output = []
+
+            elif get_search_by and get_search_by == 'warehouse': 
+                output = []                       
+                check_warehouse = Warehouse.objects.filter(name__icontains=search_text)
+                if check_warehouse.exists():                    
+                    warehouse = check_warehouse.first()                   
+                    inbound5 = list(ProcessorWarehouseShipment.objects.filter(processor_shipment_crop__crop=select_crop, warehouse_id=warehouse.id, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values("id","processor_shipment_crop__crop", "contract__secret_key","contract_id", "processor_entity_name","processor_type", "processor_id", "shipment_id", "warehouse_id", "warehouse_name","customer_name","customer_id", "date_pulled", "carrier_type", "distributor_receive_date", "status"))
+                    for shipment in inbound5:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id                     
+
+                    outbound6 = list(WarehouseCustomerShipment.objects.filter(warehouse_shipment_crop__crop=select_crop, warehouse_id=warehouse.id, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values("id","warehouse_shipment_crop__crop","contract__secret_key","contract_id", "shipment_id", "warehouse_id", "customer_id","warehouse_name","customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status"))
+                    for shipment in outbound6:
+                        if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    
+                    for shipment in inbound5:
+                        processor_id = shipment["processor_id"]
+                        processor_type = shipment["processor_type"]
+                        processor_entity_name = shipment["processor_entity_name"]
+                        return_context = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, processor_entity_name)
+                        if return_context.get("outbound2_wip"):                                
+                            output.extend(return_context["outbound2_wip"]) 
+                else:
+                    output = []
+                     
+            elif get_search_by and get_search_by == 'customer':
+                
+                check_customer = Customer.objects.filter(name__icontains=search_text)
+                if check_customer.exists():
+                    customer = check_customer.first()
+                    inbound6 = []
+                    
+                    processor_shipments = list(ProcessorWarehouseShipment.objects.filter(
+                        processor_shipment_crop__crop=select_crop,
+                        customer_id=customer.id, 
+                        date_pulled__date__gte=from_date, 
+                        date_pulled__date__lte=to_date
+                    ).values(
+                        "id","processor_shipment_crop__crop", "contract__secret_key", "contract_id", "processor_entity_name",
+                        "processor_type", "processor_id", "shipment_id", "warehouse_id",
+                        "warehouse_name", "customer_name", "customer_id", 
+                        "date_pulled", "carrier_type", "distributor_receive_date", "status"
+                    ))
+                    for shipment in processor_shipments:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    inbound6.extend(processor_shipments)
+
+                    warehouse_shipments = list(WarehouseCustomerShipment.objects.filter(
+                        warehouse_shipment_crop__crop=select_crop, 
+                        customer_id=customer.id, 
+                        date_pulled__date__gte=from_date, 
+                        date_pulled__date__lte=to_date
+                    ).values(
+                        "id", "warehouse_shipment_crop__crop","contract__secret_key", "contract_id", "shipment_id",
+                        "warehouse_id", "customer_id", "warehouse_name", "customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status"
+                    ))
+                    for shipment in warehouse_shipments:
+                        if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    inbound6.extend(warehouse_shipments)
+
+                    warehouse_ids = [shipment["warehouse_id"] for shipment in warehouse_shipments]
+                    inbound5 = list(ProcessorWarehouseShipment.objects.filter(
+                        processor_shipment_crop__crop=select_crop,
+                        warehouse_id__in=warehouse_ids,
+                        date_pulled__date__gte=from_date,
+                        date_pulled__date__lte=to_date
+                    ).values(
+                        "id","processor_shipment_crop__crop", "contract__secret_key", "contract_id", "processor_entity_name",
+                        "processor_type", "processor_id", "shipment_id", "warehouse_id",
+                        "warehouse_name", "customer_name", "customer_id", 
+                        "date_pulled", "carrier_type", "distributor_receive_date", "status"
+                    ))
+                    for shipment in inbound5:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+
+                    outbound5 = inbound5 + processor_shipments
+                    for shipment in outbound5:
+                        processor_id = shipment.get("processor_id")
+                        processor_type = shipment.get("processor_type")
+                        processor_entity_name = shipment.get("processor_entity_name")
+                        
+                        return_context = processor_traceability_report_response(
+                            select_crop, processor_id, processor_type, 
+                            from_date, to_date, processor_entity_name
+                        )                        
+                        if return_context.get("outbound2_wip"):                                
+                            output.extend(return_context["outbound2_wip"]) 
                 else:
                     output = [] 
                                 
@@ -3406,21 +5734,21 @@ def traceability_report_T2_Processor_csv_download(request,select_crop,get_search
             else:
                 output = []
             for i in output:
-                writer.writerow([i["processor_name"] , i["processor_id"], i["deliveryid"], i["grower"], i["farm"], i["field"], i["date"], i["pounds_shipped"], 
+                writer.writerow([i["processor_name"] , i["processor_id"], i["shipment_id"], i["grower"], i["farm"], i["field"], i["date"], i["pounds_shipped"], 
                                  i["pounds_received"], i["pounds_delta"]])
             
-        if select_crop == 'RICE' :
+        else :
             if get_search_by and get_search_by == 'grower' :
                 check_grower = Grower.objects.filter(name__icontains=search_text)
                 if check_grower.exists() :
                     check_grower_id = check_grower.first().id
-                    check_grower_field_crop = Field.objects.filter(crop='RICE',grower_id=check_grower_id)
+                    check_grower_field_crop = Field.objects.filter(crop=select_crop,grower_id=check_grower_id)
                     if check_grower_field_crop.exists() :
                         processor_id = LinkGrowerToProcessor.objects.filter(grower_id=check_grower_id).first().processor.id
                         entity_name = LinkGrowerToProcessor.objects.filter(grower_id=check_grower_id).first().processor.entity_name
                                                        
                         processor_type = "T1"
-                        context_ = processor_traceability_report_response(processor_id, processor_type, from_date, to_date, entity_name)      
+                        context_ = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, entity_name)      
                         output = context_.get("inbound2_wip")
                     else:
                         output = []
@@ -3428,7 +5756,7 @@ def traceability_report_T2_Processor_csv_download(request,select_crop,get_search
                     output = []
        
             elif get_search_by and get_search_by == 'field' :
-                check_field = Field.objects.filter(name__icontains=search_text,crop='RICE')
+                check_field = Field.objects.filter(name__icontains=search_text,crop=select_crop)
                 if check_field.exists() :
                     field_name = search_text
                     field_id = check_field.first().id                    
@@ -3436,7 +5764,7 @@ def traceability_report_T2_Processor_csv_download(request,select_crop,get_search
                     processor_id = LinkGrowerToProcessor.objects.filter(grower_id=grower_id).first().processor.id
                     entity_name = LinkGrowerToProcessor.objects.filter(grower_id=grower_id).first().processor.entity_name
                     processor_type = "T1"
-                    context_ = processor_traceability_report_response(processor_id, processor_type, from_date, to_date, entity_name)
+                    context_ = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, entity_name)
                     output = context_.get("inbound2_wip")
                 else:
                     output = []
@@ -3446,31 +5774,230 @@ def traceability_report_T2_Processor_csv_download(request,select_crop,get_search
                 if check_processor:
                     processor_type = check_processor["type"]
                     processor_id = check_processor["id"]
-                    context_ = processor_traceability_report_response(processor_id,processor_type, from_date, to_date, search_text)
+                    context_ = processor_traceability_report_response(select_crop, processor_id,processor_type, from_date, to_date, search_text)
                     output = context_.get("inbound2_wip")
                 else:
                     output = []
 
             elif get_search_by and get_search_by == 'sku_id' :
-                context_ = skuid_traceability_response(search_text)  
+                context_ = skuid_traceability_response(select_crop, search_text, from_date, to_date)  
                 output = context_.get("inbound2_wip")
 
-            elif get_search_by and get_search_by == 'deliveryid' :
-                get_delivery_id3 = GrowerShipment.objects.filter(shipment_id__icontains=search_text)
-                if get_delivery_id3.exists() :
-                    sku_id = get_delivery_id3.first().sku
-                    context_ = skuid_traceability_response(sku_id)
-                    output = context_.get("inbound2_wip")
-                elif not get_delivery_id3:
-                    get_sku_id = ShipmentManagement.objects.filter(shipment_id__icontains=search_text)
-                    if get_sku_id:
-                        sku_id = get_sku_id.first().storage_bin_send
-                        context_ = skuid_traceability_response(sku_id)
+            elif get_search_by and get_search_by == 'deliveryid' :                
+                check_shipment = GrowerShipment.objects.filter(shipment_id__icontains=search_text, crop=select_crop)
+                        
+                if check_shipment.exists() :
+                    get_shipment = check_shipment.first()
+                    sku_id = get_shipment.sku
+                    context_ = skuid_traceability_response(select_crop, sku_id, from_date, to_date)
+                    output = context_.get("inbound2_wip")      
+
+                elif not check_shipment and ShipmentManagement.objects.filter(shipment_id__icontains=search_text, crop=select_crop).exists():
+                    get_shipment = ShipmentManagement.objects.filter(shipment_id__icontains=search_text, crop=select_crop).first()
+                    
+                    if get_shipment and not get_shipment.receiver_processor_type == "T4":
+                        sku_id = get_shipment.storage_bin_send 
+                        context_ = skuid_traceability_response(select_crop, sku_id, from_date, to_date)
+                        output = context_.get("inbound2_wip")                        
+
+                    elif get_shipment and get_shipment.receiver_processor_type == "T4":
+                        sku_id = get_shipment.storage_bin_recive 
+                        context_ = skuid_traceability_response(select_crop, sku_id, from_date, to_date)                        
                         output = context_.get("inbound2_wip")
+
                     else:
                         output = []
+
+                elif not check_shipment and ProcessorWarehouseShipment.objects.filter(shipment_id__icontains=search_text, processor_shipment_crop__crop=select_crop).exists():
+                    output = []
+                    shipments = ProcessorWarehouseShipment.objects.filter(shipment_id__icontains=search_text, processor_shipment_crop__crop=select_crop).values("id","processor_shipment_crop__crop", "contract__secret_key","contract_id", "processor_entity_name","processor_type", "processor_id", "shipment_id", "warehouse_id", "warehouse_name","customer_name","customer_id", "date_pulled", "carrier_type", "distributor_receive_date", "status")
+                    for shipment in shipments:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    get_shipment = shipments.first()
+
+                    if get_shipment["warehouse_id"] not in [None, "null", "", " "]:                                               
+                        crops = ProcessorShipmentCrops.objects.filter(shipment_id=get_shipment["id"])
+                        outbound6 = []
+                        for crop in crops:                            
+                            if WarehouseCustomerShipment.objects.filter(warehouse_id=get_shipment["warehouse_id"], warehouse_shipment_crop__crop=crop.crop, warehouse_shipment_crop__crop_type=crop.crop_type).exists():
+                                shipments = WarehouseCustomerShipment.objects.filter(warehouse_id=get_shipment["warehouse_id"], warehouse_shipment_crop__crop=crop.crop, warehouse_shipment_crop__crop_type=crop.crop_type).values("id","warehouse_shipment_crop__crop","contract__secret_key","contract_id", "shipment_id", "warehouse_id","customer_id","warehouse_name","customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status")
+                                for shipment in shipments:
+                                    if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                                        shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                                    
+                                    carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                                    shipment["carrier_id"] = carrier.carrier_id  
+                                outbound6.extend(list(shipments))
+
+                        processor_entity_name = get_shipment["processor_entity_name"]
+                        processor_id = get_shipment["processor_id"]
+                        processor_type = get_shipment["processor_type"]
+                        for crop in crops:
+                            select_crop = crop.crop
+                            return_context = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, processor_entity_name)
+                        
+                            if return_context.get("inbound2_wip"):                                
+                                output.extend(return_context["inbound2_wip"])                                   
+                        
+                    else:  
+                        crops = ProcessorShipmentCrops.objects.filter(shipment_id=get_shipment["id"])
+                        processor_entity_name = get_shipment["processor_entity_name"]
+                        processor_id = get_shipment["processor_id"]
+                        processor_type = get_shipment["processor_type"]
+                        for crop in crops:
+                            select_crop = crop.crop
+                            return_context = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, processor_entity_name)
+                            
+                            if return_context.get("inbound2_wip"):                                
+                                output.extend(return_context["inbound2_wip"])                                      
+                               
+                elif not check_shipment and WarehouseCustomerShipment.objects.filter(shipment_id__icontains=search_text, warehouse_shipment_crop__crop=select_crop).exists():
+                    output = []
+                    shipments = WarehouseCustomerShipment.objects.filter(shipment_id__icontains=search_text, warehouse_shipment_crop__crop=select_crop).values("id","warehouse_shipment_crop__crop","contract__secret_key","contract_id", "shipment_id", "warehouse_id" ,"customer_id","warehouse_name","customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status")
+                    for shipment in shipments:
+                        if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+
+                    get_shipment = shipments.first()                    
+                    crops = WarehouseShipmentCrops.objects.filter(shipment_id=get_shipment["id"])
+                    outbound5_processor = []
+                    for crop in crops:
+                        select_crop = crop.crop
+                        check_processor_shipment = ProcessorWarehouseShipment.objects.filter(warehouse_id=get_shipment["warehouse_id"], processor_shipment_crop__crop=crop.crop, processor_shipment_crop__crop_type=crop.crop_type).values("id","processor_shipment_crop__crop", "contract__secret_key","contract_id","processor_entity_name","processor_type", "processor_id", "shipment_id", "warehouse_id", "warehouse_name","customer_name","customer_id", "date_pulled", "carrier_type", "distributor_receive_date", "status")
+                        if check_processor_shipment:
+                            for shipment in check_processor_shipment:
+                                if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                                    shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                                
+                                carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                                shipment["carrier_id"] = carrier.carrier_id                                 
+
+                            outbound5_processor.extend(check_processor_shipment) 
+                            processor_entity_name = shipment["processor_entity_name"]
+                            processor_id = shipment["processor_id"]
+                            processor_type = shipment["processor_type"]                             
+                            return_context = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, processor_entity_name)
+
+                            if return_context.get("inbound2_wip"):                                
+                                output.extend(return_context["inbound2_wip"])                      
                 else:
                     output = []
+            
+            elif get_search_by and get_search_by == 'warehouse': 
+                output = []                       
+                check_warehouse = Warehouse.objects.filter(name__icontains=search_text)
+                if check_warehouse.exists():                    
+                    warehouse = check_warehouse.first()                   
+                    inbound5 = list(ProcessorWarehouseShipment.objects.filter(processor_shipment_crop__crop=select_crop, warehouse_id=warehouse.id, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values("id","processor_shipment_crop__crop", "contract__secret_key","contract_id", "processor_entity_name","processor_type", "processor_id", "shipment_id", "warehouse_id", "warehouse_name","customer_name","customer_id", "date_pulled", "carrier_type", "distributor_receive_date", "status"))
+                    for shipment in inbound5:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id                     
+
+                    outbound6 = list(WarehouseCustomerShipment.objects.filter(warehouse_shipment_crop__crop=select_crop, warehouse_id=warehouse.id, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values("id","warehouse_shipment_crop__crop","contract__secret_key","contract_id","shipment_id", "warehouse_id", "customer_id","warehouse_name","customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status"))
+                    for shipment in outbound6:
+                        if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    
+                    for shipment in inbound5:
+                        processor_id = shipment["processor_id"]
+                        processor_type = shipment["processor_type"]
+                        processor_entity_name = shipment["processor_entity_name"]
+                        return_context = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, processor_entity_name)
+                        if return_context.get("inbound2_wip"):                                
+                            output.extend(return_context["inbound2_wip"]) 
+                else:
+                    output = []
+                     
+            elif get_search_by and get_search_by == 'customer':
+                
+                check_customer = Customer.objects.filter(name__icontains=search_text)
+                if check_customer.exists():
+                    customer = check_customer.first()
+                    inbound6 = []
+                    
+                    processor_shipments = list(ProcessorWarehouseShipment.objects.filter(
+                        processor_shipment_crop__crop=select_crop,
+                        customer_id=customer.id, 
+                        date_pulled__date__gte=from_date, 
+                        date_pulled__date__lte=to_date
+                    ).values(
+                        "id","processor_shipment_crop__crop", "contract__secret_key", "contract_id", "processor_entity_name",
+                        "processor_type", "processor_id", "shipment_id", "warehouse_id",
+                        "warehouse_name", "customer_name", "customer_id", 
+                        "date_pulled", "carrier_type", "distributor_receive_date", "status"
+                    ))
+                    for shipment in processor_shipments:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    inbound6.extend(processor_shipments)
+
+                    warehouse_shipments = list(WarehouseCustomerShipment.objects.filter(
+                        warehouse_shipment_crop__crop=select_crop, 
+                        customer_id=customer.id, 
+                        date_pulled__date__gte=from_date, 
+                        date_pulled__date__lte=to_date
+                    ).values(
+                        "id", "warehouse_shipment_crop__crop","contract__secret_key", "contract_id", "shipment_id",
+                        "warehouse_id", "customer_id", "warehouse_name", "customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status"
+                    ))
+                    for shipment in warehouse_shipments:
+                        if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    inbound6.extend(warehouse_shipments)
+
+                    warehouse_ids = [shipment["warehouse_id"] for shipment in warehouse_shipments]
+                    inbound5 = list(ProcessorWarehouseShipment.objects.filter(
+                        processor_shipment_crop__crop=select_crop,
+                        warehouse_id__in=warehouse_ids,
+                        date_pulled__date__gte=from_date,
+                        date_pulled__date__lte=to_date
+                    ).values(
+                        "id","processor_shipment_crop__crop", "contract__secret_key", "contract_id", "processor_entity_name",
+                        "processor_type", "processor_id", "shipment_id", "warehouse_id",
+                        "warehouse_name", "customer_name", "customer_id", 
+                        "date_pulled", "carrier_type", "distributor_receive_date", "status"
+                    ))
+                    for shipment in inbound5:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+
+                    outbound5 = inbound5 + processor_shipments
+                    for shipment in outbound5:
+                        processor_id = shipment.get("processor_id")
+                        processor_type = shipment.get("processor_type")
+                        processor_entity_name = shipment.get("processor_entity_name")
+                        
+                        return_context = processor_traceability_report_response(
+                            select_crop, processor_id, processor_type, 
+                            from_date, to_date, processor_entity_name
+                        )                        
+                        if return_context.get("inbound2_wip"):                                
+                            output.extend(return_context["inbound2_wip"]) 
+                else:
+                    output = [] 
+             
             else:
                 output = []
             for i in output:
@@ -3492,18 +6019,20 @@ def traceability_report_WIP3_csv_download(request,select_crop,get_search_by,sear
         writer = csv.writer(response)
         writer.writerow(['DELIVERY ID OUTBOUND', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
         output = []
-        if select_crop == 'RICE' :
+        if select_crop == "COTTON":
+            pass
+        else :
             if get_search_by and get_search_by == 'grower' :
                 check_grower = Grower.objects.filter(name__icontains=search_text)
                 if check_grower.exists() :
                     check_grower_id = check_grower.first().id
-                    check_grower_field_crop = Field.objects.filter(crop='RICE',grower_id=check_grower_id)
+                    check_grower_field_crop = Field.objects.filter(crop=select_crop,grower_id=check_grower_id)
                     if check_grower_field_crop.exists() :
                         processor_id = LinkGrowerToProcessor.objects.filter(grower_id=check_grower_id).first().processor.id
                         entity_name = LinkGrowerToProcessor.objects.filter(grower_id=check_grower_id).first().processor.entity_name
                                                        
                         processor_type = "T1"
-                        context_ = processor_traceability_report_response(processor_id, processor_type, from_date, to_date, entity_name)      
+                        context_ = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, entity_name)      
                         output = context_.get("outbound3_wip")
                     else:
                         output = []
@@ -3511,7 +6040,7 @@ def traceability_report_WIP3_csv_download(request,select_crop,get_search_by,sear
                     output = []              
             
             elif get_search_by and get_search_by == 'field' :
-                check_field = Field.objects.filter(name__icontains=search_text,crop='RICE')
+                check_field = Field.objects.filter(name__icontains=search_text,crop=select_crop)
                 if check_field.exists() :
                     field_name = search_text
                     field_id = check_field.first().id                    
@@ -3519,7 +6048,7 @@ def traceability_report_WIP3_csv_download(request,select_crop,get_search_by,sear
                     processor_id = LinkGrowerToProcessor.objects.filter(grower_id=grower_id).first().processor.id
                     entity_name = LinkGrowerToProcessor.objects.filter(grower_id=grower_id).first().processor.entity_name
                     processor_type = "T1"
-                    context_ = processor_traceability_report_response(processor_id, processor_type, from_date, to_date, entity_name)
+                    context_ = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, entity_name)
                     output = context_.get("outbound3_wip")
                 else:
                     output = []         
@@ -3529,32 +6058,230 @@ def traceability_report_WIP3_csv_download(request,select_crop,get_search_by,sear
                 if check_processor:
                     processor_type = check_processor["type"]
                     processor_id = check_processor["id"]
-                    context_ = processor_traceability_report_response(processor_id,processor_type, from_date, to_date, search_text)
+                    context_ = processor_traceability_report_response(select_crop, processor_id,processor_type, from_date, to_date, search_text)
                     output = context_.get("outbound3_wip")
                 else:
                     output = []
 
             elif get_search_by and get_search_by == 'sku_id' :
-                context_ = skuid_traceability_response(search_text)  
+                context_ = skuid_traceability_response(select_crop, search_text, from_date, to_date)  
                 output = context_.get("outbound3_wip") 
 
-            elif get_search_by and get_search_by == 'deliveryid' :
-                get_delivery_id3 = GrowerShipment.objects.filter(shipment_id__icontains=search_text)
-                if get_delivery_id3.exists() :
-                    sku_id = get_delivery_id3.first().sku
-                    context_ = skuid_traceability_response(sku_id)
-                    output = context_.get("outbound3_wip")
-                elif not get_delivery_id3:
-                    get_sku_id = ShipmentManagement.objects.filter(shipment_id__icontains=search_text)
-                    if get_sku_id:
-                        sku_id = get_sku_id.first().storage_bin_send
-                        context_ = skuid_traceability_response(sku_id)
+            elif get_search_by and get_search_by == 'deliveryid' :                
+                check_shipment = GrowerShipment.objects.filter(shipment_id__icontains=search_text, crop=select_crop)
+                        
+                if check_shipment.exists() :
+                    get_shipment = check_shipment.first()
+                    sku_id = get_shipment.sku
+                    context_ = skuid_traceability_response(select_crop, sku_id, from_date, to_date)
+                    output = context_.get("outbound3_wip")      
+
+                elif not check_shipment and ShipmentManagement.objects.filter(shipment_id__icontains=search_text, crop=select_crop).exists():
+                    get_shipment = ShipmentManagement.objects.filter(shipment_id__icontains=search_text, crop=select_crop).first()
+                    
+                    if get_shipment and not get_shipment.receiver_processor_type == "T4":
+                        sku_id = get_shipment.storage_bin_send 
+                        context_ = skuid_traceability_response(select_crop, sku_id, from_date, to_date)
+                        output = context_.get("outbound3_wip")                        
+
+                    elif get_shipment and get_shipment.receiver_processor_type == "T4":
+                        sku_id = get_shipment.storage_bin_recive 
+                        context_ = skuid_traceability_response(select_crop, sku_id, from_date, to_date)                        
                         output = context_.get("outbound3_wip")
+
                     else:
                         output = []
+
+                elif not check_shipment and ProcessorWarehouseShipment.objects.filter(shipment_id__icontains=search_text, processor_shipment_crop__crop=select_crop).exists():
+                    output = []
+                    shipments = ProcessorWarehouseShipment.objects.filter(shipment_id__icontains=search_text, processor_shipment_crop__crop=select_crop).values("id","processor_shipment_crop__crop", "contract__secret_key","contract_id", "processor_entity_name","processor_type", "processor_id", "shipment_id", "warehouse_id", "warehouse_name","customer_name","customer_id", "date_pulled", "carrier_type", "distributor_receive_date", "status")
+                    for shipment in shipments:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    get_shipment = shipments.first()
+
+                    if get_shipment["warehouse_id"] not in [None, "null", "", " "]:                                               
+                        crops = ProcessorShipmentCrops.objects.filter(shipment_id=get_shipment["id"])
+                        outbound6 = []
+                        for crop in crops:                            
+                            if WarehouseCustomerShipment.objects.filter(warehouse_id=get_shipment["warehouse_id"], warehouse_shipment_crop__crop=crop.crop, warehouse_shipment_crop__crop_type=crop.crop_type).exists():
+                                shipments = WarehouseCustomerShipment.objects.filter(warehouse_id=get_shipment["warehouse_id"], warehouse_shipment_crop__crop=crop.crop, warehouse_shipment_crop__crop_type=crop.crop_type).values("id","warehouse_shipment_crop__crop","contract__secret_key","contract_id", "shipment_id", "warehouse_id", "customer_id","warehouse_name","customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status")
+                                for shipment in shipments:
+                                    if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                                        shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                                    
+                                    carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                                    shipment["carrier_id"] = carrier.carrier_id  
+                                outbound6.extend(list(shipments))
+
+                        processor_entity_name = get_shipment["processor_entity_name"]
+                        processor_id = get_shipment["processor_id"]
+                        processor_type = get_shipment["processor_type"]
+                        for crop in crops:
+                            select_crop = crop.crop
+                            return_context = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, processor_entity_name)
+                        
+                            if return_context.get("outbound3_wip"):                                
+                                output.extend(return_context["outbound3_wip"])                                   
+                        
+                    else:  
+                        crops = ProcessorShipmentCrops.objects.filter(shipment_id=get_shipment["id"])
+                        processor_entity_name = get_shipment["processor_entity_name"]
+                        processor_id = get_shipment["processor_id"]
+                        processor_type = get_shipment["processor_type"]
+                        for crop in crops:
+                            select_crop = crop.crop
+                            return_context = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, processor_entity_name)
+                            
+                            if return_context.get("outbound3_wip"):                                
+                                output.extend(return_context["outbound3_wip"])                                      
+                               
+                elif not check_shipment and WarehouseCustomerShipment.objects.filter(shipment_id__icontains=search_text, warehouse_shipment_crop__crop=select_crop).exists():
+                    output = []
+                    shipments = WarehouseCustomerShipment.objects.filter(shipment_id__icontains=search_text, warehouse_shipment_crop__crop=select_crop).values("id","warehouse_shipment_crop__crop","contract__secret_key","contract_id", "shipment_id", "warehouse_id" ,"customer_id","warehouse_name","customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status")
+                    for shipment in shipments:
+                        if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+
+                    get_shipment = shipments.first()                    
+                    crops = WarehouseShipmentCrops.objects.filter(shipment_id=get_shipment["id"])
+                    outbound5_processor = []
+                    for crop in crops:
+                        select_crop = crop.crop
+                        check_processor_shipment = ProcessorWarehouseShipment.objects.filter(warehouse_id=get_shipment["warehouse_id"], processor_shipment_crop__crop=crop.crop, processor_shipment_crop__crop_type=crop.crop_type).values("id","processor_shipment_crop__crop", "contract__secret_key","contract_id", "processor_entity_name","processor_type", "processor_id", "shipment_id", "warehouse_id", "warehouse_name","customer_name","customer_id", "date_pulled", "carrier_type", "distributor_receive_date", "status")
+                        if check_processor_shipment:
+                            for shipment in check_processor_shipment:
+                                if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                                    shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                                
+                                carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                                shipment["carrier_id"] = carrier.carrier_id                                 
+
+                            outbound5_processor.extend(check_processor_shipment) 
+                            processor_entity_name = shipment["processor_entity_name"]
+                            processor_id = shipment["processor_id"]
+                            processor_type = shipment["processor_type"]                             
+                            return_context = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, processor_entity_name)
+
+                            if return_context.get("outbound3_wip"):                                
+                                output.extend(return_context["outbound3_wip"])                      
+                else:
+                    output = []
+
+            elif get_search_by and get_search_by == 'warehouse': 
+                output = []                       
+                check_warehouse = Warehouse.objects.filter(name__icontains=search_text)
+                if check_warehouse.exists():                    
+                    warehouse = check_warehouse.first()                   
+                    inbound5 = list(ProcessorWarehouseShipment.objects.filter(processor_shipment_crop__crop=select_crop, warehouse_id=warehouse.id, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values("id","processor_shipment_crop__crop", "contract__secret_key","contract_id", "processor_entity_name","processor_type", "processor_id", "shipment_id", "warehouse_id", "warehouse_name","customer_name","customer_id", "date_pulled", "carrier_type", "distributor_receive_date", "status"))
+                    for shipment in inbound5:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id                     
+
+                    outbound6 = list(WarehouseCustomerShipment.objects.filter(warehouse_shipment_crop__crop=select_crop, warehouse_id=warehouse.id, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values("id","warehouse_shipment_crop__crop","contract__secret_key","contract_id", "shipment_id", "warehouse_id", "customer_id","warehouse_name","customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status"))
+                    for shipment in outbound6:
+                        if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    
+                    for shipment in inbound5:
+                        processor_id = shipment["processor_id"]
+                        processor_type = shipment["processor_type"]
+                        processor_entity_name = shipment["processor_entity_name"]
+                        return_context = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, processor_entity_name)
+                        if return_context.get("outbound3_wip"):                                
+                            output.extend(return_context["outbound3_wip"]) 
+                else:
+                    output = []
+                     
+            elif get_search_by and get_search_by == 'customer':
+                
+                check_customer = Customer.objects.filter(name__icontains=search_text)
+                if check_customer.exists():
+                    customer = check_customer.first()
+                    inbound6 = []
+                    
+                    processor_shipments = list(ProcessorWarehouseShipment.objects.filter(
+                        processor_shipment_crop__crop=select_crop,
+                        customer_id=customer.id, 
+                        date_pulled__date__gte=from_date, 
+                        date_pulled__date__lte=to_date
+                    ).values(
+                        "id","processor_shipment_crop__crop", "contract__secret_key", "contract_id", "processor_entity_name",
+                        "processor_type", "processor_id", "shipment_id", "warehouse_id",
+                        "warehouse_name", "customer_name", "customer_id", 
+                        "date_pulled", "carrier_type", "distributor_receive_date", "status"
+                    ))
+                    for shipment in processor_shipments:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    inbound6.extend(processor_shipments)
+
+                    warehouse_shipments = list(WarehouseCustomerShipment.objects.filter(
+                        warehouse_shipment_crop__crop=select_crop, 
+                        customer_id=customer.id, 
+                        date_pulled__date__gte=from_date, 
+                        date_pulled__date__lte=to_date
+                    ).values(
+                        "id", "warehouse_shipment_crop__crop","contract__secret_key", "contract_id", "shipment_id",
+                        "warehouse_id", "customer_id", "warehouse_name", "customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status"
+                    ))
+                    for shipment in warehouse_shipments:
+                        if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    inbound6.extend(warehouse_shipments)
+
+                    warehouse_ids = [shipment["warehouse_id"] for shipment in warehouse_shipments]
+                    inbound5 = list(ProcessorWarehouseShipment.objects.filter(
+                        processor_shipment_crop__crop=select_crop,
+                        warehouse_id__in=warehouse_ids,
+                        date_pulled__date__gte=from_date,
+                        date_pulled__date__lte=to_date
+                    ).values(
+                        "id","processor_shipment_crop__crop", "contract__secret_key", "contract_id", "processor_entity_name",
+                        "processor_type", "processor_id", "shipment_id", "warehouse_id",
+                        "warehouse_name", "customer_name", "customer_id", 
+                        "date_pulled", "carrier_type", "distributor_receive_date", "status"
+                    ))
+                    for shipment in inbound5:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+
+                    outbound5 = inbound5 + processor_shipments
+                    for shipment in outbound5:
+                        processor_id = shipment.get("processor_id")
+                        processor_type = shipment.get("processor_type")
+                        processor_entity_name = shipment.get("processor_entity_name")
+                        
+                        return_context = processor_traceability_report_response(
+                            select_crop, processor_id, processor_type, 
+                            from_date, to_date, processor_entity_name
+                        )                        
+                        if return_context.get("outbound3_wip"):                                
+                            output.extend(return_context["outbound3_wip"]) 
                 else:
                     output = [] 
-                                
+                                 
             else:
                 output = []
             for i in output:
@@ -3576,18 +6303,20 @@ def traceability_report_T3_Processor_csv_download(request,select_crop,get_search
         writer.writerow(['PROCESSOR NAME', 'DELIVERY ID', 'DATE', 'QUANTITY POUNDS SHIPPED', 
                              'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
         output = []
-        if select_crop == 'RICE' :
+        if select_crop == 'COTTON':
+            pass
+        else :
             if get_search_by and get_search_by == 'grower' :
                 check_grower = Grower.objects.filter(name__icontains=search_text)
                 if check_grower.exists() :
                     check_grower_id = check_grower.first().id
-                    check_grower_field_crop = Field.objects.filter(crop='RICE',grower_id=check_grower_id)
+                    check_grower_field_crop = Field.objects.filter(crop=select_crop,grower_id=check_grower_id)
                     if check_grower_field_crop.exists() :
                         processor_id = LinkGrowerToProcessor.objects.filter(grower_id=check_grower_id).first().processor.id
                         entity_name = LinkGrowerToProcessor.objects.filter(grower_id=check_grower_id).first().processor.entity_name
                                                        
                         processor_type = "T1"
-                        context_ = processor_traceability_report_response(processor_id, processor_type, from_date, to_date, entity_name)      
+                        context_ = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, entity_name)      
                         output = context_.get("inbound3_wip")
                     else:
                         output = []
@@ -3595,7 +6324,7 @@ def traceability_report_T3_Processor_csv_download(request,select_crop,get_search
                     output = []
        
             elif get_search_by and get_search_by == 'field' :
-                check_field = Field.objects.filter(name__icontains=search_text,crop='RICE')
+                check_field = Field.objects.filter(name__icontains=search_text,crop=select_crop)
                 if check_field.exists() :
                     field_name = search_text
                     field_id = check_field.first().id                    
@@ -3603,7 +6332,7 @@ def traceability_report_T3_Processor_csv_download(request,select_crop,get_search
                     processor_id = LinkGrowerToProcessor.objects.filter(grower_id=grower_id).first().processor.id
                     entity_name = LinkGrowerToProcessor.objects.filter(grower_id=grower_id).first().processor.entity_name
                     processor_type = "T1"
-                    context_ = processor_traceability_report_response(processor_id, processor_type, from_date, to_date, entity_name)
+                    context_ = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, entity_name)
                     output = context_.get("inbound3_wip")
                 else:
                     output = []
@@ -3613,31 +6342,230 @@ def traceability_report_T3_Processor_csv_download(request,select_crop,get_search
                 if check_processor:
                     processor_type = check_processor["type"]
                     processor_id = check_processor["id"]
-                    context_ = processor_traceability_report_response(processor_id,processor_type, from_date, to_date, search_text)
+                    context_ = processor_traceability_report_response(select_crop, processor_id,processor_type, from_date, to_date, search_text)
                     output = context_.get("inbound3_wip")
                 else:
                     output = []
 
             elif get_search_by and get_search_by == 'sku_id' :
-                context_ = skuid_traceability_response(search_text)  
+                context_ = skuid_traceability_response(select_crop, search_text, from_date, to_date)  
                 output = context_.get("inbound3_wip")
 
-            elif get_search_by and get_search_by == 'deliveryid' :
-                get_delivery_id3 = GrowerShipment.objects.filter(shipment_id__icontains=search_text)
-                if get_delivery_id3.exists() :
-                    sku_id = get_delivery_id3.first().sku
-                    context_ = skuid_traceability_response(sku_id)
-                    output = context_.get("inbound3_wip")
-                elif not get_delivery_id3:
-                    get_sku_id = ShipmentManagement.objects.filter(shipment_id__icontains=search_text)
-                    if get_sku_id:
-                        sku_id = get_sku_id.first().storage_bin_send
-                        context_ = skuid_traceability_response(sku_id)
+            elif get_search_by and get_search_by == 'deliveryid' :                
+                check_shipment = GrowerShipment.objects.filter(shipment_id__icontains=search_text, crop=select_crop)
+                        
+                if check_shipment.exists() :
+                    get_shipment = check_shipment.first()
+                    sku_id = get_shipment.sku
+                    context_ = skuid_traceability_response(select_crop, sku_id, from_date, to_date)
+                    output = context_.get("inbound3_wip")      
+
+                elif not check_shipment and ShipmentManagement.objects.filter(shipment_id__icontains=search_text, crop=select_crop).exists():
+                    get_shipment = ShipmentManagement.objects.filter(shipment_id__icontains=search_text, crop=select_crop).first()
+                    
+                    if get_shipment and not get_shipment.receiver_processor_type == "T4":
+                        sku_id = get_shipment.storage_bin_send 
+                        context_ = skuid_traceability_response(select_crop, sku_id, from_date, to_date)
+                        output = context_.get("inbound3_wip")                        
+
+                    elif get_shipment and get_shipment.receiver_processor_type == "T4":
+                        sku_id = get_shipment.storage_bin_recive 
+                        context_ = skuid_traceability_response(select_crop, sku_id, from_date, to_date)                        
                         output = context_.get("inbound3_wip")
+
                     else:
                         output = []
+
+                elif not check_shipment and ProcessorWarehouseShipment.objects.filter(shipment_id__icontains=search_text, processor_shipment_crop__crop=select_crop).exists():
+                    output = []
+                    shipments = ProcessorWarehouseShipment.objects.filter(shipment_id__icontains=search_text, processor_shipment_crop__crop=select_crop).values("id","processor_shipment_crop__crop", "contract__secret_key","contract_id", "processor_entity_name","processor_type", "processor_id", "shipment_id", "warehouse_id","warehouse_name","customer_name","customer_id", "date_pulled", "carrier_type", "distributor_receive_date", "status")
+                    for shipment in shipments:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    get_shipment = shipments.first()
+
+                    if get_shipment["warehouse_id"] not in [None, "null", "", " "]:                                               
+                        crops = ProcessorShipmentCrops.objects.filter(shipment_id=get_shipment["id"])
+                        outbound6 = []
+                        for crop in crops:                            
+                            if WarehouseCustomerShipment.objects.filter(warehouse_id=get_shipment["warehouse_id"], warehouse_shipment_crop__crop=crop.crop, warehouse_shipment_crop__crop_type=crop.crop_type).exists():
+                                shipments = WarehouseCustomerShipment.objects.filter(warehouse_id=get_shipment["warehouse_id"], warehouse_shipment_crop__crop=crop.crop, warehouse_shipment_crop__crop_type=crop.crop_type).values("id","warehouse_shipment_crop__crop","contract__secret_key","contract_id", "shipment_id", "warehouse_id", "customer_id","warehouse_name","customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status")
+                                for shipment in shipments:
+                                    if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                                        shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                                    
+                                    carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                                    shipment["carrier_id"] = carrier.carrier_id  
+                                outbound6.extend(list(shipments))
+
+                        processor_entity_name = get_shipment["processor_entity_name"]
+                        processor_id = get_shipment["processor_id"]
+                        processor_type = get_shipment["processor_type"]
+                        for crop in crops:
+                            select_crop = crop.crop
+                            return_context = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, processor_entity_name)
+                        
+                            if return_context.get("inbound3_wip"):                                
+                                output.extend(return_context["inbound3_wip"])                                   
+                        
+                    else:  
+                        crops = ProcessorShipmentCrops.objects.filter(shipment_id=get_shipment["id"])
+                        processor_entity_name = get_shipment["processor_entity_name"]
+                        processor_id = get_shipment["processor_id"]
+                        processor_type = get_shipment["processor_type"]
+                        for crop in crops:
+                            select_crop = crop.crop
+                            return_context = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, processor_entity_name)
+                            
+                            if return_context.get("inbound3_wip"):                                
+                                output.extend(return_context["inbound3_wip"])                                      
+                               
+                elif not check_shipment and WarehouseCustomerShipment.objects.filter(shipment_id__icontains=search_text, warehouse_shipment_crop__crop=select_crop).exists():
+                    output = []
+                    shipments = WarehouseCustomerShipment.objects.filter(shipment_id__icontains=search_text, warehouse_shipment_crop__crop=select_crop).values("id","warehouse_shipment_crop__crop","contract__secret_key","contract_id", "shipment_id", "warehouse_id","customer_id","warehouse_name","customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status")
+                    for shipment in shipments:
+                        if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+
+                    get_shipment = shipments.first()                    
+                    crops = WarehouseShipmentCrops.objects.filter(shipment_id=get_shipment["id"])
+                    outbound5_processor = []
+                    for crop in crops:
+                        select_crop = crop.crop
+                        check_processor_shipment = ProcessorWarehouseShipment.objects.filter(warehouse_id=get_shipment["warehouse_id"], processor_shipment_crop__crop=crop.crop, processor_shipment_crop__crop_type=crop.crop_type).values("id","processor_shipment_crop__crop", "contract__secret_key","contract_id","processor_entity_name","processor_type", "processor_id", "shipment_id", "warehouse_id", "warehouse_name","customer_name","customer_id", "date_pulled", "carrier_type", "distributor_receive_date", "status")
+                        if check_processor_shipment:
+                            for shipment in check_processor_shipment:
+                                if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                                    shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                                
+                                carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                                shipment["carrier_id"] = carrier.carrier_id                                 
+
+                            outbound5_processor.extend(check_processor_shipment) 
+                            processor_entity_name = shipment["processor_entity_name"]
+                            processor_id = shipment["processor_id"]
+                            processor_type = shipment["processor_type"]                             
+                            return_context = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, processor_entity_name)
+
+                            if return_context.get("inbound3_wip"):                                
+                                output.extend(return_context["inbound3_wip"])                      
                 else:
                     output = []
+
+            elif get_search_by and get_search_by == 'warehouse': 
+                output = []                       
+                check_warehouse = Warehouse.objects.filter(name__icontains=search_text)
+                if check_warehouse.exists():                    
+                    warehouse = check_warehouse.first()                   
+                    inbound5 = list(ProcessorWarehouseShipment.objects.filter(processor_shipment_crop__crop=select_crop, warehouse_id=warehouse.id, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values("id","processor_shipment_crop__crop", "contract__secret_key","contract_id", "processor_entity_name","processor_type", "processor_id", "shipment_id", "warehouse_id", "warehouse_name","customer_name","customer_id", "date_pulled", "carrier_type", "distributor_receive_date", "status"))
+                    for shipment in inbound5:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id                     
+
+                    outbound6 = list(WarehouseCustomerShipment.objects.filter(warehouse_shipment_crop__crop=select_crop, warehouse_id=warehouse.id, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values("id","warehouse_shipment_crop__crop","contract__secret_key","contract_id","shipment_id", "warehouse_id", "customer_id","warehouse_name","customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status"))
+                    for shipment in outbound6:
+                        if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    
+                    for shipment in inbound5:
+                        processor_id = shipment["processor_id"]
+                        processor_type = shipment["processor_type"]
+                        processor_entity_name = shipment["processor_entity_name"]
+                        return_context = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, processor_entity_name)
+                        if return_context.get("inbound3_wip"):                                
+                            output.extend(return_context["inbound3_wip"]) 
+                else:
+                    output = []
+                     
+            elif get_search_by and get_search_by == 'customer':
+                
+                check_customer = Customer.objects.filter(name__icontains=search_text)
+                if check_customer.exists():
+                    customer = check_customer.first()
+                    inbound6 = []
+                    
+                    processor_shipments = list(ProcessorWarehouseShipment.objects.filter(
+                        processor_shipment_crop__crop=select_crop,
+                        customer_id=customer.id, 
+                        date_pulled__date__gte=from_date, 
+                        date_pulled__date__lte=to_date
+                    ).values(
+                        "id","processor_shipment_crop__crop", "contract__secret_key", "contract_id", "processor_entity_name",
+                        "processor_type", "processor_id", "shipment_id", "warehouse_id",
+                        "warehouse_name", "customer_name", "customer_id", 
+                        "date_pulled", "carrier_type", "distributor_receive_date", "status"
+                    ))
+                    for shipment in processor_shipments:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    inbound6.extend(processor_shipments)
+
+                    warehouse_shipments = list(WarehouseCustomerShipment.objects.filter(
+                        warehouse_shipment_crop__crop=select_crop, 
+                        customer_id=customer.id, 
+                        date_pulled__date__gte=from_date, 
+                        date_pulled__date__lte=to_date
+                    ).values(
+                        "id", "warehouse_shipment_crop__crop","contract__secret_key", "contract_id", "shipment_id",
+                        "warehouse_id", "customer_id", "warehouse_name", "customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status"
+                    ))
+                    for shipment in warehouse_shipments:
+                        if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    inbound6.extend(warehouse_shipments)
+
+                    warehouse_ids = [shipment["warehouse_id"] for shipment in warehouse_shipments]
+                    inbound5 = list(ProcessorWarehouseShipment.objects.filter(
+                        processor_shipment_crop__crop=select_crop,
+                        warehouse_id__in=warehouse_ids,
+                        date_pulled__date__gte=from_date,
+                        date_pulled__date__lte=to_date
+                    ).values(
+                        "id","processor_shipment_crop__crop", "contract__secret_key", "contract_id", "processor_entity_name",
+                        "processor_type", "processor_id", "shipment_id", "warehouse_id",
+                        "warehouse_name", "customer_name", "customer_id", 
+                        "date_pulled", "carrier_type", "distributor_receive_date", "status"
+                    ))
+                    for shipment in inbound5:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+
+                    outbound5 = inbound5 + processor_shipments
+                    for shipment in outbound5:
+                        processor_id = shipment.get("processor_id")
+                        processor_type = shipment.get("processor_type")
+                        processor_entity_name = shipment.get("processor_entity_name")
+                        
+                        return_context = processor_traceability_report_response(
+                            select_crop, processor_id, processor_type, 
+                            from_date, to_date, processor_entity_name
+                        )                        
+                        if return_context.get("inbound3_wip"):                                
+                            output.extend(return_context["inbound3_wip"]) 
+                else:
+                    output = [] 
+              
             else:
                 output = []
             for i in output:
@@ -3659,18 +6587,20 @@ def traceability_report_WIP4_csv_download(request,select_crop,get_search_by,sear
         writer = csv.writer(response)
         writer.writerow(['DELIVERY ID OUTBOUND', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
         output = []
-        if select_crop == 'RICE' :
+        if select_crop == "COTTON":
+            pass
+        else:
             if get_search_by and get_search_by == 'grower' :
                 check_grower = Grower.objects.filter(name__icontains=search_text)
                 if check_grower.exists() :
                     check_grower_id = check_grower.first().id
-                    check_grower_field_crop = Field.objects.filter(crop='RICE',grower_id=check_grower_id)
+                    check_grower_field_crop = Field.objects.filter(crop=select_crop,grower_id=check_grower_id)
                     if check_grower_field_crop.exists() :
                         processor_id = LinkGrowerToProcessor.objects.filter(grower_id=check_grower_id).first().processor.id
                         entity_name = LinkGrowerToProcessor.objects.filter(grower_id=check_grower_id).first().processor.entity_name
                                                        
                         processor_type = "T1"
-                        context_ = processor_traceability_report_response(processor_id, processor_type, from_date, to_date, entity_name)      
+                        context_ = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, entity_name)      
                         output = context_.get("outbound4_wip")
                     else:
                         output = []
@@ -3678,7 +6608,7 @@ def traceability_report_WIP4_csv_download(request,select_crop,get_search_by,sear
                     output = []               
             
             elif get_search_by and get_search_by == 'field' :
-                check_field = Field.objects.filter(name__icontains=search_text,crop='RICE')
+                check_field = Field.objects.filter(name__icontains=search_text,crop=select_crop)
                 if check_field.exists() :
                     field_name = search_text
                     field_id = check_field.first().id                    
@@ -3686,7 +6616,7 @@ def traceability_report_WIP4_csv_download(request,select_crop,get_search_by,sear
                     processor_id = LinkGrowerToProcessor.objects.filter(grower_id=grower_id).first().processor.id
                     entity_name = LinkGrowerToProcessor.objects.filter(grower_id=grower_id).first().processor.entity_name
                     processor_type = "T1"
-                    context_ = processor_traceability_report_response(processor_id, processor_type, from_date, to_date, entity_name)
+                    context_ = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, entity_name)
                     output = context_.get("outbound4_wip")
                 else:
                     output = []         
@@ -3696,32 +6626,230 @@ def traceability_report_WIP4_csv_download(request,select_crop,get_search_by,sear
                 if check_processor:
                     processor_type = check_processor["type"]
                     processor_id = check_processor["id"]
-                    context_ = processor_traceability_report_response(processor_id,processor_type, from_date, to_date, search_text)
+                    context_ = processor_traceability_report_response(select_crop, processor_id,processor_type, from_date, to_date, search_text)
                     output = context_.get("outbound4_wip")
                 else:
                     output = []
 
             elif get_search_by and get_search_by == 'sku_id' :
-                context_ = skuid_traceability_response(search_text)  
+                context_ = skuid_traceability_response(select_crop, search_text, from_date, to_date)  
                 output = context_.get("outbound4_wip") 
 
-            elif get_search_by and get_search_by == 'deliveryid' :
-                get_delivery_id3 = GrowerShipment.objects.filter(shipment_id__icontains=search_text)
-                if get_delivery_id3.exists() :
-                    sku_id = get_delivery_id3.first().sku
-                    context_ = skuid_traceability_response(sku_id)
-                    output = context_.get("outbound4_wip")
-                elif not get_delivery_id3:
-                    get_sku_id = ShipmentManagement.objects.filter(shipment_id__icontains=search_text)
-                    if get_sku_id:
-                        sku_id = get_sku_id.first().storage_bin_send
-                        context_ = skuid_traceability_response(sku_id)
+            elif get_search_by and get_search_by == 'deliveryid' :                
+                check_shipment = GrowerShipment.objects.filter(shipment_id__icontains=search_text, crop=select_crop)
+                        
+                if check_shipment.exists() :
+                    get_shipment = check_shipment.first()
+                    sku_id = get_shipment.sku
+                    context_ = skuid_traceability_response(select_crop, sku_id, from_date, to_date)
+                    output = context_.get("outbound4_wip")      
+
+                elif not check_shipment and ShipmentManagement.objects.filter(shipment_id__icontains=search_text, crop=select_crop).exists():
+                    get_shipment = ShipmentManagement.objects.filter(shipment_id__icontains=search_text, crop=select_crop).first()
+                    
+                    if get_shipment and not get_shipment.receiver_processor_type == "T4":
+                        sku_id = get_shipment.storage_bin_send 
+                        context_ = skuid_traceability_response(select_crop, sku_id, from_date, to_date)
+                        output = context_.get("outbound4_wip")                        
+
+                    elif get_shipment and get_shipment.receiver_processor_type == "T4":
+                        sku_id = get_shipment.storage_bin_recive 
+                        context_ = skuid_traceability_response(select_crop, sku_id, from_date, to_date)                        
                         output = context_.get("outbound4_wip")
+
                     else:
                         output = []
+
+                elif not check_shipment and ProcessorWarehouseShipment.objects.filter(shipment_id__icontains=search_text, processor_shipment_crop__crop=select_crop).exists():
+                    output = []
+                    shipments = ProcessorWarehouseShipment.objects.filter(shipment_id__icontains=search_text, processor_shipment_crop__crop=select_crop).values("id","processor_shipment_crop__crop", "contract__secret_key","contract_id", "processor_entity_name","processor_type", "processor_id", "shipment_id", "warehouse_id", "warehouse_name","customer_name","customer_id", "date_pulled", "carrier_type", "distributor_receive_date", "status")
+                    for shipment in shipments:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    get_shipment = shipments.first()
+
+                    if get_shipment["warehouse_id"] not in [None, "null", "", " "]:                                               
+                        crops = ProcessorShipmentCrops.objects.filter(shipment_id=get_shipment["id"])
+                        outbound6 = []
+                        for crop in crops:                            
+                            if WarehouseCustomerShipment.objects.filter(warehouse_id=get_shipment["warehouse_id"], warehouse_shipment_crop__crop=crop.crop, warehouse_shipment_crop__crop_type=crop.crop_type).exists():
+                                shipments = WarehouseCustomerShipment.objects.filter(warehouse_id=get_shipment["warehouse_id"], warehouse_shipment_crop__crop=crop.crop, warehouse_shipment_crop__crop_type=crop.crop_type).values("id","warehouse_shipment_crop__crop","contract__secret_key","contract_id", "shipment_id", "warehouse_id", "customer_id","warehouse_name","customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status")
+                                for shipment in shipments:
+                                    if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                                        shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                                    
+                                    carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                                    shipment["carrier_id"] = carrier.carrier_id  
+                                outbound6.extend(list(shipments))
+
+                        processor_entity_name = get_shipment["processor_entity_name"]
+                        processor_id = get_shipment["processor_id"]
+                        processor_type = get_shipment["processor_type"]
+                        for crop in crops:
+                            select_crop = crop.crop
+                            return_context = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, processor_entity_name)
+                        
+                            if return_context.get("outbound4_wip"):                                
+                                output.extend(return_context["outbound4_wip"])                                   
+                        
+                    else:  
+                        crops = ProcessorShipmentCrops.objects.filter(shipment_id=get_shipment["id"])
+                        processor_entity_name = get_shipment["processor_entity_name"]
+                        processor_id = get_shipment["processor_id"]
+                        processor_type = get_shipment["processor_type"]
+                        for crop in crops:
+                            select_crop = crop.crop
+                            return_context = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, processor_entity_name)
+                            
+                            if return_context.get("outbound4_wip"):                                
+                                output.extend(return_context["outbound4_wip"])                                      
+                               
+                elif not check_shipment and WarehouseCustomerShipment.objects.filter(shipment_id__icontains=search_text, warehouse_shipment_crop__crop=select_crop).exists():
+                    output = []
+                    shipments = WarehouseCustomerShipment.objects.filter(shipment_id__icontains=search_text, warehouse_shipment_crop__crop=select_crop).values("id","warehouse_shipment_crop__crop","contract__secret_key","contract_id", "shipment_id", "warehouse_id" ,"customer_id","warehouse_name","customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status")
+                    for shipment in shipments:
+                        if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+
+                    get_shipment = shipments.first()                    
+                    crops = WarehouseShipmentCrops.objects.filter(shipment_id=get_shipment["id"])
+                    outbound5_processor = []
+                    for crop in crops:
+                        select_crop = crop.crop
+                        check_processor_shipment = ProcessorWarehouseShipment.objects.filter(warehouse_id=get_shipment["warehouse_id"], processor_shipment_crop__crop=crop.crop, processor_shipment_crop__crop_type=crop.crop_type).values("id","processor_shipment_crop__crop", "contract__secret_key","contract_id","processor_entity_name","processor_type", "processor_id", "shipment_id", "warehouse_id", "warehouse_name","customer_name","customer_id", "date_pulled", "carrier_type", "distributor_receive_date", "status")
+                        if check_processor_shipment:
+                            for shipment in check_processor_shipment:
+                                if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                                    shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                                
+                                carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                                shipment["carrier_id"] = carrier.carrier_id                                 
+
+                            outbound5_processor.extend(check_processor_shipment) 
+                            processor_entity_name = shipment["processor_entity_name"]
+                            processor_id = shipment["processor_id"]
+                            processor_type = shipment["processor_type"]                             
+                            return_context = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, processor_entity_name)
+
+                            if return_context.get("outbound4_wip"):                                
+                                output.extend(return_context["outbound4_wip"])                      
+                else:
+                    output = []
+
+            elif get_search_by and get_search_by == 'warehouse': 
+                output = []                       
+                check_warehouse = Warehouse.objects.filter(name__icontains=search_text)
+                if check_warehouse.exists():                    
+                    warehouse = check_warehouse.first()                   
+                    inbound5 = list(ProcessorWarehouseShipment.objects.filter(processor_shipment_crop__crop=select_crop, warehouse_id=warehouse.id, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values("id","processor_shipment_crop__crop", "contract__secret_key","contract_id", "processor_entity_name","processor_type", "processor_id", "shipment_id", "warehouse_id", "warehouse_name","customer_name","customer_id", "date_pulled", "carrier_type", "distributor_receive_date", "status"))
+                    for shipment in inbound5:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id                     
+
+                    outbound6 = list(WarehouseCustomerShipment.objects.filter(warehouse_shipment_crop__crop=select_crop, warehouse_id=warehouse.id, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values("id","warehouse_shipment_crop__crop","contract__secret_key","contract_id","shipment_id", "warehouse_id", "customer_id","warehouse_name","customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status"))
+                    for shipment in outbound6:
+                        if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    
+                    for shipment in inbound5:
+                        processor_id = shipment["processor_id"]
+                        processor_type = shipment["processor_type"]
+                        processor_entity_name = shipment["processor_entity_name"]
+                        return_context = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, processor_entity_name)
+                        if return_context.get("outbound4_wip"):                                
+                            output.extend(return_context["outbound4_wip"]) 
+                else:
+                    output = []
+                     
+            elif get_search_by and get_search_by == 'customer':
+                
+                check_customer = Customer.objects.filter(name__icontains=search_text)
+                if check_customer.exists():
+                    customer = check_customer.first()
+                    inbound6 = []
+                    
+                    processor_shipments = list(ProcessorWarehouseShipment.objects.filter(
+                        processor_shipment_crop__crop=select_crop,
+                        customer_id=customer.id, 
+                        date_pulled__date__gte=from_date, 
+                        date_pulled__date__lte=to_date
+                    ).values(
+                        "id","processor_shipment_crop__crop", "contract__secret_key", "contract_id", "processor_entity_name",
+                        "processor_type", "processor_id", "shipment_id", "warehouse_id",
+                        "warehouse_name", "customer_name", "customer_id", 
+                        "date_pulled", "carrier_type", "distributor_receive_date", "status"
+                    ))
+                    for shipment in processor_shipments:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    inbound6.extend(processor_shipments)
+
+                    warehouse_shipments = list(WarehouseCustomerShipment.objects.filter(
+                        warehouse_shipment_crop__crop=select_crop, 
+                        customer_id=customer.id, 
+                        date_pulled__date__gte=from_date, 
+                        date_pulled__date__lte=to_date
+                    ).values(
+                        "id", "warehouse_shipment_crop__crop","contract__secret_key", "contract_id", "shipment_id",
+                        "warehouse_id", "customer_id", "warehouse_name", "customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status"
+                    ))
+                    for shipment in warehouse_shipments:
+                        if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    inbound6.extend(warehouse_shipments)
+
+                    warehouse_ids = [shipment["warehouse_id"] for shipment in warehouse_shipments]
+                    inbound5 = list(ProcessorWarehouseShipment.objects.filter(
+                        processor_shipment_crop__crop=select_crop,
+                        warehouse_id__in=warehouse_ids,
+                        date_pulled__date__gte=from_date,
+                        date_pulled__date__lte=to_date
+                    ).values(
+                        "id","processor_shipment_crop__crop", "contract__secret_key", "contract_id", "processor_entity_name",
+                        "processor_type", "processor_id", "shipment_id", "warehouse_id",
+                        "warehouse_name", "customer_name", "customer_id", 
+                        "date_pulled", "carrier_type", "distributor_receive_date", "status"
+                    ))
+                    for shipment in inbound5:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+
+                    outbound5 = inbound5 + processor_shipments
+                    for shipment in outbound5:
+                        processor_id = shipment.get("processor_id")
+                        processor_type = shipment.get("processor_type")
+                        processor_entity_name = shipment.get("processor_entity_name")
+                        
+                        return_context = processor_traceability_report_response(
+                            select_crop, processor_id, processor_type, 
+                            from_date, to_date, processor_entity_name
+                        )                        
+                        if return_context.get("outbound4_wip"):                                
+                            output.extend(return_context["outbound4_wip"]) 
                 else:
                     output = [] 
-                                
+              
             else:
                 output = []
             for i in output:
@@ -3743,18 +6871,20 @@ def traceability_report_T4_Processor_csv_download(request,select_crop,get_search
         writer.writerow(['PROCESSOR NAME', 'DELIVERY ID', 'DATE', 'QUANTITY POUNDS SHIPPED', 
                              'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
         output = []
-        if select_crop == 'RICE' :
+        if select_crop == 'COTTON':
+            pass
+        else:
             if get_search_by and get_search_by == 'grower' :
                 check_grower = Grower.objects.filter(name__icontains=search_text)
                 if check_grower.exists() :
                     check_grower_id = check_grower.first().id
-                    check_grower_field_crop = Field.objects.filter(crop='RICE',grower_id=check_grower_id)
+                    check_grower_field_crop = Field.objects.filter(crop=select_crop,grower_id=check_grower_id)
                     if check_grower_field_crop.exists() :
                         processor_id = LinkGrowerToProcessor.objects.filter(grower_id=check_grower_id).first().processor.id
                         entity_name = LinkGrowerToProcessor.objects.filter(grower_id=check_grower_id).first().processor.entity_name
                                                        
                         processor_type = "T1"
-                        context_ = processor_traceability_report_response(processor_id, processor_type, from_date, to_date, entity_name)      
+                        context_ = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, entity_name)      
                         output = context_.get("inbound4_wip")
                     else:
                         output = []
@@ -3762,7 +6892,7 @@ def traceability_report_T4_Processor_csv_download(request,select_crop,get_search
                     output = []
        
             elif get_search_by and get_search_by == 'field' :
-                check_field = Field.objects.filter(name__icontains=search_text,crop='RICE')
+                check_field = Field.objects.filter(name__icontains=search_text,crop=select_crop)
                 if check_field.exists() :
                     field_name = search_text
                     field_id = check_field.first().id                    
@@ -3770,7 +6900,7 @@ def traceability_report_T4_Processor_csv_download(request,select_crop,get_search
                     processor_id = LinkGrowerToProcessor.objects.filter(grower_id=grower_id).first().processor.id
                     entity_name = LinkGrowerToProcessor.objects.filter(grower_id=grower_id).first().processor.entity_name
                     processor_type = "T1"
-                    context_ = processor_traceability_report_response(processor_id, processor_type, from_date, to_date, entity_name)
+                    context_ = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, entity_name)
                     output = context_.get("inbound4_wip")
                 else:
                     output = []
@@ -3780,31 +6910,230 @@ def traceability_report_T4_Processor_csv_download(request,select_crop,get_search
                 if check_processor:
                     processor_type = check_processor["type"]
                     processor_id = check_processor["id"]
-                    context_ = processor_traceability_report_response(processor_id,processor_type, from_date, to_date, search_text)
+                    context_ = processor_traceability_report_response(select_crop, processor_id,processor_type, from_date, to_date, search_text)
                     output = context_.get("inbound4_wip")
                 else:
                     output = []
 
             elif get_search_by and get_search_by == 'sku_id' :
-                context_ = skuid_traceability_response(search_text)  
+                context_ = skuid_traceability_response(select_crop, search_text, from_date, to_date)  
                 output = context_.get("inbound4_wip")
 
-            elif get_search_by and get_search_by == 'deliveryid' :
-                get_delivery_id3 = GrowerShipment.objects.filter(shipment_id__icontains=search_text)
-                if get_delivery_id3.exists() :
-                    sku_id = get_delivery_id3.first().sku
-                    context_ = skuid_traceability_response(sku_id)
-                    output = context_.get("inbound4_wip")
-                elif not get_delivery_id3:
-                    get_sku_id = ShipmentManagement.objects.filter(shipment_id__icontains=search_text)
-                    if get_sku_id:
-                        sku_id = get_sku_id.first().storage_bin_send
-                        context_ = skuid_traceability_response(sku_id)
+            elif get_search_by and get_search_by == 'deliveryid' :                
+                check_shipment = GrowerShipment.objects.filter(shipment_id__icontains=search_text, crop=select_crop)
+                        
+                if check_shipment.exists() :
+                    get_shipment = check_shipment.first()
+                    sku_id = get_shipment.sku
+                    context_ = skuid_traceability_response(select_crop, sku_id, from_date, to_date)
+                    output = context_.get("inbound4_wip")      
+
+                elif not check_shipment and ShipmentManagement.objects.filter(shipment_id__icontains=search_text, crop=select_crop).exists():
+                    get_shipment = ShipmentManagement.objects.filter(shipment_id__icontains=search_text, crop=select_crop).first()
+                    
+                    if get_shipment and not get_shipment.receiver_processor_type == "T4":
+                        sku_id = get_shipment.storage_bin_send 
+                        context_ = skuid_traceability_response(select_crop, sku_id, from_date, to_date)
+                        output = context_.get("inbound4_wip")                        
+
+                    elif get_shipment and get_shipment.receiver_processor_type == "T4":
+                        sku_id = get_shipment.storage_bin_recive 
+                        context_ = skuid_traceability_response(select_crop, sku_id, from_date, to_date)                        
                         output = context_.get("inbound4_wip")
+
                     else:
                         output = []
+
+                elif not check_shipment and ProcessorWarehouseShipment.objects.filter(shipment_id__icontains=search_text, processor_shipment_crop__crop=select_crop).exists():
+                    output = []
+                    shipments = ProcessorWarehouseShipment.objects.filter(shipment_id__icontains=search_text, processor_shipment_crop__crop=select_crop).values("id","processor_shipment_crop__crop", "contract__secret_key","contract_id", "processor_entity_name","processor_type", "processor_id", "shipment_id", "warehouse_id", "warehouse_name","customer_name","customer_id", "date_pulled", "carrier_type", "distributor_receive_date", "status")
+                    for shipment in shipments:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    get_shipment = shipments.first()
+
+                    if get_shipment["warehouse_id"] not in [None, "null", "", " "]:                                               
+                        crops = ProcessorShipmentCrops.objects.filter(shipment_id=get_shipment["id"])
+                        outbound6 = []
+                        for crop in crops:                            
+                            if WarehouseCustomerShipment.objects.filter(warehouse_id=get_shipment["warehouse_id"], warehouse_shipment_crop__crop=crop.crop, warehouse_shipment_crop__crop_type=crop.crop_type).exists():
+                                shipments = WarehouseCustomerShipment.objects.filter(warehouse_id=get_shipment["warehouse_id"], warehouse_shipment_crop__crop=crop.crop, warehouse_shipment_crop__crop_type=crop.crop_type).values("id","warehouse_shipment_crop__crop","contract__secret_key","contract_id", "shipment_id", "warehouse_id", "customer_id","warehouse_name","customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status")
+                                for shipment in shipments:
+                                    if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                                        shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                                    
+                                    carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                                    shipment["carrier_id"] = carrier.carrier_id  
+                                outbound6.extend(list(shipments))
+
+                        processor_entity_name = get_shipment["processor_entity_name"]
+                        processor_id = get_shipment["processor_id"]
+                        processor_type = get_shipment["processor_type"]
+                        for crop in crops:
+                            select_crop = crop.crop
+                            return_context = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, processor_entity_name)
+                        
+                            if return_context.get("inbound4_wip"):                                
+                                output.extend(return_context["inbound4_wip"])                                   
+                        
+                    else:  
+                        crops = ProcessorShipmentCrops.objects.filter(shipment_id=get_shipment["id"])
+                        processor_entity_name = get_shipment["processor_entity_name"]
+                        processor_id = get_shipment["processor_id"]
+                        processor_type = get_shipment["processor_type"]
+                        for crop in crops:
+                            select_crop = crop.crop
+                            return_context = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, processor_entity_name)
+                            
+                            if return_context.get("inbound4_wip"):                                
+                                output.extend(return_context["inbound4_wip"])                                      
+                               
+                elif not check_shipment and WarehouseCustomerShipment.objects.filter(shipment_id__icontains=search_text, warehouse_shipment_crop__crop=select_crop).exists():
+                    output = []
+                    shipments = WarehouseCustomerShipment.objects.filter(shipment_id__icontains=search_text, warehouse_shipment_crop__crop=select_crop).values("id","warehouse_shipment_crop__crop","contract__secret_key","contract_id", "shipment_id", "warehouse_id" ,"customer_id","warehouse_name","customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status")
+                    for shipment in shipments:
+                        if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+
+                    get_shipment = shipments.first()                    
+                    crops = WarehouseShipmentCrops.objects.filter(shipment_id=get_shipment["id"])
+                    outbound5_processor = []
+                    for crop in crops:
+                        select_crop = crop.crop
+                        check_processor_shipment = ProcessorWarehouseShipment.objects.filter(warehouse_id=get_shipment["warehouse_id"], processor_shipment_crop__crop=crop.crop, processor_shipment_crop__crop_type=crop.crop_type).values("id","processor_shipment_crop__crop", "contract__secret_key","contract_id","processor_entity_name","processor_type", "processor_id", "shipment_id", "warehouse_id", "warehouse_name","customer_name","customer_id", "date_pulled", "carrier_type", "distributor_receive_date", "status")
+                        if check_processor_shipment:
+                            for shipment in check_processor_shipment:
+                                if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                                    shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                                
+                                carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                                shipment["carrier_id"] = carrier.carrier_id                                 
+
+                            outbound5_processor.extend(check_processor_shipment) 
+                            processor_entity_name = shipment["processor_entity_name"]
+                            processor_id = shipment["processor_id"]
+                            processor_type = shipment["processor_type"]                             
+                            return_context = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, processor_entity_name)
+
+                            if return_context.get("inbound4_wip"):                                
+                                output.extend(return_context["inbound4_wip"])                      
                 else:
                     output = []
+
+            elif get_search_by and get_search_by == 'warehouse': 
+                output = []                       
+                check_warehouse = Warehouse.objects.filter(name__icontains=search_text)
+                if check_warehouse.exists():                    
+                    warehouse = check_warehouse.first()                   
+                    inbound5 = list(ProcessorWarehouseShipment.objects.filter(processor_shipment_crop__crop=select_crop, warehouse_id=warehouse.id, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values("id","processor_shipment_crop__crop", "contract__secret_key","contract_id", "processor_entity_name","processor_type", "processor_id", "shipment_id", "warehouse_id", "warehouse_name","customer_name","customer_id", "date_pulled", "carrier_type", "distributor_receive_date", "status"))
+                    for shipment in inbound5:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id                     
+
+                    outbound6 = list(WarehouseCustomerShipment.objects.filter(warehouse_shipment_crop__crop=select_crop, warehouse_id=warehouse.id, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values("id","warehouse_shipment_crop__crop","contract__secret_key","contract_id","shipment_id", "warehouse_id", "customer_id","warehouse_name","customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status"))
+                    for shipment in outbound6:
+                        if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    
+                    for shipment in inbound5:
+                        processor_id = shipment["processor_id"]
+                        processor_type = shipment["processor_type"]
+                        processor_entity_name = shipment["processor_entity_name"]
+                        return_context = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, processor_entity_name)
+                        if return_context.get("inbound4_wip"):                                
+                            output.extend(return_context["inbound4_wip"]) 
+                else:
+                    output = []
+                     
+            elif get_search_by and get_search_by == 'customer':
+                
+                check_customer = Customer.objects.filter(name__icontains=search_text)
+                if check_customer.exists():
+                    customer = check_customer.first()
+                    inbound6 = []
+                    
+                    processor_shipments = list(ProcessorWarehouseShipment.objects.filter(
+                        processor_shipment_crop__crop=select_crop,
+                        customer_id=customer.id, 
+                        date_pulled__date__gte=from_date, 
+                        date_pulled__date__lte=to_date
+                    ).values(
+                        "id","processor_shipment_crop__crop", "contract__secret_key", "contract_id", "processor_entity_name",
+                        "processor_type", "processor_id", "shipment_id", "warehouse_id",
+                        "warehouse_name", "customer_name", "customer_id", 
+                        "date_pulled", "carrier_type", "distributor_receive_date", "status"
+                    ))
+                    for shipment in processor_shipments:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    inbound6.extend(processor_shipments)
+
+                    warehouse_shipments = list(WarehouseCustomerShipment.objects.filter(
+                        warehouse_shipment_crop__crop=select_crop, 
+                        customer_id=customer.id, 
+                        date_pulled__date__gte=from_date, 
+                        date_pulled__date__lte=to_date
+                    ).values(
+                        "id", "warehouse_shipment_crop__crop","contract__secret_key", "contract_id", "shipment_id",
+                        "warehouse_id", "customer_id", "warehouse_name", "customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status"
+                    ))
+                    for shipment in warehouse_shipments:
+                        if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    inbound6.extend(warehouse_shipments)
+
+                    warehouse_ids = [shipment["warehouse_id"] for shipment in warehouse_shipments]
+                    inbound5 = list(ProcessorWarehouseShipment.objects.filter(
+                        processor_shipment_crop__crop=select_crop,
+                        warehouse_id__in=warehouse_ids,
+                        date_pulled__date__gte=from_date,
+                        date_pulled__date__lte=to_date
+                    ).values(
+                        "id","processor_shipment_crop__crop", "contract__secret_key", "contract_id", "processor_entity_name",
+                        "processor_type", "processor_id", "shipment_id", "warehouse_id",
+                        "warehouse_name", "customer_name", "customer_id", 
+                        "date_pulled", "carrier_type", "distributor_receive_date", "status"
+                    ))
+                    for shipment in inbound5:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+
+                    outbound5 = inbound5 + processor_shipments
+                    for shipment in outbound5:
+                        processor_id = shipment.get("processor_id")
+                        processor_type = shipment.get("processor_type")
+                        processor_entity_name = shipment.get("processor_entity_name")
+                        
+                        return_context = processor_traceability_report_response(
+                            select_crop, processor_id, processor_type, 
+                            from_date, to_date, processor_entity_name
+                        )                        
+                        if return_context.get("inbound4_wip"):                                
+                            output.extend(return_context["inbound4_wip"]) 
+                else:
+                    output = [] 
+              
             else:
                 output = []
             for i in output:
@@ -3816,6 +7145,874 @@ def traceability_report_T4_Processor_csv_download(request,select_crop,get_search
 
 
 @login_required()
+def traceability_report_WIP5_csv_download(request,select_crop, get_search_by, search_text, from_date, to_date):
+    if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+        filename = 'Outbound 5 WIP.csv'
+        response = HttpResponse(
+            content_type='text/csv',
+            headers={'Content-Disposition': 'attachment; filename="{}"'.format(filename)},
+        )
+        writer = csv.writer(response)
+        writer.writerow(['DELIVERY ID', 'PROCESSOR NAME', 'WAREHOUSE/CUSTOMER NAME', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'PER UNIT RATE'])
+        output = []
+        if select_crop == "COTTON":
+            pass
+        else:
+            if get_search_by and get_search_by == 'grower' :
+                check_grower = Grower.objects.filter(name__icontains=search_text)
+                if check_grower.exists() :
+                    check_grower_id = check_grower.first().id
+                    check_grower_field_crop = Field.objects.filter(crop=select_crop,grower_id=check_grower_id)
+                    if check_grower_field_crop.exists() :
+                        processor_id = LinkGrowerToProcessor.objects.filter(grower_id=check_grower_id).first().processor.id
+                        entity_name = LinkGrowerToProcessor.objects.filter(grower_id=check_grower_id).first().processor.entity_name
+                                                       
+                        processor_type = "T1"
+                        context_ = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, entity_name)      
+                        output = context_.get("outbound5_wip")
+                    else:
+                        output = []
+                else:
+                    output = []               
+            
+            elif get_search_by and get_search_by == 'field' :
+                check_field = Field.objects.filter(name__icontains=search_text,crop=select_crop)
+                if check_field.exists() :
+                    field_name = search_text
+                    field_id = check_field.first().id                    
+                    grower_id =  check_field.first().grower.id                    
+                    processor_id = LinkGrowerToProcessor.objects.filter(grower_id=grower_id).first().processor.id
+                    entity_name = LinkGrowerToProcessor.objects.filter(grower_id=grower_id).first().processor.entity_name
+                    processor_type = "T1"
+                    context_ = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, entity_name)
+                    output = context_.get("outbound5_wip")
+                else:
+                    output = []         
+                            
+            elif get_search_by and get_search_by == 'processor' :
+                check_processor = get_processor_type(search_text)
+                if check_processor:
+                    processor_type = check_processor["type"]
+                    processor_id = check_processor["id"]
+                    context_ = processor_traceability_report_response(select_crop, processor_id,processor_type, from_date, to_date, search_text)
+                    output = context_.get("outbound5_wip")
+                else:
+                    output = []
+
+            elif get_search_by and get_search_by == 'sku_id' :
+                context_ = skuid_traceability_response(select_crop, search_text, from_date, to_date)  
+                output = context_.get("outbound5_wip") 
+
+            elif get_search_by and get_search_by == 'deliveryid' :                        
+                check_shipment = GrowerShipment.objects.filter(shipment_id__icontains=search_text, crop=select_crop)
+                
+                if check_shipment.exists() :
+                    get_shipment = check_shipment.first()
+                    sku_id = get_shipment.sku
+                    context_ = skuid_traceability_response(select_crop, sku_id, from_date, to_date)
+                    output = context_.get("outbound5_wip")                               
+
+                elif not check_shipment and ShipmentManagement.objects.filter(shipment_id__icontains=search_text, crop=select_crop).exists():
+                    get_shipment = ShipmentManagement.objects.filter(shipment_id__icontains=search_text, crop=select_crop).first()
+                    
+                    if get_shipment and not get_shipment.receiver_processor_type == "T4":
+                        sku_id = get_shipment.storage_bin_send 
+                        context_ = skuid_traceability_response(select_crop, sku_id, from_date, to_date)
+                        output = context_.get("outbound5_wip")
+
+                    elif get_shipment and get_shipment.receiver_processor_type == "T4":
+                        sku_id = get_shipment.storage_bin_recive 
+                        context_ = skuid_traceability_response(select_crop, sku_id, from_date, to_date)
+                        output = context_.get("outbound5_wip")
+
+                    else:
+                        output = []
+
+                elif not check_shipment and ProcessorWarehouseShipment.objects.filter(shipment_id__icontains=search_text, processor_shipment_crop__crop=select_crop).exists():
+                    
+                    shipments = ProcessorWarehouseShipment.objects.filter(shipment_id__icontains=search_text, processor_shipment_crop__crop=select_crop).values("id","processor_shipment_crop__crop", "contract__secret_key","contract_id", "processor_entity_name","processor_type", "processor_id", "shipment_id", "warehouse_id", "warehouse_name","customer_name","customer_id", "date_pulled", "carrier_type", "distributor_receive_date", "status")
+                    for shipment in shipments:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    get_shipment = shipments.first()
+                    if get_shipment["warehouse_id"] not in [None, "null", "", " "]:
+                        inbound5 = list(shipments)                        
+                        output = inbound5                        
+                        
+                    else:
+                        output = shipments
+                             
+                elif not check_shipment and WarehouseCustomerShipment.objects.filter(shipment_id__icontains=search_text, warehouse_shipment_crop__crop=select_crop).exists():
+                    shipments = WarehouseCustomerShipment.objects.filter(shipment_id__icontains=search_text, warehouse_shipment_crop__crop=select_crop).values("id","warehouse_shipment_crop__crop","contract__secret_key","contract_id", "shipment_id", "warehouse_id" ,"customer_id","warehouse_name","customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status")
+                    for shipment in shipments:
+                        if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+
+                    get_shipment = shipments.first()
+                   
+                    crops = WarehouseShipmentCrops.objects.filter(shipment_id=get_shipment["id"])
+                    outbound5_processor = []
+                    for crop in crops:
+                        select_crop = crop.crop
+                        check_processor_shipment = ProcessorWarehouseShipment.objects.filter(warehouse_id=get_shipment["warehouse_id"], processor_shipment_crop__crop=crop.crop, processor_shipment_crop__crop_type=crop.crop_type).values("id","processor_shipment_crop__crop", "contract__secret_key","contract_id","processor_entity_name","processor_type", "processor_id", "shipment_id", "warehouse_id", "warehouse_name","customer_name","customer_id", "date_pulled", "carrier_type", "distributor_receive_date", "status")
+                        if check_processor_shipment:
+                                for shipment in check_processor_shipment:
+                                    if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                                        shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                                    
+                                    carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                                    shipment["carrier_id"] = carrier.carrier_id                                 
+
+                                outbound5_processor.extend(check_processor_shipment)                                
+
+                    output = outbound5_processor
+                                           
+                else:
+                    output = []   
+              
+            elif get_search_by and get_search_by == 'warehouse':               
+                check_warehouse = Warehouse.objects.filter(name__icontains=search_text)
+                if check_warehouse.exists():                  
+                    warehouse = check_warehouse.first()                    
+                    inbound5 = list(ProcessorWarehouseShipment.objects.filter(processor_shipment_crop__crop=select_crop, warehouse_id=warehouse.id, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values("id","processor_shipment_crop__crop", "contract__secret_key","contract_id", "processor_entity_name","processor_type", "processor_id", "shipment_id", "warehouse_id", "warehouse_name","customer_name","customer_id", "date_pulled", "carrier_type", "distributor_receive_date", "status"))
+                    for shipment in inbound5:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+
+                    outbound6 = list(WarehouseCustomerShipment.objects.filter(warehouse_shipment_crop__crop=select_crop, warehouse_id=warehouse.id, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values("id","warehouse_shipment_crop__crop","contract__secret_key","contract_id","shipment_id", "warehouse_id", "customer_id","warehouse_name","customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status"))
+                    for shipment in outbound6:
+                        if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    
+                    output = inbound5
+                    
+                else:
+                    output = []
+            
+            elif get_search_by and get_search_by == 'customer':                
+                check_customer = Customer.objects.filter(name__icontains=search_text)
+                if check_customer.exists():
+                    customer = check_customer.first()
+                    inbound6 = []
+                    
+                    processor_shipments = list(ProcessorWarehouseShipment.objects.filter(
+                        processor_shipment_crop__crop=select_crop,
+                        customer_id=customer.id, 
+                        date_pulled__date__gte=from_date, 
+                        date_pulled__date__lte=to_date
+                    ).values(
+                        "id","processor_shipment_crop__crop", "contract__secret_key", "contract_id", "processor_entity_name",
+                        "processor_type", "processor_id", "shipment_id", "warehouse_id",
+                        "warehouse_name", "customer_name", "customer_id", 
+                        "date_pulled", "carrier_type", "distributor_receive_date", "status"
+                    ))
+                    for shipment in processor_shipments:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    inbound6.extend(processor_shipments)
+
+                    warehouse_shipments = list(WarehouseCustomerShipment.objects.filter(
+                        warehouse_shipment_crop__crop=select_crop, 
+                        customer_id=customer.id, 
+                        date_pulled__date__gte=from_date, 
+                        date_pulled__date__lte=to_date
+                    ).values(
+                        "id", "warehouse_shipment_crop__crop","contract__secret_key", "contract_id", "shipment_id",
+                        "warehouse_id", "customer_id", "warehouse_name", "customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status"
+                    ))
+                    for shipment in warehouse_shipments:
+                        if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    inbound6.extend(warehouse_shipments)
+
+                    warehouse_ids = [shipment["warehouse_id"] for shipment in warehouse_shipments]
+                    inbound5 = list(ProcessorWarehouseShipment.objects.filter(
+                        processor_shipment_crop__crop=select_crop,
+                        warehouse_id__in=warehouse_ids,
+                        date_pulled__date__gte=from_date,
+                        date_pulled__date__lte=to_date
+                    ).values(
+                        "id","processor_shipment_crop__crop", "contract__secret_key", "contract_id", "processor_entity_name",
+                        "processor_type", "processor_id", "shipment_id", "warehouse_id",
+                        "warehouse_name", "customer_name", "customer_id", 
+                        "date_pulled", "carrier_type", "distributor_receive_date", "status"
+                    ))
+                    for shipment in inbound5:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    
+                    output = inbound5 + processor_shipments
+                else:
+                    output = []
+            
+            else:
+                output = []
+            for i in output:
+                writer.writerow([i["shipment_id"] ,i["processor_entity_name"], i["warehouse_name"] if i["warehouse_name"] is not None else i["customer_name"], i["date_pulled"], i["carrier_type"]])
+        return response
+    else:
+        return redirect ('dashboard')
+
+
+@login_required()
+def traceability_report_Warehouse_csv_download(request, select_crop, get_search_by, search_text, from_date, to_date):
+    if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+        filename = 'Warehouse.csv'
+        response = HttpResponse(
+            content_type='text/csv',
+            headers={'Content-Disposition': 'attachment; filename="{}"'.format(filename)},
+        )
+        writer = csv.writer(response)
+        writer.writerow(['PROCESSOR NAME', 'WAREHOUSE NAME', 'DELIVERY ID', 'DATE', 'QUANTITY POUNDS SHIPPED', 'PER UNIT PRICE'])
+        output = []
+        if select_crop == 'COTTON':
+            pass
+        else:
+            if get_search_by and get_search_by == 'grower' :
+                check_grower = Grower.objects.filter(name__icontains=search_text)
+                if check_grower.exists() :
+                    check_grower_id = check_grower.first().id
+                    check_grower_field_crop = Field.objects.filter(crop=select_crop,grower_id=check_grower_id)
+                    if check_grower_field_crop.exists() :
+                        processor_id = LinkGrowerToProcessor.objects.filter(grower_id=check_grower_id).first().processor.id
+                        entity_name = LinkGrowerToProcessor.objects.filter(grower_id=check_grower_id).first().processor.entity_name
+                                                       
+                        processor_type = "T1"
+                        context_ = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, entity_name)      
+                        output = context_.get("inbound5_wip")
+                    else:
+                        output = []
+                else:
+                    output = []
+       
+            elif get_search_by and get_search_by == 'field' :
+                check_field = Field.objects.filter(name__icontains=search_text,crop=select_crop)
+                if check_field.exists() :
+                    field_name = search_text
+                    field_id = check_field.first().id                    
+                    grower_id =  check_field.first().grower.id                    
+                    processor_id = LinkGrowerToProcessor.objects.filter(grower_id=grower_id).first().processor.id
+                    entity_name = LinkGrowerToProcessor.objects.filter(grower_id=grower_id).first().processor.entity_name
+                    processor_type = "T1"
+                    context_ = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, entity_name)
+                    output = context_.get("inbound5_wip")
+                else:
+                    output = []
+            
+            elif get_search_by and get_search_by == 'processor' :
+                check_processor = get_processor_type(search_text)
+                if check_processor:
+                    processor_type = check_processor["type"]
+                    processor_id = check_processor["id"]
+                    context_ = processor_traceability_report_response(select_crop, processor_id,processor_type, from_date, to_date, search_text)
+                    output = context_.get("inbound5_wip")
+                else:
+                    output = []
+
+            elif get_search_by and get_search_by == 'sku_id' :
+                context_ = skuid_traceability_response(select_crop, search_text, from_date, to_date)  
+                output = context_.get("inbound5_wip")
+
+            elif get_search_by and get_search_by == 'deliveryid' :                        
+                check_shipment = GrowerShipment.objects.filter(shipment_id__icontains=search_text, crop=select_crop)
+                
+                if check_shipment.exists() :
+                    get_shipment = check_shipment.first()
+                    sku_id = get_shipment.sku
+                    context_ = skuid_traceability_response(select_crop, sku_id, from_date, to_date)
+                    output = context_.get("inbound5_wip")                              
+
+                elif not check_shipment and ShipmentManagement.objects.filter(shipment_id__icontains=search_text, crop=select_crop).exists():
+                    get_shipment = ShipmentManagement.objects.filter(shipment_id__icontains=search_text, crop=select_crop).first()
+                    
+                    if get_shipment and not get_shipment.receiver_processor_type == "T4":
+                        sku_id = get_shipment.storage_bin_send 
+                        context_ = skuid_traceability_response(select_crop, sku_id, from_date, to_date)
+                        output = context_.get("inbound5_wip")
+
+                    elif get_shipment and get_shipment.receiver_processor_type == "T4":
+                        sku_id = get_shipment.storage_bin_recive 
+                        context_ = skuid_traceability_response(select_crop, sku_id, from_date, to_date)
+                        output = context_.get("inbound5_wip")
+
+                    else:
+                        output = []
+
+                elif not check_shipment and ProcessorWarehouseShipment.objects.filter(shipment_id__icontains=search_text, processor_shipment_crop__crop=select_crop).exists():
+                    
+                    shipments = ProcessorWarehouseShipment.objects.filter(shipment_id__icontains=search_text, processor_shipment_crop__crop=select_crop).values("id","processor_shipment_crop__crop", "contract__secret_key","contract_id", "processor_entity_name","processor_type", "processor_id", "shipment_id", "warehouse_id", "warehouse_name","customer_name","customer_id", "date_pulled", "carrier_type", "distributor_receive_date", "status")
+                    for shipment in shipments:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    get_shipment = shipments.first()
+                    if get_shipment["warehouse_id"] not in [None, "null", "", " "]:
+                        inbound5 = list(shipments)
+                        output = inbound5
+                        
+                    else:
+                        output = []
+                        
+                elif not check_shipment and WarehouseCustomerShipment.objects.filter(shipment_id__icontains=search_text, warehouse_shipment_crop__crop=select_crop).exists():
+                    shipments = WarehouseCustomerShipment.objects.filter(shipment_id__icontains=search_text, warehouse_shipment_crop__crop=select_crop).values("id","warehouse_shipment_crop__crop","contract__secret_key","contract_id", "shipment_id", "warehouse_id" ,"customer_id","warehouse_name","customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status")
+                    for shipment in shipments:
+                        if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+
+                    get_shipment = shipments.first()                    
+                    crops = WarehouseShipmentCrops.objects.filter(shipment_id=get_shipment["id"])
+                    outbound5_processor = []
+                    for crop in crops:
+                        select_crop = crop.crop
+                        check_processor_shipment = ProcessorWarehouseShipment.objects.filter(warehouse_id=get_shipment["warehouse_id"], processor_shipment_crop__crop=crop.crop, processor_shipment_crop__crop_type=crop.crop_type).values("id","processor_shipment_crop__crop", "contract__secret_key","contract_id","processor_entity_name","processor_type", "processor_id", "shipment_id", "warehouse_id", "warehouse_name","customer_name","customer_id", "date_pulled", "carrier_type", "distributor_receive_date", "status")
+                        if check_processor_shipment:
+                                for shipment in check_processor_shipment:
+                                    if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                                        shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                                    
+                                    carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                                    shipment["carrier_id"] = carrier.carrier_id                                 
+
+                                outbound5_processor.extend(check_processor_shipment)                               
+                    output = outbound5_processor                        
+                else:
+                    output = []   
+
+            elif get_search_by and get_search_by == 'warehouse':                
+                check_warehouse = Warehouse.objects.filter(name__icontains=search_text)
+                if check_warehouse.exists():                  
+                    warehouse = check_warehouse.first()                    
+                    inbound5 = list(ProcessorWarehouseShipment.objects.filter(processor_shipment_crop__crop=select_crop, warehouse_id=warehouse.id, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values("id","processor_shipment_crop__crop", "contract__secret_key","contract_id", "processor_entity_name","processor_type", "processor_id", "shipment_id", "warehouse_id", "warehouse_name","customer_name","customer_id", "date_pulled", "carrier_type", "distributor_receive_date", "status"))
+                    for shipment in inbound5:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    output = inbound5
+                    
+                else:
+                    output = []
+            
+            elif get_search_by and get_search_by == 'customer':                
+                check_customer = Customer.objects.filter(name__icontains=search_text)
+                if check_customer.exists():
+                    customer = check_customer.first()
+                    inbound6 = []
+                    
+                    processor_shipments = list(ProcessorWarehouseShipment.objects.filter(
+                        processor_shipment_crop__crop=select_crop,
+                        customer_id=customer.id, 
+                        date_pulled__date__gte=from_date, 
+                        date_pulled__date__lte=to_date
+                    ).values(
+                        "id","processor_shipment_crop__crop", "contract__secret_key", "contract_id", "processor_entity_name",
+                        "processor_type", "processor_id", "shipment_id", "warehouse_id",
+                        "warehouse_name", "customer_name", "customer_id", 
+                        "date_pulled", "carrier_type", "distributor_receive_date", "status"
+                    ))
+                    for shipment in processor_shipments:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    inbound6.extend(processor_shipments)
+
+                    warehouse_shipments = list(WarehouseCustomerShipment.objects.filter(
+                        warehouse_shipment_crop__crop=select_crop, 
+                        customer_id=customer.id, 
+                        date_pulled__date__gte=from_date, 
+                        date_pulled__date__lte=to_date
+                    ).values(
+                        "id", "warehouse_shipment_crop__crop","contract__secret_key", "contract_id", "shipment_id",
+                        "warehouse_id", "customer_id", "warehouse_name", "customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status"
+                    ))
+                    for shipment in warehouse_shipments:
+                        if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    inbound6.extend(warehouse_shipments)
+
+                    warehouse_ids = [shipment["warehouse_id"] for shipment in warehouse_shipments]
+                    inbound5 = list(ProcessorWarehouseShipment.objects.filter(
+                        processor_shipment_crop__crop=select_crop,
+                        warehouse_id__in=warehouse_ids,
+                        date_pulled__date__gte=from_date,
+                        date_pulled__date__lte=to_date
+                    ).values(
+                        "id","processor_shipment_crop__crop", "contract__secret_key", "contract_id", "processor_entity_name",
+                        "processor_type", "processor_id", "shipment_id", "warehouse_id",
+                        "warehouse_name", "customer_name", "customer_id", 
+                        "date_pulled", "carrier_type", "distributor_receive_date", "status"
+                    ))
+                    for shipment in inbound5:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    output = inbound5
+                    
+                else:
+                    output = [] 
+            
+            else:
+                output = []
+            for i in output:
+                writer.writerow([i["processor_entity_name"] ,i["warehouse_name"], i["shipment_id"], i["distributor_receive_date"] 
+                                 ])
+        return response
+    else:
+        return redirect ('dashboard')
+
+
+@login_required()
+def traceability_report_WIP6_csv_download(request,select_crop, get_search_by, search_text, from_date, to_date):
+    if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+        filename = 'Outbound 6 WIP.csv'
+        response = HttpResponse(
+            content_type='text/csv',
+            headers={'Content-Disposition': 'attachment; filename="{}"'.format(filename)},
+        )
+        writer = csv.writer(response)
+        writer.writerow(['DELIVERY ID', 'WAREHOUSE NAME', 'CUSTOMER NAME', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'PER UNIT RATE'])
+        output = []
+        if select_crop == "COTTON":
+            pass
+        else:
+            if get_search_by and get_search_by == 'grower' :
+                check_grower = Grower.objects.filter(name__icontains=search_text)
+                if check_grower.exists() :
+                    check_grower_id = check_grower.first().id
+                    check_grower_field_crop = Field.objects.filter(crop=select_crop,grower_id=check_grower_id)
+                    if check_grower_field_crop.exists() :
+                        processor_id = LinkGrowerToProcessor.objects.filter(grower_id=check_grower_id).first().processor.id
+                        entity_name = LinkGrowerToProcessor.objects.filter(grower_id=check_grower_id).first().processor.entity_name
+                                                       
+                        processor_type = "T1"
+                        context_ = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, entity_name)      
+                        output = context_.get("outbound6_wip")
+                    else:
+                        output = []
+                else:
+                    output = []               
+            
+            elif get_search_by and get_search_by == 'field' :
+                check_field = Field.objects.filter(name__icontains=search_text,crop=select_crop)
+                if check_field.exists() :
+                    field_name = search_text
+                    field_id = check_field.first().id                    
+                    grower_id =  check_field.first().grower.id                    
+                    processor_id = LinkGrowerToProcessor.objects.filter(grower_id=grower_id).first().processor.id
+                    entity_name = LinkGrowerToProcessor.objects.filter(grower_id=grower_id).first().processor.entity_name
+                    processor_type = "T1"
+                    context_ = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, entity_name)
+                    output = context_.get("outbound6_wip")
+                else:
+                    output = []         
+                            
+            elif get_search_by and get_search_by == 'processor' :
+                check_processor = get_processor_type(search_text)
+                if check_processor:
+                    processor_type = check_processor["type"]
+                    processor_id = check_processor["id"]
+                    context_ = processor_traceability_report_response(select_crop, processor_id,processor_type, from_date, to_date, search_text)
+                    output = context_.get("outbound6_wip")
+                else:
+                    output = []
+
+            elif get_search_by and get_search_by == 'sku_id' :
+                context_ = skuid_traceability_response(select_crop, search_text, from_date, to_date)  
+                output = context_.get("outbound6_wip") 
+
+            elif get_search_by and get_search_by == 'deliveryid' :
+                        
+                check_shipment = GrowerShipment.objects.filter(shipment_id__icontains=search_text, crop=select_crop)
+                
+                if check_shipment.exists() :
+                    get_shipment = check_shipment.first()
+                    sku_id = get_shipment.sku
+                    context_ = skuid_traceability_response(select_crop, sku_id, from_date, to_date)
+                    output = context_.get("outbound6_wip")                              
+
+                elif not check_shipment and ShipmentManagement.objects.filter(shipment_id__icontains=search_text, crop=select_crop).exists():
+                    get_shipment = ShipmentManagement.objects.filter(shipment_id__icontains=search_text, crop=select_crop).first()
+                    
+                    if get_shipment and not get_shipment.receiver_processor_type == "T4":
+                        sku_id = get_shipment.storage_bin_send 
+                        context_ = skuid_traceability_response(select_crop, sku_id, from_date, to_date)
+                        output = context_.get("outbound6_wip") 
+
+                    elif get_shipment and get_shipment.receiver_processor_type == "T4":
+                        sku_id = get_shipment.storage_bin_recive 
+                        context_ = skuid_traceability_response(select_crop, sku_id, from_date, to_date)
+                        output = context_.get("outbound6_wip") 
+
+                    else:
+                        output = []
+
+                elif not check_shipment and ProcessorWarehouseShipment.objects.filter(shipment_id__icontains=search_text, processor_shipment_crop__crop=select_crop).exists():
+                    
+                    shipments = ProcessorWarehouseShipment.objects.filter(shipment_id__icontains=search_text, processor_shipment_crop__crop=select_crop).values("id","processor_shipment_crop__crop", "contract__secret_key","contract_id", "processor_entity_name","processor_type", "processor_id", "shipment_id", "warehouse_id","warehouse_name","customer_name","customer_id", "date_pulled", "carrier_type", "distributor_receive_date", "status")
+                    for shipment in shipments:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    get_shipment = shipments.first()
+                    if get_shipment["warehouse_id"] not in [None, "null", "", " "]:
+                        inbound5 = list(shipments)                        
+                        crops = ProcessorShipmentCrops.objects.filter(shipment_id=get_shipment["id"])
+                        outbound6 = []
+                        for crop in crops:
+                            
+                            if WarehouseCustomerShipment.objects.filter(warehouse_id=get_shipment["warehouse_id"], warehouse_shipment_crop__crop=crop.crop, warehouse_shipment_crop__crop_type=crop.crop_type).exists():
+                                shipments = WarehouseCustomerShipment.objects.filter(warehouse_id=get_shipment["warehouse_id"], warehouse_shipment_crop__crop=crop.crop, warehouse_shipment_crop__crop_type=crop.crop_type).values("id","warehouse_shipment_crop__crop","contract__secret_key","contract_id", "shipment_id", "warehouse_id", "customer_id","warehouse_name","customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status")
+                                for shipment in shipments:
+                                    if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                                        shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                                    
+                                    carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                                    shipment["carrier_id"] = carrier.carrier_id  
+                                outbound6.extend(list(shipments))
+                        output = outbound6                        
+                    else:
+                          output = []
+                        
+                elif not check_shipment and WarehouseCustomerShipment.objects.filter(shipment_id__icontains=search_text, warehouse_shipment_crop__crop=select_crop).exists():
+                    shipments = WarehouseCustomerShipment.objects.filter(shipment_id__icontains=search_text, warehouse_shipment_crop__crop=select_crop).values("id","warehouse_shipment_crop__crop","contract__secret_key","contract_id", "shipment_id", "warehouse_id" ,"customer_id","warehouse_name","customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status")
+                    for shipment in shipments:
+                        if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id                    
+                    output = list(shipments)
+                                           
+                else:
+                    output = []   
+
+            elif get_search_by and get_search_by == 'warehouse':
+                
+                check_warehouse = Warehouse.objects.filter(name__icontains=search_text)
+                if check_warehouse.exists():                   
+                    warehouse = check_warehouse.first()                  
+                    inbound5 = list(ProcessorWarehouseShipment.objects.filter(processor_shipment_crop__crop=select_crop, warehouse_id=warehouse.id, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values("id","processor_shipment_crop__crop", "contract__secret_key","contract_id", "processor_entity_name","processor_type", "processor_id", "shipment_id", "warehouse_id", "warehouse_name","customer_name","customer_id", "date_pulled", "carrier_type", "distributor_receive_date", "status"))
+                    for shipment in inbound5:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id                      
+
+                    outbound6 = list(WarehouseCustomerShipment.objects.filter(warehouse_shipment_crop__crop=select_crop, warehouse_id=warehouse.id, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values("id","warehouse_shipment_crop__crop","contract__secret_key","contract_id","shipment_id", "warehouse_id", "customer_id","warehouse_name","customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status"))
+                    for shipment in outbound6:
+                        if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    output = outbound6
+                    
+                else:
+                    output = []
+              
+            elif get_search_by and get_search_by == 'customer':
+                
+                check_customer = Customer.objects.filter(name__icontains=search_text)
+                if check_customer.exists():
+                    customer = check_customer.first()
+                    inbound6 = []
+                    
+                    processor_shipments = list(ProcessorWarehouseShipment.objects.filter(
+                        processor_shipment_crop__crop=select_crop,
+                        customer_id=customer.id, 
+                        date_pulled__date__gte=from_date, 
+                        date_pulled__date__lte=to_date
+                    ).values(
+                        "id","processor_shipment_crop__crop", "contract__secret_key", "contract_id", "processor_entity_name",
+                        "processor_type", "processor_id", "shipment_id", "warehouse_id",
+                        "warehouse_name", "customer_name", "customer_id", 
+                        "date_pulled", "carrier_type", "distributor_receive_date", "status"
+                    ))
+                    for shipment in processor_shipments:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    inbound6.extend(processor_shipments)
+
+                    warehouse_shipments = list(WarehouseCustomerShipment.objects.filter(
+                        warehouse_shipment_crop__crop=select_crop, 
+                        customer_id=customer.id, 
+                        date_pulled__date__gte=from_date, 
+                        date_pulled__date__lte=to_date
+                    ).values(
+                        "id", "warehouse_shipment_crop__crop","contract__secret_key", "contract_id", "shipment_id",
+                        "warehouse_id", "customer_id", "warehouse_name", "customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status"
+                    ))
+                    for shipment in warehouse_shipments:
+                        if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    inbound6.extend(warehouse_shipments)                    
+                    output = warehouse_shipments
+                    
+                else:
+                    output = []
+            
+            else:
+                output = []
+            for i in output:
+                writer.writerow([i["shipment_id"] ,i["warehouse_name"], i["customer_name"], i["date_pulled"],  i["carrier_type"]])
+        return response
+    else:
+        return redirect ('dashboard')
+
+
+@login_required()
+def traceability_report_Customer_csv_download(request, select_crop, get_search_by, search_text, from_date, to_date):
+    if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+        filename = 'Customer.csv'
+        response = HttpResponse(
+            content_type='text/csv',
+            headers={'Content-Disposition': 'attachment; filename="{}"'.format(filename)},
+        )
+        writer = csv.writer(response)
+        writer.writerow(['WAREHOUSE/PROCESSOR NAME', 'CUSTOMER NAME', 'DELIVERY ID', 'DATE', 'QUANTITY POUNDS SHIPPED', 'PER UNIT PRICE'])
+        output = []
+        if select_crop == 'COTTON':
+            pass
+        else:
+            if get_search_by and get_search_by == 'grower' :
+                check_grower = Grower.objects.filter(name__icontains=search_text)
+                if check_grower.exists() :
+                    check_grower_id = check_grower.first().id
+                    check_grower_field_crop = Field.objects.filter(crop=select_crop,grower_id=check_grower_id)
+                    if check_grower_field_crop.exists() :
+                        processor_id = LinkGrowerToProcessor.objects.filter(grower_id=check_grower_id).first().processor.id
+                        entity_name = LinkGrowerToProcessor.objects.filter(grower_id=check_grower_id).first().processor.entity_name
+                                                       
+                        processor_type = "T1"
+                        context_ = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, entity_name)      
+                        output = context_.get("inbound6_wip")
+                    else:
+                        output = []
+                else:
+                    output = []
+       
+            elif get_search_by and get_search_by == 'field' :
+                check_field = Field.objects.filter(name__icontains=search_text,crop=select_crop)
+                if check_field.exists() :
+                    field_name = search_text
+                    field_id = check_field.first().id                    
+                    grower_id =  check_field.first().grower.id                    
+                    processor_id = LinkGrowerToProcessor.objects.filter(grower_id=grower_id).first().processor.id
+                    entity_name = LinkGrowerToProcessor.objects.filter(grower_id=grower_id).first().processor.entity_name
+                    processor_type = "T1"
+                    context_ = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, entity_name)
+                    output = context_.get("inbound6_wip")
+                else:
+                    output = []
+            
+            elif get_search_by and get_search_by == 'processor' :
+                check_processor = get_processor_type(search_text)
+                if check_processor:
+                    processor_type = check_processor["type"]
+                    processor_id = check_processor["id"]
+                    context_ = processor_traceability_report_response(select_crop, processor_id,processor_type, from_date, to_date, search_text)
+                    output = context_.get("inbound6_wip")
+                else:
+                    output = []
+
+            elif get_search_by and get_search_by == 'sku_id' :
+                context_ = skuid_traceability_response(select_crop, search_text, from_date, to_date)  
+                output = context_.get("inbound6_wip")
+
+            elif get_search_by and get_search_by == 'deliveryid' :                        
+                check_shipment = GrowerShipment.objects.filter(shipment_id__icontains=search_text, crop=select_crop)                        
+                if check_shipment.exists() :
+                    get_shipment = check_shipment.first()
+                    sku_id = get_shipment.sku
+                    context_ = skuid_traceability_response(select_crop, sku_id, from_date, to_date)
+                    output = context_.get("inbound6_wip")                              
+
+                elif not check_shipment and ShipmentManagement.objects.filter(shipment_id__icontains=search_text, crop=select_crop).exists():
+                    get_shipment = ShipmentManagement.objects.filter(shipment_id__icontains=search_text, crop=select_crop).first()
+                    
+                    if get_shipment and not get_shipment.receiver_processor_type == "T4":
+                        sku_id = get_shipment.storage_bin_send 
+                        context_ = skuid_traceability_response(select_crop, sku_id, from_date, to_date)
+                        output = context_.get("inbound6_wip")
+
+                    elif get_shipment and get_shipment.receiver_processor_type == "T4":
+                        sku_id = get_shipment.storage_bin_recive 
+                        context_ = skuid_traceability_response(select_crop, sku_id, from_date, to_date)
+                        output = context_.get("inbound6_wip")
+
+                    else:
+                        output = []
+
+                elif not check_shipment and ProcessorWarehouseShipment.objects.filter(shipment_id__icontains=search_text, processor_shipment_crop__crop=select_crop).exists():
+                    
+                    shipments = ProcessorWarehouseShipment.objects.filter(shipment_id__icontains=search_text, processor_shipment_crop__crop=select_crop).values("id","processor_shipment_crop__crop", "contract__secret_key","contract_id", "processor_entity_name","processor_type", "processor_id", "shipment_id", "warehouse_id", "warehouse_name","customer_name","customer_id", "date_pulled", "carrier_type", "distributor_receive_date", "status")
+                    for shipment in shipments:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    get_shipment = shipments.first()
+                    if get_shipment["warehouse_id"] not in [None, "null", "", " "]:
+                        inbound5 = list(shipments)                        
+                        crops = ProcessorShipmentCrops.objects.filter(shipment_id=get_shipment["id"])
+                        outbound6 = []
+                        for crop in crops:
+                          
+                            if WarehouseCustomerShipment.objects.filter(warehouse_id=get_shipment["warehouse_id"], warehouse_shipment_crop__crop=crop.crop, warehouse_shipment_crop__crop_type=crop.crop_type).exists():
+                                shipments = WarehouseCustomerShipment.objects.filter(warehouse_id=get_shipment["warehouse_id"], warehouse_shipment_crop__crop=crop.crop, warehouse_shipment_crop__crop_type=crop.crop_type).values("id","warehouse_shipment_crop__crop","contract__secret_key","contract_id", "shipment_id", "warehouse_id", "customer_id","warehouse_name","customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status")
+                                for shipment in shipments:
+                                    if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                                        shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                                    
+                                    carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                                    shipment["carrier_id"] = carrier.carrier_id  
+                                outbound6.extend(list(shipments))                        
+                        output = outbound6                        
+                    else:
+                        output = shipments
+                        
+                elif not check_shipment and WarehouseCustomerShipment.objects.filter(shipment_id__icontains=search_text, warehouse_shipment_crop__crop=select_crop).exists():
+                    shipments = WarehouseCustomerShipment.objects.filter(shipment_id__icontains=search_text, warehouse_shipment_crop__crop=select_crop).values("id","warehouse_shipment_crop__crop","contract__secret_key","contract_id", "shipment_id", "warehouse_id" ,"customer_id","warehouse_name","customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status")
+                    for shipment in shipments:
+                        if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+
+                    get_shipment = shipments.first()
+                    output = list(shipments)                                         
+                
+                else:
+                    output = []    
+        
+            elif get_search_by and get_search_by == 'warehouse':                
+                check_warehouse = Warehouse.objects.filter(name__icontains=search_text)
+                if check_warehouse.exists():                    
+                    warehouse = check_warehouse.first()                    
+                    inbound5 = list(ProcessorWarehouseShipment.objects.filter(processor_shipment_crop__crop=select_crop, warehouse_id=warehouse.id, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values("id","processor_shipment_crop__crop", "contract__secret_key","contract_id", "processor_entity_name","processor_type", "processor_id", "shipment_id", "warehouse_id", "warehouse_name","customer_name","customer_id", "date_pulled", "carrier_type", "distributor_receive_date", "status"))
+                    for shipment in inbound5:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id                     
+
+                    outbound6 = list(WarehouseCustomerShipment.objects.filter(warehouse_shipment_crop__crop=select_crop, warehouse_id=warehouse.id, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values("id","warehouse_shipment_crop__crop","contract__secret_key","contract_id","shipment_id", "warehouse_id", "customer_id","warehouse_name","customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status"))
+                    for shipment in outbound6:
+                        if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    output = outbound6                   
+                    
+                else:
+                    output = []
+            
+            elif get_search_by and get_search_by == 'customer':                
+                check_customer = Customer.objects.filter(name__icontains=search_text)
+                if check_customer.exists():
+                    customer = check_customer.first()
+                    inbound6 = []
+                    
+                    processor_shipments = list(ProcessorWarehouseShipment.objects.filter(
+                        processor_shipment_crop__crop=select_crop,
+                        customer_id=customer.id, 
+                        date_pulled__date__gte=from_date, 
+                        date_pulled__date__lte=to_date
+                    ).values(
+                        "id","processor_shipment_crop__crop", "contract__secret_key", "contract_id", "processor_entity_name",
+                        "processor_type", "processor_id", "shipment_id", "warehouse_id",
+                        "warehouse_name", "customer_name", "customer_id", 
+                        "date_pulled", "carrier_type", "distributor_receive_date", "status"
+                    ))
+                    for shipment in processor_shipments:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    inbound6.extend(processor_shipments)
+
+                    warehouse_shipments = list(WarehouseCustomerShipment.objects.filter(
+                        warehouse_shipment_crop__crop=select_crop, 
+                        customer_id=customer.id, 
+                        date_pulled__date__gte=from_date, 
+                        date_pulled__date__lte=to_date
+                    ).values(
+                        "id", "warehouse_shipment_crop__crop","contract__secret_key", "contract_id", "shipment_id",
+                        "warehouse_id", "customer_id", "warehouse_name", "customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status"
+                    ))
+                    for shipment in warehouse_shipments:
+                        if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    inbound6.extend(warehouse_shipments)
+
+                    output = inbound6
+                    
+                else:
+                    output = [] 
+            
+            else:
+                output = []
+            
+            for i in output:
+                writer.writerow([i["warehouse_name"] if i["warehouse_name"] is not None else i["processor_entity_name"] ,i["customer_name"], i["shipment_id"], i["customer_receive_date"] if i["warehouse_name"] is not None else i["distributor_receive_date"]
+                                 ])
+        return response
+    else:
+        return redirect ('dashboard')
+   
+
+@login_required()
 def traceability_report_all_csv_download(request,select_crop,get_search_by,search_text,from_date,to_date):
     if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
         filename = 'TRACE MODULE.csv'
@@ -3824,9 +8021,7 @@ def traceability_report_all_csv_download(request,select_crop,get_search_by,searc
             headers={'Content-Disposition': 'attachment; filename="{}"'.format(filename)},
         )
         writer = csv.writer(response)
-        # writer.writerow(['CROP', 'VARIETY', 'FIELD', 'GROWER', 'FARM', 'HARVEST DATE', 
-        #                 'PROJECTED YIELD', 'ACTUAL YIELD', 'YIELD  DELTA', 'Pass / Fail Sustainability','Water Savings %',
-        #                 'Land Use Efficiency %', 'Less GHG % ', 'Premiums to Growers %', 'CO2 EQ footprint #','Pounds of Water Per Pound Savings %'])
+        
         output_origin = []
         if select_crop == 'COTTON' :
             # search by Grower ....
@@ -3856,7 +8051,7 @@ def traceability_report_all_csv_download(request,select_crop,get_search_by,searc
                         'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
                         t1_processor = t1_Processor_grower('COTTON',check_grower_id,from_date,to_date)
                         for i in t1_processor:
-                            writer.writerow([i["processor_name"] , i["processor_id"], i["deliveryid"], i["grower"], i["farm"], i["field"], i["date"], i["pounds_shipped"], 
+                            writer.writerow([i["processor_name"] , i["processor_id"], i["shipment_id"], i["grower"], i["farm"], i["field"], i["date"], i["pounds_shipped"], 
                             i["pounds_received"], i["pounds_delta"]])
                         # 20-03-23
                         writer.writerow([""])
@@ -3869,7 +8064,7 @@ def traceability_report_all_csv_download(request,select_crop,get_search_by,searc
                         'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
                         t2_processor = t2_Processor_grower('COTTON',check_grower_id,from_date,to_date)
                         for i in t2_processor:
-                            writer.writerow([i["processor_name"] , i["processor_id"], i["deliveryid"], i["grower"], i["farm"], i["field"], i["date"], i["pounds_shipped"], 
+                            writer.writerow([i["processor_name"] , i["processor_id"], i["shipment_id"], i["grower"], i["farm"], i["field"], i["date"], i["pounds_shipped"], 
                             i["pounds_received"], i["pounds_delta"]])
  
                     else:
@@ -3902,7 +8097,7 @@ def traceability_report_all_csv_download(request,select_crop,get_search_by,searc
                     'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
                     t1_processor = t1_Processor_field('COTTON',field_name,field_id,field_id,from_date,to_date)
                     for i in t1_processor:
-                        writer.writerow([i["processor_name"] , i["processor_id"], i["deliveryid"], i["grower"], i["farm"], i["field"], i["date"], i["pounds_shipped"], 
+                        writer.writerow([i["processor_name"] , i["processor_id"], i["shipment_id"], i["grower"], i["farm"], i["field"], i["date"], i["pounds_shipped"], 
                         i["pounds_received"], i["pounds_delta"]])
                     # 20-03-23
                     writer.writerow([""])
@@ -3915,7 +8110,7 @@ def traceability_report_all_csv_download(request,select_crop,get_search_by,searc
                     'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
                     t2_processor = t2_Processor_field('COTTON',field_name,field_id,from_date,to_date)
                     for i in t2_processor:
-                        writer.writerow([i["processor_name"] , i["processor_id"], i["deliveryid"], i["grower"], i["farm"], i["field"], i["date"], i["pounds_shipped"], 
+                        writer.writerow([i["processor_name"] , i["processor_id"], i["shipment_id"], i["grower"], i["farm"], i["field"], i["date"], i["pounds_shipped"], 
                         i["pounds_received"], i["pounds_delta"]])
                 else:
                     pass
@@ -3947,7 +8142,7 @@ def traceability_report_all_csv_download(request,select_crop,get_search_by,searc
                         'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
                         t1_processor = t1_Processor_Processor('COTTON',processor_id,from_date,to_date,*bale_id)
                         for i in t1_processor:
-                            writer.writerow([i["processor_name"] , i["processor_id"], i["deliveryid"], i["grower"], i["farm"], i["field"], i["date"], i["pounds_shipped"], 
+                            writer.writerow([i["processor_name"] , i["processor_id"], i["shipment_id"], i["grower"], i["farm"], i["field"], i["date"], i["pounds_shipped"], 
                             i["pounds_received"], i["pounds_delta"]])
                         # 20-03-23
                         writer.writerow([""])
@@ -3960,7 +8155,7 @@ def traceability_report_all_csv_download(request,select_crop,get_search_by,searc
                         'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])                        
                         t2_processor =  t2_Processor_Processor('COTTON',processor_id,from_date,to_date,*bale_id) 
                         for i in t2_processor:
-                            writer.writerow([i["processor_name"] , i["processor_id"], i["deliveryid"], i["grower"], i["farm"], i["field"], i["date"], i["pounds_shipped"], 
+                            writer.writerow([i["processor_name"] , i["processor_id"], i["shipment_id"], i["grower"], i["farm"], i["field"], i["date"], i["pounds_shipped"], 
                             i["pounds_received"], i["pounds_delta"]])
                     else:
                         pass
@@ -3993,7 +8188,7 @@ def traceability_report_all_csv_download(request,select_crop,get_search_by,searc
                     'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
                     t1_processor = t1_Processor_deliveryid('COTTON',search_text,warehouse_wh_id,from_date,to_date)
                     for i in t1_processor:
-                        writer.writerow([i["processor_name"] , i["processor_id"], i["deliveryid"], i["grower"], i["farm"], i["field"], i["date"], i["pounds_shipped"], 
+                        writer.writerow([i["processor_name"] , i["processor_id"], i["shipment_id"], i["grower"], i["farm"], i["field"], i["date"], i["pounds_shipped"], 
                         i["pounds_received"], i["pounds_delta"]])
                     writer.writerow([""])
                     writer.writerow(["Outbound 2 WIP"])
@@ -4004,7 +8199,7 @@ def traceability_report_all_csv_download(request,select_crop,get_search_by,searc
                     'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])   
                     t2_processor =  t2_Processor_deliveryid('COTTON',search_text,warehouse_wh_id,from_date,to_date)
                     for i in t2_processor:
-                        writer.writerow([i["processor_name"] , i["processor_id"], i["deliveryid"], i["grower"], i["farm"], i["field"], i["date"], i["pounds_shipped"], 
+                        writer.writerow([i["processor_name"] , i["processor_id"], i["shipment_id"], i["grower"], i["farm"], i["field"], i["date"], i["pounds_shipped"], 
                         i["pounds_received"], i["pounds_delta"]])
                 elif get_delivery_id2.exists() :
                     field_id = [i.ob4 for i in get_delivery_id2][0]
@@ -4029,7 +8224,7 @@ def traceability_report_all_csv_download(request,select_crop,get_search_by,searc
                     'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
                     t1_processor = t1_Processor_deliveryid('COTTON',f"0{search_text}",warehouse_wh_id,from_date,to_date)
                     for i in t1_processor:
-                        writer.writerow([i["processor_name"] , i["processor_id"], i["deliveryid"], i["grower"], i["farm"], i["field"], i["date"], i["pounds_shipped"], 
+                        writer.writerow([i["processor_name"] , i["processor_id"], i["shipment_id"], i["grower"], i["farm"], i["field"], i["date"], i["pounds_shipped"], 
                         i["pounds_received"], i["pounds_delta"]])
                     writer.writerow([""])
                     writer.writerow(["Outbound 2 WIP"])
@@ -4040,25 +8235,25 @@ def traceability_report_all_csv_download(request,select_crop,get_search_by,searc
                     'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])   
                     t2_processor =  t2_Processor_deliveryid('COTTON',f"0{search_text}",warehouse_wh_id,from_date,to_date)
                     for i in t2_processor:
-                        writer.writerow([i["processor_name"] , i["processor_id"], i["deliveryid"], i["grower"], i["farm"], i["field"], i["date"], i["pounds_shipped"], 
+                        writer.writerow([i["processor_name"] , i["processor_id"], i["shipment_id"], i["grower"], i["farm"], i["field"], i["date"], i["pounds_shipped"], 
                         i["pounds_received"], i["pounds_delta"]])
                 else:
                     pass                  
             else:
                 pass
-        if select_crop == 'RICE' :
+        else:
             if get_search_by and get_search_by == 'grower' :
                 check_grower = Grower.objects.filter(name__icontains=search_text)
                 if check_grower.exists() :
                     check_grower_id = [i.id for i in check_grower][0]
-                    check_grower_field_crop = Field.objects.filter(crop='RICE',grower_id=check_grower_id)
+                    check_grower_field_crop = Field.objects.filter(crop=select_crop,grower_id=check_grower_id)
                     if check_grower_field_crop.exists() :
                         grower_field_ids = [i.id for i in check_grower_field_crop]
                         writer.writerow(["Origin"])
                         writer.writerow(['CROP', 'VARIETY', 'FIELD', 'GROWER', 'FARM', 'HARVEST DATE', 
                         'PROJECTED YIELD', 'ACTUAL YIELD', 'YIELD  DELTA', 'Pass / Fail Sustainability','Water Savings %',
                         'Land Use Efficiency %', 'Less GHG % ', 'Premiums to Growers %', 'CO2 EQ footprint #','Pounds of Water Per Pound Savings %'])
-                        get_Origin_Grower = Origin_searchby_Grower('RICE',search_text,*grower_field_ids)                                              
+                        get_Origin_Grower = Origin_searchby_Grower(select_crop,search_text,*grower_field_ids)                                              
                         for i in get_Origin_Grower:
                             writer.writerow([i["get_select_crop"], i["variety"], i["field_name"], i["grower_name"], i["farm_name"], i["harvest_date"], 
                             i["projected_yeild"], i["reported_yeild"], i["yield_delta"],i["pf_sus"],i["water_savings"],i["land_use"],i["premiums_to_growers"],
@@ -4066,71 +8261,113 @@ def traceability_report_all_csv_download(request,select_crop,get_search_by,searc
                         processor_id = LinkGrowerToProcessor.objects.filter(grower_id=check_grower_id).first().processor.id
                         entity_name = LinkGrowerToProcessor.objects.filter(grower_id=check_grower_id).first().processor.entity_name
                         processor_type = "T1"
-                        context_ = processor_traceability_report_response(processor_id, processor_type, from_date, to_date, entity_name)
+                        context = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, entity_name)
                        
                         writer.writerow([""])
                         writer.writerow(["Outbound 1 WIP"])
                         writer.writerow(['DELIVERY ID OUTBOUND', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
-                        outbound1_wip = context_.get("outbound1_wip")    
-                        for i in outbound1_wip:
-                            writer.writerow([i["deliveryid"], i["date"], i["quantity"], i["transportation"], i["destination"]])
+                        outbound1_wip = context.get("outbound1_wip")
+                        if outbound1_wip:    
+                            for i in outbound1_wip:
+                                writer.writerow([i["shipment_id"], i["date"], i["quantity"], i["transportation"], i["destination"]])
                         
                         writer.writerow([""])
                         writer.writerow(["T1 Processor"])
                         writer.writerow(['PROCESSOR NAME', 'DELIVERY ID', 'Grower', 'Farm', 'Field', 'DATE', 'QUANTITY POUNDS SHIPPED', 
                         'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
-                        t1_processor = t1_processor = list(GrowerShipment.objects.filter(processor_id=processor_id, grower_id=check_grower_id, status="APPROVED").values("processor__entity_name","processor_id","shipment_id","sku","approval_date","grower__name","field__farm__name","field__name","total_amount","received_amount"))
-                        for i in t1_processor:
-                            writer.writerow([i["processor__entity_name"], i["shipment_id"], i["grower__name"], i["field__farm__name"], i["field__name"], i["approval_date"], i["total_amount"], 
-                                            i["received_amount"], float(i["total_amount"]) - float(i["received_amount"])])
+                        t1_processor = t1_processor = list(GrowerShipment.objects.filter(processor_id=processor_id, grower_id=check_grower_id, status="APPROVED", crop=select_crop).values("processor__entity_name","processor_id","shipment_id","sku","approval_date","grower__name","field__farm__name","field__name","total_amount","received_amount"))
+                        if t1_processor:
+                            for i in t1_processor:
+                                writer.writerow([i["processor__entity_name"], i["shipment_id"], i["grower__name"], i["field__farm__name"], i["field__name"], i["approval_date"], i["total_amount"], 
+                                                i["received_amount"], float(i["total_amount"]) - float(i["received_amount"])])
                        
                         writer.writerow([""])
                         writer.writerow(["Outbound 2 WIP"])
                         writer.writerow(['DELIVERY ID OUTBOUND', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
-                        outbound2_wip = context_.get("outbound2_wip")        
-                        for i in outbound2_wip:
-                            writer.writerow([i["shipment_id"] , i["storage_bin_send"], i["date_pulled"], i["volume_shipped"], i["equipment_type"], i["processor2_name"]])
-                       
+                        outbound2_wip = context.get("outbound2_wip") 
+                        if outbound1_wip:       
+                            for i in outbound2_wip:
+                                writer.writerow([i["shipment_id"] , i["storage_bin_send"], i["date_pulled"], i["volume_shipped"], i["equipment_type"], i["processor2_name"]])
+                        
                         writer.writerow([""])
                         writer.writerow(["T2 Processor"])
                         writer.writerow(['PROCESSOR NAME', 'PROCESSOR ID #', 'DELIVERY ID', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS SHIPPED', 'RECEIVER PROCESSOR', 'RECEIVER SKU ID', 
                         'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
-                        t2_processor = context_.get("inbound2_wip")
-                        for i in t2_processor:
-                            writer.writerow([i["processor_e_name"] , i["processor_idd"], i["shipment_id"], i["storage_bin_send"],  i["recive_delivery_date"], i["volume_shipped"], i["processor2_name"], i["storage_bin_recive"],
-                                 i["received_weight"], float(i["volume_shipped"]) - float(i["received_weight"])])
+                        t2_processor = context.get("inbound2_wip")
+                        if t2_processor:
+                            for i in t2_processor:
+                                writer.writerow([i["processor_e_name"] , i["processor_idd"], i["shipment_id"], i["storage_bin_send"],  i["recive_delivery_date"], i["volume_shipped"], i["processor2_name"], i["storage_bin_recive"],
+                                        i["received_weight"], float(i["volume_shipped"]) - float(i["received_weight"])])
                         
                         writer.writerow([""])
                         writer.writerow(["Outbound 3 WIP"])
                         writer.writerow(['DELIVERY ID OUTBOUND', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
-                        outbound3_wip = context_.get("outbound3_wip")        
-                        for i in outbound3_wip:
-                            writer.writerow([i["shipment_id"] , i["storage_bin_send"], i["date_pulled"], i["volume_shipped"], i["equipment_type"], i["processor2_name"]])
+                        outbound3_wip = context.get("outbound3_wip")
+                        if outbound3_wip:        
+                            for i in outbound3_wip:
+                                writer.writerow([i["shipment_id"] , i["storage_bin_send"], i["date_pulled"], i["volume_shipped"], i["equipment_type"], i["processor2_name"]])
                         
                         writer.writerow([""])
                         writer.writerow(["T3 Processor"])
                         writer.writerow(['PROCESSOR NAME', 'PROCESSOR ID #', 'DELIVERY ID', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS SHIPPED', 'RECEIVER PROCESSOR', 'RECEIVER SKU ID', 
                         'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
-                        t3_processor = context_.get("inbound3_wip")
-                        for i in t3_processor:
-                            writer.writerow([i["processor_e_name"] , i["processor_idd"], i["shipment_id"], i["storage_bin_send"],  i["recive_delivery_date"], i["volume_shipped"], i["processor2_name"], i["storage_bin_recive"],
-                                 i["received_weight"], float(i["volume_shipped"]) - float(i["received_weight"])])
+                        t3_processor = context.get("inbound3_wip")
+                        if t3_processor:
+                            for i in t3_processor:
+                                writer.writerow([i["processor_e_name"] , i["processor_idd"], i["shipment_id"], i["storage_bin_send"],  i["recive_delivery_date"], i["volume_shipped"], i["processor2_name"], i["storage_bin_recive"],
+                                        i["received_weight"], float(i["volume_shipped"]) - float(i["received_weight"])])
                         
                         writer.writerow([""])
                         writer.writerow(["Outbound 4 WIP"])
                         writer.writerow(['DELIVERY ID OUTBOUND', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
-                        outbound4_wip = context_.get("outbound4_wip")        
-                        for i in outbound4_wip:
-                            writer.writerow([i["shipment_id"] , i["storage_bin_send"], i["date_pulled"], i["volume_shipped"], i["equipment_type"], i["processor2_name"]])
+                        outbound4_wip = context.get("outbound4_wip") 
+                        if outbound4_wip:       
+                            for i in outbound4_wip:
+                                writer.writerow([i["shipment_id"] , i["storage_bin_send"], i["date_pulled"], i["volume_shipped"], i["equipment_type"], i["processor2_name"]])
 
                         writer.writerow([""])
                         writer.writerow(["T4 Processor"])
                         writer.writerow(['PROCESSOR NAME', 'PROCESSOR ID #', 'DELIVERY ID', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS SHIPPED', 'RECEIVER PROCESSOR', 'RECEIVER SKU ID', 
                         'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
-                        t4_processor = context_.get("inbound4_wip")
-                        for i in t4_processor:
-                            writer.writerow([i["processor_e_name"] , i["processor_idd"], i["shipment_id"], i["storage_bin_send"],  i["recive_delivery_date"], i["volume_shipped"], i["processor2_name"], i["storage_bin_recive"],
-                                 i["received_weight"], float(i["volume_shipped"]) - float(i["received_weight"])])
+                        t4_processor = context.get("inbound4_wip")
+                        if t4_processor:
+                            for i in t4_processor:
+                                writer.writerow([i["processor_e_name"] , i["processor_idd"], i["shipment_id"], i["storage_bin_send"],  i["recive_delivery_date"], i["volume_shipped"], i["processor2_name"], i["storage_bin_recive"],
+                                        i["received_weight"], float(i["volume_shipped"]) - float(i["received_weight"])])
+                            
+                        writer.writerow([""])
+                        writer.writerow(["Outbound 5 WIP"])
+                        writer.writerow(['DELIVERY ID', 'PROCESSOR NAME', 'WAREHOUSE/CUSTOMER NAME', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'PER UNIT RATE'])
+                        outbound5_wip = context.get("outbound5_wip") 
+                        if outbound5_wip:      
+                            for i in outbound5_wip:
+                                writer.writerow([i["shipment_id"] ,i["processor_entity_name"], i["warehouse_name"] if i["warehouse_name"] is not None else i["customer_name"], i["date_pulled"], i["carrier_type"]])
+
+                        writer.writerow([""])
+                        writer.writerow(["Warehouse"])
+                        writer.writerow(['PROCESSOR NAME', 'WAREHOUSE NAME', 'DELIVERY ID', 'DATE', 'QUANTITY POUNDS SHIPPED', 'PER UNIT PRICE'])
+                        warehouse = context.get("inbound5_wip")
+                        if warehouse:
+                            for i in warehouse:
+                                writer.writerow([i["processor_entity_name"] ,i["warehouse_name"], i["shipment_id"], i["distributor_receive_date"] 
+                                        ])
+                            
+                        writer.writerow([""])
+                        writer.writerow(["Outbound 6 WIP"])
+                        writer.writerow(['DELIVERY ID', 'WAREHOUSE NAME', 'CUSTOMER NAME', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'PER UNIT RATE'])
+                        outbound6_wip = context.get("outbound6_wip") 
+                        if outbound6_wip:       
+                            for i in outbound6_wip:
+                                writer.writerow([i["shipment_id"] ,i["warehouse_name"], i["customer_name"], i["date_pulled"],  i["carrier_type"]])
+                            
+                        writer.writerow([""])
+                        writer.writerow(["Customer"])
+                        writer.writerow(['WAREHOUSE/PROCESSOR NAME', 'CUSTOMER NAME',  'DELIVERY ID', 'DATE', 'QUANTITY POUNDS SHIPPED', 'PER UNIT PRICE'])
+                        customer = context.get("inbound6_wip")
+                        if customer:
+                            for i in customer:
+                                writer.writerow([i["warehouse_name"] if i["warehouse_name"] is not None else i["processor_entity_name"], i["customer_name"], i["shipment_id"], i["customer_receive_date"] if i["warehouse_name"] is not None else i["distributor_receive_date"] 
+                                        ])
                     else:
                         pass
                 else:
@@ -4138,7 +8375,7 @@ def traceability_report_all_csv_download(request,select_crop,get_search_by,searc
                 
             # search by Field ....
             elif get_search_by and get_search_by == 'field' :
-                check_field = Field.objects.filter(name__icontains=search_text,crop='RICE')
+                check_field = Field.objects.filter(name__icontains=search_text,crop=select_crop)
                 if check_field.exists() :
                     field_name = search_text
                     field_id = [i.id for i in check_field][0]
@@ -4147,7 +8384,7 @@ def traceability_report_all_csv_download(request,select_crop,get_search_by,searc
                     writer.writerow(['CROP', 'VARIETY', 'FIELD', 'GROWER', 'FARM', 'HARVEST DATE', 
                     'PROJECTED YIELD', 'ACTUAL YIELD', 'YIELD  DELTA', 'Pass / Fail Sustainability','Water Savings %',
                     'Land Use Efficiency %', 'Less GHG % ', 'Premiums to Growers %', 'CO2 EQ footprint #','Pounds of Water Per Pound Savings %'])
-                    get_origin_details = get_Origin_deliveryid('RICE',field_id,field_name,'',warehouse_wh_id)
+                    get_origin_details = get_Origin_deliveryid(select_crop,field_id,field_name,'',warehouse_wh_id)
                     for i in get_origin_details:
                         writer.writerow([i["get_select_crop"], i["variety"], i["field_name"], i["grower_name"], i["farm_name"], i["harvest_date"], 
                         i["projected_yeild"], i["reported_yeild"], i["yield_delta"],i["pf_sus"],i["water_savings"],i["land_use"],i["premiums_to_growers"],
@@ -4156,72 +8393,112 @@ def traceability_report_all_csv_download(request,select_crop,get_search_by,searc
                     writer.writerow([""])
                     writer.writerow(["Outbound 1 WIP"])
                     writer.writerow(['DELIVERY ID OUTBOUND', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
-                    outbound1_wip = outbound1_Wip_field('RICE',search_text,from_date,to_date,field_id)
+                    outbound1_wip = outbound1_Wip_field(select_crop,search_text,from_date,to_date,field_id)
                     for i in outbound1_wip:
-                        writer.writerow([i["deliveryid"], i["date"], i["quantity"], i["transportation"], i["destination"]])
+                        writer.writerow([i["shipment_id"], i["date"], i["quantity"], i["transportation"], i["destination"]])
                     
                     writer.writerow([""])
                     writer.writerow(["T1 Processor"])
                     writer.writerow(['PROCESSOR NAME', 'DELIVERY ID', 'Grower', 'Farm', 'Field', 'DATE', 'QUANTITY POUNDS SHIPPED', 
                     'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
-                    t1_processor = t1_Processor_field('RICE',search_text,field_id,from_date,to_date)
+                    t1_processor = t1_Processor_field(select_crop,search_text,field_id,from_date,to_date)
                     for i in t1_processor:
-                        writer.writerow([i["processor_name"], i["deliveryid"], i["grower"], i["farm"], i["field"], i["date"], i["pounds_shipped"], 
+                        writer.writerow([i["processor_name"], i["shipment_id"], i["grower"], i["farm"], i["field"], i["date"], i["pounds_shipped"], 
                                         i["pounds_received"], i["pounds_delta"]])
 
                     grower_id =  check_field.first().grower.id
                     processor_id = LinkGrowerToProcessor.objects.filter(grower_id=grower_id).first().processor.id
                     entity_name = LinkGrowerToProcessor.objects.filter(grower_id=grower_id).first().processor.entity_name
                     processor_type = "T1"
-                    context_ = processor_traceability_report_response(processor_id, processor_type, from_date, to_date, entity_name)
+                    context = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, entity_name)
                    
                     writer.writerow([""])
                     writer.writerow(["Outbound 2 WIP"])
                     writer.writerow(['DELIVERY ID OUTBOUND', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
-                    outbound2_wip = context_.get("outbound2_wip")        
-                    for i in outbound2_wip:
-                        writer.writerow([i["shipment_id"] , i["storage_bin_send"], i["date_pulled"], i["volume_shipped"], i["equipment_type"], i["processor2_name"]])
+                    outbound2_wip = context.get("outbound2_wip") 
+                    if outbound1_wip:       
+                        for i in outbound2_wip:
+                            writer.writerow([i["shipment_id"] , i["storage_bin_send"], i["date_pulled"], i["volume_shipped"], i["equipment_type"], i["processor2_name"]])
                     
                     writer.writerow([""])
                     writer.writerow(["T2 Processor"])
                     writer.writerow(['PROCESSOR NAME', 'PROCESSOR ID #', 'DELIVERY ID', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS SHIPPED', 'RECEIVER PROCESSOR', 'RECEIVER SKU ID', 
                     'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
-                    t2_processor = context_.get("inbound2_wip")
-                    for i in t2_processor:
-                        writer.writerow([i["processor_e_name"] , i["processor_idd"], i["shipment_id"], i["storage_bin_send"],  i["recive_delivery_date"], i["volume_shipped"], i["processor2_name"], i["storage_bin_recive"],
-                                i["received_weight"], float(i["volume_shipped"]) - float(i["received_weight"])])
+                    t2_processor = context.get("inbound2_wip")
+                    if t2_processor:
+                        for i in t2_processor:
+                            writer.writerow([i["processor_e_name"] , i["processor_idd"], i["shipment_id"], i["storage_bin_send"],  i["recive_delivery_date"], i["volume_shipped"], i["processor2_name"], i["storage_bin_recive"],
+                                    i["received_weight"], float(i["volume_shipped"]) - float(i["received_weight"])])
                     
                     writer.writerow([""])
                     writer.writerow(["Outbound 3 WIP"])
                     writer.writerow(['DELIVERY ID OUTBOUND', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
-                    outbound3_wip = context_.get("outbound3_wip")        
-                    for i in outbound3_wip:
-                        writer.writerow([i["shipment_id"] , i["storage_bin_send"], i["date_pulled"], i["volume_shipped"], i["equipment_type"], i["processor2_name"]])
+                    outbound3_wip = context.get("outbound3_wip")
+                    if outbound3_wip:        
+                        for i in outbound3_wip:
+                            writer.writerow([i["shipment_id"] , i["storage_bin_send"], i["date_pulled"], i["volume_shipped"], i["equipment_type"], i["processor2_name"]])
                     
                     writer.writerow([""])
                     writer.writerow(["T3 Processor"])
                     writer.writerow(['PROCESSOR NAME', 'PROCESSOR ID #', 'DELIVERY ID', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS SHIPPED', 'RECEIVER PROCESSOR', 'RECEIVER SKU ID', 
                     'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
-                    t3_processor = context_.get("inbound3_wip")
-                    for i in t3_processor:
-                        writer.writerow([i["processor_e_name"] , i["processor_idd"], i["shipment_id"], i["storage_bin_send"],  i["recive_delivery_date"], i["volume_shipped"], i["processor2_name"], i["storage_bin_recive"],
-                                i["received_weight"], float(i["volume_shipped"]) - float(i["received_weight"])])
+                    t3_processor = context.get("inbound3_wip")
+                    if t3_processor:
+                        for i in t3_processor:
+                            writer.writerow([i["processor_e_name"] , i["processor_idd"], i["shipment_id"], i["storage_bin_send"],  i["recive_delivery_date"], i["volume_shipped"], i["processor2_name"], i["storage_bin_recive"],
+                                    i["received_weight"], float(i["volume_shipped"]) - float(i["received_weight"])])
                     
                     writer.writerow([""])
                     writer.writerow(["Outbound 4 WIP"])
                     writer.writerow(['DELIVERY ID OUTBOUND', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
-                    outbound4_wip = context_.get("outbound4_wip")        
-                    for i in outbound4_wip:
-                        writer.writerow([i["shipment_id"] , i["storage_bin_send"], i["date_pulled"], i["volume_shipped"], i["equipment_type"], i["processor2_name"]])
+                    outbound4_wip = context.get("outbound4_wip") 
+                    if outbound4_wip:       
+                        for i in outbound4_wip:
+                            writer.writerow([i["shipment_id"] , i["storage_bin_send"], i["date_pulled"], i["volume_shipped"], i["equipment_type"], i["processor2_name"]])
 
                     writer.writerow([""])
                     writer.writerow(["T4 Processor"])
                     writer.writerow(['PROCESSOR NAME', 'PROCESSOR ID #', 'DELIVERY ID', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS SHIPPED', 'RECEIVER PROCESSOR', 'RECEIVER SKU ID', 
                     'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
-                    t4_processor = context_.get("inbound4_wip")
-                    for i in t4_processor:
-                        writer.writerow([i["processor_e_name"] , i["processor_idd"], i["shipment_id"], i["storage_bin_send"],  i["recive_delivery_date"], i["volume_shipped"], i["processor2_name"], i["storage_bin_recive"],
-                                i["received_weight"], float(i["volume_shipped"]) - float(i["received_weight"])])
+                    t4_processor = context.get("inbound4_wip")
+                    if t4_processor:
+                        for i in t4_processor:
+                            writer.writerow([i["processor_e_name"] , i["processor_idd"], i["shipment_id"], i["storage_bin_send"],  i["recive_delivery_date"], i["volume_shipped"], i["processor2_name"], i["storage_bin_recive"],
+                                    i["received_weight"], float(i["volume_shipped"]) - float(i["received_weight"])])
+                        
+                    writer.writerow([""])
+                    writer.writerow(["Outbound 5 WIP"])
+                    writer.writerow(['DELIVERY ID', 'PROCESSOR NAME', 'WAREHOUSE/CUSTOMER NAME', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'PER UNIT RATE'])
+                    outbound5_wip = context.get("outbound5_wip") 
+                    if outbound5_wip:      
+                        for i in outbound5_wip:
+                            writer.writerow([i["shipment_id"] ,i["processor_entity_name"], i["warehouse_name"] if i["warehouse_name"] is not None else i["customer_name"], i["date_pulled"], i["carrier_type"]])
+
+                    writer.writerow([""])
+                    writer.writerow(["Warehouse"])
+                    writer.writerow(['PROCESSOR NAME', 'WAREHOUSE NAME', 'DELIVERY ID', 'DATE', 'QUANTITY POUNDS SHIPPED', 'PER UNIT PRICE'])
+                    warehouse = context.get("inbound5_wip")
+                    if warehouse:
+                        for i in warehouse:
+                            writer.writerow([i["processor_entity_name"] ,i["warehouse_name"], i["shipment_id"], i["distributor_receive_date"] 
+                                    ])
+                        
+                    writer.writerow([""])
+                    writer.writerow(["Outbound 6 WIP"])
+                    writer.writerow(['DELIVERY ID', 'WAREHOUSE NAME', 'CUSTOMER NAME', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'PER UNIT RATE'])
+                    outbound6_wip = context.get("outbound6_wip") 
+                    if outbound6_wip:       
+                        for i in outbound6_wip:
+                            writer.writerow([i["shipment_id"] ,i["warehouse_name"], i["customer_name"], i["date_pulled"],  i["carrier_type"]])
+                        
+                    writer.writerow([""])
+                    writer.writerow(["Customer"])
+                    writer.writerow(['WAREHOUSE/PROCESSOR NAME', 'CUSTOMER NAME',  'DELIVERY ID', 'DATE', 'QUANTITY POUNDS SHIPPED', 'PER UNIT PRICE'])
+                    customer = context.get("inbound6_wip")
+                    if customer:
+                        for i in customer:
+                            writer.writerow([i["warehouse_name"] if i["warehouse_name"] is not None else i["processor_entity_name"], i["customer_name"], i["shipment_id"], i["customer_receive_date"] if i["warehouse_name"] is not None else i["distributor_receive_date"] 
+                                    ])
                 else:
                     pass
 
@@ -4231,253 +8508,933 @@ def traceability_report_all_csv_download(request,select_crop,get_search_by,searc
                 if check_processor:
                     processor_type = check_processor["type"]
                     processor_id = check_processor["id"]
-                    context_ = processor_traceability_report_response(processor_id,processor_type, from_date, to_date, search_text)
+                    context = processor_traceability_report_response(select_crop, processor_id,processor_type, from_date, to_date, search_text)
                     
                     writer.writerow(["Origin"])
                     writer.writerow(['CROP', 'VARIETY', 'FIELD', 'GROWER', 'FARM', 'HARVEST DATE', 
                     'PROJECTED YIELD', 'ACTUAL YIELD', 'YIELD  DELTA', 'Pass / Fail Sustainability','Water Savings %',
                     'Land Use Efficiency %', 'Less GHG % ', 'Premiums to Growers %', 'CO2 EQ footprint #','Pounds of Water Per Pound Savings %'])
-                    get_Origin_Processor = context_.get("origin_context")         
-                    for i in get_Origin_Processor:
-                        writer.writerow([i["get_select_crop"], i["variety"], i["field_name"], i["grower_name"], i["farm_name"], i["harvest_date"], 
-                        i["projected_yeild"], i["reported_yeild"], i["yield_delta"],i["pf_sus"],i["water_savings"],i["land_use"],i["premiums_to_growers"],
-                        i["co2_eQ_footprint"],i["water_per_pound_savings"]])
-                    
+                    get_origin_details = context.get("origin_context")
+                    if get_origin_details:
+                        for i in get_origin_details:
+                            writer.writerow([i["get_select_crop"], i["variety"], i["field_name"], i["grower_name"], i["farm_name"], i["harvest_date"], 
+                            i["projected_yeild"], i["reported_yeild"], i["yield_delta"],i["pf_sus"],i["water_savings"],i["land_use"],i["premiums_to_growers"],
+                            i["co2_eQ_footprint"],i["water_per_pound_savings"]])
+
                     writer.writerow([""])
                     writer.writerow(["Outbound 1 WIP"])
                     writer.writerow(['DELIVERY ID OUTBOUND', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
-                    outbound1_wip = context_.get("outbound1_wip")
-                    for i in outbound1_wip:
-                        writer.writerow([i["deliveryid"], i["date"], i["quantity"], i["transportation"], i["destination"]])
-                    
+                    outbound1_wip = context.get("outbound1_wip")
+                    if outbound1_wip:
+                        for i in outbound1_wip:
+                            writer.writerow([i["shipment_id"], i["date"], i["quantity"], i["transportation"], i["destination"]])
+
                     writer.writerow([""])
                     writer.writerow(["T1 Processor"])
                     writer.writerow(['PROCESSOR NAME', 'DELIVERY ID', 'Grower', 'Farm', 'Field', 'DATE', 'QUANTITY POUNDS SHIPPED', 
                     'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
-                    t1_processor = context_.get("t1_processor")
-                    for i in t1_processor:
-                        writer.writerow([i["processor_name"], i["deliveryid"], i["grower"], i["farm"], i["field"], i["date"], i["pounds_shipped"], 
-                                    i["pounds_received"], i["pounds_delta"]])
+                    t1_processor = context.get("t1_processor")
+                    if t1_processor:
+                        for i in t1_processor:
+                            writer.writerow([i["processor_name"], i["shipment_id"], i["grower"], i["farm"], i["field"], i["date"], i["pounds_shipped"], 
+                                        i["pounds_received"], i["pounds_delta"]])
                     
                     writer.writerow([""])
                     writer.writerow(["Outbound 2 WIP"])
                     writer.writerow(['DELIVERY ID OUTBOUND', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
-                    outbound2_wip = context_.get("outbound2_wip")        
-                    for i in outbound2_wip:
-                        writer.writerow([i["shipment_id"] , i["storage_bin_send"], i["date_pulled"], i["volume_shipped"], i["equipment_type"], i["processor2_name"]])
+                    outbound2_wip = context.get("outbound2_wip") 
+                    if outbound1_wip:       
+                        for i in outbound2_wip:
+                            writer.writerow([i["shipment_id"] , i["storage_bin_send"], i["date_pulled"], i["volume_shipped"], i["equipment_type"], i["processor2_name"]])
                     
                     writer.writerow([""])
                     writer.writerow(["T2 Processor"])
                     writer.writerow(['PROCESSOR NAME', 'PROCESSOR ID #', 'DELIVERY ID', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS SHIPPED', 'RECEIVER PROCESSOR', 'RECEIVER SKU ID', 
                     'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
-                    t2_processor = context_.get("inbound2_wip")
-                    for i in t2_processor:
-                        writer.writerow([i["processor_e_name"] , i["processor_idd"], i["shipment_id"], i["storage_bin_send"],  i["recive_delivery_date"], i["volume_shipped"], i["processor2_name"], i["storage_bin_recive"],
-                                i["received_weight"], float(i["volume_shipped"]) - float(i["received_weight"])])
+                    t2_processor = context.get("inbound2_wip")
+                    if t2_processor:
+                        for i in t2_processor:
+                            writer.writerow([i["processor_e_name"] , i["processor_idd"], i["shipment_id"], i["storage_bin_send"],  i["recive_delivery_date"], i["volume_shipped"], i["processor2_name"], i["storage_bin_recive"],
+                                    i["received_weight"], float(i["volume_shipped"]) - float(i["received_weight"])])
                     
                     writer.writerow([""])
                     writer.writerow(["Outbound 3 WIP"])
                     writer.writerow(['DELIVERY ID OUTBOUND', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
-                    outbound3_wip = context_.get("outbound3_wip")        
-                    for i in outbound3_wip:
-                        writer.writerow([i["shipment_id"] , i["storage_bin_send"], i["date_pulled"], i["volume_shipped"], i["equipment_type"], i["processor2_name"]])
+                    outbound3_wip = context.get("outbound3_wip")
+                    if outbound3_wip:        
+                        for i in outbound3_wip:
+                            writer.writerow([i["shipment_id"] , i["storage_bin_send"], i["date_pulled"], i["volume_shipped"], i["equipment_type"], i["processor2_name"]])
                     
                     writer.writerow([""])
                     writer.writerow(["T3 Processor"])
                     writer.writerow(['PROCESSOR NAME', 'PROCESSOR ID #', 'DELIVERY ID', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS SHIPPED', 'RECEIVER PROCESSOR', 'RECEIVER SKU ID', 
                     'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
-                    t3_processor = context_.get("inbound3_wip")
-                    for i in t3_processor:
-                        writer.writerow([i["processor_e_name"] , i["processor_idd"], i["shipment_id"], i["storage_bin_send"],  i["recive_delivery_date"], i["volume_shipped"], i["processor2_name"], i["storage_bin_recive"],
-                                i["received_weight"], float(i["volume_shipped"]) - float(i["received_weight"])])
+                    t3_processor = context.get("inbound3_wip")
+                    if t3_processor:
+                        for i in t3_processor:
+                            writer.writerow([i["processor_e_name"] , i["processor_idd"], i["shipment_id"], i["storage_bin_send"],  i["recive_delivery_date"], i["volume_shipped"], i["processor2_name"], i["storage_bin_recive"],
+                                    i["received_weight"], float(i["volume_shipped"]) - float(i["received_weight"])])
                     
                     writer.writerow([""])
                     writer.writerow(["Outbound 4 WIP"])
                     writer.writerow(['DELIVERY ID OUTBOUND', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
-                    outbound4_wip = context_.get("outbound4_wip")        
-                    for i in outbound4_wip:
-                        writer.writerow([i["shipment_id"] , i["storage_bin_send"], i["date_pulled"], i["volume_shipped"], i["equipment_type"], i["processor2_name"]])
+                    outbound4_wip = context.get("outbound4_wip") 
+                    if outbound4_wip:       
+                        for i in outbound4_wip:
+                            writer.writerow([i["shipment_id"] , i["storage_bin_send"], i["date_pulled"], i["volume_shipped"], i["equipment_type"], i["processor2_name"]])
 
                     writer.writerow([""])
                     writer.writerow(["T4 Processor"])
                     writer.writerow(['PROCESSOR NAME', 'PROCESSOR ID #', 'DELIVERY ID', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS SHIPPED', 'RECEIVER PROCESSOR', 'RECEIVER SKU ID', 
                     'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
-                    t4_processor = context_.get("inbound4_wip")
-                    for i in t4_processor:
-                        writer.writerow([i["processor_e_name"] , i["processor_idd"], i["shipment_id"], i["storage_bin_send"],  i["recive_delivery_date"], i["volume_shipped"], i["processor2_name"], i["storage_bin_recive"],
-                                i["received_weight"], float(i["volume_shipped"]) - float(i["received_weight"])])                
+                    t4_processor = context.get("inbound4_wip")
+                    if t4_processor:
+                        for i in t4_processor:
+                            writer.writerow([i["processor_e_name"] , i["processor_idd"], i["shipment_id"], i["storage_bin_send"],  i["recive_delivery_date"], i["volume_shipped"], i["processor2_name"], i["storage_bin_recive"],
+                                    i["received_weight"], float(i["volume_shipped"]) - float(i["received_weight"])])
+                        
+                    writer.writerow([""])
+                    writer.writerow(["Outbound 5 WIP"])
+                    writer.writerow(['DELIVERY ID', 'PROCESSOR NAME', 'WAREHOUSE/CUSTOMER NAME', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'PER UNIT RATE'])
+                    outbound5_wip = context.get("outbound5_wip") 
+                    if outbound5_wip:      
+                        for i in outbound5_wip:
+                            writer.writerow([i["shipment_id"] ,i["processor_entity_name"], i["warehouse_name"] if i["warehouse_name"] is not None else i["customer_name"], i["date_pulled"], i["carrier_type"]])
+
+                    writer.writerow([""])
+                    writer.writerow(["Warehouse"])
+                    writer.writerow(['PROCESSOR NAME', 'WAREHOUSE NAME', 'DELIVERY ID', 'DATE', 'QUANTITY POUNDS SHIPPED', 'PER UNIT PRICE'])
+                    warehouse = context.get("inbound5_wip")
+                    if warehouse:
+                        for i in warehouse:
+                            writer.writerow([i["processor_entity_name"] ,i["warehouse_name"], i["shipment_id"], i["distributor_receive_date"] 
+                                    ])
+                        
+                    writer.writerow([""])
+                    writer.writerow(["Outbound 6 WIP"])
+                    writer.writerow(['DELIVERY ID', 'WAREHOUSE NAME', 'CUSTOMER NAME', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'PER UNIT RATE'])
+                    outbound6_wip = context.get("outbound6_wip") 
+                    if outbound6_wip:       
+                        for i in outbound6_wip:
+                            writer.writerow([i["shipment_id"] ,i["warehouse_name"], i["customer_name"], i["date_pulled"],  i["carrier_type"]])
+                        
+                    writer.writerow([""])
+                    writer.writerow(["Customer"])
+                    writer.writerow(['WAREHOUSE/PROCESSOR NAME', 'CUSTOMER NAME',  'DELIVERY ID', 'DATE', 'QUANTITY POUNDS SHIPPED', 'PER UNIT PRICE'])
+                    customer = context.get("inbound6_wip")
+                    if customer:
+                        for i in customer:
+                            writer.writerow([i["warehouse_name"] if i["warehouse_name"] is not None else i["processor_entity_name"], i["customer_name"], i["shipment_id"], i["customer_receive_date"] if i["warehouse_name"] is not None else i["distributor_receive_date"] 
+                                    ])              
                 else:
                     pass
             
             # search by SKU ID......
             elif get_search_by and get_search_by == 'sku_id':
-                context_ = skuid_traceability_response(search_text)
+                context = skuid_traceability_response(select_crop, search_text, from_date, to_date)
+
                 writer.writerow(["Origin"])
                 writer.writerow(['CROP', 'VARIETY', 'FIELD', 'GROWER', 'FARM', 'HARVEST DATE', 
                 'PROJECTED YIELD', 'ACTUAL YIELD', 'YIELD  DELTA', 'Pass / Fail Sustainability','Water Savings %',
                 'Land Use Efficiency %', 'Less GHG % ', 'Premiums to Growers %', 'CO2 EQ footprint #','Pounds of Water Per Pound Savings %'])
-                get_origin_details = context_.get("origin_context")
-                for i in get_origin_details:
-                    writer.writerow([i["get_select_crop"], i["variety"], i["field_name"], i["grower_name"], i["farm_name"], i["harvest_date"], 
-                    i["projected_yeild"], i["reported_yeild"], i["yield_delta"],i["pf_sus"],i["water_savings"],i["land_use"],i["premiums_to_growers"],
-                    i["co2_eQ_footprint"],i["water_per_pound_savings"]])
+                get_origin_details = context.get("origin_context")
+                if get_origin_details:
+                    for i in get_origin_details:
+                        writer.writerow([i["get_select_crop"], i["variety"], i["field_name"], i["grower_name"], i["farm_name"], i["harvest_date"], 
+                        i["projected_yeild"], i["reported_yeild"], i["yield_delta"],i["pf_sus"],i["water_savings"],i["land_use"],i["premiums_to_growers"],
+                        i["co2_eQ_footprint"],i["water_per_pound_savings"]])
 
                 writer.writerow([""])
                 writer.writerow(["Outbound 1 WIP"])
                 writer.writerow(['DELIVERY ID OUTBOUND', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
-                outbound1_wip = context_.get("outbound1_wip")
-                for i in outbound1_wip:
-                    writer.writerow([i["deliveryid"], i["date"], i["quantity"], i["transportation"], i["destination"]])
+                outbound1_wip = context.get("outbound1_wip")
+                if outbound1_wip:
+                    for i in outbound1_wip:
+                        writer.writerow([i["shipment_id"], i["date"], i["quantity"], i["transportation"], i["destination"]])
 
                 writer.writerow([""])
                 writer.writerow(["T1 Processor"])
                 writer.writerow(['PROCESSOR NAME', 'DELIVERY ID', 'Grower', 'Farm', 'Field', 'DATE', 'QUANTITY POUNDS SHIPPED', 
                 'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
-                t1_processor = context_.get("t1_processor")
-                for i in t1_processor:
-                    writer.writerow([i["processor_name"], i["deliveryid"], i["grower"], i["farm"], i["field"], i["date"], i["pounds_shipped"], 
-                                i["pounds_received"], i["pounds_delta"]])
+                t1_processor = context.get("t1_processor")
+                if t1_processor:
+                    for i in t1_processor:
+                        writer.writerow([i["processor_name"], i["shipment_id"], i["grower"], i["farm"], i["field"], i["date"], i["pounds_shipped"], 
+                                    i["pounds_received"], i["pounds_delta"]])
                 
                 writer.writerow([""])
                 writer.writerow(["Outbound 2 WIP"])
                 writer.writerow(['DELIVERY ID OUTBOUND', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
-                outbound2_wip = context_.get("outbound2_wip")        
-                for i in outbound2_wip:
-                    writer.writerow([i["shipment_id"] , i["storage_bin_send"], i["date_pulled"], i["volume_shipped"], i["equipment_type"], i["processor2_name"]])
+                outbound2_wip = context.get("outbound2_wip") 
+                if outbound1_wip:       
+                    for i in outbound2_wip:
+                        writer.writerow([i["shipment_id"] , i["storage_bin_send"], i["date_pulled"], i["volume_shipped"], i["equipment_type"], i["processor2_name"]])
                 
                 writer.writerow([""])
                 writer.writerow(["T2 Processor"])
                 writer.writerow(['PROCESSOR NAME', 'PROCESSOR ID #', 'DELIVERY ID', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS SHIPPED', 'RECEIVER PROCESSOR', 'RECEIVER SKU ID', 
                 'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
-                t2_processor = context_.get("inbound2_wip")
-                for i in t2_processor:
-                    writer.writerow([i["processor_e_name"] , i["processor_idd"], i["shipment_id"], i["storage_bin_send"],  i["recive_delivery_date"], i["volume_shipped"], i["processor2_name"], i["storage_bin_recive"],
-                            i["received_weight"], float(i["volume_shipped"]) - float(i["received_weight"])])
+                t2_processor = context.get("inbound2_wip")
+                if t2_processor:
+                    for i in t2_processor:
+                        writer.writerow([i["processor_e_name"] , i["processor_idd"], i["shipment_id"], i["storage_bin_send"],  i["recive_delivery_date"], i["volume_shipped"], i["processor2_name"], i["storage_bin_recive"],
+                                i["received_weight"], float(i["volume_shipped"]) - float(i["received_weight"])])
                 
                 writer.writerow([""])
                 writer.writerow(["Outbound 3 WIP"])
                 writer.writerow(['DELIVERY ID OUTBOUND', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
-                outbound3_wip = context_.get("outbound3_wip")        
-                for i in outbound3_wip:
-                    writer.writerow([i["shipment_id"] , i["storage_bin_send"], i["date_pulled"], i["volume_shipped"], i["equipment_type"], i["processor2_name"]])
+                outbound3_wip = context.get("outbound3_wip")
+                if outbound3_wip:        
+                    for i in outbound3_wip:
+                        writer.writerow([i["shipment_id"] , i["storage_bin_send"], i["date_pulled"], i["volume_shipped"], i["equipment_type"], i["processor2_name"]])
                 
                 writer.writerow([""])
                 writer.writerow(["T3 Processor"])
                 writer.writerow(['PROCESSOR NAME', 'PROCESSOR ID #', 'DELIVERY ID', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS SHIPPED', 'RECEIVER PROCESSOR', 'RECEIVER SKU ID', 
                 'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
-                t3_processor = context_.get("inbound3_wip")
-                for i in t3_processor:
-                    writer.writerow([i["processor_e_name"] , i["processor_idd"], i["shipment_id"], i["storage_bin_send"],  i["recive_delivery_date"], i["volume_shipped"], i["processor2_name"], i["storage_bin_recive"],
-                            i["received_weight"], float(i["volume_shipped"]) - float(i["received_weight"])])
+                t3_processor = context.get("inbound3_wip")
+                if t3_processor:
+                    for i in t3_processor:
+                        writer.writerow([i["processor_e_name"] , i["processor_idd"], i["shipment_id"], i["storage_bin_send"],  i["recive_delivery_date"], i["volume_shipped"], i["processor2_name"], i["storage_bin_recive"],
+                                i["received_weight"], float(i["volume_shipped"]) - float(i["received_weight"])])
                 
                 writer.writerow([""])
                 writer.writerow(["Outbound 4 WIP"])
                 writer.writerow(['DELIVERY ID OUTBOUND', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
-                outbound4_wip = context_.get("outbound4_wip")        
-                for i in outbound4_wip:
-                    writer.writerow([i["shipment_id"] , i["storage_bin_send"], i["date_pulled"], i["volume_shipped"], i["equipment_type"], i["processor2_name"]])
+                outbound4_wip = context.get("outbound4_wip") 
+                if outbound4_wip:       
+                    for i in outbound4_wip:
+                        writer.writerow([i["shipment_id"] , i["storage_bin_send"], i["date_pulled"], i["volume_shipped"], i["equipment_type"], i["processor2_name"]])
 
                 writer.writerow([""])
                 writer.writerow(["T4 Processor"])
                 writer.writerow(['PROCESSOR NAME', 'PROCESSOR ID #', 'DELIVERY ID', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS SHIPPED', 'RECEIVER PROCESSOR', 'RECEIVER SKU ID', 
                 'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
-                t4_processor = context_.get("inbound4_wip")
-                for i in t4_processor:
-                    writer.writerow([i["processor_e_name"] , i["processor_idd"], i["shipment_id"], i["storage_bin_send"],  i["recive_delivery_date"], i["volume_shipped"], i["processor2_name"], i["storage_bin_recive"],
-                            i["received_weight"], float(i["volume_shipped"]) - float(i["received_weight"])])
+                t4_processor = context.get("inbound4_wip")
+                if t4_processor:
+                    for i in t4_processor:
+                        writer.writerow([i["processor_e_name"] , i["processor_idd"], i["shipment_id"], i["storage_bin_send"],  i["recive_delivery_date"], i["volume_shipped"], i["processor2_name"], i["storage_bin_recive"],
+                                i["received_weight"], float(i["volume_shipped"]) - float(i["received_weight"])])
+                    
+                writer.writerow([""])
+                writer.writerow(["Outbound 5 WIP"])
+                writer.writerow(['DELIVERY ID', 'PROCESSOR NAME', 'WAREHOUSE/CUSTOMER NAME', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'PER UNIT RATE'])
+                outbound5_wip = context.get("outbound5_wip") 
+                if outbound5_wip:      
+                    for i in outbound5_wip:
+                        writer.writerow([i["shipment_id"] ,i["processor_entity_name"], i["warehouse_name"] if i["warehouse_name"] is not None else i["customer_name"], i["date_pulled"], i["carrier_type"]])
+
+                writer.writerow([""])
+                writer.writerow(["Warehouse"])
+                writer.writerow(['PROCESSOR NAME', 'WAREHOUSE NAME', 'DELIVERY ID', 'DATE', 'QUANTITY POUNDS SHIPPED', 'PER UNIT PRICE'])
+                warehouse = context.get("inbound5_wip")
+                if warehouse:
+                    for i in warehouse:
+                        writer.writerow([i["processor_entity_name"] ,i["warehouse_name"], i["shipment_id"], i["distributor_receive_date"] 
+                                ])
+                    
+                writer.writerow([""])
+                writer.writerow(["Outbound 6 WIP"])
+                writer.writerow(['DELIVERY ID', 'WAREHOUSE NAME', 'CUSTOMER NAME', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'PER UNIT RATE'])
+                outbound6_wip = context.get("outbound6_wip") 
+                if outbound6_wip:       
+                    for i in outbound6_wip:
+                        writer.writerow([i["shipment_id"] ,i["warehouse_name"], i["customer_name"], i["date_pulled"],  i["carrier_type"]])
+                    
+                writer.writerow([""])
+                writer.writerow(["Customer"])
+                writer.writerow(['WAREHOUSE/PROCESSOR NAME', 'CUSTOMER NAME',  'DELIVERY ID', 'DATE', 'QUANTITY POUNDS SHIPPED', 'PER UNIT PRICE'])
+                customer = context.get("inbound6_wip")
+                if customer:
+                    for i in customer:
+                        writer.writerow([i["warehouse_name"] if i["warehouse_name"] is not None else i["processor_entity_name"], i["customer_name"], i["shipment_id"], i["customer_receive_date"] if i["warehouse_name"] is not None else i["distributor_receive_date"] 
+                                ])
 
             # search by Delivery ID ....
             elif get_search_by and get_search_by == 'deliveryid' :
-                get_delivery_id3 = GrowerShipment.objects.filter(shipment_id__icontains=search_text)
-                if get_delivery_id3.exists() :
-                    sku_id = get_delivery_id3.first().sku
-                    context_ = skuid_traceability_response(sku_id)
-                elif not get_delivery_id3 and ShipmentManagement.objects.filter(shipment_id__icontains=search_text).exists():
-                    get_sku_id = ShipmentManagement.objects.filter(shipment_id__icontains=search_text)                    
-                    sku_id = get_sku_id.first().storage_bin_send
-                    context_ = skuid_traceability_response(sku_id)                    
-                else:
-                    pass 
+                context = {}
+                check_shipment = GrowerShipment.objects.filter(shipment_id__icontains=search_text, crop=select_crop)
+                        
+                if check_shipment.exists() :
+                    get_shipment = check_shipment.first()
+                    sku_id = get_shipment.sku
+                    context = skuid_traceability_response(select_crop, sku_id, from_date, to_date)                    
 
+                elif not check_shipment and ShipmentManagement.objects.filter(shipment_id__icontains=search_text, crop=select_crop).exists():
+                    get_shipment = ShipmentManagement.objects.filter(shipment_id__icontains=search_text, crop=select_crop).first()
+                    
+                    if get_shipment and not get_shipment.receiver_processor_type == "T4":
+                        sku_id = get_shipment.storage_bin_send 
+                        context = skuid_traceability_response(select_crop, sku_id, from_date, to_date)                                              
+
+                    elif get_shipment and get_shipment.receiver_processor_type == "T4":
+                        sku_id = get_shipment.storage_bin_recive 
+                        context = skuid_traceability_response(select_crop, sku_id, from_date, to_date)
+                                             
+                    else:
+                        context['no_rec_found_msg'] = "No Records Found"
+
+                elif not check_shipment and ProcessorWarehouseShipment.objects.filter(shipment_id__icontains=search_text, processor_shipment_crop__crop=select_crop).exists():
+                    
+                    shipments = ProcessorWarehouseShipment.objects.filter(shipment_id__icontains=search_text, processor_shipment_crop__crop=select_crop).values("id","processor_shipment_crop__crop", "contract__secret_key","contract_id", "processor_entity_name","processor_type", "processor_id", "shipment_id", "warehouse_id", "warehouse_name","customer_name","customer_id", "date_pulled", "carrier_type", "distributor_receive_date", "status")
+                    for shipment in shipments:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+
+                    get_shipment = shipments.first()
+                    if get_shipment["warehouse_id"] not in [None, "null", "", " "]:
+                        inbound5 = list(shipments)
+                        context["inbound5_wip"] = inbound5
+                        context["outbound5_wip"] = inbound5
+                        crops = ProcessorShipmentCrops.objects.filter(shipment_id=get_shipment["id"])
+                        outbound6 = []
+                        for crop in crops:                          
+                            if WarehouseCustomerShipment.objects.filter(warehouse_id=get_shipment["warehouse_id"], warehouse_shipment_crop__crop=crop.crop, warehouse_shipment_crop__crop_type=crop.crop_type).exists():
+                                shipments = WarehouseCustomerShipment.objects.filter(warehouse_id=get_shipment["warehouse_id"], warehouse_shipment_crop__crop=crop.crop, warehouse_shipment_crop__crop_type=crop.crop_type).values("id","warehouse_shipment_crop__crop","contract__secret_key","contract_id", "shipment_id", "warehouse_id", "customer_id","warehouse_name","customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status")
+                                for shipment in shipments:
+                                    if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                                        shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                                    
+                                    carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                                    shipment["carrier_id"] = carrier.carrier_id  
+                                outbound6.extend(list(shipments))
+                        context["outbound6_wip"] = outbound6
+                        context["inbound6_wip"] = outbound6
+                        processor_entity_name = get_shipment["processor_entity_name"]
+                        processor_id = get_shipment["processor_id"]
+                        processor_type = get_shipment["processor_type"]
+                        for crop in crops:
+                            select_crop = crop.crop
+                            return_context = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, processor_entity_name)
+                            
+                            del return_context["inbound5_wip"]
+                            del return_context["inbound6_wip"]
+                            del return_context["outbound5_wip"]
+                            del return_context["outbound6_wip"]
+                            
+                            keys_to_extend = [
+                                "origin_context",
+                                "t1_processor",
+                                "inbound2_wip",
+                                "inbound3_wip",
+                                "inbound4_wip",
+                                "outbound2_wip",
+                                "outbound3_wip",
+                                "outbound4_wip",
+                            ]
+
+                            for key in keys_to_extend:
+                                if return_context.get(key):
+                                    context[key] = context.get(key, [])
+                                    context[key].extend(return_context[key])                                      
+                        
+                    else:
+                        inbound6 = shipments
+                        context["inbound6_wip"] = inbound6
+                        context["outbound5_wip"] = inbound6
+                        context["inbound5_wip"] = []
+                        context["outbound6_wip"] = []
+                        crops = ProcessorShipmentCrops.objects.filter(shipment_id=get_shipment["id"])
+
+                        processor_entity_name = get_shipment["processor_entity_name"]
+                        processor_id = get_shipment["processor_id"]
+                        processor_type = get_shipment["processor_type"]
+                        for crop in crops:
+                            select_crop = crop.crop
+                            return_context = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, processor_entity_name)
+                            del return_context["inbound5_wip"]
+                            del return_context["inbound6_wip"]
+                            del return_context["outbound5_wip"]
+                            del return_context["outbound6_wip"]
+                            keys_to_extend = [
+                                "origin_context",
+                                "t1_processor",
+                                "inbound2_wip",
+                                "inbound3_wip",
+                                "inbound4_wip",
+                                "outbound2_wip",
+                                "outbound3_wip",
+                                "outbound4_wip",
+                            ]
+
+                            for key in keys_to_extend:
+                                if return_context.get(key):
+                                    context[key] = context.get(key, [])
+                                    context[key].extend(return_context[key])                                      
+                        
+                elif not check_shipment and WarehouseCustomerShipment.objects.filter(shipment_id__icontains=search_text, warehouse_shipment_crop__crop=select_crop).exists():
+                    shipments = WarehouseCustomerShipment.objects.filter(shipment_id__icontains=search_text, warehouse_shipment_crop__crop=select_crop).values("id","warehouse_shipment_crop__crop","contract__secret_key","contract_id", "shipment_id", "warehouse_id" ,"customer_id","warehouse_name","customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status")
+                    for shipment in shipments:
+                        if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+
+                    get_shipment = shipments.first()
+                    context["inbound6_wip"] = list(shipments)
+                    context["outbound6_wip"] = list(shipments)
+                    crops = WarehouseShipmentCrops.objects.filter(shipment_id=get_shipment["id"])
+                    outbound5_processor = []
+                    for crop in crops:
+                        select_crop = crop.crop
+                        check_processor_shipment = ProcessorWarehouseShipment.objects.filter(warehouse_id=get_shipment["warehouse_id"], processor_shipment_crop__crop=crop.crop, processor_shipment_crop__crop_type=crop.crop_type).values("id","processor_shipment_crop__crop", "contract__secret_key","contract_id","processor_entity_name","processor_type", "processor_id", "shipment_id", "warehouse_id", "warehouse_name","customer_name","customer_id", "date_pulled", "carrier_type", "distributor_receive_date", "status")
+                        if check_processor_shipment:
+                                for shipment in check_processor_shipment:
+                                    if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                                        shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                                    
+                                    carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                                    shipment["carrier_id"] = carrier.carrier_id                                 
+
+                                outbound5_processor.extend(check_processor_shipment) 
+                                processor_entity_name = shipment["processor_entity_name"]
+                                processor_id = shipment["processor_id"]
+                                processor_type = shipment["processor_type"]                             
+                                return_context = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, processor_entity_name)
+                                del return_context["inbound5_wip"]
+                                del return_context["inbound6_wip"]
+                                del return_context["outbound5_wip"]
+                                del return_context["outbound6_wip"]
+                                keys_to_extend = [
+                                    "origin_context",
+                                    "t1_processor",
+                                    "inbound2_wip",
+                                    "inbound3_wip",
+                                    "inbound4_wip",
+                                    "outbound2_wip",
+                                    "outbound3_wip",
+                                    "outbound4_wip",
+                                ]
+
+                                for key in keys_to_extend:
+                                    if return_context.get(key):
+                                        context[key] = context.get(key, [])
+                                        context[key].extend(return_context[key])                                      
+
+                    context["outbound5_wip"] = outbound5_processor
+                    context["inbound5_wip"] = outbound5_processor                       
+                
                 writer.writerow(["Origin"])
                 writer.writerow(['CROP', 'VARIETY', 'FIELD', 'GROWER', 'FARM', 'HARVEST DATE', 
                 'PROJECTED YIELD', 'ACTUAL YIELD', 'YIELD  DELTA', 'Pass / Fail Sustainability','Water Savings %',
                 'Land Use Efficiency %', 'Less GHG % ', 'Premiums to Growers %', 'CO2 EQ footprint #','Pounds of Water Per Pound Savings %'])
-                get_origin_details = context_.get("origin_context")
-                for i in get_origin_details:
-                    writer.writerow([i["get_select_crop"], i["variety"], i["field_name"], i["grower_name"], i["farm_name"], i["harvest_date"], 
-                    i["projected_yeild"], i["reported_yeild"], i["yield_delta"],i["pf_sus"],i["water_savings"],i["land_use"],i["premiums_to_growers"],
-                    i["co2_eQ_footprint"],i["water_per_pound_savings"]])
+                get_origin_details = context.get("origin_context")
+                if get_origin_details:
+                    for i in get_origin_details:
+                        writer.writerow([i["get_select_crop"], i["variety"], i["field_name"], i["grower_name"], i["farm_name"], i["harvest_date"], 
+                        i["projected_yeild"], i["reported_yeild"], i["yield_delta"],i["pf_sus"],i["water_savings"],i["land_use"],i["premiums_to_growers"],
+                        i["co2_eQ_footprint"],i["water_per_pound_savings"]])
 
                 writer.writerow([""])
                 writer.writerow(["Outbound 1 WIP"])
                 writer.writerow(['DELIVERY ID OUTBOUND', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
-                outbound1_wip = context_.get("outbound1_wip")
-                for i in outbound1_wip:
-                    writer.writerow([i["deliveryid"], i["date"], i["quantity"], i["transportation"], i["destination"]])
+                outbound1_wip = context.get("outbound1_wip")
+                if outbound1_wip:
+                    for i in outbound1_wip:
+                        writer.writerow([i["shipment_id"], i["date"], i["quantity"], i["transportation"], i["destination"]])
 
                 writer.writerow([""])
                 writer.writerow(["T1 Processor"])
                 writer.writerow(['PROCESSOR NAME', 'DELIVERY ID', 'Grower', 'Farm', 'Field', 'DATE', 'QUANTITY POUNDS SHIPPED', 
                 'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
-                t1_processor = context_.get("t1_processor")
-                for i in t1_processor:
-                    writer.writerow([i["processor_name"], i["deliveryid"], i["grower"], i["farm"], i["field"], i["date"], i["pounds_shipped"], 
-                                i["pounds_received"], i["pounds_delta"]])
+                t1_processor = context.get("t1_processor")
+                if t1_processor:
+                    for i in t1_processor:
+                        writer.writerow([i["processor_name"], i["shipment_id"], i["grower"], i["farm"], i["field"], i["date"], i["pounds_shipped"], 
+                                    i["pounds_received"], i["pounds_delta"]])
                 
                 writer.writerow([""])
                 writer.writerow(["Outbound 2 WIP"])
                 writer.writerow(['DELIVERY ID OUTBOUND', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
-                outbound2_wip = context_.get("outbound2_wip")        
-                for i in outbound2_wip:
-                    writer.writerow([i["shipment_id"] , i["storage_bin_send"], i["date_pulled"], i["volume_shipped"], i["equipment_type"], i["processor2_name"]])
+                outbound2_wip = context.get("outbound2_wip") 
+                if outbound1_wip:       
+                    for i in outbound2_wip:
+                        writer.writerow([i["shipment_id"] , i["storage_bin_send"], i["date_pulled"], i["volume_shipped"], i["equipment_type"], i["processor2_name"]])
                 
                 writer.writerow([""])
                 writer.writerow(["T2 Processor"])
                 writer.writerow(['PROCESSOR NAME', 'PROCESSOR ID #', 'DELIVERY ID', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS SHIPPED', 'RECEIVER PROCESSOR', 'RECEIVER SKU ID', 
                 'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
-                t2_processor = context_.get("inbound2_wip")
-                for i in t2_processor:
-                    writer.writerow([i["processor_e_name"] , i["processor_idd"], i["shipment_id"], i["storage_bin_send"],  i["recive_delivery_date"], i["volume_shipped"], i["processor2_name"], i["storage_bin_recive"],
-                            i["received_weight"], float(i["volume_shipped"]) - float(i["received_weight"])])
+                t2_processor = context.get("inbound2_wip")
+                if t2_processor:
+                    for i in t2_processor:
+                        writer.writerow([i["processor_e_name"] , i["processor_idd"], i["shipment_id"], i["storage_bin_send"],  i["recive_delivery_date"], i["volume_shipped"], i["processor2_name"], i["storage_bin_recive"],
+                                i["received_weight"], float(i["volume_shipped"]) - float(i["received_weight"])])
                 
                 writer.writerow([""])
                 writer.writerow(["Outbound 3 WIP"])
                 writer.writerow(['DELIVERY ID OUTBOUND', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
-                outbound3_wip = context_.get("outbound3_wip")        
-                for i in outbound3_wip:
-                    writer.writerow([i["shipment_id"] , i["storage_bin_send"], i["date_pulled"], i["volume_shipped"], i["equipment_type"], i["processor2_name"]])
+                outbound3_wip = context.get("outbound3_wip")
+                if outbound3_wip:        
+                    for i in outbound3_wip:
+                        writer.writerow([i["shipment_id"] , i["storage_bin_send"], i["date_pulled"], i["volume_shipped"], i["equipment_type"], i["processor2_name"]])
                 
                 writer.writerow([""])
                 writer.writerow(["T3 Processor"])
                 writer.writerow(['PROCESSOR NAME', 'PROCESSOR ID #', 'DELIVERY ID', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS SHIPPED', 'RECEIVER PROCESSOR', 'RECEIVER SKU ID', 
                 'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
-                t3_processor = context_.get("inbound3_wip")
-                for i in t3_processor:
-                    writer.writerow([i["processor_e_name"] , i["processor_idd"], i["shipment_id"], i["storage_bin_send"],  i["recive_delivery_date"], i["volume_shipped"], i["processor2_name"], i["storage_bin_recive"],
-                            i["received_weight"], float(i["volume_shipped"]) - float(i["received_weight"])])
+                t3_processor = context.get("inbound3_wip")
+                if t3_processor:
+                    for i in t3_processor:
+                        writer.writerow([i["processor_e_name"] , i["processor_idd"], i["shipment_id"], i["storage_bin_send"],  i["recive_delivery_date"], i["volume_shipped"], i["processor2_name"], i["storage_bin_recive"],
+                                i["received_weight"], float(i["volume_shipped"]) - float(i["received_weight"])])
                 
                 writer.writerow([""])
                 writer.writerow(["Outbound 4 WIP"])
                 writer.writerow(['DELIVERY ID OUTBOUND', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
-                outbound4_wip = context_.get("outbound4_wip")        
-                for i in outbound4_wip:
-                    writer.writerow([i["shipment_id"] , i["storage_bin_send"], i["date_pulled"], i["volume_shipped"], i["equipment_type"], i["processor2_name"]])
+                outbound4_wip = context.get("outbound4_wip") 
+                if outbound4_wip:       
+                    for i in outbound4_wip:
+                        writer.writerow([i["shipment_id"] , i["storage_bin_send"], i["date_pulled"], i["volume_shipped"], i["equipment_type"], i["processor2_name"]])
 
                 writer.writerow([""])
                 writer.writerow(["T4 Processor"])
                 writer.writerow(['PROCESSOR NAME', 'PROCESSOR ID #', 'DELIVERY ID', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS SHIPPED', 'RECEIVER PROCESSOR', 'RECEIVER SKU ID', 
                 'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
-                t4_processor = context_.get("inbound4_wip")
-                for i in t4_processor:
-                    writer.writerow([i["processor_e_name"] , i["processor_idd"], i["shipment_id"], i["storage_bin_send"],  i["recive_delivery_date"], i["volume_shipped"], i["processor2_name"], i["storage_bin_recive"],
-                            i["received_weight"], float(i["volume_shipped"]) - float(i["received_weight"])])
+                t4_processor = context.get("inbound4_wip")
+                if t4_processor:
+                    for i in t4_processor:
+                        writer.writerow([i["processor_e_name"] , i["processor_idd"], i["shipment_id"], i["storage_bin_send"],  i["recive_delivery_date"], i["volume_shipped"], i["processor2_name"], i["storage_bin_recive"],
+                                i["received_weight"], float(i["volume_shipped"]) - float(i["received_weight"])])
+                    
+                writer.writerow([""])
+                writer.writerow(["Outbound 5 WIP"])
+                writer.writerow(['DELIVERY ID', 'PROCESSOR NAME', 'WAREHOUSE/CUSTOMER NAME', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'PER UNIT RATE'])
+                outbound5_wip = context.get("outbound5_wip") 
+                if outbound5_wip:      
+                    for i in outbound5_wip:
+                        writer.writerow([i["shipment_id"] ,i["processor_entity_name"], i["warehouse_name"] if i["warehouse_name"] is not None else i["customer_name"], i["date_pulled"], i["carrier_type"]])
+
+                writer.writerow([""])
+                writer.writerow(["Warehouse"])
+                writer.writerow(['PROCESSOR NAME', 'WAREHOUSE NAME', 'DELIVERY ID', 'DATE', 'QUANTITY POUNDS SHIPPED', 'PER UNIT PRICE'])
+                warehouse = context.get("inbound5_wip")
+                if warehouse:
+                    for i in warehouse:
+                        writer.writerow([i["processor_entity_name"] ,i["warehouse_name"], i["shipment_id"], i["distributor_receive_date"] 
+                                ])
+                    
+                writer.writerow([""])
+                writer.writerow(["Outbound 6 WIP"])
+                writer.writerow(['DELIVERY ID', 'WAREHOUSE NAME', 'CUSTOMER NAME', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'PER UNIT RATE'])
+                outbound6_wip = context.get("outbound6_wip") 
+                if outbound6_wip:       
+                    for i in outbound6_wip:
+                        writer.writerow([i["shipment_id"] ,i["warehouse_name"], i["customer_name"], i["date_pulled"],  i["carrier_type"]])
+                    
+                writer.writerow([""])
+                writer.writerow(["Customer"])
+                writer.writerow(['WAREHOUSE/PROCESSOR NAME', 'CUSTOMER NAME',  'DELIVERY ID', 'DATE', 'QUANTITY POUNDS SHIPPED', 'PER UNIT PRICE'])
+                customer = context.get("inbound6_wip")
+                if customer:
+                    for i in customer:
+                        writer.writerow([i["warehouse_name"] if i["warehouse_name"] is not None else i["processor_entity_name"], i["customer_name"], i["shipment_id"], i["customer_receive_date"] if i["warehouse_name"] is not None else i["distributor_receive_date"] 
+                                ])
+           
+            # search by Warehouse....
+            elif get_search_by and get_search_by == 'warehouse':
+                context = {}
+                check_warehouse = Warehouse.objects.filter(name__icontains=search_text)
+                if check_warehouse.exists():                   
+                    warehouse = check_warehouse.first()                    
+                    inbound5 = list(ProcessorWarehouseShipment.objects.filter(processor_shipment_crop__crop=select_crop, warehouse_id=warehouse.id, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values("id","processor_shipment_crop__crop", "contract__secret_key","contract_id", "processor_entity_name","processor_type", "processor_id", "shipment_id", "warehouse_id", "warehouse_name","customer_name","customer_id", "date_pulled", "carrier_type", "distributor_receive_date", "status"))
+                    for shipment in inbound5:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    context["inbound5_wip"] = inbound5
+
+                    outbound6 = list(WarehouseCustomerShipment.objects.filter(warehouse_shipment_crop__crop=select_crop, warehouse_id=warehouse.id, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values("id","warehouse_shipment_crop__crop","contract__secret_key","contract_id","shipment_id", "warehouse_id", "customer_id","warehouse_name","customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status"))
+                    for shipment in outbound6:
+                        if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    context["outbound6_wip"] = outbound6
+                    
+                    context["inbound6_wip"] = outbound6
+                    context["outbound5_wip"] = inbound5
+                    for shipment in inbound5:
+                        processor_id = shipment["processor_id"]
+                        processor_type = shipment["processor_type"]
+                        processor_entity_name = shipment["processor_entity_name"]
+                        return_context = processor_traceability_report_response(select_crop, processor_id, processor_type, from_date, to_date, processor_entity_name)
+                        del return_context["inbound5_wip"]
+                        del return_context["inbound6_wip"]
+                        del return_context["outbound5_wip"]
+                        del return_context["outbound6_wip"]
+                        keys_to_extend = [
+                            "origin_context",
+                            "t1_processor",
+                            "inbound2_wip",
+                            "inbound3_wip",
+                            "inbound4_wip",
+                            "outbound2_wip",
+                            "outbound3_wip",
+                            "outbound4_wip",
+                        ]
+
+                        for key in keys_to_extend:
+                            if return_context.get(key):
+                                context[key] = context.get(key, [])
+                                context[key].extend(return_context[key])                                            
+                        
+                else:
+                    context['no_rec_found_msg'] = "No Records Found"
+
+                writer.writerow(["Origin"])
+                writer.writerow(['CROP', 'VARIETY', 'FIELD', 'GROWER', 'FARM', 'HARVEST DATE', 
+                'PROJECTED YIELD', 'ACTUAL YIELD', 'YIELD  DELTA', 'Pass / Fail Sustainability','Water Savings %',
+                'Land Use Efficiency %', 'Less GHG % ', 'Premiums to Growers %', 'CO2 EQ footprint #','Pounds of Water Per Pound Savings %'])
+                get_origin_details = context.get("origin_context")
+                if get_origin_details:
+                    for i in get_origin_details:
+                        writer.writerow([i["get_select_crop"], i["variety"], i["field_name"], i["grower_name"], i["farm_name"], i["harvest_date"], 
+                        i["projected_yeild"], i["reported_yeild"], i["yield_delta"],i["pf_sus"],i["water_savings"],i["land_use"],i["premiums_to_growers"],
+                        i["co2_eQ_footprint"],i["water_per_pound_savings"]])
+
+                writer.writerow([""])
+                writer.writerow(["Outbound 1 WIP"])
+                writer.writerow(['DELIVERY ID OUTBOUND', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
+                outbound1_wip = context.get("outbound1_wip")
+                if outbound1_wip:
+                    for i in outbound1_wip:
+                        writer.writerow([i["shipment_id"], i["date"], i["quantity"], i["transportation"], i["destination"]])
+
+                writer.writerow([""])
+                writer.writerow(["T1 Processor"])
+                writer.writerow(['PROCESSOR NAME', 'DELIVERY ID', 'Grower', 'Farm', 'Field', 'DATE', 'QUANTITY POUNDS SHIPPED', 
+                'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
+                t1_processor = context.get("t1_processor")
+                if t1_processor:
+                    for i in t1_processor:
+                        writer.writerow([i["processor_name"], i["shipment_id"], i["grower"], i["farm"], i["field"], i["date"], i["pounds_shipped"], 
+                                    i["pounds_received"], i["pounds_delta"]])
+                
+                writer.writerow([""])
+                writer.writerow(["Outbound 2 WIP"])
+                writer.writerow(['DELIVERY ID OUTBOUND', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
+                outbound2_wip = context.get("outbound2_wip") 
+                if outbound1_wip:       
+                    for i in outbound2_wip:
+                        writer.writerow([i["shipment_id"] , i["storage_bin_send"], i["date_pulled"], i["volume_shipped"], i["equipment_type"], i["processor2_name"]])
+                
+                writer.writerow([""])
+                writer.writerow(["T2 Processor"])
+                writer.writerow(['PROCESSOR NAME', 'PROCESSOR ID #', 'DELIVERY ID', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS SHIPPED', 'RECEIVER PROCESSOR', 'RECEIVER SKU ID', 
+                'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
+                t2_processor = context.get("inbound2_wip")
+                if t2_processor:
+                    for i in t2_processor:
+                        writer.writerow([i["processor_e_name"] , i["processor_idd"], i["shipment_id"], i["storage_bin_send"],  i["recive_delivery_date"], i["volume_shipped"], i["processor2_name"], i["storage_bin_recive"],
+                                i["received_weight"], float(i["volume_shipped"]) - float(i["received_weight"])])
+                
+                writer.writerow([""])
+                writer.writerow(["Outbound 3 WIP"])
+                writer.writerow(['DELIVERY ID OUTBOUND', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
+                outbound3_wip = context.get("outbound3_wip")
+                if outbound3_wip:        
+                    for i in outbound3_wip:
+                        writer.writerow([i["shipment_id"] , i["storage_bin_send"], i["date_pulled"], i["volume_shipped"], i["equipment_type"], i["processor2_name"]])
+                
+                writer.writerow([""])
+                writer.writerow(["T3 Processor"])
+                writer.writerow(['PROCESSOR NAME', 'PROCESSOR ID #', 'DELIVERY ID', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS SHIPPED', 'RECEIVER PROCESSOR', 'RECEIVER SKU ID', 
+                'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
+                t3_processor = context.get("inbound3_wip")
+                if t3_processor:
+                    for i in t3_processor:
+                        writer.writerow([i["processor_e_name"] , i["processor_idd"], i["shipment_id"], i["storage_bin_send"],  i["recive_delivery_date"], i["volume_shipped"], i["processor2_name"], i["storage_bin_recive"],
+                                i["received_weight"], float(i["volume_shipped"]) - float(i["received_weight"])])
+                
+                writer.writerow([""])
+                writer.writerow(["Outbound 4 WIP"])
+                writer.writerow(['DELIVERY ID OUTBOUND', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
+                outbound4_wip = context.get("outbound4_wip") 
+                if outbound4_wip:       
+                    for i in outbound4_wip:
+                        writer.writerow([i["shipment_id"] , i["storage_bin_send"], i["date_pulled"], i["volume_shipped"], i["equipment_type"], i["processor2_name"]])
+
+                writer.writerow([""])
+                writer.writerow(["T4 Processor"])
+                writer.writerow(['PROCESSOR NAME', 'PROCESSOR ID #', 'DELIVERY ID', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS SHIPPED', 'RECEIVER PROCESSOR', 'RECEIVER SKU ID', 
+                'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
+                t4_processor = context.get("inbound4_wip")
+                if t4_processor:
+                    for i in t4_processor:
+                        writer.writerow([i["processor_e_name"] , i["processor_idd"], i["shipment_id"], i["storage_bin_send"],  i["recive_delivery_date"], i["volume_shipped"], i["processor2_name"], i["storage_bin_recive"],
+                                i["received_weight"], float(i["volume_shipped"]) - float(i["received_weight"])])
+                    
+                writer.writerow([""])
+                writer.writerow(["Outbound 5 WIP"])
+                writer.writerow(['DELIVERY ID', 'PROCESSOR NAME', 'WAREHOUSE/CUSTOMER NAME', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'PER UNIT RATE'])
+                outbound5_wip = context.get("outbound5_wip") 
+                if outbound5_wip:      
+                    for i in outbound5_wip:
+                        writer.writerow([i["shipment_id"] ,i["processor_entity_name"], i["warehouse_name"] if i["warehouse_name"] is not None else i["customer_name"], i["date_pulled"], i["carrier_type"]])
+
+                writer.writerow([""])
+                writer.writerow(["Warehouse"])
+                writer.writerow(['PROCESSOR NAME', 'WAREHOUSE NAME', 'DELIVERY ID', 'DATE', 'QUANTITY POUNDS SHIPPED', 'PER UNIT PRICE'])
+                warehouse = context.get("inbound5_wip")
+                if warehouse:
+                    for i in warehouse:
+                        writer.writerow([i["processor_entity_name"] ,i["warehouse_name"], i["shipment_id"], i["distributor_receive_date"] 
+                                ])
+                    
+                writer.writerow([""])
+                writer.writerow(["Outbound 6 WIP"])
+                writer.writerow(['DELIVERY ID', 'WAREHOUSE NAME', 'CUSTOMER NAME', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'PER UNIT RATE'])
+                outbound6_wip = context.get("outbound6_wip") 
+                if outbound6_wip:       
+                    for i in outbound6_wip:
+                        writer.writerow([i["shipment_id"] ,i["warehouse_name"], i["customer_name"], i["date_pulled"],  i["carrier_type"]])
+                    
+                writer.writerow([""])
+                writer.writerow(["Customer"])
+                writer.writerow(['WAREHOUSE/PROCESSOR NAME', 'CUSTOMER NAME',  'DELIVERY ID', 'DATE', 'QUANTITY POUNDS SHIPPED', 'PER UNIT PRICE'])
+                customer = context.get("inbound6_wip")
+                if customer:
+                    for i in customer:
+                        writer.writerow([i["warehouse_name"] if i["warehouse_name"] is not None else i["processor_entity_name"], i["customer_name"], i["shipment_id"], i["customer_receive_date"] if i["warehouse_name"] is not None else i["distributor_receive_date"] 
+                                ])
+            
+            # search by Customer....
+            elif get_search_by and get_search_by == 'customer':
+                # print('this function called')
+                context = {}
+                check_customer = Customer.objects.filter(name__icontains=search_text)
+                if check_customer.exists():
+                    customer = check_customer.first()
+                    inbound6 = []
+                    
+                    processor_shipments = list(ProcessorWarehouseShipment.objects.filter(
+                        processor_shipment_crop__crop=select_crop,
+                        customer_id=customer.id, 
+                        date_pulled__date__gte=from_date, 
+                        date_pulled__date__lte=to_date
+                    ).values(
+                        "id","processor_shipment_crop__crop", "contract__secret_key", "contract_id", "processor_entity_name",
+                        "processor_type", "processor_id", "shipment_id", "warehouse_id",
+                        "warehouse_name", "customer_name", "customer_id", 
+                        "date_pulled", "carrier_type", "distributor_receive_date", "status"
+                    ))
+                    for shipment in processor_shipments:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    inbound6.extend(processor_shipments)
+
+                    warehouse_shipments = list(WarehouseCustomerShipment.objects.filter(
+                        warehouse_shipment_crop__crop=select_crop, 
+                        customer_id=customer.id, 
+                        date_pulled__date__gte=from_date, 
+                        date_pulled__date__lte=to_date
+                    ).values(
+                        "id", "warehouse_shipment_crop__crop","contract__secret_key", "contract_id", "shipment_id",
+                        "warehouse_id", "customer_id", "warehouse_name", "customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status"
+                    ))
+                    for shipment in warehouse_shipments:
+                        if WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = WarehouseShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    inbound6.extend(warehouse_shipments)
+
+                    context["inbound6_wip"] = inbound6
+                    context["outbound6_wip"] = warehouse_shipments
+
+                    warehouse_ids = [shipment["warehouse_id"] for shipment in warehouse_shipments]
+                    inbound5 = list(ProcessorWarehouseShipment.objects.filter(
+                        processor_shipment_crop__crop=select_crop,
+                        warehouse_id__in=warehouse_ids,
+                        date_pulled__date__gte=from_date,
+                        date_pulled__date__lte=to_date
+                    ).values(
+                        "id","processor_shipment_crop__crop", "contract__secret_key", "contract_id", "processor_entity_name",
+                        "processor_type", "processor_id", "shipment_id", "warehouse_id",
+                        "warehouse_name", "customer_name", "customer_id", 
+                        "date_pulled", "carrier_type", "distributor_receive_date", "status"
+                    ))
+                    for shipment in inbound5:
+                        if ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).exists():
+                            shipment["new_waybill_number"] = ProcessorShipmentDiversionTracking.objects.filter(shipment_id=shipment["id"]).last().waybill_number
+                        
+                        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                        shipment["carrier_id"] = carrier.carrier_id  
+                    context["inbound5_wip"] = inbound5
+                    outbound5 = inbound5 + processor_shipments
+                    context["outbound5_wip"] = outbound5
+
+                    for shipment in outbound5:
+                        processor_id = shipment.get("processor_id")
+                        processor_type = shipment.get("processor_type")
+                        processor_entity_name = shipment.get("processor_entity_name")
+                        
+                        return_context = processor_traceability_report_response(
+                            select_crop, processor_id, processor_type, 
+                            from_date, to_date, processor_entity_name
+                        )
+                        del return_context["inbound5_wip"]
+                        del return_context["inbound6_wip"]
+                        del return_context["outbound5_wip"]
+                        del return_context["outbound6_wip"]
+                        keys_to_extend = [
+                            "origin_context",
+                            "t1_processor",
+                            "inbound2_wip",
+                            "inbound3_wip",
+                            "inbound4_wip",
+                            "outbound2_wip",
+                            "outbound3_wip",
+                            "outbound4_wip",
+                        ]
+
+                        for key in keys_to_extend:
+                            if return_context.get(key):
+                                context[key] = context.get(key, [])
+                                context[key].extend(return_context[key])                                      
+                    
+                        new_context_ = location_response(context)                           
+                        context.update(new_context_)                                    
+                            
+                else:
+                    context['no_rec_found_msg'] = "No Records Found"
+                
+                
+                writer.writerow(["Origin"])
+                writer.writerow(['CROP', 'VARIETY', 'FIELD', 'GROWER', 'FARM', 'HARVEST DATE', 
+                'PROJECTED YIELD', 'ACTUAL YIELD', 'YIELD  DELTA', 'Pass / Fail Sustainability','Water Savings %',
+                'Land Use Efficiency %', 'Less GHG % ', 'Premiums to Growers %', 'CO2 EQ footprint #','Pounds of Water Per Pound Savings %'])
+                get_origin_details = context.get("origin_context")
+                if get_origin_details:
+                    for i in get_origin_details:
+                        writer.writerow([i["get_select_crop"], i["variety"], i["field_name"], i["grower_name"], i["farm_name"], i["harvest_date"], 
+                        i["projected_yeild"], i["reported_yeild"], i["yield_delta"],i["pf_sus"],i["water_savings"],i["land_use"],i["premiums_to_growers"],
+                        i["co2_eQ_footprint"],i["water_per_pound_savings"]])
+
+                writer.writerow([""])
+                writer.writerow(["Outbound 1 WIP"])
+                writer.writerow(['DELIVERY ID OUTBOUND', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
+                outbound1_wip = context.get("outbound1_wip")
+                if outbound1_wip:
+                    for i in outbound1_wip:
+                        writer.writerow([i["shipment_id"], i["date"], i["quantity"], i["transportation"], i["destination"]])
+
+                writer.writerow([""])
+                writer.writerow(["T1 Processor"])
+                writer.writerow(['PROCESSOR NAME', 'DELIVERY ID', 'Grower', 'Farm', 'Field', 'DATE', 'QUANTITY POUNDS SHIPPED', 
+                'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
+                t1_processor = context.get("t1_processor")
+                if t1_processor:
+                    for i in t1_processor:
+                        writer.writerow([i["processor_name"], i["shipment_id"], i["grower"], i["farm"], i["field"], i["date"], i["pounds_shipped"], 
+                                    i["pounds_received"], i["pounds_delta"]])
+                
+                writer.writerow([""])
+                writer.writerow(["Outbound 2 WIP"])
+                writer.writerow(['DELIVERY ID OUTBOUND', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
+                outbound2_wip = context.get("outbound2_wip") 
+                if outbound1_wip:       
+                    for i in outbound2_wip:
+                        writer.writerow([i["shipment_id"] , i["storage_bin_send"], i["date_pulled"], i["volume_shipped"], i["equipment_type"], i["processor2_name"]])
+                
+                writer.writerow([""])
+                writer.writerow(["T2 Processor"])
+                writer.writerow(['PROCESSOR NAME', 'PROCESSOR ID #', 'DELIVERY ID', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS SHIPPED', 'RECEIVER PROCESSOR', 'RECEIVER SKU ID', 
+                'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
+                t2_processor = context.get("inbound2_wip")
+                if t2_processor:
+                    for i in t2_processor:
+                        writer.writerow([i["processor_e_name"] , i["processor_idd"], i["shipment_id"], i["storage_bin_send"],  i["recive_delivery_date"], i["volume_shipped"], i["processor2_name"], i["storage_bin_recive"],
+                                i["received_weight"], float(i["volume_shipped"]) - float(i["received_weight"])])
+                
+                writer.writerow([""])
+                writer.writerow(["Outbound 3 WIP"])
+                writer.writerow(['DELIVERY ID OUTBOUND', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
+                outbound3_wip = context.get("outbound3_wip")
+                if outbound3_wip:        
+                    for i in outbound3_wip:
+                        writer.writerow([i["shipment_id"] , i["storage_bin_send"], i["date_pulled"], i["volume_shipped"], i["equipment_type"], i["processor2_name"]])
+                
+                writer.writerow([""])
+                writer.writerow(["T3 Processor"])
+                writer.writerow(['PROCESSOR NAME', 'PROCESSOR ID #', 'DELIVERY ID', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS SHIPPED', 'RECEIVER PROCESSOR', 'RECEIVER SKU ID', 
+                'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
+                t3_processor = context.get("inbound3_wip")
+                if t3_processor:
+                    for i in t3_processor:
+                        writer.writerow([i["processor_e_name"] , i["processor_idd"], i["shipment_id"], i["storage_bin_send"],  i["recive_delivery_date"], i["volume_shipped"], i["processor2_name"], i["storage_bin_recive"],
+                                i["received_weight"], float(i["volume_shipped"]) - float(i["received_weight"])])
+                
+                writer.writerow([""])
+                writer.writerow(["Outbound 4 WIP"])
+                writer.writerow(['DELIVERY ID OUTBOUND', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'DESTINATION'])
+                outbound4_wip = context.get("outbound4_wip") 
+                if outbound4_wip:       
+                    for i in outbound4_wip:
+                        writer.writerow([i["shipment_id"] , i["storage_bin_send"], i["date_pulled"], i["volume_shipped"], i["equipment_type"], i["processor2_name"]])
+
+                writer.writerow([""])
+                writer.writerow(["T4 Processor"])
+                writer.writerow(['PROCESSOR NAME', 'PROCESSOR ID #', 'DELIVERY ID', 'SENDER SKU ID', 'DATE', 'QUANTITY POUNDS SHIPPED', 'RECEIVER PROCESSOR', 'RECEIVER SKU ID', 
+                'QUANTITY POUNDS RECEIVED', 'QUANTITY DELTA'])
+                t4_processor = context.get("inbound4_wip")
+                if t4_processor:
+                    for i in t4_processor:
+                        writer.writerow([i["processor_e_name"] , i["processor_idd"], i["shipment_id"], i["storage_bin_send"],  i["recive_delivery_date"], i["volume_shipped"], i["processor2_name"], i["storage_bin_recive"],
+                                i["received_weight"], float(i["volume_shipped"]) - float(i["received_weight"])])
+                    
+                writer.writerow([""])
+                writer.writerow(["Outbound 5 WIP"])
+                writer.writerow(['DELIVERY ID', 'PROCESSOR NAME', 'WAREHOUSE/CUSTOMER NAME', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'PER UNIT RATE'])
+                outbound5_wip = context.get("outbound5_wip") 
+                if outbound5_wip:      
+                    for i in outbound5_wip:
+                        writer.writerow([i["shipment_id"] ,i["processor_entity_name"], i["warehouse_name"] if i["warehouse_name"] is not None else i["customer_name"], i["date_pulled"], i["carrier_type"]])
+
+                writer.writerow([""])
+                writer.writerow(["Warehouse"])
+                writer.writerow(['PROCESSOR NAME', 'WAREHOUSE NAME', 'DELIVERY ID', 'DATE', 'QUANTITY POUNDS SHIPPED', 'PER UNIT PRICE'])
+                warehouse = context.get("inbound5_wip")
+                if warehouse:
+                    for i in warehouse:
+                        writer.writerow([i["processor_entity_name"] ,i["warehouse_name"], i["shipment_id"], i["distributor_receive_date"] 
+                                ])
+                    
+                writer.writerow([""])
+                writer.writerow(["Outbound 6 WIP"])
+                writer.writerow(['DELIVERY ID', 'WAREHOUSE NAME', 'CUSTOMER NAME', 'DATE', 'QUANTITY POUNDS', 'TRANSPORTATION MODE (RAIL OR TRUCK)', 'PER UNIT RATE'])
+                outbound6_wip = context.get("outbound6_wip") 
+                if outbound6_wip:       
+                    for i in outbound6_wip:
+                        writer.writerow([i["shipment_id"] ,i["warehouse_name"], i["customer_name"], i["date_pulled"],  i["carrier_type"]])
+                    
+                writer.writerow([""])
+                writer.writerow(["Customer"])
+                writer.writerow(['WAREHOUSE/PROCESSOR NAME', 'CUSTOMER NAME',  'DELIVERY ID', 'DATE', 'QUANTITY POUNDS SHIPPED', 'PER UNIT PRICE'])
+                customer = context.get("inbound6_wip")
+                if customer:
+                    for i in customer:
+                        writer.writerow([i["warehouse_name"] if i["warehouse_name"] is not None else i["processor_entity_name"], i["customer_name"], i["shipment_id"], i["customer_receive_date"] if i["warehouse_name"] is not None else i["distributor_receive_date"] 
+                                ])
+                 
             else:
                 pass
         return response
     else:
         return redirect ('dashboard')
-
+ 
 
 def transport_list(request):
     outbound2_wip = [
@@ -4506,4 +9463,3933 @@ def transport_list(request):
     }
     return render(request, 'tracemodule/traceability_map_show.html', context)
     
+
+def shipmentid_response(search_text, from_date, to_date, crop_id=0, diversion_id=0):
+    new_context = {}
+    check_shipment = GrowerShipment.objects.filter(shipment_id=search_text)
+                        
+    if check_shipment.exists() :
+        
+        get_shipment = check_shipment.values().first()            
+        select_crop = get_shipment["crop"]
+        context = grower_shipment_response(select_crop, get_shipment["shipment_id"], from_date, to_date)
+        new_context.update(context)
+
+    elif not check_shipment and ShipmentManagement.objects.filter(shipment_id=search_text).exists():
+        
+        shipment = ShipmentManagement.objects.filter(shipment_id=search_text)
+        get_shipment = shipment.values().first()       
+        select_crop = get_shipment["crop"]        
+        context = procesor_inbound_shipment_response(select_crop, get_shipment["shipment_id"], from_date, to_date)
+          
+        new_context.update(context)
+
+    elif not check_shipment and ProcessorWarehouseShipment.objects.filter(shipment_id=search_text).exists():
+       
+        shipments = ProcessorWarehouseShipment.objects.filter(shipment_id=search_text).values("id","processor_shipment_crop__crop", "contract__secret_key","contract_id" ,"processor_entity_name","processor_type", "processor_id", "shipment_id", "warehouse_id", "warehouse_name","customer_name","customer_id", "date_pulled", "carrier_type", "distributor_receive_date", "status", "destination")
+        
+        
+        shipment = shipments.first()
+        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first()
+        carrier_id = carrier.carrier_id if carrier else None
+
+        # Fetch all crops for this shipment
+        crops = ProcessorShipmentCrops.objects.filter(
+            shipment_id=shipment["id"], id=int(crop_id)
+        ).values("id", "crop", "lot_number", "net_weight", "weight_unit", "waybill_number")
+
+        for crop in crops:
+            # Get all diversions for this crop
+            diversions = ProcessorShipmentDiversionTracking.objects.filter(
+                shipment_id=shipment["id"],
+                crop_id=crop["id"], id=int(diversion_id)
+            ).order_by("-id")
+
+            if diversions.exists():
+                if shipment["status"] != "Received":
+                    location = diversions[0].address
+                else:
+                    location = shipment["destination"]
+
+                for diversion in diversions:
+                    shipment["carrier_id"] = carrier_id
+                    shipment["location"] = location
+                    shipment["crops"] = [{
+                        "crop_name": crop["crop"],
+                        "crop_id":crop["id"],
+                        "lot_number": crop["lot_number"],
+                        "net_weight": diversion.net_weight,
+                        "weight_unit": diversion.weight_unit,
+                        "diversion_id": diversion.id,
+                        "prev_waybill_number": diversion.prev_waybill_number,
+                        "new_waybill_number": diversion.waybill_number,
+                        "address": diversion.address,
+                        "diversion_date": diversion.diversion_date,
+                    }]
+                
+            else:
+                if shipment["status"] != "Received":
+                    location = "In Transit"
+                else:
+                    location = shipment["destination"]
+
+                shipment["carrier_id"] = carrier_id
+                shipment["location"] = location
+                shipment["crops"] = [{
+                    "crop_name": crop["crop"],
+                    "crop_id":crop["id"],
+                    "lot_number": crop["lot_number"],
+                    "net_weight": crop["net_weight"],
+                    "weight_unit": crop["weight_unit"],
+                    "diversion_id": 0,
+                    "prev_waybill_number": None,
+                    "new_waybill_number": None,
+                    "address": None,
+                    "diversion_date": None,
+                }] 
+            
+        if diversion_id not in [None, '0', 0, "null"]:
+            diversion_id = int(diversion_id)
+            diversion_details = ProcessorShipmentDiversionTracking.objects.filter(id=int(diversion_id), shipment_id=shipment["id"], crop_id=int(crop_id)).values("crop__crop","net_weight", "weight_unit","prev_waybill_number", "waybill_number", "address", "diversion_date")
+
+            new_context["diversions"] = diversion_details
+        else:
+            new_context["diversions"] = []
+            
+        if shipment["warehouse_id"] not in [None, "null", "", " "]:
+            
+            inbound5 = [shipment]
+            new_context["inbound5_wip"] = inbound5
+            new_context["outbound5_wip"] = inbound5
+            crops = ProcessorShipmentCrops.objects.filter(shipment_id=shipment["id"], id=int(crop_id))           
+            
+            processor_entity_name = shipment["processor_entity_name"]
+            processor_id = shipment["processor_id"]
+            processor_type = shipment["processor_type"]
+            for crop in crops:
+                select_crop = crop.crop
+                if processor_type == "T1":
+                    return_context = t1_processor_shipments(select_crop, processor_id, from_date, to_date)
+                elif processor_type == "T2":
+                    return_context = t2_processor_shipments(select_crop, processor_id, from_date, to_date, processor_entity_name)
+                elif processor_type == "T3":
+                    return_context = t3_processor_shipments(select_crop, processor_id, from_date, to_date, processor_entity_name)
+                elif processor_type == "T4":
+                    return_context = t4_processor_shipments(select_crop, processor_id, from_date, to_date, processor_entity_name)
+                    
+                keys_to_extend = [
+                    "origin_context",
+                    "t1_processor",
+                    "inbound2_wip",
+                    "inbound3_wip",
+                    "inbound4_wip",
+                    "outbound2_wip",
+                    "outbound3_wip",
+                    "outbound4_wip",
+                ]
+
+                for key in keys_to_extend:
+                    if return_context.get(key):
+                        new_context[key] = new_context.get(key, [])
+                        new_context[key].extend(return_context[key])                                              
+        else:
+            
+            inbound6 = [shipment]
+            new_context["inbound6_wip"] = inbound6
+            new_context["outbound5_wip"] = inbound6
+            new_context["inbound5_wip"] = []
+            new_context["outbound6_wip"] = []
+
+            crops = ProcessorShipmentCrops.objects.filter(shipment_id=shipment["id"], id=int(crop_id))
+
+            processor_entity_name = shipment["processor_entity_name"]
+            processor_id = shipment["processor_id"]
+            processor_type = shipment["processor_type"]
+            for crop in crops:
+                select_crop = crop.crop
+                if processor_type == "T1":
+                    return_context = t1_processor_shipments(select_crop, processor_id, from_date, to_date)
+                elif processor_type == "T2":
+                    return_context = t2_processor_shipments(select_crop, processor_id, from_date, to_date, processor_entity_name)
+                elif processor_type == "T3":
+                    return_context = t3_processor_shipments(select_crop, processor_id, from_date, to_date, processor_entity_name)
+                elif processor_type == "T4":
+                    return_context = t4_processor_shipments(select_crop, processor_id, from_date, to_date, processor_entity_name)
+                
+                keys_to_extend = [
+                    "origin_context",
+                    "t1_processor",
+                    "inbound2_wip",
+                    "inbound3_wip",
+                    "inbound4_wip",
+                    "outbound2_wip",
+                    "outbound3_wip",
+                    "outbound4_wip",
+                ]
+
+                for key in keys_to_extend:
+                    if return_context.get(key):
+                        new_context[key] = new_context.get(key, [])
+                        new_context[key].extend(return_context[key])                                      
     
+    elif not check_shipment and WarehouseCustomerShipment.objects.filter(shipment_id=search_text).exists():
+        
+        shipments = WarehouseCustomerShipment.objects.filter(shipment_id=search_text).values("id","warehouse_shipment_crop__crop","contract__secret_key","contract_id", "shipment_id", "warehouse_id", "customer_id","warehouse_name","customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status", "destination")
+      
+        shipment = shipments.first()
+        carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first()
+        carrier_id = carrier.carrier_id if carrier else None
+
+        # Fetch all crops for this shipment
+        crops = WarehouseShipmentCrops.objects.filter(
+            shipment_id=shipment["id"], id=int(crop_id)
+        ).values("id", "crop", "lot_number", "net_weight", "weight_unit", "waybill_number")
+        for crop in crops:
+            # Get all diversions for this crop
+            diversions = WarehouseShipmentDiversionTracking.objects.filter(
+                shipment_id=shipment["id"],
+                crop_id=crop["id"], id=int(diversion_id)
+            ).order_by("-id")
+
+            if diversions.exists():
+                if shipment["status"] != "Received":
+                    location = diversions[0].address
+                else:
+                    location = shipment["destination"]
+
+                for diversion in diversions:                       
+                    shipment["carrier_id"] = carrier_id
+                    shipment["location"] = location
+                    shipment["crops"] = [{
+                        "crop_name": crop["crop"],
+                        "crop_id":crop["id"],
+                        "lot_number": crop["lot_number"],
+                        "net_weight": diversion.net_weight,
+                        "weight_unit": diversion.weight_unit,
+                        "diversion_id": diversion.id,
+                        "prev_waybill_number": diversion.prev_waybill_number,
+                        "new_waybill_number": diversion.waybill_number,
+                        "address": diversion.address,
+                        "diversion_date": diversion.diversion_date,
+                    }]
+                    
+            else:
+                if shipment["status"] != "Received":
+                    location = "In Transit"
+                else:
+                    location = shipment["destination"]
+
+                shipment["carrier_id"] = carrier_id
+                shipment["location"] = location
+                shipment["crops"] = [{
+                    "crop_name": crop["crop"],
+                    "crop_id":crop["id"],
+                    "lot_number": crop["lot_number"],
+                    "net_weight": crop["net_weight"],
+                    "weight_unit": crop["weight_unit"],
+                    "diversion_id": 0,
+                    "prev_waybill_number": None,
+                    "new_waybill_number": None,
+                    "address": None,
+                    "diversion_date": None,
+                }]                           
+        
+        if diversion_id not in [None, '0', 0, "null"]:
+            diversion_id = int(diversion_id)
+            diversion_details = WarehouseShipmentDiversionTracking.objects.filter(id=int(diversion_id), shipment_id=shipment["id"], crop_id=int(crop_id)).values("crop__crop","net_weight", "weight_unit","prev_waybill_number", "waybill_number", "address", "diversion_date")
+
+            new_context["diversions"] = diversion_details
+        else:
+            new_context["diversions"] = []
+            
+        new_context["inbound6_wip"] = [shipment]
+        new_context["outbound6_wip"] = [shipment]
+
+        crops = WarehouseShipmentCrops.objects.filter(shipment_id=shipment["id"], id=int(crop_id))
+        
+        outbound5_processor = []
+        for crop in crops:
+            select_crop = crop.crop
+            check_processor_shipment = ProcessorWarehouseShipment.objects.filter(warehouse_id=shipment["warehouse_id"], processor_shipment_crop__crop=crop.crop, processor_shipment_crop__crop_type=crop.crop_type, processor_shipment_crop__item_name=crop.item_name).values("id","processor_shipment_crop__crop", "contract__secret_key","contract_id", "processor_entity_name","processor_type", "processor_id", "shipment_id", "warehouse_id", "warehouse_name","customer_name","customer_id", "date_pulled", "carrier_type", "distributor_receive_date", "status", "destination")
+            if check_processor_shipment:
+                
+                for ship in check_processor_shipment:                 
+
+                    carrier = CarrierDetails.objects.filter(shipment_id=ship["id"]).first()
+                    carrier_id = carrier.carrier_id if carrier else None                  
+                    shipment_crops = ProcessorShipmentCrops.objects.filter(shipment_id=ship["id"], crop=crop.crop, crop_type=crop.crop_type, item_name=crop.item_name).values("id", "crop","lot_number", "net_weight", "weight_unit", 'waybill_number' )
+                   
+                    for crop_ in shipment_crops:
+                        
+                        # Get all diversions for this crop
+                        diversions = ProcessorShipmentDiversionTracking.objects.filter(
+                            shipment_id=ship["id"],
+                            crop_id=crop_["id"], id=int(diversion_id)
+                        ).order_by("-id")
+
+                        if diversions.exists():
+                            if ship["status"] != "Received":
+                                location = diversions[0].address
+                            else:
+                                location = ship["destination"]
+
+                            for diversion in diversions:                                
+                                ship["carrier_id"] = carrier_id
+                                ship["location"] = location
+                                ship["crops"] = [{
+                                    "crop_name": crop_["crop"],
+                                    "crop_id":crop_["id"],
+                                    "lot_number": crop_["lot_number"],
+                                    "net_weight": diversion.net_weight,
+                                    "weight_unit": diversion.weight_unit,
+                                    "diversion_id": diversion.id,
+                                    "prev_waybill_number": diversion.prev_waybill_number,
+                                    "new_waybill_number": diversion.waybill_number,
+                                    "address": diversion.address,
+                                    "diversion_date": diversion.diversion_date,
+                                }]                                
+                        else:
+                            if ship["status"] != "Received":
+                                location = "In Transit"
+                            else:
+                                location = ship["destination"]
+
+                            ship["carrier_id"] = carrier_id
+                            ship["location"] = location
+                            ship["crops"] = [{
+                                "crop_name": crop_["crop"],
+                                "crop_id":crop_["id"],
+                                "lot_number": crop_["lot_number"],
+                                "net_weight": crop_["net_weight"],
+                                "weight_unit": crop_["weight_unit"],
+                                "diversion_id": 0,
+                                "prev_waybill_number": None,
+                                "new_waybill_number": None,
+                                "address": None,
+                                "diversion_date": None,
+                            }]
+                    outbound5_processor.extend(check_processor_shipment) 
+                    processor_entity_name = ship["processor_entity_name"]
+                    processor_id = ship["processor_id"]
+                    processor_type = ship["processor_type"]                             
+                    if processor_type == "T1":
+                        return_context = t1_processor_shipments(select_crop, processor_id, from_date, to_date)
+                    elif processor_type == "T2":
+                        return_context = t2_processor_shipments(select_crop, processor_id, from_date, to_date, processor_entity_name)
+                    elif processor_type == "T3":
+                        return_context = t3_processor_shipments(select_crop, processor_id, from_date, to_date, processor_entity_name)
+                    elif processor_type == "T4":
+                        return_context = t4_processor_shipments(select_crop, processor_id, from_date, to_date, processor_entity_name)
+                    
+                    keys_to_extend = [
+                        "origin_context",
+                        "t1_processor",
+                        "inbound2_wip",
+                        "inbound3_wip",
+                        "inbound4_wip",
+                        "outbound2_wip",
+                        "outbound3_wip",
+                        "outbound4_wip",
+                    ]
+
+                    for key in keys_to_extend:
+                        if return_context.get(key):
+                            new_context[key] = new_context.get(key, [])
+                            new_context[key].extend(return_context[key])                                   
+                
+        new_context["outbound5_wip"] = outbound5_processor
+        new_context["inbound5_wip"] = outbound5_processor 
+
+    return new_context
+
+
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+@login_required()
+def traceability_report(request):
+    context = {}
+    if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
+        crops = Crop.objects.all()
+        context["crops"] = crops
+        grower_shipments = GrowerShipment.objects.filter(status="APPROVED").values(
+            'id', 'date_time', 'shipment_id', 'grower__name', 'grower_id',
+            'processor__id', 'processor__entity_name', 'approval_date', 'status', 'crop', 'received_amount', 'unit_type'
+        ).annotate(
+            date_field=F('date_time'),
+            shipment_type=Value('GrowerShipment', output_field=CharField()),
+            location=Case(
+                When(
+                    status="APPROVED",
+                    then=Subquery(
+                        Location.objects.filter(
+                            processor_id=Cast(OuterRef('processor__id'), output_field=BigIntegerField())
+                        ).values('name')[:1]
+                    )
+                ),
+                When(
+                    status="DISAPPROVED",
+                    then=Subquery(
+                        Grower.objects.filter(
+                            id=Cast(OuterRef('grower_id'), output_field=BigIntegerField())
+                        ).values('physical_address1')[:1]
+                    )
+                ),
+                default=Value("In Transit"), output_field=CharField(),
+            )
+        )
+
+        # Optimized processor shipments
+        processor_shipments = ShipmentManagement.objects.filter(status="APPROVED").values(
+            'id', 'date_pulled', 'shipment_id', 'processor_idd', 'processor_e_name',
+            'sender_processor_type', 'processor2_idd', 'processor2_name', 'recive_delivery_date', 'crop', 'status', 'lot_number', 'received_weight', 'weight_of_product_unit'
+        ).annotate(
+            date_field=F('date_pulled'),
+            shipment_type=Value('ShipmentManagement', output_field=CharField()),
+            location=Case(
+                When(
+                    status="APPROVED",
+                    then=Subquery(
+                        Processor2Location.objects.filter(
+                            processor_id=Cast(OuterRef('processor2_idd'), output_field=BigIntegerField())
+                        ).values('name')[:1]
+                    )
+                ),
+                When(
+                    status="DISAPPROVED",
+                    then=Case(
+                        When(
+                            sender_processor_type="T1",
+                            then=Subquery(
+                                Location.objects.filter(
+                                    processor_id=Cast(OuterRef('processor_idd'), output_field=BigIntegerField())
+                                ).values('name')[:1]
+                            )
+                        ),
+                        default=Subquery(
+                            Processor2Location.objects.filter(
+                                processor_id=Cast(OuterRef('processor2_idd'), output_field=BigIntegerField())
+                            ).values('name')[:1]
+                        )
+                    )
+                ),
+                default=Value("In Transit"), output_field=CharField(),
+            )
+        )
+
+        # Optimized contract processor shipments
+    
+        contract_processor_shipments = ProcessorWarehouseShipment.objects.values(
+            'id', 'date_pulled', 'shipment_id', 'processor_id', 'processor_entity_name',
+            'warehouse_id', 'warehouse_name', 'customer_id', 'customer_name',
+            'status', 'distributor_receive_date', 'destination'
+        ).annotate(
+            date_field=F('date_pulled'),
+            shipment_type=Value('ProcessorWarehouseShipment', output_field=CharField()),
+            location=Case(
+                When(status="Received", then=F('destination')),   # use shipment’s destination
+                default=Value("In Transit"),                      # fallback default
+                output_field=CharField(),
+            )
+        )
+
+        # Final flattened result list
+        final_processor_contract_shipments = []
+
+        for shipment in contract_processor_shipments:
+            # Preload carrier
+            carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first()
+            carrier_id = carrier.carrier_id if carrier else None
+
+            # Fetch all crops for this shipment
+            crops = ProcessorShipmentCrops.objects.filter(
+                shipment_id=shipment["id"]
+            ).values("id", "crop", "lot_number", "net_weight", "weight_unit", "waybill_number")
+
+            for crop in crops:
+                # Get all diversions for this crop
+                diversions = ProcessorShipmentDiversionTracking.objects.filter(
+                    shipment_id=shipment["id"],
+                    crop_id=crop["id"]
+                ).order_by("-id")
+
+                if diversions.exists():
+                    for diversion in diversions:
+                        entry = shipment.copy()
+                        entry["carrier_id"] = carrier_id
+                        entry["crops"] = [{                            
+                            "crop_name": crop["crop"],
+                            "crop_id":crop["id"],
+                            "lot_number": crop["lot_number"],
+                            "net_weight": diversion.net_weight,
+                            "weight_unit": diversion.weight_unit,
+                            "diversion_id": diversion.id,
+                            "prev_waybill_number": diversion.prev_waybill_number,
+                            "new_waybill_number": diversion.waybill_number,
+                            "address": diversion.address,
+                            "diversion_date": diversion.diversion_date,
+                        }]
+                        final_processor_contract_shipments.append(entry)
+                else:
+                    entry = shipment.copy()
+                    entry["carrier_id"] = carrier_id
+                    entry["crops"] = [{
+                        "crop_name": crop["crop"],
+                        "crop_id":crop["id"],
+                        "lot_number": crop["lot_number"],
+                        "net_weight": crop["net_weight"],
+                        "weight_unit": crop["weight_unit"],
+                        "diversion_id": 0,
+                        "prev_waybill_number": None,
+                        "new_waybill_number": None,
+                        "address": None,
+                        "diversion_date": None,
+                    }]
+                    final_processor_contract_shipments.append(entry)
+        
+        final_customer_contract_shipments = []
+
+        # Optimized contract warehouse shipments
+        contract_warehouse_shipments = WarehouseCustomerShipment.objects.values(
+            'id', 'date_pulled', 'shipment_id', 'warehouse_id', 'warehouse_name',
+            'customer_id', 'customer_name', 'status', 'customer_receive_date', 'destination'
+        ).annotate(
+            date_field=F('date_pulled'),
+            shipment_type=Value('WarehouseCustomerShipment', output_field=CharField()),
+            location=Case(
+                When(status="Received", then=F('destination')),   # use shipment’s destination field
+                default=Value("In Transit"),                      # fallback default
+                output_field=CharField(),
+            )
+        )
+
+        for shipment in contract_warehouse_shipments:
+            # Fetch carrier_id
+            carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first()
+            carrier_id = carrier.carrier_id if carrier else None
+
+            # Fetch all crops for this shipment
+            crops = WarehouseShipmentCrops.objects.filter(
+                shipment_id=shipment["id"]
+            ).values("id", "crop", "lot_number", "net_weight", "weight_unit", "waybill_number")
+
+            for crop in crops:
+                # Fetch diversions for the crop
+                diversions = WarehouseShipmentDiversionTracking.objects.filter(
+                    shipment_id=shipment["id"],
+                    crop_id=crop["id"]
+                ).order_by("-id")
+
+                if diversions.exists():
+                    for diversion in diversions:
+                        entry = shipment.copy()
+                        entry["carrier_id"] = carrier_id
+                        entry["crops"] = [{
+                            "crop_name": crop["crop"],
+                            "crop_id":crop["id"],
+                            "lot_number": crop["lot_number"],
+                            "net_weight": diversion.net_weight,
+                            "weight_unit": diversion.weight_unit,
+                            "diversion_id": diversion.id,
+                            "prev_waybill_number": diversion.prev_waybill_number,
+                            "new_waybill_number": diversion.waybill_number,
+                            "address": diversion.address,
+                            "diversion_date": diversion.diversion_date,
+                        }]
+                        final_customer_contract_shipments.append(entry)
+                else:
+                    entry = shipment.copy()
+                    entry["carrier_id"] = carrier_id
+                    entry["crops"] = [{
+                        "crop_name": crop["crop"],
+                        "crop_id":crop["id"],
+                        "lot_number": crop["lot_number"],
+                        "net_weight": crop["net_weight"],
+                        "weight_unit": crop["weight_unit"],
+                        "diversion_id": 0,
+                        "prev_waybill_number": None,
+                        "new_waybill_number": None,
+                        "address": None,
+                        "diversion_date": None,
+                    }]
+                    final_customer_contract_shipments.append(entry)
+        
+        # Combine all shipments and sort
+        combined_shipments = list(chain(
+            grower_shipments,
+            processor_shipments,
+            final_processor_contract_shipments,
+            final_customer_contract_shipments
+        ))
+       
+        sorted_shipments = sorted(combined_shipments, key=itemgetter('date_field'), reverse=True)
+
+        # Limit to recent shipments
+        recent_shipments = sorted_shipments[:10]
+        
+
+        # Determine from and to dates
+        first_shipment = GrowerShipment.objects.order_by('date_time').first()
+        from_date = first_shipment.date_time.date() if first_shipment else None
+        to_date = date.today()
+
+        # Return results
+        context['recent_shipments'] = recent_shipments
+        
+        context['from_date'] = from_date
+        context['to_date'] = to_date        
+
+        select_crop = request.GET.get('select_crop')
+        get_search_by = request.GET.get('get_search_by')
+        search_text = request.GET.get('search_text')
+        filter_type = request.GET.get('filter_type')            
+
+        from_date, to_date, crop_year = None, None, None  # <-- initialize crop_year
+
+        if filter_type == "date_range":
+            from_date = request.GET.get('from_date')
+            to_date = request.GET.get('to_date')
+            try:
+                from_date = date.fromisoformat(from_date) if from_date else None
+                to_date = date.fromisoformat(to_date) if to_date else None
+            except ValueError:
+                from_date, to_date = None, None
+
+        elif filter_type == "year":
+            crop_year = request.GET.get('crop_year')
+            try:
+                year = int(crop_year)
+                from_date = date(year, 1, 1)
+                to_date = date(year, 12, 31)
+            except (ValueError, TypeError):
+                from_date, to_date = None, None
+
+        # ✅ Fallback if either missing
+        if not from_date or not to_date:
+            from_date = date(2023, 4, 1)
+            to_date = date.today()           
+
+        if search_text and get_search_by:
+            context['search_text'] = search_text
+            context['get_search_by'] = get_search_by
+            context['filter_type'] = filter_type
+
+            if select_crop:
+                context['select_crop'] = select_crop
+
+            if crop_year or (from_date and to_date):
+                if crop_year:
+                    context['crop_year'] = crop_year
+                context['from_date'] = from_date
+                context['to_date'] = to_date 
+        
+        shipments = []
+        search_by = None
+        type = None
+        
+        # search by Grower ....
+        if get_search_by and get_search_by == 'grower':
+            check_grower = Grower.objects.filter(name__icontains=search_text)
+            if check_grower.exists() :
+                grower_id = check_grower.first().id
+                shipments = list(GrowerShipment.objects.filter(grower_id=grower_id, date_time__date__gte=from_date, date_time__date__lte=to_date).values("id","shipment_id","grower_id", "grower__name", "field_id", "field__name", "processor__id", "processor__entity_name", "crop", "variety", "total_amount", "received_amount", "unit_type", "date_time", "approval_date", "sku", "status"))
+                if select_crop:
+                    shipments = list(GrowerShipment.objects.filter(grower_id=grower_id, crop=select_crop, date_time__date__gte=from_date, date_time__date__lte=to_date).values("id","shipment_id","grower_id", "grower__name", "field_id", "field__name", "processor__id", "processor__entity_name", "crop", "variety", "total_amount", "received_amount", "unit_type", "date_time", "approval_date", "sku", "status"))
+                type = "grower_shipments" 
+                search_by = "grower" 
+                
+                unique_shipments = list({s["shipment_id"]: s for s in shipments}.values())
+                for shipment in unique_shipments:
+                    if shipment["status"] == "APPROVED":
+                        processor = Processor.objects.filter(id=int(shipment["processor__id"])).first()
+                        processor_location = Location.objects.filter(processor=processor).first()
+                        if processor_location:
+                            location = processor_location.name
+                        else:
+                            location = "N/A"
+                    elif shipment["status"] == "DISAPPROVED":
+                        grower = Grower.objects.filter(id=int(shipment["grower_id"])).first()
+                        location = grower.physical_address1
+                    else:
+                        location = "In Transit"
+                    shipment["location"] = location  
+                shipments = unique_shipments                
+            else:
+                context['no_rec_found_msg'] = "No Records Found"
+
+        # search by Field ....
+        elif get_search_by and get_search_by == 'field':
+            check_field = Field.objects.filter(name__icontains=search_text)
+            if check_field.exists() :                    
+                field_id = check_field.first().id                  
+                grower_id =  check_field.first().grower.id
+                shipments = list(GrowerShipment.objects.filter(grower_id=grower_id, field_id=field_id, date_time__date__gte=from_date, date_time__date__lte=to_date).values("id","shipment_id","grower_id", "grower__name", "field_id", "field__name", "processor__id", "processor__entity_name", "crop", "variety", "total_amount", "received_amount", "unit_type", "date_time", "approval_date", "sku", "status", "received_amount", "unit_type"))
+                if select_crop:
+                    shipments = list(GrowerShipment.objects.filter(grower_id=grower_id, field_id=field_id, crop=select_crop, date_time__date__gte=from_date, date_time__date__lte=to_date).values("id","shipment_id","grower_id", "grower__name", "field_id", "field__name", "processor__id", "processor__entity_name", "crop", "variety", "total_amount", "received_amount", "unit_type", "date_time", "approval_date", "sku"))
+                type = "grower_shipments" 
+                search_by = "field"  
+                unique_shipments = list({s["shipment_id"]: s for s in shipments}.values())   
+                
+                for shipment in unique_shipments:
+                    if shipment["status"] == "APPROVED":
+                        processor = Processor.objects.filter(id=int(shipment["processor__id"])).first()
+                        processor_location = Location.objects.filter(processor=processor).first()
+                        if processor_location:
+                            location = processor_location.name
+                        else:
+                            location = "N/A"
+                    elif shipment["status"] == "DISAPPROVED":
+                        grower = Grower.objects.filter(id=int(shipment["grower_id"])).first()
+                        location = grower.physical_address1
+                    else:
+                        location = "In Transit"
+                    shipment["location"] = location
+
+                shipments = unique_shipments
+            else:
+                context['no_rec_found_msg'] = "No Records Found"
+        
+        # search by Processor ....
+        elif get_search_by and get_search_by == 'processor':
+            check_processor = get_processor_type(search_text)
+            if check_processor:
+                processor_type = check_processor["type"]
+                processor_id = check_processor["id"]
+                if processor_type == "T1":
+                    inbound_shipments = list(GrowerShipment.objects.filter(processor_id=processor_id, date_time__date__gte=from_date, date_time__date__lte=to_date).values("id","shipment_id","grower_id", "grower__name", "field_id", "field__name", "processor__id", "processor__entity_name", "crop", "variety", "total_amount", "received_amount", "unit_type", "date_time", "approval_date", "sku", "status", "received_amount", "unit_type"))
+
+                    unique_inbound_shipments = list({s["shipment_id"]: s for s in inbound_shipments}.values())
+                    for shipment in unique_inbound_shipments:
+                        if shipment["status"] == "APPROVED":
+                            processor = Processor.objects.filter(id=int(shipment["processor__id"])).first()
+                            processor_location = Location.objects.filter(processor=processor).first()
+                            if processor_location:
+                                location = processor_location.name
+                            else:
+                                location = "N/A"
+                        elif shipment["status"] == "DISAPPROVED":
+                            grower = Grower.objects.filter(id=int(shipment["grower_id"])).first()
+                            location = grower.physical_address1
+                        else:
+                            location = "In Transit"
+                        shipment["location"] = location
+                else:
+                    inbound_shipments = list(ShipmentManagement.objects.filter(processor2_idd=processor_id, receiver_processor_type=processor_type, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values())
+                    unique_inbound_shipments = list({s["shipment_id"]: s for s in inbound_shipments}.values())
+
+                    for shipment in unique_inbound_shipments:
+                        if shipment["status"] == "APPROVED":
+                            processor = Processor2.objects.filter(id=int(shipment["processor2_idd"])).first()
+                            processor_location = Processor2Location.objects.filter(processor=processor).first()
+                            if processor_location:
+                                location = processor_location.name
+                            else:
+                                location = "N/A"
+                        elif shipment["status"]== "DISAPPROVED":
+                            if shipment["sender_processor_type"] == "T1":
+                                processor = Processor.objects.filter(id=int(shipment["processor_idd"])).first()
+                                processor_location = Location.objects.filter(processor=processor).first()
+                                if processor_location:
+                                    location = processor_location.name
+                                else:
+                                    location = "N/A"
+                            else:            
+                                processor = Processor2.objects.filter(id=int(shipment["processor2_idd"])).first()
+                                processor_location = Processor2Location.objects.filter(processor=processor).first()
+                                if processor_location:
+                                    location = processor_location.name
+                                else:
+                                    location = "N/A"
+                        else:
+                            location = "In Transit"                            
+                        shipment["location"] = location
+
+                outbound_shipments = list(ShipmentManagement.objects.filter(processor_idd=processor_id, sender_processor_type=processor_type, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values())
+                
+                contract_shipments = list(ProcessorWarehouseShipment.objects.filter(processor_id=processor_id, processor_type=processor_type, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values(
+                    "id","processor_shipment_crop__crop", "contract__secret_key", "contract_id", "processor_entity_name",
+                    "processor_type", "processor_id", "shipment_id", "warehouse_id",
+                    "warehouse_name", "customer_name", "customer_id", 
+                    "date_pulled", "carrier_type", "distributor_receive_date", "status", "destination"
+                ))
+                if select_crop:
+                    if processor_type == "T1":
+                        inbound_shipments = list(GrowerShipment.objects.filter(processor_id=processor_id, crop=select_crop, date_time__date__gte=from_date, date_time__date__lte=to_date).values("id","shipment_id","grower_id", "grower__name", "field_id", "field__name", "processor__id", "processor__entity_name", "crop", "variety", "total_amount", "received_amount", "unit_type", "date_time", "approval_date", "sku", "status"))
+                        unique_inbound_shipments = list({s["shipment_id"]: s for s in inbound_shipments}.values())
+
+                        for shipment in unique_inbound_shipments:
+                            if shipment["status"] == "APPROVED":
+                                processor = Processor.objects.filter(id=int(shipment["processor__id"])).first()
+                                processor_location = Location.objects.filter(processor=processor).first()
+                                if processor_location:
+                                    location = processor_location.name
+                                else:
+                                    location = "N/A"
+                            elif shipment["status"] == "DISAPPROVED":
+                                grower = Grower.objects.filter(id=int(shipment["grower_id"])).first()
+                                location = grower.physical_address1
+                            else:
+                                location = "In Transit"
+                            shipment["location"] = location
+                    else:
+                        inbound_shipments = list(ShipmentManagement.objects.filter(processor2_idd=processor_id, sender_processor_type=processor_type, crop=select_crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values())
+                        unique_inbound_shipments = list({s["shipment_id"]: s for s in inbound_shipments}.values())
+
+                        for shipment in unique_inbound_shipments:
+                            if shipment["status"] == "APPROVED":
+                                processor = Processor2.objects.filter(id=int(shipment["processor2_idd"])).first()
+                                processor_location = Processor2Location.objects.filter(processor=processor).first()
+                                if processor_location:
+                                    location = processor_location.name
+                                else:
+                                    location = "N/A"
+                            elif shipment["status"]== "DISAPPROVED":
+                                if shipment["sender_processor_type"] == "T1":
+                                    processor = Processor.objects.filter(id=int(shipment["processor_idd"])).first()
+                                    processor_location = Location.objects.filter(processor=processor).first()
+                                    if processor_location:
+                                        location = processor_location.name
+                                    else:
+                                        location = "N/A"
+                                else:            
+                                    processor = Processor2.objects.filter(id=int(shipment["processor2_idd"])).first()
+                                    processor_location = Processor2Location.objects.filter(processor=processor).first()
+                                    if processor_location:
+                                        location = processor_location.name
+                                    else:
+                                        location = "N/A"
+                            else:
+                                location = "In Transit"                            
+                            shipment["location"] = location
+                    
+                    outbound_shipments = list(ShipmentManagement.objects.filter(processor_idd=processor_id, sender_processor_type=processor_type, crop=select_crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values())
+                    
+                    contract_shipments = list(ProcessorWarehouseShipment.objects.filter(processor_id=processor_id, processor_type=processor_type, processor_shipment_crop__crop=select_crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values(
+                    "id","processor_shipment_crop__crop", "contract__secret_key", "contract_id", "processor_entity_name",
+                    "processor_type", "processor_id", "shipment_id", "warehouse_id",
+                    "warehouse_name", "customer_name", "customer_id", 
+                    "date_pulled", "carrier_type", "distributor_receive_date", "status","destination"
+                ))
+
+                unique_outbound_shipments = list({s["shipment_id"]: s for s in outbound_shipments}.values())  
+
+                for shipment in unique_outbound_shipments:
+                    if shipment["status"] == "APPROVED":
+                        processor = Processor2.objects.filter(id=int(shipment["processor2_idd"])).first()
+                        location = Processor2Location.objects.filter(processor=processor).first().name
+                    elif shipment["status"]== "DISAPPROVED":
+                        if shipment["sender_processor_type"] == "T1":
+                            processor = Processor.objects.filter(id=int(shipment["processor_idd"])).first()
+                            processor_location = Location.objects.filter(processor=processor).first()
+                            if processor_location:
+                                location = processor_location.name
+                            else:
+                                location = "N/A"
+                        else:            
+                            processor = Processor2.objects.filter(id=int(shipment["processor2_idd"])).first()
+                            processor_location = Processor2Location.objects.filter(processor=processor).first()
+                            if processor_location:
+                                location = processor_location.name
+                            else:
+                                location = "N/A"
+                    else:
+                        location = "In Transit"
+                    shipment["location"] = location
+
+                unique_contract_shipments = list({s["shipment_id"]: s for s in contract_shipments}.values())
+                final_processor_contract_shipments = []
+                for shipment in unique_contract_shipments:
+                    # Preload carrier
+                    carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first()
+                    carrier_id = carrier.carrier_id if carrier else None
+
+                    # Fetch all crops for this shipment
+                    crops = ProcessorShipmentCrops.objects.filter(
+                        shipment_id=shipment["id"]
+                    ).values("id", "crop", "lot_number", "net_weight", "weight_unit", "waybill_number")
+
+                    for crop in crops:
+                        # Get all diversions for this crop
+                        diversions = ProcessorShipmentDiversionTracking.objects.filter(
+                            shipment_id=shipment["id"],
+                            crop_id=crop["id"]
+                        ).order_by("-id")
+
+                        if diversions.exists():
+                            if shipment["status"] != "Received":
+                                location = diversions[0].address
+                            else:
+                                location = shipment["destination"]
+
+                            for diversion in diversions:
+                                entry = shipment.copy()
+                                entry["carrier_id"] = carrier_id
+                                entry["location"] = location
+                                entry["crops"] = [{
+                                    "crop_name": crop["crop"],
+                                    "crop_id":crop["id"],
+                                    "lot_number": crop["lot_number"],
+                                    "net_weight": diversion.net_weight,
+                                    "weight_unit": diversion.weight_unit,
+                                    "diversion_id": diversion.id,
+                                    "prev_waybill_number": diversion.prev_waybill_number,
+                                    "new_waybill_number": diversion.waybill_number,
+                                    "address": diversion.address,
+                                    "diversion_date": diversion.diversion_date,
+                                }]
+                                final_processor_contract_shipments.append(entry)
+                        else:
+                            if shipment["status"] != "Received":
+                                location = "In Transit"
+                            else:
+                                location = shipment["destination"]
+
+                            entry = shipment.copy()
+                            entry["carrier_id"] = carrier_id
+                            entry["location"] = location
+                            entry["crops"] = [{
+                                "crop_name": crop["crop"],
+                                "crop_id":crop["id"],
+                                "lot_number": crop["lot_number"],
+                                "net_weight": crop["net_weight"],
+                                "weight_unit": crop["weight_unit"],
+                                "diversion_id": 0,
+                                "prev_waybill_number": None,
+                                "new_waybill_number": None,
+                                "address": None,
+                                "diversion_date": None,
+                            }]
+                            final_processor_contract_shipments.append(entry)
+                
+                shipments = unique_outbound_shipments + final_processor_contract_shipments + unique_inbound_shipments
+                type = "processor_shipments" 
+                search_by = "processor"                    
+                
+            else:
+                context['no_rec_found_msg'] = "No Records Found"
+        
+        # search by SKU Id ....
+        elif get_search_by and get_search_by == 'sku_id':
+            grower_shipments = list(GrowerShipment.objects.filter(sku__icontains=search_text, date_time__date__gte=from_date, date_time__date__lte=to_date).values("id","shipment_id","grower_id", "grower__name", "field_id", "field__name", "processor__id", "processor__entity_name", "crop", "variety", "total_amount", "received_amount", "unit_type", "date_time", "approval_date", "sku", "status"))
+            if select_crop:
+                grower_shipments = list(GrowerShipment.objects.filter(sku__icontains=search_text, crop=select_crop, date_time__date__gte=from_date, date_time__date__lte=to_date).values("id","shipment_id","grower_id", "grower__name", "field_id", "field__name", "processor__id", "processor__entity_name", "crop", "variety", "total_amount", "received_amount", "unit_type", "date_time", "approval_date", "sku", "status"))
+            
+            unique_grower_shipments = list({s["shipment_id"]: s for s in grower_shipments}.values())
+            for shipment in unique_grower_shipments:
+                if shipment["status"] == "APPROVED":
+                    processor = Processor.objects.filter(id=int(shipment["processor__id"])).first()
+                    processor_location = Location.objects.filter(processor=processor).first()
+                    if processor_location:
+                        location = processor_location.name
+                    else:
+                        location = "N/A"
+                elif shipment["status"] == "DISAPPROVED":
+                    grower = Grower.objects.filter(id=int(shipment["grower_id"])).first()
+                    location = grower.physical_address1
+                else:
+                    location = "In Transit"
+                shipment["location"] = location
+
+            processor_shipments = list(ShipmentManagement.objects.filter(Q(storage_bin_send__icontains=search_text) | Q(storage_bin_recive__icontains=search_text), date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values())                                      
+            if select_crop:
+                processor_shipments = list(ShipmentManagement.objects.filter((Q(storage_bin_send__icontains=search_text) | Q(storage_bin_recive__icontains=search_text)), crop=select_crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values())
+
+            unique_processor_shipments = list({s["shipment_id"]: s for s in processor_shipments}.values())
+
+            for shipment in unique_processor_shipments:
+                if shipment["status"] == "APPROVED":
+                    processor = Processor2.objects.filter(id=int(shipment["processor2_idd"])).first()
+                    processor_location = Processor2Location.objects.filter(processor=processor).first()
+                    if processor_location:
+                        location = processor_location.name
+                    else:
+                        location = "N/A"
+                elif shipment["status"]== "DISAPPROVED":
+                    if shipment["sender_processor_type"] == "T1":
+                        processor = Processor.objects.filter(id=int(shipment["processor_idd"])).first()
+                        processor_location = Location.objects.filter(processor=processor).first()
+                        if processor_location:
+                            location = processor_location.name
+                        else:
+                            location = "N/A"
+                    else:            
+                        processor = Processor2.objects.filter(id=int(shipment["processor2_idd"])).first()
+                        processor_location = Processor2Location.objects.filter(processor=processor).first()
+                        if processor_location:
+                            location = processor_location.name
+                        else:
+                            location = "N/A"
+                else:
+                    location = "In Transit"                            
+                shipment["location"] = location
+                
+            shipments = unique_grower_shipments + unique_processor_shipments  
+            type = "processor_shipments" 
+            search_by = "sku_id"  
+                
+        # search by Delivery Id ....
+        elif get_search_by and get_search_by == 'deliveryid': 
+            search_by = "deliveryid"                              
+            check_shipment = GrowerShipment.objects.filter(shipment_id__icontains=search_text, date_time__date__gte=from_date, date_time__date__lte=to_date)
+            
+            if check_shipment.exists() :
+                shipments = list(check_shipment.values("id","shipment_id","grower_id", "grower__name", "field_id", "field__name", "processor__id", "processor__entity_name", "crop", "variety", "total_amount", "received_amount", "unit_type", "date_time", "approval_date", "sku", "status", "received_amount", "unit_type")) 
+                if select_crop:
+                    shipments = list(check_shipment.filter(crop=select_crop).values("id","shipment_id","grower_id", "grower__name", "field_id", "field__name", "processor__id", "processor__entity_name", "crop", "variety", "total_amount", "received_amount", "unit_type", "date_time", "approval_date", "sku", "status")) 
+                type = "grower_shipments"  
+
+                unique_shipments = list({s["shipment_id"]: s for s in shipments}.values())
+                shipments = unique_shipments
+                for shipment in shipments:
+                    if shipment["status"] == "APPROVED":
+                        processor = Processor.objects.filter(id=int(shipment["processor__id"])).first()
+                        processor_location = Location.objects.filter(processor=processor).first()
+                        if processor_location:
+                            location = processor_location.name
+                        else:
+                            location = "N/A"
+                    elif shipment["status"] == "DISAPPROVED":
+                        grower = Grower.objects.filter(id=int(shipment["grower_id"])).first()
+                        location = grower.physical_address1
+                    else:
+                        location = "In Transit"
+                    shipment["location"] = location
+                            
+
+            elif not check_shipment and ShipmentManagement.objects.filter(shipment_id__icontains=search_text, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).exists():
+                shipments = ShipmentManagement.objects.filter(shipment_id__icontains=search_text, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values()
+                if select_crop:
+                    shipments = ShipmentManagement.objects.filter(shipment_id__icontains=search_text, crop=select_crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values()
+
+                unique_shipments = list({s["shipment_id"]: s for s in shipments}.values())
+                shipments = unique_shipments
+                for shipment in shipments:
+                    if shipment["status"] == "APPROVED":
+                        processor = Processor2.objects.filter(id=int(shipment["processor2_idd"])).first()
+                        processor_location = Processor2Location.objects.filter(processor=processor).first()
+                        if processor_location:
+                            location = processor_location.name
+                        else:
+                            location = "N/A"
+                    elif shipment["status"]== "DISAPPROVED":
+                        if shipment["sender_processor_type"] == "T1":
+                            processor = Processor.objects.filter(id=int(shipment["processor_idd"])).first()
+                            processor_location = Location.objects.filter(processor=processor).first()
+                            if processor_location:
+                                location = processor_location.name
+                            else:
+                                location = "N/A"
+                        else:            
+                            processor = Processor2.objects.filter(id=int(shipment["processor2_idd"])).first()
+                            processor_location = Processor2Location.objects.filter(processor=processor).first()
+                            if processor_location:
+                                location = processor_location.name
+                            else:
+                                location = "N/A"
+                    else:
+                        location = "In Transit"                            
+                    shipment["location"] = location 
+
+                type = "processor_shipments"                
+                
+            elif not check_shipment and ProcessorWarehouseShipment.objects.filter(shipment_id__icontains=search_text, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).exists():                    
+                contract_shipments = list(ProcessorWarehouseShipment.objects.filter(shipment_id__icontains=search_text, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values(
+                    "id","processor_shipment_crop__crop", "contract__secret_key", "contract_id", "processor_entity_name",
+                    "processor_type", "processor_id", "shipment_id", "warehouse_id",
+                    "warehouse_name", "customer_name", "customer_id", 
+                    "date_pulled", "carrier_type", "distributor_receive_date", "status", "destination"
+                ))
+                if select_crop:
+                    contract_shipments = list(ProcessorWarehouseShipment.objects.filter(shipment_id__icontains=search_text, processor_shipment_crop__crop=select_crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values(
+                    "id","processor_shipment_crop__crop", "contract__secret_key", "contract_id", "processor_entity_name",
+                    "processor_type", "processor_id", "shipment_id", "warehouse_id",
+                    "warehouse_name", "customer_name", "customer_id", 
+                    "date_pulled", "carrier_type", "distributor_receive_date", "status", "destination"
+                ))
+                unique_contract_shipments = list({s["shipment_id"]: s for s in contract_shipments}.values())
+                    
+                shipments = []
+                for shipment in unique_contract_shipments:
+                    # Preload carrier
+                    carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first()
+                    carrier_id = carrier.carrier_id if carrier else None
+
+                    # Fetch all crops for this shipment
+                    crops = ProcessorShipmentCrops.objects.filter(
+                        shipment_id=shipment["id"]
+                    ).values("id", "crop", "lot_number", "net_weight", "weight_unit", "waybill_number")
+
+                    for crop in crops:
+                        # Get all diversions for this crop
+                        diversions = ProcessorShipmentDiversionTracking.objects.filter(
+                            shipment_id=shipment["id"],
+                            crop_id=crop["id"]
+                        ).order_by("-id")
+
+                        if diversions.exists():
+                            if shipment["status"] != "Received":
+                                location = diversions[0].address
+                            else:
+                                location = shipment["destination"]
+
+                            for diversion in diversions:
+                                entry = shipment.copy()
+                                entry["carrier_id"] = carrier_id
+                                entry["location"] = location
+                                entry["crops"] = [{
+                                    "crop_name": crop["crop"],
+                                    "crop_id":crop["id"],
+                                    "lot_number": crop["lot_number"],
+                                    "net_weight": diversion.net_weight,
+                                    "weight_unit": diversion.weight_unit,
+                                    "diversion_id": diversion.id,
+                                    "prev_waybill_number": diversion.prev_waybill_number,
+                                    "new_waybill_number": diversion.waybill_number,
+                                    "address": diversion.address,
+                                    "diversion_date": diversion.diversion_date,
+                                }]
+                                shipments.append(entry)
+                        else:
+                            if shipment["status"] != "Received":
+                                location = "In Transit"
+                            else:
+                                location = shipment["destination"]
+
+                            entry = shipment.copy()
+                            entry["carrier_id"] = carrier_id
+                            entry["location"] = location
+                            entry["crops"] = [{
+                                "crop_name": crop["crop"],
+                                "crop_id":crop["id"],
+                                "lot_number": crop["lot_number"],
+                                "net_weight": crop["net_weight"],
+                                "weight_unit": crop["weight_unit"],
+                                "diversion_id": 0,
+                                "prev_waybill_number": None,
+                                "new_waybill_number": None,
+                                "address": None,
+                                "diversion_date": None,
+                            }]
+                            shipments.append(entry) 
+
+                type = "contract_shipments"  
+                        
+            
+            elif not check_shipment and WarehouseCustomerShipment.objects.filter(shipment_id__icontains=search_text, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).exists():
+                contract_shipments = list(WarehouseCustomerShipment.objects.filter(shipment_id__icontains=search_text, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values(
+                        "id", "warehouse_shipment_crop__crop","contract__secret_key", "contract_id", "shipment_id",
+                        "warehouse_id", "customer_id", "warehouse_name", "customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status", "destination"
+                    ))
+                if select_crop:
+                    contract_shipments = list(WarehouseCustomerShipment.objects.filter(shipment_id__icontains=search_text, warehouse_shipment_crop__crop=select_crop, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values(
+                        "id", "warehouse_shipment_crop__crop","contract__secret_key", "contract_id", "shipment_id",
+                        "warehouse_id", "customer_id", "warehouse_name", "customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status", "destination"
+                    ))
+
+                unique_contract_shipments = list({s["shipment_id"]: s for s in contract_shipments}.values())
+                shipments = []
+                for shipment in unique_contract_shipments:
+                    # Fetch carrier_id
+                    carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first()
+                    carrier_id = carrier.carrier_id if carrier else None
+
+                    # Fetch all crops for this shipment
+                    crops = WarehouseShipmentCrops.objects.filter(
+                        shipment_id=shipment["id"]
+                    ).values("id", "crop", "lot_number", "net_weight", "weight_unit", "waybill_number")
+
+                    for crop in crops:
+                        # Fetch diversions for the crop
+                        diversions = WarehouseShipmentDiversionTracking.objects.filter(
+                            shipment_id=shipment["id"],
+                            crop_id=crop["id"]
+                        ).order_by("-id")
+
+                        if diversions.exists():
+                            if shipment["status"] != "Received":
+                                location = diversions[0].address
+                            else:
+                                location = shipment["destination"]
+
+                            for diversion in diversions:
+                                entry = shipment.copy()
+                                entry["carrier_id"] = carrier_id
+                                entry["location"] = location
+                                entry["crops"] = [{
+                                    "crop_name": crop["crop"],
+                                    "crop_id":crop["id"],
+                                    "lot_number": crop["lot_number"],
+                                    "net_weight": diversion.net_weight,
+                                    "weight_unit": diversion.weight_unit,
+                                    "diversion_id": diversion.id,
+                                    "prev_waybill_number": diversion.prev_waybill_number,
+                                    "new_waybill_number": diversion.waybill_number,
+                                    "address": diversion.address,
+                                    "diversion_date": diversion.diversion_date,
+                                }]
+                                shipments.append(entry)
+                        else:
+
+                            if shipment["status"] != "Received":
+                                location = "In Transit"
+                            else:
+                                location = shipment["destination"]
+
+                            entry = shipment.copy()
+                            entry["carrier_id"] = carrier_id
+                            entry["location"] = location
+                            entry["crops"] = [{
+                                "crop_name": crop["crop"],
+                                "crop_id":crop["id"],
+                                "lot_number": crop["lot_number"],
+                                "net_weight": crop["net_weight"],
+                                "weight_unit": crop["weight_unit"],
+                                "diversion_id": 0,
+                                "prev_waybill_number": None,
+                                "new_waybill_number": None,
+                                "address": None,
+                                "diversion_date": None,
+                            }]
+                            shipments.append(entry)
+
+                type = "contract_shipments"  
+                                                            
+            else:
+                context['no_rec_found_msg'] = "No Records Found"   
+
+        # search by Warehouse....
+        elif get_search_by and get_search_by == 'warehouse':
+            search_by = "warehouse"
+            type = "contract_shipments"
+
+            check_warehouse = Warehouse.objects.filter(name__icontains=search_text)
+            if check_warehouse.exists():                            
+                warehouse = check_warehouse.first()                            
+                inbound_shipments = list(ProcessorWarehouseShipment.objects.filter( warehouse_id=warehouse.id, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values(
+                    "id","processor_shipment_crop__crop", "contract__secret_key", "contract_id", "processor_entity_name",
+                    "processor_type", "processor_id", "shipment_id", "warehouse_id",
+                    "warehouse_name", "customer_name", "customer_id", 
+                    "date_pulled", "carrier_type", "distributor_receive_date", "status", "destination"
+                ))
+                if select_crop:
+                    inbound_shipments = list(ProcessorWarehouseShipment.objects.filter(processor_shipment_crop__crop=select_crop, warehouse_id=warehouse.id, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values(
+                    "id","processor_shipment_crop__crop", "contract__secret_key", "contract_id", "processor_entity_name",
+                    "processor_type", "processor_id", "shipment_id", "warehouse_id",
+                    "warehouse_name", "customer_name", "customer_id", 
+                    "date_pulled", "carrier_type", "distributor_receive_date", "status", "destination"
+                ))
+                
+                unique_inbound_shipments = list({s["shipment_id"]: s for s in inbound_shipments}.values())
+                final_inbound_shipments = []
+                for shipment in unique_inbound_shipments:
+                    # Preload carrier
+                    carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first()
+                    carrier_id = carrier.carrier_id if carrier else None
+
+                    # Fetch all crops for this shipment
+                    crops = ProcessorShipmentCrops.objects.filter(
+                        shipment_id=shipment["id"]
+                    ).values("id", "crop", "lot_number", "net_weight", "weight_unit", "waybill_number")
+
+                    for crop in crops:
+                        # Get all diversions for this crop
+                        diversions = ProcessorShipmentDiversionTracking.objects.filter(
+                            shipment_id=shipment["id"],
+                            crop_id=crop["id"]
+                        ).order_by("-id")
+
+                        if diversions.exists():
+                            if shipment["status"] != "Received":
+                                location = diversions[0].address
+                            else:
+                                location = shipment["destination"]
+
+                            for diversion in diversions:
+                                entry = shipment.copy()
+                                entry["carrier_id"] = carrier_id
+                                entry["location"] = location
+                                entry["crops"] = [{
+                                    "crop_name": crop["crop"],
+                                    "crop_id":crop["id"],
+                                    "lot_number": crop["lot_number"],
+                                    "net_weight": diversion.net_weight,
+                                    "weight_unit": diversion.weight_unit,
+                                    "diversion_id": diversion.id,
+                                    "prev_waybill_number": diversion.prev_waybill_number,
+                                    "new_waybill_number": diversion.waybill_number,
+                                    "address": diversion.address,
+                                    "diversion_date": diversion.diversion_date,
+                                }]
+                                final_inbound_shipments.append(entry)
+                        else:
+                            if shipment["status"] != "Received":
+                                location = "In Transit"
+                            else:
+                                location = shipment["destination"]
+
+                            entry = shipment.copy()
+                            entry["carrier_id"] = carrier_id
+                            entry["location"] = location
+                            entry["crops"] = [{
+                                "crop_name": crop["crop"],
+                                "crop_id":crop["id"],
+                                "lot_number": crop["lot_number"],
+                                "net_weight": crop["net_weight"],
+                                "weight_unit": crop["weight_unit"],
+                                "diversion_id": 0,
+                                "prev_waybill_number": None,
+                                "new_waybill_number": None,
+                                "address": None,
+                                "diversion_date": None,
+                            }]
+                            final_inbound_shipments.append(entry) 
+            
+                outbound_shipments = list(WarehouseCustomerShipment.objects.filter(warehouse_id=warehouse.id, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values("id","warehouse_shipment_crop__crop","contract__secret_key","contract_id","shipment_id", "warehouse_id", "customer_id","warehouse_name","customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status", "destination"))
+                if select_crop:
+                    outbound_shipments = list(WarehouseCustomerShipment.objects.filter(warehouse_shipment_crop__crop=select_crop,warehouse_id=warehouse.id, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values("id","warehouse_shipment_crop__crop","contract__secret_key","contract_id","shipment_id", "warehouse_id", "customer_id","warehouse_name","customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status", "destination"))
+
+                unique_outbound_shipments = list({s["shipment_id"]: s for s in outbound_shipments}.values())
+                final_outbound_shipments = []
+                for shipment in unique_outbound_shipments:
+                    # Fetch carrier_id
+                    carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first()
+                    carrier_id = carrier.carrier_id if carrier else None
+
+                    # Fetch all crops for this shipment
+                    crops = WarehouseShipmentCrops.objects.filter(
+                        shipment_id=shipment["id"]
+                    ).values("id", "crop", "lot_number", "net_weight", "weight_unit", "waybill_number")
+
+                    for crop in crops:
+                        # Fetch diversions for the crop
+                        diversions = WarehouseShipmentDiversionTracking.objects.filter(
+                            shipment_id=shipment["id"],
+                            crop_id=crop["id"]
+                        ).order_by("-id")
+
+                        if diversions.exists():
+                            if shipment["status"] != "Received":
+                                location = diversions[0].address
+                            else:
+                                location = shipment["destination"]
+
+                            for diversion in diversions:
+                                entry = shipment.copy()
+                                entry["carrier_id"] = carrier_id
+                                entry["location"] = location
+                                entry["crops"] = [{
+                                    "crop_name": crop["crop"],
+                                    "crop_id":crop["id"],
+                                    "lot_number": crop["lot_number"],
+                                    "net_weight": diversion.net_weight,
+                                    "weight_unit": diversion.weight_unit,
+                                    "diversion_id": diversion.id,
+                                    "prev_waybill_number": diversion.prev_waybill_number,
+                                    "new_waybill_number": diversion.waybill_number,
+                                    "address": diversion.address,
+                                    "diversion_date": diversion.diversion_date,
+                                }]
+                                final_outbound_shipments.append(entry)
+                        else:
+
+                            if shipment["status"] != "Received":
+                                location = "In Transit"
+                            else:
+                                location = shipment["destination"]
+
+                            entry = shipment.copy()
+                            entry["carrier_id"] = carrier_id
+                            entry["location"] = location
+                            entry["crops"] = [{
+                                "crop_name": crop["crop"],
+                                "crop_id":crop["id"],
+                                "lot_number": crop["lot_number"],
+                                "net_weight": crop["net_weight"],
+                                "weight_unit": crop["weight_unit"],
+                                "diversion_id": 0,
+                                "prev_waybill_number": None,
+                                "new_waybill_number": None,
+                                "address": None,
+                                "diversion_date": None,
+                            }]
+                            final_outbound_shipments.append(entry)
+
+                shipments = final_inbound_shipments + final_outbound_shipments        
+                
+            else:
+                context['no_rec_found_msg'] = "No Records Found"
+                    
+        # search by Customer....
+        elif get_search_by and get_search_by == 'customer':
+            search_by = "customer"
+            type = "contract_shipments"
+            check_customer = Customer.objects.filter(name__icontains=search_text)
+            if check_customer.exists():
+                customer = check_customer.first()                   
+                
+                processor_shipments = list(ProcessorWarehouseShipment.objects.filter(                        
+                    customer_id=customer.id, 
+                    date_pulled__date__gte=from_date, 
+                    date_pulled__date__lte=to_date
+                ).values(
+                    "id","processor_shipment_crop__crop", "contract__secret_key", "contract_id", "processor_entity_name",
+                    "processor_type", "processor_id", "shipment_id", "warehouse_id",
+                    "warehouse_name", "customer_name", "customer_id", 
+                    "date_pulled", "carrier_type", "distributor_receive_date", "status", "destination"
+                ))
+                if select_crop:
+                    processor_shipments = list(ProcessorWarehouseShipment.objects.filter( 
+                    processor_shipment_crop__crop=select_crop,                       
+                    customer_id=customer.id, 
+                    date_pulled__date__gte=from_date, 
+                    date_pulled__date__lte=to_date
+                    ).values(
+                        "id","processor_shipment_crop__crop", "contract__secret_key", "contract_id", "processor_entity_name",
+                        "processor_type", "processor_id", "shipment_id", "warehouse_id",
+                        "warehouse_name", "customer_name", "customer_id", 
+                        "date_pulled", "carrier_type", "distributor_receive_date", "status", "destination"
+                    ))
+
+                unique_processor_shipments = list({s["shipment_id"]: s for s in processor_shipments}.values())
+                final_processor_shipments = []
+                for shipment in unique_processor_shipments:
+                    # Preload carrier
+                    carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first()
+                    carrier_id = carrier.carrier_id if carrier else None
+
+                    # Fetch all crops for this shipment
+                    crops = ProcessorShipmentCrops.objects.filter(
+                        shipment_id=shipment["id"]
+                    ).values("id", "crop", "lot_number", "net_weight", "weight_unit", "waybill_number")
+
+                    for crop in crops:
+                        # Get all diversions for this crop
+                        diversions = ProcessorShipmentDiversionTracking.objects.filter(
+                            shipment_id=shipment["id"],
+                            crop_id=crop["id"]
+                        ).order_by("-id")
+
+                        if diversions.exists():
+                            if shipment["status"] != "Received":
+                                location = diversions[0].address
+                            else:
+                                location = shipment["destination"]
+
+                            for diversion in diversions:
+                                entry = shipment.copy()
+                                entry["carrier_id"] = carrier_id
+                                entry["location"] = location
+                                entry["crops"] = [{
+                                    "crop_name": crop["crop"],
+                                    "crop_id":crop["id"],
+                                    "lot_number": crop["lot_number"],
+                                    "net_weight": diversion.net_weight,
+                                    "weight_unit": diversion.weight_unit,
+                                    "diversion_id": diversion.id,
+                                    "prev_waybill_number": diversion.prev_waybill_number,
+                                    "new_waybill_number": diversion.waybill_number,
+                                    "address": diversion.address,
+                                    "diversion_date": diversion.diversion_date,
+                                }]
+                                final_processor_shipments.append(entry)
+                        else:
+                            if shipment["status"] != "Received":
+                                location = "In Transit"
+                            else:
+                                location = shipment["destination"]
+
+                            entry = shipment.copy()
+                            entry["carrier_id"] = carrier_id
+                            entry["location"] = location
+                            entry["crops"] = [{
+                                "crop_name": crop["crop"],
+                                "crop_id":crop["id"],
+                                "lot_number": crop["lot_number"],
+                                "net_weight": crop["net_weight"],
+                                "weight_unit": crop["weight_unit"],
+                                "prev_waybill_number": None,
+                                "new_waybill_number": None,
+                                "address": None,
+                                "diversion_date": None,
+                                "diversion_id": 0,                                    
+                            }]
+                            final_processor_shipments.append(entry) 
+                    
+                warehouse_shipments = list(WarehouseCustomerShipment.objects.filter(                         
+                    customer_id=customer.id, 
+                    date_pulled__date__gte=from_date, 
+                    date_pulled__date__lte=to_date
+                ).values(
+                    "id", "warehouse_shipment_crop__crop","contract__secret_key", "contract_id", "shipment_id",
+                    "warehouse_id", "customer_id", "warehouse_name", "customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status", "destination"
+                ))
+                if select_crop:
+                    warehouse_shipments = list(WarehouseCustomerShipment.objects.filter(
+                    warehouse_shipment_crop__crop=select_crop,                         
+                    customer_id=customer.id, 
+                    date_pulled__date__gte=from_date, 
+                    date_pulled__date__lte=to_date
+                    ).values(
+                        "id", "warehouse_shipment_crop__crop","contract__secret_key", "contract_id", "shipment_id",
+                        "warehouse_id", "customer_id", "warehouse_name", "customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status", "destination"
+                    ))
+                
+                unique_warehouse_shipments = list({s["shipment_id"]: s for s in warehouse_shipments}.values())
+                final_warehouse_shipments = []
+                for shipment in unique_warehouse_shipments:
+                    # Fetch carrier_id
+                    carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first()
+                    carrier_id = carrier.carrier_id if carrier else None
+
+                    # Fetch all crops for this shipment
+                    crops = WarehouseShipmentCrops.objects.filter(
+                        shipment_id=shipment["id"]
+                    ).values("id", "crop", "lot_number", "net_weight", "weight_unit", "waybill_number")
+
+                    for crop in crops:
+                        # Fetch diversions for the crop
+                        diversions = WarehouseShipmentDiversionTracking.objects.filter(
+                            shipment_id=shipment["id"],
+                            crop_id=crop["id"]
+                        ).order_by("-id")
+
+                        if diversions.exists():
+                            if shipment["status"] != "Received":
+                                location = diversions[0].address
+                            else:
+                                location = shipment["destination"]
+
+                            for diversion in diversions:
+                                entry = shipment.copy()
+                                entry["carrier_id"] = carrier_id
+                                entry["location"] = location
+                                entry["crops"] = [{
+                                    "crop_name": crop["crop"],
+                                    "crop_id":crop["id"],
+                                    "lot_number": crop["lot_number"],
+                                    "net_weight": diversion.net_weight,
+                                    "weight_unit": diversion.weight_unit,
+                                    "diversion_id": diversion.id,
+                                    "prev_waybill_number": diversion.prev_waybill_number,
+                                    "new_waybill_number": diversion.waybill_number,
+                                    "address": diversion.address,
+                                    "diversion_date": diversion.diversion_date,
+                                }]
+                                final_warehouse_shipments.append(entry)
+                        else:
+
+                            if shipment["status"] != "Received":
+                                location = "In Transit"
+                            else:
+                                location = shipment["destination"]
+
+                            entry = shipment.copy()
+                            entry["carrier_id"] = carrier_id
+                            entry["location"] = location
+                            entry["crops"] = [{
+                                "crop_name": crop["crop"],
+                                "crop_id":crop["id"],
+                                "lot_number": crop["lot_number"],
+                                "net_weight": crop["net_weight"],
+                                "weight_unit": crop["weight_unit"],
+                                "diversion_id": 0,
+                                "prev_waybill_number": None,
+                                "new_waybill_number": None,
+                                "address": None,
+                                "diversion_date": None,
+                            }]
+                            final_warehouse_shipments.append(entry)
+        
+                shipments=  final_processor_shipments + final_warehouse_shipments                    
+                    
+            else:
+                context['no_rec_found_msg'] = "No Records Found" 
+        
+        paginator = Paginator(shipments, 10)  # Show 10 shipments per page
+        page = request.GET.get('page')
+        try:
+            paginated_shipments = paginator.page(page)
+        except PageNotAnInteger:
+            paginated_shipments = paginator.page(1)
+        except EmptyPage:
+            paginated_shipments = paginator.page(paginator.num_pages)
+        context["shipments"] = paginated_shipments
+        context["get_search_by"] = search_by
+        context["type"] = type
+        
+        return render (request, 'tracemodule/test_trace_module.html', context)                                                          
+    else:
+        return redirect ('dashboard')       
+
+
+
+@login_required()
+def trace_shipment(request, search_text, crop_id, diversion_id, from_date, to_date):  
+    
+    new_context = {}
+    from_date =  date(2023, 4, 1) 
+    to_date = date.today() 
+    check_shipment = GrowerShipment.objects.filter(shipment_id=search_text)
+                        
+    if check_shipment.exists() :        
+        type = "grower_shipment"
+        shipment = check_shipment.first()  
+
+        if shipment.status == "APPROVED":
+            processor = Processor.objects.filter(id=int(shipment.processor.id)).first()
+            processor_location = Location.objects.filter(processor=processor).first()
+            if processor_location:
+                location = processor_location.name
+            else:
+                location = "N/A"
+        elif shipment.status== "DISAPPROVED":
+            grower = Grower.objects.filter(id=int(shipment.grower.id)).first()
+            location = grower.physical_address1
+        else:
+            location = "In Transit"
+               
+        select_crop = shipment.crop
+        context = grower_shipment_response(select_crop, shipment.shipment_id, from_date, to_date)
+        new_context.update(context)    
+        context_ = location_response(new_context)                                
+        new_context.update(context_) 
+    
+    elif not check_shipment and ShipmentManagement.objects.filter(shipment_id=search_text).exists():
+        type = "processor_shipment"
+        shipments = ShipmentManagement.objects.filter(shipment_id=search_text)
+        shipment = shipments.first()  
+
+        if shipment.status == "APPROVED":
+            processor = Processor2.objects.filter(id=int(shipment.processor2_idd)).first()
+            processor_location = Processor2Location.objects.filter(processor=processor).first()
+            if processor_location:
+                location = processor_location.name
+            else:
+                location = "N/A"
+        elif shipment.status== "DISAPPROVED":
+            if shipment.sender_processor_type == "T1":
+                processor = Processor.objects.filter(id=int(shipment.processor_idd)).first()
+                processor_location = Location.objects.filter(processor=processor).first()
+                if processor_location:
+                    location = processor_location.name
+                else:
+                    location = "N/A"
+            else:            
+                processor = Processor2.objects.filter(id=int(shipment.processor2_idd)).first()
+                processor_location = Processor2Location.objects.filter(processor=processor).first()
+                if processor_location:
+                    location = processor_location.name
+                else:
+                    location = "N/A"
+        else:
+            location = "In Transit"    
+        select_crop = shipment.crop        
+        context = procesor_inbound_shipment_response(select_crop, shipment.shipment_id, from_date, to_date)
+          
+        new_context.update(context)    
+        context_ = location_response(new_context)                                
+        new_context.update(context_) 
+        
+    elif not check_shipment and ProcessorWarehouseShipment.objects.filter(shipment_id=search_text).exists():
+        type = "contract_shipment"
+        shipments = ProcessorWarehouseShipment.objects.filter(shipment_id=search_text).values("id","processor_shipment_crop__crop", "contract__secret_key","contract_id" ,"processor_entity_name","processor_type", "processor_id", "shipment_id", "warehouse_id", "warehouse_name","customer_name","customer_id", "date_pulled", "carrier_type", "distributor_receive_date", "status", "destination")
+        
+        shipment = shipments.first()
+
+        # Fetch all crops for this shipment
+        crop = ProcessorShipmentCrops.objects.get(
+            shipment_id=shipment["id"], id=int(crop_id)
+        )
+
+        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"], shipment_item=crop).first()
+        carrier_id = carrier.carrier_id if carrier else None
+
+        # Get all diversions for this crop
+        diversions = ProcessorShipmentDiversionTracking.objects.filter(
+            shipment_id=shipment["id"],
+            crop_id=crop.id, id=int(diversion_id)
+        ).order_by("-id")
+
+        if diversions.exists():
+            if shipment["status"] != "Received":
+                location = diversions[0].address
+            else:
+                location = shipment["destination"]
+
+            for diversion in diversions:
+                shipment["carrier_id"] = carrier_id
+                shipment["location"] = location
+                shipment["crops"] = [{
+                    "crop_name": crop.crop,
+                    "crop_id":crop.id,
+                    "lot_number": crop.lot_number,
+                    "net_weight": diversion.net_weight,
+                    "weight_unit": diversion.weight_unit,
+                    "diversion_id": diversion.id,
+                    "prev_waybill_number": diversion.prev_waybill_number,
+                    "new_waybill_number": diversion.waybill_number,
+                    "address": diversion.address,
+                    "diversion_date": diversion.diversion_date,
+                }]
+            
+        else:
+            if shipment["status"] != "Received":
+                location = "In Transit"
+            else:
+                location = shipment["destination"]
+
+            shipment["carrier_id"] = carrier_id
+            shipment["location"] = location
+            shipment["crops"] = [{
+                "crop_name": crop.crop,
+                "crop_id":crop.id,
+                "lot_number": crop.lot_number,
+                "net_weight": crop.net_weight,
+                "weight_unit": crop.weight_unit,
+                "diversion_id": 0,
+                "prev_waybill_number": None,
+                "new_waybill_number": None,
+                "address": None,
+                "diversion_date": None,
+            }]
+                    
+        if diversion_id not in [None, '0', 0, "null"]:
+            diversion_id = int(diversion_id)
+            diversion_details = ProcessorShipmentDiversionTracking.objects.filter(id=int(diversion_id), shipment_id=shipment["id"], crop_id=int(crop_id)).values("crop__crop","net_weight", "weight_unit","prev_waybill_number", "waybill_number", "address", "diversion_date")
+
+            new_context["diversions"] = diversion_details
+        else:
+            new_context["diversions"] = []
+            
+        if shipment["warehouse_id"] not in [None, "null", "", " "]:
+            
+            inbound5 = [shipment]
+            new_context["inbound5_wip"] = inbound5
+            new_context["outbound5_wip"] = inbound5
+            
+            processor_entity_name = shipment["processor_entity_name"]
+            processor_id = shipment["processor_id"]
+            processor_type = shipment["processor_type"]
+            select_crop = crop.crop
+            if processor_type == "T1":
+                return_context = t1_processor_shipments(select_crop, processor_id, from_date, to_date)
+            elif processor_type == "T2":
+                return_context = t2_processor_shipments(select_crop, processor_id, from_date, to_date, processor_entity_name)
+            elif processor_type == "T3":
+                return_context = t3_processor_shipments(select_crop, processor_id, from_date, to_date, processor_entity_name)
+            elif processor_type == "T4":
+                return_context = t4_processor_shipments(select_crop, processor_id, from_date, to_date, processor_entity_name)
+            
+            keys_to_extend = [
+                "origin_context",
+                "t1_processor",
+                "inbound2_wip",
+                "inbound3_wip",
+                "inbound4_wip",
+                "outbound2_wip",
+                "outbound3_wip",
+                "outbound4_wip",
+            ]
+
+            for key in keys_to_extend:
+                if return_context.get(key):
+                    new_context[key] = new_context.get(key, [])
+                    new_context[key].extend(return_context[key])                                      
+            
+            new_context_ = location_response(new_context)                           
+            new_context.update(new_context_)
+        else:
+             
+            inbound6 = [shipment]            
+            new_context["inbound6_wip"] = inbound6
+            new_context["outbound5_wip"] = inbound6
+            new_context["inbound5_wip"] = []
+            new_context["outbound6_wip"] = []
+
+            processor_entity_name = shipment["processor_entity_name"]
+            processor_id = shipment["processor_id"]
+            processor_type = shipment["processor_type"]
+            
+            select_crop = crop.crop
+            if processor_type == "T1":
+                return_context = t1_processor_shipments(select_crop, processor_id, from_date, to_date)
+            elif processor_type == "T2":
+                return_context = t2_processor_shipments(select_crop, processor_id, from_date, to_date, processor_entity_name)
+            elif processor_type == "T3":
+                return_context = t3_processor_shipments(select_crop, processor_id, from_date, to_date, processor_entity_name)
+            elif processor_type == "T4":
+                return_context = t4_processor_shipments(select_crop, processor_id, from_date, to_date, processor_entity_name)
+            
+            keys_to_extend = [
+                "origin_context",
+                "t1_processor",
+                "inbound2_wip",
+                "inbound3_wip",
+                "inbound4_wip",
+                "outbound2_wip",
+                "outbound3_wip",
+                "outbound4_wip",
+            ]
+
+            for key in keys_to_extend:
+                if return_context.get(key):
+                    new_context[key] = new_context.get(key, [])
+                    new_context[key].extend(return_context[key])                                      
+            
+            new_context_ = location_response(new_context)                           
+            new_context.update(new_context_)
+    
+    elif not check_shipment and WarehouseCustomerShipment.objects.filter(shipment_id=search_text).exists():
+        type = "contract_shipment"
+        shipments = WarehouseCustomerShipment.objects.filter(shipment_id=search_text).values("id","warehouse_shipment_crop__crop","contract__secret_key","contract_id","shipment_id", "warehouse_id", "customer_id","warehouse_name","customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status", "destination")
+
+        shipment = shipments.first()
+        
+        # Fetch all crops for this shipment
+        crop = WarehouseShipmentCrops.objects.get(
+            shipment_id=shipment["id"], id=int(crop_id)
+        )
+        
+        carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"], shipment_item=crop).first()
+        carrier_id = carrier.carrier_id if carrier else None
+        
+        # Get all diversions for this crop
+        diversions = WarehouseShipmentDiversionTracking.objects.filter(
+            shipment_id=shipment["id"],
+            crop_id=crop.id, id=int(diversion_id)
+        ).order_by("-id")
+
+        if diversions.exists():
+            if shipment["status"] != "Received":
+                location = diversions[0].address
+            else:
+                location = shipment["destination"]
+
+            for diversion in diversions:                       
+                shipment["carrier_id"] = carrier_id
+                shipment["location"] = location
+                shipment["crops"] = [{
+                    "crop_name": crop.crop,
+                    "crop_id":crop.id,
+                    "lot_number": crop.lot_number,
+                    "net_weight": diversion.net_weight,
+                    "weight_unit": diversion.weight_unit,
+                    "diversion_id": diversion.id,
+                    "prev_waybill_number": diversion.prev_waybill_number,
+                    "new_waybill_number": diversion.waybill_number,
+                    "address": diversion.address,
+                    "diversion_date": diversion.diversion_date,
+                }]
+                
+        else:
+            if shipment["status"] != "Received":
+                location = "In Transit"
+            else:
+                location = shipment["destination"]
+
+            shipment["carrier_id"] = carrier_id
+            shipment["location"] = location
+            shipment["crops"] = [{
+                "crop_name": crop.crop,
+                "crop_id":crop.id,
+                "lot_number": crop.lot_number,
+                "net_weight": crop.net_weight,
+                "weight_unit": crop.weight_unit,
+                "diversion_id": 0,
+                "prev_waybill_number": None,
+                "new_waybill_number": None,
+                "address": None,
+                "diversion_date": None,
+            }]                    
+        
+        if diversion_id not in [None, '0', 0, "null"]:
+            diversion_id = int(diversion_id)
+            diversion_details = WarehouseShipmentDiversionTracking.objects.filter(id=int(diversion_id), shipment_id=shipment["id"], crop_id=int(crop_id)).values("crop__crop","net_weight", "weight_unit","prev_waybill_number", "waybill_number", "address", "diversion_date")
+
+            new_context["diversions"] = diversion_details
+        else:
+            new_context["diversions"] = []
+
+        new_context["inbound6_wip"] = [shipment]
+        new_context["outbound6_wip"] = [shipment]
+
+        outbound5_processor = []
+    
+        select_crop = crop.crop
+        check_processor_shipment = ProcessorWarehouseShipment.objects.filter(warehouse_id=shipment["warehouse_id"], processor_shipment_crop__crop=crop.crop, processor_shipment_crop__crop_type=crop.crop_type, processor_shipment_crop__item_name=crop.item_name).values("id","processor_shipment_crop__crop", "contract__secret_key","contract_id", "processor_entity_name","processor_type", "processor_id", "shipment_id", "warehouse_id", "warehouse_name","customer_name","customer_id", "date_pulled", "carrier_type", "distributor_receive_date", "status", "destination")
+        if check_processor_shipment:
+            for ship in check_processor_shipment: 
+                                
+                crop_ = ProcessorShipmentCrops.objects.filter(shipment_id=ship["id"], crop=crop.crop, crop_type=crop.crop_type, item_name=crop.item_name).values("id", "crop","lot_number", "net_weight", "weight_unit", 'waybill_number' ).first()
+                carrier = CarrierDetails.objects.filter(shipment_id=ship["id"], shipment_item_id=crop_["id"]).first()
+                carrier_id = carrier.carrier_id if carrier else None  
+                # Get all diversions for this crop
+                diversions = ProcessorShipmentDiversionTracking.objects.filter(
+                    shipment_id=ship["id"],
+                    crop_id=crop_["id"], id=int(diversion_id)
+                ).order_by("-id")
+
+                if diversions.exists():
+                    if ship["status"] != "Received":
+                        location = diversions[0].address
+                    else:
+                        location = ship["destination"]
+
+                    for diversion in diversions:                                
+                        ship["carrier_id"] = carrier_id
+                        ship["location"] = location
+                        ship["crops"] = [{
+                            "crop_name": crop_["crop"],
+                            "crop_id":crop_["id"],
+                            "lot_number": crop_["lot_number"],
+                            "net_weight": diversion.net_weight,
+                            "weight_unit": diversion.weight_unit,
+                            "diversion_id": diversion.id,
+                            "prev_waybill_number": diversion.prev_waybill_number,
+                            "new_waybill_number": diversion.waybill_number,
+                            "address": diversion.address,
+                            "diversion_date": diversion.diversion_date,
+                        }]                                
+                else:
+                    if ship["status"] != "Received":
+                        location = "In Transit"
+                    else:
+                        location = ship["destination"]
+
+                    ship["carrier_id"] = carrier_id
+                    ship["location"] = location
+                    ship["crops"] = [{
+                        "crop_name": crop_["crop"],
+                        "crop_id":crop_["id"],
+                        "lot_number": crop_["lot_number"],
+                        "net_weight": crop_["net_weight"],
+                        "weight_unit": crop_["weight_unit"],
+                        "diversion_id": 0,
+                        "prev_waybill_number": None,
+                        "new_waybill_number": None,
+                        "address": None,
+                        "diversion_date": None,
+                    }]
+                        
+                outbound5_processor.extend(check_processor_shipment) 
+                processor_entity_name = ship["processor_entity_name"]
+                processor_id = ship["processor_id"]
+                processor_type = ship["processor_type"]                             
+                if processor_type == "T1":
+                    return_context = t1_processor_shipments(select_crop, processor_id, from_date, to_date)
+                elif processor_type == "T2":
+                    return_context = t2_processor_shipments(select_crop, processor_id, from_date, to_date, processor_entity_name)
+                elif processor_type == "T3":
+                    return_context = t3_processor_shipments(select_crop, processor_id, from_date, to_date, processor_entity_name)
+                elif processor_type == "T4":
+                    return_context = t4_processor_shipments(select_crop, processor_id, from_date, to_date, processor_entity_name)
+                
+                keys_to_extend = [
+                    "origin_context",
+                    "t1_processor",
+                    "inbound2_wip",
+                    "inbound3_wip",
+                    "inbound4_wip",
+                    "outbound2_wip",
+                    "outbound3_wip",
+                    "outbound4_wip",
+                ]
+
+                for key in keys_to_extend:
+                    if return_context.get(key):
+                        new_context[key] = new_context.get(key, [])
+                        new_context[key].extend(return_context[key])                                     
+                
+        new_context["outbound5_wip"] = outbound5_processor
+        new_context["inbound5_wip"] = outbound5_processor   
+
+        new_context_ = location_response(new_context)                           
+        new_context.update(new_context_)                     
+    
+    else:
+        new_context['no_rec_found_msg'] = "No Records Found"  
+    
+    context_ = grower_location(new_context)
+    new_context.update(context_)
+    new_context["shipment"] = shipment
+    new_context["shipment_type"] = type
+    new_context["from_date"] = from_date
+    new_context["to_date"] = to_date
+    new_context["location"] = location
+    
+    return render(request, 'tracemodule/view_traceability.html', new_context)
+
+
+
+def view_traceability(request, search_text, from_date, to_date):  
+    
+    new_context = {}
+    from_date =  date(2023, 4, 1)
+    to_date = date.today() 
+    check_shipment = GrowerShipment.objects.filter(shipment_id__icontains=search_text)
+                        
+    if check_shipment.exists() :        
+        type = "grower_shipment"
+        get_shipment = check_shipment.first()  
+
+        if get_shipment.status == "APPROVED":
+            processor = Processor.objects.filter(id=int(get_shipment.processor.id)).first()
+            processor_location = Location.objects.filter(processor=processor).first()
+            if processor_location:
+                location = processor_location.name
+            else:
+                location = "N/A"
+        elif get_shipment.status== "DISAPPROVED":
+            grower = Grower.objects.filter(id=int(get_shipment.grower.id)).first()
+            location = grower.physical_address1
+        else:
+            location = "In Transit"
+               
+        select_crop = get_shipment.crop
+        context = grower_shipment_response(select_crop, get_shipment.shipment_id, from_date, to_date)
+        new_context.update(context)    
+        context_ = location_response(new_context)                                
+        new_context.update(context_) 
+    
+    elif not check_shipment and ShipmentManagement.objects.filter(shipment_id__icontains=search_text).exists():
+        type = "processor_shipment"
+        shipment = ShipmentManagement.objects.filter(shipment_id__icontains=search_text)
+        get_shipment = shipment.first()  
+
+        if get_shipment.status == "APPROVED":
+            processor = Processor2.objects.filter(id=int(get_shipment.processor2_idd)).first()
+            processor_location = Processor2Location.objects.filter(processor=processor).first()
+            if processor_location:
+                location = processor_location.name
+            else:
+                location = "N/A"
+        elif get_shipment.status== "DISAPPROVED":
+            if get_shipment.sender_processor_type == "T1":
+                processor = Processor.objects.filter(id=int(get_shipment.processor_idd)).first()
+                processor_location = Location.objects.filter(processor=processor).first()
+                if processor_location:
+                    location = processor_location.name
+                else:
+                    location = "N/A"
+            else:            
+                processor = Processor2.objects.filter(id=int(get_shipment.processor2_idd)).first()
+                processor_location = Processor2Location.objects.filter(processor=processor).first()
+                if processor_location:
+                    location = processor_location.name
+                else:
+                    location = "N/A"
+        else:
+            location = "In Transit"    
+        select_crop = get_shipment.crop        
+        context = procesor_inbound_shipment_response(select_crop, get_shipment.shipment_id, from_date, to_date)
+          
+        new_context.update(context)    
+        context_ = location_response(new_context)                                
+        new_context.update(context_) 
+        
+    elif not check_shipment and ProcessorWarehouseShipment.objects.filter(shipment_id__icontains=search_text).exists():
+        type = "contract_shipment"
+        shipments = ProcessorWarehouseShipment.objects.filter(shipment_id__icontains=search_text).values("id","processor_shipment_crop__crop", "contract__secret_key","contract_id" ,"processor_entity_name","processor_type", "processor_id", "shipment_id", "warehouse_id", "warehouse_name","customer_name","customer_id", "date_pulled", "carrier_type", "distributor_receive_date", "status")
+        for shipment in shipments:
+            crops = ProcessorShipmentCrops.objects.filter(shipment_id=shipment["id"]).values("id", "crop","lot_number", "net_weight", "weight_unit", 'waybill_number' )
+
+            shipment["crops"] = []
+            for crop in crops:
+                
+                additional_waybill = ProcessorShipmentDiversionTracking.objects.filter(
+                    shipment_id=shipment["id"],
+                    crop_id=crop["id"]
+                ).order_by("-id").values("waybill_number").first()
+
+                shipment["crops"].append({
+                    "crop_name": crop["crop"],
+                    "lot_number": crop["lot_number"],
+                    "net_weight": crop["net_weight"],
+                    "weight_unit": crop["weight_unit"],
+                    "new_waybill_number": additional_waybill["waybill_number"] if additional_waybill else None,
+                })
+            carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+            shipment["carrier_id"] = carrier.carrier_id  
+
+        get_shipment = shipments.first()
+        check_waybill_entries = list(ProcessorShipmentDiversionTracking.objects.filter(shipment=get_shipment["id"]).values_list("address", flat=True))
+        if check_waybill_entries and get_shipment["status"] != "Received":
+            location = check_waybill_entries[-1]
+        elif check_waybill_entries and get_shipment["status"] == "Received":
+            if get_shipment["warehouse_id"] not in [None, "null", "", " "]:
+                destination = Warehouse.objects.filter(id=int(get_shipment["warehouse_id"])).first()
+            else:
+                destination = Customer.objects.filter(id=int(get_shipment["customer_id"])).first()
+            location = destination.location
+        else:
+            location = "In Transit"
+        if get_shipment["warehouse_id"] not in [None, "null", "", " "]:
+            
+            inbound5 = list(shipments)
+            new_context["inbound5_wip"] = inbound5
+            new_context["outbound5_wip"] = inbound5
+            crops = ProcessorShipmentCrops.objects.filter(shipment_id=get_shipment["id"])
+            processor_entity_name = get_shipment["processor_entity_name"]
+            processor_id = get_shipment["processor_id"]
+            processor_type = get_shipment["processor_type"]
+            for crop in crops:
+                select_crop = crop.crop
+                if processor_type == "T1":
+                    return_context = t1_processor_shipments(select_crop, processor_id, from_date, to_date)
+                elif processor_type == "T2":
+                    return_context = t2_processor_shipments(select_crop, processor_id, from_date, to_date, processor_entity_name)
+                elif processor_type == "T3":
+                    return_context = t3_processor_shipments(select_crop, processor_id, from_date, to_date, processor_entity_name)
+                elif processor_type == "T4":
+                    return_context = t4_processor_shipments(select_crop, processor_id, from_date, to_date, processor_entity_name)
+                
+                keys_to_extend = [
+                    "origin_context",
+                    "t1_processor",
+                    "inbound2_wip",
+                    "inbound3_wip",
+                    "inbound4_wip",
+                    "outbound2_wip",
+                    "outbound3_wip",
+                    "outbound4_wip",
+                ]
+
+                for key in keys_to_extend:
+                    if return_context.get(key):
+                        new_context[key] = new_context.get(key, [])
+                        new_context[key].extend(return_context[key])                                      
+            
+            new_context_ = location_response(new_context)                           
+            new_context.update(new_context_)
+        else:
+             
+            inbound6 = list(shipments)
+            new_context["inbound6_wip"] = inbound6
+            new_context["outbound5_wip"] = inbound6
+            new_context["inbound5_wip"] = []
+            new_context["outbound6_wip"] = []
+
+            crops = ProcessorShipmentCrops.objects.filter(shipment_id=get_shipment["id"])
+
+            processor_entity_name = get_shipment["processor_entity_name"]
+            processor_id = get_shipment["processor_id"]
+            processor_type = get_shipment["processor_type"]
+            for crop in crops:
+                select_crop = crop.crop
+                if processor_type == "T1":
+                    return_context = t1_processor_shipments(select_crop, processor_id, from_date, to_date)
+                elif processor_type == "T2":
+                    return_context = t2_processor_shipments(select_crop, processor_id, from_date, to_date, processor_entity_name)
+                elif processor_type == "T3":
+                    return_context = t3_processor_shipments(select_crop, processor_id, from_date, to_date, processor_entity_name)
+                elif processor_type == "T4":
+                    return_context = t4_processor_shipments(select_crop, processor_id, from_date, to_date, processor_entity_name)
+                
+                keys_to_extend = [
+                    "origin_context",
+                    "t1_processor",
+                    "inbound2_wip",
+                    "inbound3_wip",
+                    "inbound4_wip",
+                    "outbound2_wip",
+                    "outbound3_wip",
+                    "outbound4_wip",
+                ]
+
+                for key in keys_to_extend:
+                    if return_context.get(key):
+                        new_context[key] = new_context.get(key, [])
+                        new_context[key].extend(return_context[key])                                      
+            
+            new_context_ = location_response(new_context)                           
+            new_context.update(new_context_)
+    
+    elif not check_shipment and WarehouseCustomerShipment.objects.filter(shipment_id__icontains=search_text).exists():
+        type = "contract_shipment"
+        shipments = WarehouseCustomerShipment.objects.filter(shipment_id__icontains=search_text).values("id","warehouse_shipment_crop__crop","contract__secret_key","contract_id","shipment_id", "warehouse_id", "customer_id","warehouse_name","customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status")
+        for shipment in shipments:
+            crops = WarehouseShipmentCrops.objects.filter(shipment_id=shipment["id"]).values("id", "crop","lot_number", "net_weight", "weight_unit", 'waybill_number')
+
+            shipment["crops"] = []
+            for crop in crops:
+                
+                additional_lot = WarehouseShipmentDiversionTracking.objects.filter(
+                    shipment_id=shipment["id"],
+                    crop_id=crop["id"]
+                ).order_by("-id").values("waybill_number").first()
+
+                shipment["crops"].append({
+                    "crop_name": crop["crop"],
+                    "lot_number": crop["lot_number"],
+                    "net_weight": crop["net_weight"],
+                    "weight_unit": crop["weight_unit"],
+                    "waybill_number": additional_lot["waybill_number"] if additional_lot else None,
+                })
+            carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first() 
+            shipment["carrier_id"] = carrier.carrier_id  
+
+        get_shipment = shipments.first()
+        check_lot_entries = list(WarehouseShipmentDiversionTracking.objects.filter(shipment=get_shipment["id"]).values_list("address", flat=True))
+        if check_lot_entries and get_shipment["status"] != "Received":
+            location = check_lot_entries[-1]
+        elif check_lot_entries and get_shipment["status"] == "Received":
+            
+            destination = Customer.objects.filter(id=int(get_shipment["customer_id"])).first()
+            location = destination.location
+        else:
+            location = "In Transit"
+        new_context["inbound6_wip"] = list(shipments)
+        new_context["outbound6_wip"] = list(shipments)
+        crops = WarehouseShipmentCrops.objects.filter(shipment_id=get_shipment["id"])
+        outbound5_processor = []
+        for crop in crops:
+            select_crop = crop.crop
+            check_processor_shipment = ProcessorWarehouseShipment.objects.filter(warehouse_id=get_shipment["warehouse_id"], processor_shipment_crop__crop=crop.crop, processor_shipment_crop__crop_type=crop.crop_type).values("id","processor_shipment_crop__crop", "contract__secret_key","contract_id", "processor_entity_name","processor_type", "processor_id", "shipment_id", "warehouse_id", "warehouse_name","customer_name","customer_id", "date_pulled", "carrier_type", "distributor_receive_date", "status")
+            if check_processor_shipment:
+                for shipment in check_processor_shipment:                   
+                    shipment_crops = ProcessorShipmentCrops.objects.filter(shipment_id=shipment["id"]).values("id", "crop","lot_number", "net_weight", "weight_unit", 'waybill_number' )
+
+                    shipment["crops"] = []
+                    for crop_ in shipment_crops:
+                        
+                        additional_waybill = ProcessorShipmentDiversionTracking.objects.filter(
+                            shipment_id=shipment["id"],
+                            crop_id=crop_["id"]
+                        ).order_by("-id").values("waybill_number").first()
+
+                        shipment["crops"].append({
+                            "crop_name": crop_["crop"],
+                            "lot_number": crop_["lot_number"],
+                            "net_weight": crop_["net_weight"],
+                            "weight_unit": crop_["weight_unit"],
+                            "new_waybill_number": additional_waybill["waybill_number"] if additional_waybill else None,
+                        })
+                    carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first() 
+                    shipment["carrier_id"] = carrier.carrier_id  
+                    outbound5_processor.extend(check_processor_shipment) 
+                    processor_entity_name = shipment["processor_entity_name"]
+                    processor_id = shipment["processor_id"]
+                    processor_type = shipment["processor_type"]                             
+                    if processor_type == "T1":
+                        return_context = t1_processor_shipments(select_crop, processor_id, from_date, to_date)
+                    elif processor_type == "T2":
+                        return_context = t2_processor_shipments(select_crop, processor_id, from_date, to_date, processor_entity_name)
+                    elif processor_type == "T3":
+                        return_context = t3_processor_shipments(select_crop, processor_id, from_date, to_date, processor_entity_name)
+                    elif processor_type == "T4":
+                        return_context = t4_processor_shipments(select_crop, processor_id, from_date, to_date, processor_entity_name)
+                    
+                    keys_to_extend = [
+                        "origin_context",
+                        "t1_processor",
+                        "inbound2_wip",
+                        "inbound3_wip",
+                        "inbound4_wip",
+                        "outbound2_wip",
+                        "outbound3_wip",
+                        "outbound4_wip",
+                    ]
+
+                    for key in keys_to_extend:
+                        if return_context.get(key):
+                            new_context[key] = new_context.get(key, [])
+                            new_context[key].extend(return_context[key])                                     
+                
+        new_context["outbound5_wip"] = outbound5_processor
+        new_context["inbound5_wip"] = outbound5_processor   
+
+        new_context_ = location_response(new_context)                           
+        new_context.update(new_context_)                     
+    
+    else:
+        new_context['no_rec_found_msg'] = "No Records Found"  
+    
+    context_ = grower_location(new_context)
+    new_context.update(context_)
+    new_context["shipment"] = get_shipment
+    new_context["shipment_type"] = type
+    new_context["from_date"] = from_date
+    new_context["to_date"] = to_date
+    new_context["location"] = location
+    
+    return render(request, 'tracemodule/view_traceability2.html', new_context)
+
+
+def get_unique_shipments_by_id(shipments):
+    """
+    Ensures the list of shipments is unique by shipment_id.
+    """
+    unique_shipments = {}
+    for shipment in shipments:
+        shipment_id = shipment.get("shipment_id")
+        if shipment_id not in unique_shipments:
+            unique_shipments[shipment_id] = shipment
+    return list(unique_shipments.values())
+
+
+@login_required()
+def export_all_csv_for_shipmentID(request, search_text, crop_id, diversion_id, from_date, to_date):
+    print('this function called')
+    selected_coloumns = request.GET.getlist('columns')
+    
+    filename = f"{search_text}.csv"
+    response = HttpResponse(
+        content_type='text/csv',
+        headers={'Content-Disposition': 'attachment; filename="{}"'.format(filename)},
+    )
+    writer = csv.writer(response)
+    new_context = {}
+    
+    check_shipment = GrowerShipment.objects.filter(shipment_id=search_text)
+                        
+    if check_shipment.exists() :
+        
+        get_shipment = check_shipment.values().first()            
+        select_crop = get_shipment["crop"]
+        context = grower_shipment_response(select_crop, get_shipment["shipment_id"], from_date, to_date)
+        new_context.update(context)
+
+    elif not check_shipment and ShipmentManagement.objects.filter(shipment_id=search_text).exists():
+        
+        shipment = ShipmentManagement.objects.filter(shipment_id=search_text)
+        get_shipment = shipment.values().first()       
+        select_crop = get_shipment["crop"]        
+        context = procesor_inbound_shipment_response(select_crop, get_shipment["shipment_id"], from_date, to_date)
+          
+        new_context.update(context)
+
+    elif not check_shipment and ProcessorWarehouseShipment.objects.filter(shipment_id=search_text).exists():
+        
+        shipments = ProcessorWarehouseShipment.objects.filter(shipment_id=search_text).values("id","processor_shipment_crop__crop", "contract__secret_key","contract_id" ,"processor_entity_name","processor_type", "processor_id", "shipment_id", "warehouse_id", "warehouse_name","customer_name","customer_id", "date_pulled", "carrier_type", "distributor_receive_date", "status", "destination")
+        
+        shipment = shipments.first()
+        
+        carrier = CarrierDetails.objects.filter(shipment_id=shipment["id"]).first()
+        carrier_id = carrier.carrier_id if carrier else None
+
+        # Fetch all crops for this shipment
+        crops = ProcessorShipmentCrops.objects.filter(
+            shipment_id=shipment["id"], id=int(crop_id)
+        ).values("id", "crop", "lot_number", "net_weight", "weight_unit", "waybill_number")
+
+        for crop in crops:
+            # Get all diversions for this crop
+            diversions = ProcessorShipmentDiversionTracking.objects.filter(
+                shipment_id=shipment["id"],
+                crop_id=crop["id"], id=int(diversion_id)
+            ).order_by("-id")
+
+            if diversions.exists():
+                if shipment["status"] != "Received":
+                    location = diversions[0].address
+                else:
+                    location = shipment["destination"]
+
+                for diversion in diversions:
+                    shipment["carrier_id"] = carrier_id
+                    shipment["location"] = location
+                    shipment["crops"] = [{
+                        "crop_name": crop["crop"],
+                        "crop_id":crop["id"],
+                        "lot_number": crop["lot_number"],
+                        "net_weight": diversion.net_weight,
+                        "weight_unit": diversion.weight_unit,
+                        "diversion_id": diversion.id,
+                        "prev_waybill_number": diversion.prev_waybill_number,
+                        "new_waybill_number": diversion.waybill_number,
+                        "address": diversion.address,
+                        "diversion_date": diversion.diversion_date,
+                    }]
+                
+            else:
+                if shipment["status"] != "Received":
+                    location = "In Transit"
+                else:
+                    location = shipment["destination"]
+
+                shipment["carrier_id"] = carrier_id
+                shipment["location"] = location
+                shipment["crops"] = [{
+                    "crop_name": crop["crop"],
+                    "crop_id":crop["id"],
+                    "lot_number": crop["lot_number"],
+                    "net_weight": crop["net_weight"],
+                    "weight_unit": crop["weight_unit"],
+                    "diversion_id": 0,
+                    "prev_waybill_number": None,
+                    "new_waybill_number": None,
+                    "address": None,
+                    "diversion_date": None,
+                }]
+                    
+        if diversion_id not in [None, '0', 0, "null"]:
+            diversion_id = int(diversion_id)
+            diversion_details = ProcessorShipmentDiversionTracking.objects.filter(id=int(diversion_id), shipment_id=shipment["id"], crop_id=int(crop_id)).values("crop__crop","net_weight", "weight_unit","prev_waybill_number", "waybill_number", "address", "diversion_date")
+
+            new_context["diversions"] = diversion_details
+        else:
+            new_context["diversions"] = []
+            
+        if shipment["warehouse_id"] not in [None, "null", "", " "]:
+            
+            inbound5 = [shipment]
+            new_context["inbound5_wip"] = inbound5
+            new_context["outbound5_wip"] = inbound5
+            
+            crops = ProcessorShipmentCrops.objects.filter(shipment_id=shipment["id"], id=int(crop_id))
+            processor_entity_name = shipment["processor_entity_name"]
+            processor_id = shipment["processor_id"]
+            processor_type = shipment["processor_type"]
+            for crop in crops:
+                select_crop = crop.crop
+                if processor_type == "T1":
+                    return_context = t1_processor_shipments(select_crop, processor_id, from_date, to_date)
+                elif processor_type == "T2":
+                    return_context = t2_processor_shipments(select_crop, processor_id, from_date, to_date, processor_entity_name)
+                elif processor_type == "T3":
+                    return_context = t3_processor_shipments(select_crop, processor_id, from_date, to_date, processor_entity_name)
+                elif processor_type == "T4":
+                    return_context = t4_processor_shipments(select_crop, processor_id, from_date, to_date, processor_entity_name)
+                
+                keys_to_extend = [
+                    "origin_context",
+                    "t1_processor",
+                    "inbound2_wip",
+                    "inbound3_wip",
+                    "inbound4_wip",
+                    "outbound2_wip",
+                    "outbound3_wip",
+                    "outbound4_wip",
+                ]
+
+                for key in keys_to_extend:
+                    if return_context.get(key):
+                        new_context[key] = new_context.get(key, [])
+                        new_context[key].extend(return_context[key])                                      
+            
+        else:
+             
+            inbound6 = [shipment]
+            
+            new_context["inbound6_wip"] = inbound6
+            new_context["outbound5_wip"] = inbound6
+            new_context["inbound5_wip"] = []
+            new_context["outbound6_wip"] = []
+
+            crops = ProcessorShipmentCrops.objects.filter(shipment_id=shipment["id"], id=int(crop_id))
+
+            processor_entity_name = shipment["processor_entity_name"]
+            processor_id = shipment["processor_id"]
+            processor_type = shipment["processor_type"]
+            for crop in crops:
+                select_crop = crop.crop
+                if processor_type == "T1":
+                    return_context = t1_processor_shipments(select_crop, processor_id, from_date, to_date)
+                elif processor_type == "T2":
+                    return_context = t2_processor_shipments(select_crop, processor_id, from_date, to_date, processor_entity_name)
+                elif processor_type == "T3":
+                    return_context = t3_processor_shipments(select_crop, processor_id, from_date, to_date, processor_entity_name)
+                elif processor_type == "T4":
+                    return_context = t4_processor_shipments(select_crop, processor_id, from_date, to_date, processor_entity_name)
+                
+                keys_to_extend = [
+                    "origin_context",
+                    "t1_processor",
+                    "inbound2_wip",
+                    "inbound3_wip",
+                    "inbound4_wip",
+                    "outbound2_wip",
+                    "outbound3_wip",
+                    "outbound4_wip",
+                ]
+
+                for key in keys_to_extend:
+                    if return_context.get(key):
+                        new_context[key] = new_context.get(key, [])
+                        new_context[key].extend(return_context[key])                                                                        
+    
+    elif not check_shipment and WarehouseCustomerShipment.objects.filter(shipment_id__icontains=search_text).exists():
+        
+        shipments = WarehouseCustomerShipment.objects.filter(shipment_id=search_text).values("id","warehouse_shipment_crop__crop","contract__secret_key","contract_id","shipment_id", "warehouse_id", "customer_id","warehouse_name","customer_name", "date_pulled", "carrier_type", "customer_receive_date", "status", "destination")
+
+        shipment = shipments.first()
+        carrier = CarrierDetails2.objects.filter(shipment_id=shipment["id"]).first()
+        carrier_id = carrier.carrier_id if carrier else None
+
+        # Fetch all crops for this shipment
+        crops = WarehouseShipmentCrops.objects.filter(
+            shipment_id=shipment["id"], id=int(crop_id)
+        ).values("id", "crop", "lot_number", "net_weight", "weight_unit", "waybill_number")
+
+        for crop in crops:
+            # Get all diversions for this crop
+            diversions = WarehouseShipmentDiversionTracking.objects.filter(
+                shipment_id=shipment["id"],
+                crop_id=crop["id"], id=int(diversion_id)
+            ).order_by("-id")
+
+            if diversions.exists():
+                if shipment["status"] != "Received":
+                    location = diversions[0].address
+                else:
+                    location = shipment["destination"]
+
+                for diversion in diversions:                       
+                    shipment["carrier_id"] = carrier_id
+                    shipment["location"] = location
+                    shipment["crops"] = [{
+                        "crop_name": crop["crop"],
+                        "crop_id":crop["id"],
+                        "lot_number": crop["lot_number"],
+                        "net_weight": diversion.net_weight,
+                        "weight_unit": diversion.weight_unit,
+                        "diversion_id": diversion.id,
+                        "prev_waybill_number": diversion.prev_waybill_number,
+                        "new_waybill_number": diversion.waybill_number,
+                        "address": diversion.address,
+                        "diversion_date": diversion.diversion_date,
+                    }]
+                    
+            else:
+                if shipment["status"] != "Received":
+                    location = "In Transit"
+                else:
+                    location = shipment["destination"]
+
+                shipment["carrier_id"] = carrier_id
+                shipment["location"] = location
+                shipment["crops"] = [{
+                    "crop_name": crop["crop"],
+                    "crop_id":crop["id"],
+                    "lot_number": crop["lot_number"],
+                    "net_weight": crop["net_weight"],
+                    "weight_unit": crop["weight_unit"],
+                    "diversion_id": 0,
+                    "prev_waybill_number": None,
+                    "new_waybill_number": None,
+                    "address": None,
+                    "diversion_date": None,
+                }]                    
+        
+        if diversion_id not in [None, '0', 0, "null"]:
+            diversion_id = int(diversion_id)
+            diversion_details = WarehouseShipmentDiversionTracking.objects.filter(id=int(diversion_id), shipment_id=shipment["id"], crop_id=int(crop_id)).values("crop__crop","net_weight", "weight_unit","prev_waybill_number", "waybill_number", "address", "diversion_date")
+
+            new_context["diversions"] = diversion_details
+        else:
+            new_context["diversions"] = []
+
+        new_context["inbound6_wip"] = [shipment]
+        new_context["outbound6_wip"] = [shipment]
+
+        crops = WarehouseShipmentCrops.objects.filter(shipment_id=shipment["id"], id=int(crop_id))
+        outbound5_processor = []
+        for crop in crops:
+            select_crop = crop.crop
+            check_processor_shipment = ProcessorWarehouseShipment.objects.filter(warehouse_id=shipment["warehouse_id"], processor_shipment_crop__crop=crop.crop, processor_shipment_crop__crop_type=crop.crop_type, processor_shipment_crop__item_name=crop.item_name).values("id","processor_shipment_crop__crop", "contract__secret_key","contract_id", "processor_entity_name","processor_type", "processor_id", "shipment_id", "warehouse_id", "warehouse_name","customer_name","customer_id", "date_pulled", "carrier_type", "distributor_receive_date", "status", "destination")
+            if check_processor_shipment:
+                for ship in check_processor_shipment: 
+                    carrier = CarrierDetails.objects.filter(shipment_id=ship["id"]).first()
+                    carrier_id = carrier.carrier_id if carrier else None                  
+                    shipment_crops = ProcessorShipmentCrops.objects.filter(shipment_id=ship["id"], crop=crop.crop, crop_type=crop.crop_type, item_name=crop.item_name).values("id", "crop","lot_number", "net_weight", "weight_unit", 'waybill_number' )
+                   
+                    for crop_ in shipment_crops:
+                        
+                        # Get all diversions for this crop
+                        diversions = ProcessorShipmentDiversionTracking.objects.filter(
+                            shipment_id=ship["id"],
+                            crop_id=crop_["id"], id=int(diversion_id)
+                        ).order_by("-id")
+
+                        if diversions.exists():
+                            if ship["status"] != "Received":
+                                location = diversions[0].address
+                            else:
+                                location = ship["destination"]
+
+                            for diversion in diversions:                                
+                                ship["carrier_id"] = carrier_id
+                                ship["location"] = location
+                                ship["crops"] = [{
+                                    "crop_name": crop_["crop"],
+                                    "crop_id":crop_["id"],
+                                    "lot_number": crop_["lot_number"],
+                                    "net_weight": diversion.net_weight,
+                                    "weight_unit": diversion.weight_unit,
+                                    "diversion_id": diversion.id,
+                                    "prev_waybill_number": diversion.prev_waybill_number,
+                                    "new_waybill_number": diversion.waybill_number,
+                                    "address": diversion.address,
+                                    "diversion_date": diversion.diversion_date,
+                                }]                                
+                        else:
+                            if ship["status"] != "Received":
+                                location = "In Transit"
+                            else:
+                                location = ship["destination"]
+
+                            ship["carrier_id"] = carrier_id
+                            ship["location"] = location
+                            ship["crops"] = [{
+                                "crop_name": crop_["crop"],
+                                "crop_id":crop_["id"],
+                                "lot_number": crop_["lot_number"],
+                                "net_weight": crop_["net_weight"],
+                                "weight_unit": crop_["weight_unit"],
+                                "diversion_id": 0,
+                                "prev_waybill_number": None,
+                                "new_waybill_number": None,
+                                "address": None,
+                                "diversion_date": None,
+                            }]
+                            
+                    outbound5_processor.extend(check_processor_shipment) 
+                    processor_entity_name = ship["processor_entity_name"]
+                    processor_id = ship["processor_id"]
+                    processor_type = ship["processor_type"]                             
+                    if processor_type == "T1":
+                        return_context = t1_processor_shipments(select_crop, processor_id, from_date, to_date)
+                    elif processor_type == "T2":
+                        return_context = t2_processor_shipments(select_crop, processor_id, from_date, to_date, processor_entity_name)
+                    elif processor_type == "T3":
+                        return_context = t3_processor_shipments(select_crop, processor_id, from_date, to_date, processor_entity_name)
+                    elif processor_type == "T4":
+                        return_context = t4_processor_shipments(select_crop, processor_id, from_date, to_date, processor_entity_name)
+                    
+                    keys_to_extend = [
+                        "origin_context",
+                        "t1_processor",
+                        "inbound2_wip",
+                        "inbound3_wip",
+                        "inbound4_wip",
+                        "outbound2_wip",
+                        "outbound3_wip",
+                        "outbound4_wip",
+                    ]
+
+                    for key in keys_to_extend:
+                        if return_context.get(key):
+                            new_context[key] = new_context.get(key, [])
+                            new_context[key].extend(return_context[key])                                     
+                
+        new_context["outbound5_wip"] = outbound5_processor
+        new_context["inbound5_wip"] = outbound5_processor    
+
+    writer.writerow([f"Shipment ID = {shipment['shipment_id']}"])
+    writer.writerow([""])
+    
+    excluded_key = "no_rec_found_msg" 
+    filtered_context = {key: value for key, value in new_context.items() if key != excluded_key}
+   
+    headers = []
+
+    if "origin_context" in selected_coloumns and "origin_context" in filtered_context and len(filtered_context["origin_context"]) > 0:
+            headers.extend(["Origin: Field", "Grower"])
+
+    if "inbound_mill" in selected_coloumns and "t1_processor" in filtered_context and len(filtered_context["t1_processor"]) > 0:
+        headers.extend(["Inbound Mill: Shipment ID", "Crop", "Weight", "Date", "Grower"])
+        
+    if "in_mill" in selected_coloumns:
+        if "inbound3_wip" in filtered_context and len(filtered_context["inbound3_wip"]) > 0 and "inbound4_wip" in filtered_context and len(filtered_context["inbound4_wip"])> 0:
+            headers.extend(["In Mill: Mill", "Shipment ID", "Crop", "Weight", "Lot Number"])
+        
+        elif "inbound2_wip" in filtered_context and len(filtered_context["inbound2_wip"]) > 0 and "inbound4_wip" in filtered_context and len(filtered_context["inbound4_wip"])> 0:
+            headers.extend(["In Mill: Mill", "Shipment ID", "Crop", "Weight", "Lot Number"])
+
+        elif "inbound2_wip" in filtered_context and len(filtered_context["inbound2_wip"]) > 0 and "inbound3_wip" in filtered_context and len(filtered_context["inbound3_wip"])> 0:
+            headers.extend(["In Mill: Mill", "Shipment ID", "Crop", "Weight","Lot Number"]) 
+
+        elif "inbound4_wip" in filtered_context and len(filtered_context["inbound4_wip"]) > 0:
+            headers.extend(["In Mill: Mill", "Shipment ID","Crop", "Weight", "Lot Number"])
+
+        elif "inbound3_wip" in filtered_context and len(filtered_context["inbound3_wip"]) > 0:
+            headers.extend(["In Mill: Mill", "Shipment ID","Crop", "Weight", "Lot Number"])
+
+        elif "inbound2_wip" in filtered_context and len(filtered_context["inbound2_wip"]) > 0:
+            headers.extend(["In Mill: Mill", "Shipment ID", "Crop", "Weight","Lot Number"])
+
+    if "assigned_lot_number" in selected_coloumns and "outbound5_wip" in filtered_context and len(filtered_context["outbound5_wip"]) > 0:
+        headers.extend(["Assigned Lot Number: Mill", "Crop", "Weight","Lot Number", "Shipment ID"])        
+
+    if "shipped_to_warehouse" in selected_coloumns and "outbound5_wip" in filtered_context and len(filtered_context["outbound5_wip"]) > 0:        
+        headers.extend(["Shipped To Warehouse/Customer: Shipment ID", "Crop", "Weight", "Transit ID", "New Lot Number", "Date"])
+
+    if "received_by_warehouse" in selected_coloumns and "inbound5_wip" in filtered_context and len(filtered_context["inbound5_wip"]) > 0:
+        headers.extend(["Received By Warehouse: Warehouse Name", "Warehouse ID", "Receive Date", "Crop", "Weight", "Shipment ID"])
+
+    if "shipped_to_customer" in selected_coloumns and "outbound6_wip" in filtered_context and len(filtered_context["outbound6_wip"]) > 0:
+        headers.extend(["Shipped To Customer: Shipment ID", "Crop", "Weight", "Transit ID", "New Waybill Number", "Date"])
+
+    if "received_by_customer" in selected_coloumns and "inbound6_wip" in filtered_context and len(filtered_context["inbound6_wip"]) > 0:
+        headers.extend(["Received By Customer: Customer Name", "Customer ID", "Receive Date", "Crop", "Weight", "Shipment ID"])
+
+    writer.writerow(headers)
+    writer.writerow([""])
+    
+    origin_context = new_context.get("origin_context", [])
+    t1_processor = new_context.get("t1_processor", [])
+    outbound5 = new_context.get("outbound5_wip", [])
+    inbound5 = new_context.get("inbound5_wip", [])
+    outbound6 = new_context.get("outbound6_wip", [])
+    inbound6 = new_context.get("inbound6_wip", [])
+    in_mill_data = []
+
+    if "inbound3_wip" in filtered_context and len(filtered_context["inbound3_wip"]) > 0 and "inbound4_wip" in filtered_context and len(filtered_context["inbound4_wip"])> 0 :
+            in_mill_data = new_context.get("inbound4_wip")
+
+    elif "inbound2_wip" in filtered_context and len(filtered_context["inbound2_wip"]) > 0 and "inbound4_wip" in filtered_context and len(filtered_context["inbound4_wip"])> 0 :
+        in_mill_data = new_context.get("inbound4_wip")
+
+    elif "inbound2_wip" in filtered_context and len(filtered_context["inbound2_wip"]) > 0 and "inbound3_wip" in filtered_context and len(filtered_context["inbound3_wip"])> 0:
+        in_mill_data = new_context.get("inbound3_wip")   
+
+    elif "inbound4_wip" in filtered_context and len(filtered_context["inbound4_wip"]) > 0:
+        in_mill_data = new_context.get("inbound4_wip")  
+
+    elif "inbound3_wip" in filtered_context and len(filtered_context["inbound3_wip"]) > 0 :
+        in_mill_data = new_context.get("inbound3_wip")   
+    
+    elif "inbound2_wip" in filtered_context and len(filtered_context["inbound2_wip"]) > 0:
+        in_mill_data = new_context.get("inbound2_wip")
+    
+    max_rows = max(len(origin_context), len(t1_processor),len(in_mill_data),len(outbound5), len(inbound5), len(outbound6), len(inbound6))
+    
+   # Populate rows dynamically
+    for i in range(max_rows):
+        row = []
+
+        # Origin Data
+        if "Origin: Field" in headers and "Grower" in headers:
+            if i < len(origin_context):
+                origin = origin_context[i]
+                row.extend([
+                    origin.get("field_name", ""), origin.get("grower_name", "")
+                ])
+            else:
+                row.extend([""] * 2)
+
+        # T1 Processor Data
+        if "Inbound Mill: Shipment ID" in headers:
+            if i < len(t1_processor):
+                t1_processor_data = t1_processor[i]
+                crop_data = f'{t1_processor_data.get("crop", "")}'
+                # print(format_date(t1_processor_data.get("date", "")))
+                weight_data = f'{t1_processor_data.get("pounds_received") if t1_processor_data.get("pounds_received") not in ["None", None, "", "null"] else t1_processor_data.get("pounds_shipped")} {t1_processor_data.get("unit", "")}'
+                row.extend([
+                    t1_processor_data.get("shipment_id", ""), crop_data, weight_data, format_date(t1_processor_data.get("date", "")), t1_processor_data.get("grower", "")
+                ])
+            else:
+                row.extend([""] * 5)
+
+        # In Mill Data
+        if "In Mill: Mill" in headers:
+            if i < len(in_mill_data):
+                mill_data = in_mill_data[i]
+                crop_data = f'{mill_data.get("crop", "")}'
+                weight_data = f'{mill_data.get("received_weight") if mill_data.get("received_weight") else mill_data.get("weight_or_product")} {mill_data.get("weight_of_product_unit", "")}'
+                row.extend([
+                    mill_data.get("processor2_name", ""), mill_data.get("shipment_id", ""), crop_data, weight_data, mill_data.get("lot_number", "")
+                ])
+            else:
+                row.extend([""] * 5)
+        
+        # Outbound5 Data
+        if "Assigned Lot Number: Mill" in headers:
+            if i < len(outbound5):
+                outbound5_data = outbound5[i]
+                crop_data = "\n".join(
+                    f"{crop['crop_name']}" 
+                    for crop in outbound5_data.get("crops", [])
+                )
+                weight_data = "\n".join(
+                    f"{crop['net_weight']} {crop['weight_unit']}"
+                    for crop in outbound5_data.get("crops", [])
+                )
+                lot_number_data = "\n".join(
+                    f"{crop['lot_number']}"
+                    for crop in outbound5_data.get("crops", [])
+                )
+                row.extend([
+                    outbound5_data.get("processor_entity_name", ""), crop_data, weight_data, lot_number_data, outbound5_data.get("shipment_id")
+                ])
+            else:
+                row.extend([""] * 5)
+                
+        if "Shipped To Warehouse/Customer: Shipment ID" in headers:
+            if i < len(outbound5):
+                outbound5_data = outbound5[i]                
+                crop_data = "\n".join(
+                    f"{crop['crop_name']}" 
+                    for crop in outbound5_data.get("crops", [])
+                )
+                weight_data = "\n".join(
+                    f"{crop['net_weight']} {crop['weight_unit']}"
+                    for crop in outbound5_data.get("crops", [])
+                )
+                new_waybill_number_data = "\n".join(
+                    f"{crop['new_waybill_number']}"
+                    for crop in outbound5_data.get("crops", [])
+                )
+                row.extend([
+                    outbound5_data.get("shipment_id", ""), crop_data, weight_data, outbound5_data.get("carrier_id", ""), 
+                    new_waybill_number_data, format_date(outbound5_data.get("date_pulled", ""))
+                ])
+            else:
+                row.extend([""] * 6)
+
+        # Inbound5 Data
+        if "Received By Warehouse: Warehouse Name" in headers:
+            if i < len(inbound5):
+                inbound5_data = inbound5[i]
+                crop_data = "\n".join(
+                    f"{crop['crop_name']}" 
+                    for crop in inbound5_data.get("crops", [])
+                )
+                weight_data = "\n".join(
+                    f"{crop['net_weight']} {crop['weight_unit']}"
+                    for crop in inbound5_data.get("crops", [])
+                )
+                row.extend([
+                    inbound5_data.get("warehouse_name", ""), inbound5_data.get("warehouse_id", ""), 
+                    format_date(inbound5_data.get("distributor_receive_date", "")), crop_data, weight_data, inbound5_data.get("shipment_id", "")
+                ])
+            else:
+                row.extend([""] * 6)
+
+        # Outbound6 Data
+        if "Shipped To Customer: Shipment ID" in headers:
+            if i < len(outbound6):
+                outbound6_data = outbound6[i]
+                crop_data = "\n".join(
+                    f"{crop['crop_name']}" 
+                    for crop in outbound6_data.get("crops", [])
+                )
+                weight_data = "\n".join(
+                    f"{crop['net_weight']} {crop['weight_unit']}"
+                    for crop in outbound6_data.get("crops", [])
+                )
+                new_waybill_number_data = "\n".join(
+                    f"{crop['new_waybill_number']}"
+                    for crop in outbound6_data.get("crops", [])
+                )
+                row.extend([
+                    outbound6_data.get("shipment_id", ""), crop_data, weight_data, outbound6_data.get("carrier_id", ""), 
+                    new_waybill_number_data, format_date(outbound6_data.get("date_pulled", ""))
+                ])
+            else:
+                row.extend([""] * 6)
+
+        # Inbound6 Data
+        if "Received By Customer: Customer Name" in headers:
+            if i < len(inbound6):
+                inbound6_data = inbound6[i]
+                crop_data = "\n".join(
+                    f"{crop['crop_name']}" 
+                    for crop in inbound6_data.get("crops", [])
+                )
+                weight_data = "\n".join(
+                    f"{crop['net_weight']} {crop['weight_unit']}"
+                    for crop in inbound6_data.get("crops", [])
+                )
+                row.extend([
+                    inbound6_data.get("customer_name", ""), inbound6_data.get("customer_id", ""), 
+                    format_date(inbound6_data.get("customer_receive_date", "")), crop_data, weight_data, inbound6_data.get("shipment_id", "")
+                ])
+            else:
+                row.extend([""] * 6)
+
+        # Write the row to the CSV
+        writer.writerow(row)
+
+    return response
+
+
+@login_required()
+def generate_csv_for_multiple_shipments(request, search_text, get_search_by, from_date, to_date, select_crop=None):
+    new_context = {}
+    filename = 'TRACE MODULE.csv'
+    response = HttpResponse(
+        content_type='text/csv',
+        headers={'Content-Disposition': 'attachment; filename="{}"'.format(filename)},
+    )
+    writer = csv.writer(response)
+
+    # search by Grower ....
+    if get_search_by and get_search_by == 'grower' :
+        check_grower = Grower.objects.filter(name__icontains=search_text)
+        if check_grower.exists() :
+            grower_id = check_grower.first().id
+            shipments = GrowerShipment.objects.filter(grower_id=grower_id).values(
+                'id', 'date_time', 'shipment_id', 'grower__name','grower_id','processor__id', 'processor__entity_name', 'approval_date', 'status', 'crop'
+            ).annotate(
+                date_field=F('date_time'),
+                shipment_type=Value('GrowerShipment')
+            )
+            if select_crop:
+                shipments = GrowerShipment.objects.filter(grower_id=grower_id, crop=select_crop).values(
+                    'id', 'date_time', 'shipment_id', 'grower__name','grower_id','processor__id', 'processor__entity_name', 'approval_date', 'status', 'crop'
+                ).annotate(
+                    date_field=F('date_time'),
+                    shipment_type=Value('GrowerShipment')
+                )    
+            unique_shipments = list({s["shipment_id"]: s for s in shipments}.values()) 
+            shipments = unique_shipments                        
+        else:
+            context['no_rec_found_msg'] = "No Records Found"
+
+    # search by Field ....
+    elif get_search_by and get_search_by == 'field' :
+        check_field = Field.objects.filter(name__icontains=search_text)
+        if check_field.exists() :                    
+            field_id = check_field.first().id                  
+            grower_id =  check_field.first().grower.id
+            shipments = GrowerShipment.objects.filter(grower_id=grower_id, field_id=field_id).values(
+                'id', 'date_time', 'shipment_id', 'grower__name','grower_id','processor__id', 'processor__entity_name', 'approval_date', 'status', 'crop'
+            ).annotate(
+                date_field=F('date_time'),
+                shipment_type=Value('GrowerShipment')
+            )
+            if select_crop:
+                shipments = GrowerShipment.objects.filter(grower_id=grower_id, field_id=field_id, crop=select_crop).values(
+                    'id', 'date_time', 'shipment_id', 'grower__name','grower_id','processor__id', 'processor__entity_name', 'approval_date', 'status', 'crop'
+                ).annotate(
+                    date_field=F('date_time'),
+                    shipment_type=Value('GrowerShipment')
+                )
+            unique_shipments = list({s["shipment_id"]: s for s in shipments}.values()) 
+            shipments = unique_shipments
+                                                                          
+        else:
+            context['no_rec_found_msg'] = "No Records Found"
+    
+    # search by Processor ....
+    elif get_search_by and get_search_by == 'processor' :
+        check_processor = get_processor_type(search_text)
+        if check_processor:
+            processor_type = check_processor["type"]
+            processor_id = check_processor["id"]
+            if processor_type == "T1":
+                inbound_shipments = GrowerShipment.objects.filter(processor_id=processor_id).values(
+                    'id', 'date_time', 'shipment_id', 'grower__name','grower_id','processor__id', 'processor__entity_name', 'approval_date', 'status', 'crop'
+                ).annotate(
+                    date_field=F('date_time'),
+                    shipment_type=Value('GrowerShipment')
+                )
+            else:
+                inbound_shipments = ShipmentManagement.objects.filter(processor2_idd=processor_id, sender_processor_type=processor_type).values(
+                    'id', 'date_pulled', 'shipment_id', 'processor_idd', 'processor_e_name', 'processor2_idd', 'processor2_name', 'recive_delivery_date', 'crop', 'status', 'lot_number'
+                ).annotate(
+                    date_field=F('date_pulled'),
+                    shipment_type=Value('ShipmentManagement')
+                )
+            outbound_shipments = ShipmentManagement.objects.filter(processor_idd=processor_id, sender_processor_type=processor_type).values(
+                'id', 'date_pulled', 'shipment_id', 'processor_idd', 'processor_e_name', 'processor2_idd', 'processor2_name', 'recive_delivery_date', 'crop', 'status', 'lot_number'
+            ).annotate(
+                date_field=F('date_pulled'),
+                shipment_type=Value('ShipmentManagement')
+            )
+            
+            contract_shipments = ProcessorWarehouseShipment.objects.filter(processor_id=processor_id, processor_type=processor_type).values(
+                'id', 'date_pulled', 'shipment_id', 'processor_id', 'processor_entity_name', 'warehouse_id', 'warehouse_name', 'customer_id', 'customer_name', 'status', 'distributor_receive_date'
+            ).annotate(
+                date_field=F('date_pulled'),
+                shipment_type=Value('ProcessorWarehouseShipment')
+            )
+            if select_crop:
+                if processor_type == "T1":
+                    inbound_shipments = GrowerShipment.objects.filter(processor_id=processor_id, crop=select_crop).values(
+                        'id', 'date_time', 'shipment_id', 'grower__name','grower_id','processor__id', 'processor__entity_name', 'approval_date', 'status', 'crop'
+                    ).annotate(
+                        date_field=F('date_time'),
+                        shipment_type=Value('GrowerShipment')
+                    )
+                else:
+                    inbound_shipments = ShipmentManagement.objects.filter(processor2_idd=processor_id, sender_processor_type=processor_type, crop=select_crop).values(
+                        'id', 'date_pulled', 'shipment_id', 'processor_idd', 'processor_e_name', 'processor2_idd', 'processor2_name', 'recive_delivery_date', 'crop', 'status', 'lot_number'
+                    ).annotate(
+                        date_field=F('date_pulled'),
+                        shipment_type=Value('ShipmentManagement')
+                    )
+                
+                outbound_shipments = ShipmentManagement.objects.filter(processor_idd=processor_id, sender_processor_type=processor_type, crop=select_crop).values(
+                    'id', 'date_pulled', 'shipment_id', 'processor_idd', 'processor_e_name', 'processor2_idd', 'processor2_name', 'recive_delivery_date', 'crop', 'status', 'lot_number'
+                ).annotate(
+                    date_field=F('date_pulled'),
+                    shipment_type=Value('ShipmentManagement')
+                )
+                
+                contract_shipments = ProcessorWarehouseShipment.objects.filter(processor_id=processor_id, processor_type=processor_type, processor_shipment_crop__crop=select_crop).values(
+                    'id', 'date_pulled', 'shipment_id', 'processor_id', 'processor_entity_name', 'warehouse_id', 'warehouse_name', 'customer_id', 'customer_name', 'status', 'distributor_receive_date'
+                ).annotate(
+                    date_field=F('date_pulled'),
+                    shipment_type=Value('ProcessorWarehouseShipment')
+                )
+            
+            unique_inbound_shipments = list({s["shipment_id"]: s for s in inbound_shipments}.values()) 
+            unique_outbound_shipments = list({s["shipment_id"]: s for s in outbound_shipments}.values())
+            unique_contract_shipments = list({s["shipment_id"]: s for s in contract_shipments}.values())
+            
+            final_contract_shipments = []
+            for shipment in unique_contract_shipments:        
+
+                # Fetch all crops for this shipment
+                crops = ProcessorShipmentCrops.objects.filter(
+                    shipment_id=shipment["id"]
+                ).values("id", "crop", "lot_number", "net_weight", "weight_unit", "waybill_number")
+
+                for crop in crops:
+                    # Fetch diversions for the crop
+                    diversions = ProcessorShipmentDiversionTracking.objects.filter(
+                        shipment_id=shipment["id"],
+                        crop_id=crop["id"]
+                    ).order_by("-id")
+
+                    if diversions.exists():
+                        for diversion in diversions:
+                            entry = shipment.copy()
+                            entry["crop_id"] = crop["id"]
+                            entry["diversion_id"] = diversion.id
+                            final_contract_shipments.append(entry)
+                    else:
+                        entry = shipment.copy()
+                        entry["crop_id"] = crop["id"]
+                        entry["diversion_id"] = 0
+                        final_contract_shipments.append(entry)
+            shipments = list(unique_outbound_shipments) + list(final_contract_shipments) + list(unique_inbound_shipments)                              
+            
+        else:
+            context['no_rec_found_msg'] = "No Records Found"
+    
+    # search by SKU Id ....
+    elif get_search_by and get_search_by == 'sku_id':
+        grower_shipments = GrowerShipment.objects.filter(sku__icontains=search_text).values(
+                'id', 'date_time', 'shipment_id', 'grower__name','grower_id','processor__id', 'processor__entity_name', 'approval_date', 'status', 'crop'
+            ).annotate(
+                date_field=F('date_time'),
+                shipment_type=Value('GrowerShipment')
+            )
+        unique_grower_shipments = list({s["shipment_id"]: s for s in grower_shipments}.values())
+        processor_shipments = ShipmentManagement.objects.filter(Q(storage_bin_send__icontains=search_text) | Q(storage_bin_recive__icontains=search_text)).values(
+                'id', 'date_pulled', 'shipment_id', 'processor_idd', 'processor_e_name', 'processor2_idd', 'processor2_name', 'recive_delivery_date', 'crop', 'status', 'lot_number'
+            ).annotate(
+                date_field=F('date_pulled'),
+                shipment_type=Value('ShipmentManagement')
+            ) 
+        unique_processor_shipments = list({s["shipment_id"]: s for s in processor_shipments}.values())                              
+        shipments = list(unique_grower_shipments) + list(unique_processor_shipments)    
+
+    # search by Delivery Id ....
+    elif get_search_by and get_search_by == 'deliveryid' :                                  
+        check_shipment = GrowerShipment.objects.filter(shipment_id__icontains=search_text).values(
+                'id', 'date_time', 'shipment_id', 'grower__name','grower_id','processor__id', 'processor__entity_name', 'approval_date', 'status', 'crop'
+            ).annotate(
+                date_field=F('date_time'),
+                shipment_type=Value('GrowerShipment')
+            )
+        
+        if check_shipment.exists() :
+            shipments = check_shipment
+            if select_crop:
+                shipments = check_shipment.filter(crop=select_crop) 
+
+            unique_shipments = list({s["shipment_id"]: s for s in shipments}.values())     
+            shipments = unique_shipments     
+
+        elif not check_shipment and ShipmentManagement.objects.filter(shipment_id__icontains=search_text).exists():
+            shipments = ShipmentManagement.objects.filter(shipment_id__icontains=search_text).values(
+                    'id', 'date_pulled', 'shipment_id', 'processor_idd', 'processor_e_name', 'processor2_idd', 'processor2_name', 'recive_delivery_date', 'crop', 'status', 'lot_number'
+                ).annotate(
+                    date_field=F('date_pulled'),
+                    shipment_type=Value('ShipmentManagement')
+                )
+            if select_crop:
+                shipments = ShipmentManagement.objects.filter(shipment_id__icontains=search_text, crop=select_crop).values(
+                    'id', 'date_pulled', 'shipment_id', 'processor_idd', 'processor_e_name', 'processor2_idd', 'processor2_name', 'recive_delivery_date', 'crop', 'status', 'lot_number'
+                ).annotate(
+                    date_field=F('date_pulled'),
+                    shipment_type=Value('ShipmentManagement')
+                )                    
+            unique_shipments = list({s["shipment_id"]: s for s in shipments}.values()) 
+            shipments = unique_shipments
+            
+        elif not check_shipment and ProcessorWarehouseShipment.objects.filter(shipment_id__icontains=search_text).exists():                    
+            shipments = ProcessorWarehouseShipment.objects.filter(shipment_id__icontains=search_text).values(
+                'id', 'date_pulled', 'shipment_id', 'processor_id', 'processor_entity_name', 'warehouse_id', 'warehouse_name', 'customer_id', 'customer_name', 'status', 'distributor_receive_date'
+            ).annotate(
+                date_field=F('date_pulled'),
+                shipment_type=Value('ProcessorWarehouseShipment')
+            )
+            if select_crop:
+                shipments = ProcessorWarehouseShipment.objects.filter(shipment_id__icontains=search_text, processor_shipment_crop__crop=select_crop).values(
+                    'id', 'date_pulled', 'shipment_id', 'processor_id', 'processor_entity_name', 'warehouse_id', 'warehouse_name', 'customer_id', 'customer_name', 'status', 'distributor_receive_date'
+                ).annotate(
+                    date_field=F('date_pulled'),
+                    shipment_type=Value('ProcessorWarehouseShipment')
+                )
+            
+            unique_shipments = list({s["shipment_id"]: s for s in shipments}.values())
+            
+            final_shipments = []
+            for shipment in unique_shipments:        
+
+                # Fetch all crops for this shipment
+                crops = ProcessorShipmentCrops.objects.filter(
+                    shipment_id=shipment["id"]
+                ).values("id", "crop", "lot_number", "net_weight", "weight_unit", "waybill_number")
+
+                for crop in crops:
+                    # Fetch diversions for the crop
+                    diversions = ProcessorShipmentDiversionTracking.objects.filter(
+                        shipment_id=shipment["id"],
+                        crop_id=crop["id"]
+                    ).order_by("-id")
+
+                    if diversions.exists():
+                        for diversion in diversions:
+                            entry = shipment.copy()
+                            entry["crop_id"] = crop["id"]
+                            entry["diversion_id"] = diversion.id
+                            final_shipments.append(entry)
+                    else:
+                        entry = shipment.copy()
+                        entry["crop_id"] = crop["id"]
+                        entry["diversion_id"] = 0
+                        final_shipments.append(entry)
+
+            shipments = final_shipments 
+        elif not check_shipment and WarehouseCustomerShipment.objects.filter(shipment_id__icontains=search_text).exists():
+            shipments = WarehouseCustomerShipment.objects.filter(shipment_id__icontains=search_text).values(
+                'id', 'date_pulled', 'shipment_id', 'warehouse_id', 'warehouse_name', 'customer_id', 'customer_name', 'status', 'customer_receive_date', 
+            ).annotate(
+                date_field=F('date_pulled'),
+                shipment_type=Value('WarehouseCustomerShipment')
+            )
+            if select_crop:
+                shipments = WarehouseCustomerShipment.objects.filter(shipment_id__icontains=search_text, warehouse_shipment_crop__crop=select_crop).values(
+                    'id', 'date_pulled', 'shipment_id', 'warehouse_id', 'warehouse_name', 'customer_id', 'customer_name', 'status', 'customer_receive_date', 
+                ).annotate(
+                    date_field=F('date_pulled'),
+                    shipment_type=Value('WarehouseCustomerShipment')
+                )
+            unique_shipments = list({s["shipment_id"]: s for s in shipments}.values())
+            final_shipments = []
+            for shipment in unique_shipments:        
+
+                # Fetch all crops for this shipment
+                crops = WarehouseShipmentCrops.objects.filter(
+                    shipment_id=shipment["id"]
+                ).values("id", "crop", "lot_number", "net_weight", "weight_unit", "waybill_number")
+
+                for crop in crops:
+                    diversions = WarehouseShipmentDiversionTracking.objects.filter(
+                        shipment_id=shipment["id"],
+                        crop_id=crop["id"]
+                    ).order_by("-id")
+
+                    if diversions.exists():
+                        for diversion in diversions:
+                            entry = shipment.copy()
+                            entry["crop_id"] = crop["id"]
+                            entry["diversion_id"] = diversion.id
+                            final_shipments.append(entry)
+                    else:
+                        entry = shipment.copy()
+                        entry["crop_id"] = crop["id"]
+                        entry["diversion_id"] = 0
+                        final_shipments.append(entry)
+            shipments = final_shipments                                               
+        else:
+            context['no_rec_found_msg'] = "No Records Found"   
+
+    # search by Warehouse....
+    elif get_search_by and get_search_by == 'warehouse':
+        
+        check_warehouse = Warehouse.objects.filter(name__icontains=search_text)
+        if check_warehouse.exists():                            
+            warehouse = check_warehouse.first()                            
+            inbound_shipments = ProcessorWarehouseShipment.objects.filter( warehouse_id=warehouse.id, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values(
+                'id', 'date_pulled', 'shipment_id', 'processor_id', 'processor_entity_name', 'warehouse_id', 'warehouse_name', 'customer_id', 'customer_name', 'status', 'distributor_receive_date'
+            ).annotate(
+                date_field=F('date_pulled'),
+                shipment_type=Value('ProcessorWarehouseShipment')
+            )
+            if select_crop:
+                inbound_shipments = ProcessorWarehouseShipment.objects.filter(prcessor_shipment_crop__crop=select_crop, warehouse_id=warehouse.id, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values(
+                    'id', 'date_pulled', 'shipment_id', 'processor_id', 'processor_entity_name', 'warehouse_id', 'warehouse_name', 'customer_id', 'customer_name', 'status', 'distributor_receive_date'
+                ).annotate(
+                    date_field=F('date_pulled'),
+                    shipment_type=Value('ProcessorWarehouseShipment')
+                )
+            unique_inbound_shipments = list({s["shipment_id"]: s for s in inbound_shipments}.values())
+            
+            final_inbound_shipments = []
+            for shipment in unique_inbound_shipments:        
+
+                # Fetch all crops for this shipment
+                crops = ProcessorShipmentCrops.objects.filter(
+                    shipment_id=shipment["id"]
+                ).values("id", "crop", "lot_number", "net_weight", "weight_unit", "waybill_number")
+
+                for crop in crops:
+                    # Fetch diversions for the crop
+                    diversions = ProcessorShipmentDiversionTracking.objects.filter(
+                        shipment_id=shipment["id"],
+                        crop_id=crop["id"]
+                    ).order_by("-id")
+
+                    if diversions.exists():
+                        for diversion in diversions:
+                            entry = shipment.copy()
+                            entry["crop_id"] = crop["id"]
+                            entry["diversion_id"] = diversion.id
+                            final_inbound_shipments.append(entry)
+                    else:
+                        entry = shipment.copy()
+                        entry["crop_id"] = crop["id"]
+                        entry["diversion_id"] = 0
+                        final_inbound_shipments.append(entry)
+            
+            outbound_shipments = WarehouseCustomerShipment.objects.filter(warehouse_id=warehouse.id, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values(
+                'id', 'date_pulled', 'shipment_id', 'warehouse_id', 'warehouse_name', 'customer_id', 'customer_name', 'status', 'customer_receive_date', 
+            ).annotate(
+                date_field=F('date_pulled'),
+                shipment_type=Value('WarehouseCustomerShipment')
+            )
+            if select_crop:
+                outbound_shipments = WarehouseCustomerShipment.objects.filter(warehouse_shipment_crop__crop=select_crop,warehouse_id=warehouse.id, date_pulled__date__gte=from_date, date_pulled__date__lte=to_date).values(
+                    'id', 'date_pulled', 'shipment_id', 'warehouse_id', 'warehouse_name', 'customer_id', 'customer_name', 'status', 'customer_receive_date', 
+                ).annotate(
+                    date_field=F('date_pulled'),
+                    shipment_type=Value('WarehouseCustomerShipment')
+                )
+            unique_outbound_shipments = list({s["shipment_id"]: s for s in outbound_shipments}.values())
+            final_outbound_shipments = []
+            for shipment in unique_outbound_shipments:        
+
+                # Fetch all crops for this shipment
+                crops = WarehouseShipmentCrops.objects.filter(
+                    shipment_id=shipment["id"]
+                ).values("id", "crop", "lot_number", "net_weight", "weight_unit", "waybill_number")
+
+                for crop in crops:
+                    diversions = WarehouseShipmentDiversionTracking.objects.filter(
+                        shipment_id=shipment["id"],
+                        crop_id=crop["id"]
+                    ).order_by("-id")
+
+                    if diversions.exists():
+                        for diversion in diversions:
+                            entry = shipment.copy()
+                            entry["crop_id"] = crop["id"]
+                            entry["diversion_id"] = diversion.id
+                            final_outbound_shipments.append(entry)
+                    else:
+                        entry = shipment.copy()
+                        entry["crop_id"] = crop["id"]
+                        entry["diversion_id"] = 0
+                        final_outbound_shipments.append(entry)
+
+            shipments = list(final_inbound_shipments) + list(final_outbound_shipments)       
+            
+        else:
+            context['no_rec_found_msg'] = "No Records Found"
+                
+    # search by Customer....
+    elif get_search_by and get_search_by == 'customer':
+        
+        check_customer = Customer.objects.filter(name__icontains=search_text)
+        if check_customer.exists():
+            customer = check_customer.first()                   
+            
+            processor_shipments = ProcessorWarehouseShipment.objects.filter(                        
+                customer_id=customer.id, 
+                date_pulled__date__gte=from_date, 
+                date_pulled__date__lte=to_date
+            ).values(
+                'id', 'date_pulled', 'shipment_id', 'processor_id', 'processor_entity_name', 'warehouse_id', 'warehouse_name', 'customer_id', 'customer_name', 'status', 'distributor_receive_date'
+            ).annotate(
+                date_field=F('date_pulled'),
+                shipment_type=Value('ProcessorWarehouseShipment')
+            )
+            if select_crop:
+                processor_shipments = ProcessorWarehouseShipment.objects.filter( 
+                processor_shipment_crop__crop=select_crop,                       
+                customer_id=customer.id, 
+                date_pulled__date__gte=from_date, 
+                date_pulled__date__lte=to_date
+                ).values(
+                    'id', 'date_pulled', 'shipment_id', 'processor_id', 'processor_entity_name', 'warehouse_id', 'warehouse_name', 'customer_id', 'customer_name', 'status', 'distributor_receive_date'
+                ).annotate(
+                    date_field=F('date_pulled'),
+                    shipment_type=Value('ProcessorWarehouseShipment')
+                )        
+            unique_processor_shipments = list({s["shipment_id"]: s for s in processor_shipments}.values())
+            
+            final_processor_shipments = []
+            for shipment in unique_processor_shipments:        
+
+                # Fetch all crops for this shipment
+                crops = ProcessorShipmentCrops.objects.filter(
+                    shipment_id=shipment["id"]
+                ).values("id", "crop", "lot_number", "net_weight", "weight_unit", "waybill_number")
+
+                for crop in crops:
+                    # Fetch diversions for the crop
+                    diversions = ProcessorShipmentDiversionTracking.objects.filter(
+                        shipment_id=shipment["id"],
+                        crop_id=crop["id"]
+                    ).order_by("-id")
+
+                    if diversions.exists():
+                        for diversion in diversions:
+                            entry = shipment.copy()
+                            entry["crop_id"] = crop["id"]
+                            entry["diversion_id"] = diversion.id
+                            final_processor_shipments.append(entry)
+                    else:
+                        entry = shipment.copy()
+                        entry["crop_id"] = crop["id"]
+                        entry["diversion_id"] = 0
+                        final_processor_shipments.append(entry) 
+
+            warehouse_shipments = WarehouseCustomerShipment.objects.filter(                         
+                customer_id=customer.id, 
+                date_pulled__date__gte=from_date, 
+                date_pulled__date__lte=to_date
+            ).values(
+                    'id', 'date_pulled', 'shipment_id', 'warehouse_id', 'warehouse_name', 'customer_id', 'customer_name', 'status', 'customer_receive_date', 
+                ).annotate(
+                    date_field=F('date_pulled'),
+                    shipment_type=Value('WarehouseCustomerShipment')
+                )
+            if select_crop:
+                warehouse_shipments = WarehouseCustomerShipment.objects.filter(
+                warehouse_shipment_crop__crop=select_crop,                         
+                customer_id=customer.id, 
+                date_pulled__date__gte=from_date, 
+                date_pulled__date__lte=to_date
+                ).values(
+                    'id', 'date_pulled', 'shipment_id', 'warehouse_id', 'warehouse_name', 'customer_id', 'customer_name', 'status', 'customer_receive_date', 
+                ).annotate(
+                    date_field=F('date_pulled'),
+                    shipment_type=Value('WarehouseCustomerShipment')
+                )
+
+            unique_warehouse_shipments = list({s["shipment_id"]: s for s in warehouse_shipments}.values())
+            final_warehouse_shipments = []
+            for shipment in unique_warehouse_shipments:        
+
+                # Fetch all crops for this shipment
+                crops = WarehouseShipmentCrops.objects.filter(
+                    shipment_id=shipment["id"]
+                ).values("id", "crop", "lot_number", "net_weight", "weight_unit", "waybill_number")
+
+                for crop in crops:
+                    diversions = WarehouseShipmentDiversionTracking.objects.filter(
+                        shipment_id=shipment["id"],
+                        crop_id=crop["id"]
+                    ).order_by("-id")
+
+                    if diversions.exists():
+                        for diversion in diversions:
+                            entry = shipment.copy()
+                            entry["crop_id"] = crop["id"]
+                            entry["diversion_id"] = diversion.id
+                            final_warehouse_shipments.append(entry)
+                    else:
+                        entry = shipment.copy()
+                        entry["crop_id"] = crop["id"]
+                        entry["diversion_id"] = 0
+                        final_warehouse_shipments.append(entry)
+
+            shipments=  list(final_processor_shipments) + list(final_warehouse_shipments )                    
+                
+        else:
+            context['no_rec_found_msg'] = "No Records Found" 
+            
+   
+    for shipment in shipments:        
+        shipment_id = shipment['shipment_id']
+        shipment_type = shipment.get('shipment_type')
+
+        if shipment_type in ["ProcessorWarehouseShipment", "WarehouseCustomerShipment"]:
+            crop_id = shipment.get('crop_id', 0)
+            diversion_id = shipment.get('diversion_id', 0)
+            context = shipmentid_response(shipment_id, from_date, to_date, crop_id, diversion_id)            
+            
+        else:
+            context = shipmentid_response(shipment_id, from_date, to_date)
+
+        # new_context.update(context)
+        # print(new_context)
+        writer.writerow([""])
+        writer.writerow([f"Shipment ID = {shipment_id}"])
+        writer.writerow([""])
+
+        excluded_key = "no_rec_found_msg" 
+        filtered_context = {key: value for key, value in context.items() if key != excluded_key}
+    
+        headers = []
+        
+        if "origin_context" in filtered_context and len(filtered_context["origin_context"]) > 0:
+            headers.extend(["Origin: Field", "Grower"])
+
+        if "t1_processor" in filtered_context and len(filtered_context["t1_processor"]) > 0:
+            headers.extend(["Inbound Mill: Shipment ID", "Crop", "Weight", "Date", "Grower"])
+        
+        if "inbound3_wip" in filtered_context and len(filtered_context["inbound3_wip"]) > 0 and "inbound4_wip" in filtered_context and len(filtered_context["inbound4_wip"])> 0:
+            headers.extend(["In Mill: Mill", "Shipment ID", "Crop", "Weight", "Lot Number"])
+        
+        elif "inbound2_wip" in filtered_context and len(filtered_context["inbound2_wip"]) > 0 and "inbound4_wip" in filtered_context and len(filtered_context["inbound4_wip"])> 0:
+            headers.extend(["In Mill: Mill", "Shipment ID", "Crop", "Weight", "Lot Number"])
+
+        elif "inbound2_wip" in filtered_context and len(filtered_context["inbound2_wip"]) > 0 and "inbound3_wip" in filtered_context and len(filtered_context["inbound3_wip"])> 0:
+            headers.extend(["In Mill: Mill", "Shipment ID", "Crop", "Weight","Lot Number"]) 
+
+        elif "inbound4_wip" in filtered_context and len(filtered_context["inbound4_wip"]) > 0:
+            headers.extend(["In Mill: Mill", "Shipment ID","Crop", "Weight", "Lot Number"])
+
+        elif "inbound3_wip" in filtered_context and len(filtered_context["inbound3_wip"]) > 0:
+            headers.extend(["In Mill: Mill", "Shipment ID","Crop", "Weight", "Lot Number"])
+
+        elif "inbound2_wip" in filtered_context and len(filtered_context["inbound2_wip"]) > 0:
+            headers.extend(["In Mill: Mill", "Shipment ID", "Crop", "Weight","Lot Number"])
+
+        if "outbound5_wip" in filtered_context and len(filtered_context["outbound5_wip"]) > 0:
+            headers.extend(["Assigned Lot Number: Mill", "Crop", "Weight","Lot Number", "Shipment ID"])
+            headers.extend(["Shipped To Warehouse/Customer: Shipment ID", "Crop", "Weight", "Transit ID", "New Lot Number", "Date"])
+
+        if "inbound5_wip" in filtered_context and len(filtered_context["inbound5_wip"]) > 0:
+            headers.extend(["Received By Warehouse: Warehouse Name", "Warehouse ID", "Receive Date", "Crop", "Weight", "Shipment ID"])
+
+        if "outbound6_wip" in filtered_context and len(filtered_context["outbound6_wip"]) > 0:
+            headers.extend(["Shipped To Customer: Shipment ID", "Crop", "Weight", "Transit ID", "New Waybill Number", "Date"])
+
+        if "inbound6_wip" in filtered_context and len(filtered_context["inbound6_wip"]) > 0:
+            headers.extend(["Received By Customer: Customer Name", "Customer ID", "Receive Date", "Crop", "Weight", "Shipment ID"])
+
+        writer.writerow(headers)
+        writer.writerow([""])
+        
+        origin_context = context.get("origin_context", [])
+        t1_processor = context.get("t1_processor", [])
+        outbound5 = context.get("outbound5_wip", [])
+        inbound5 = context.get("inbound5_wip", [])
+        outbound6 = context.get("outbound6_wip", [])
+        inbound6 = context.get("inbound6_wip", [])
+        in_mill_data = []
+
+        if "inbound3_wip" in filtered_context and len(filtered_context["inbound3_wip"]) > 0 and "inbound4_wip" in filtered_context and len(filtered_context["inbound4_wip"])> 0 :
+            in_mill_data = context.get("inbound4_wip")
+
+        elif "inbound2_wip" in filtered_context and len(filtered_context["inbound2_wip"]) > 0 and "inbound4_wip" in filtered_context and len(filtered_context["inbound4_wip"])> 0 :
+            in_mill_data = context.get("inbound4_wip")
+
+        elif "inbound2_wip" in filtered_context and len(filtered_context["inbound2_wip"]) > 0 and "inbound3_wip" in filtered_context and len(filtered_context["inbound3_wip"])> 0:
+            in_mill_data = context.get("inbound3_wip")   
+
+        elif "inbound4_wip" in filtered_context and len(filtered_context["inbound4_wip"]) > 0:
+            in_mill_data = context.get("inbound4_wip")  
+
+        elif "inbound3_wip" in filtered_context and len(filtered_context["inbound3_wip"]) > 0 :
+            in_mill_data = context.get("inbound3_wip")   
+        
+        elif "inbound2_wip" in filtered_context and len(filtered_context["inbound2_wip"]) > 0:
+            in_mill_data = context.get("inbound2_wip")
+        
+        max_rows = max(len(origin_context), len(t1_processor),len(in_mill_data),len(outbound5), len(inbound5), len(outbound6), len(inbound6))
+        
+    # Populate rows dynamically
+        for i in range(max_rows):
+            row = []
+
+            # Origin Data
+            if "Origin: Field" in headers and "Grower" in headers:
+                if i < len(origin_context):
+                    origin = origin_context[i]
+                    row.extend([
+                        origin.get("field_name", ""), origin.get("grower_name", "")
+                    ])
+                else:
+                    row.extend([""] * 2)
+
+            # T1 Processor Data
+            if "Inbound Mill: Shipment ID" in headers:
+                if i < len(t1_processor):
+                    t1_processor_data = t1_processor[i]
+                    crop_data = f'{t1_processor_data.get("crop", "")}'
+                    weight_data = f'{t1_processor_data.get("pounds_received") if t1_processor_data.get("pounds_received") not in ["None", None, "", "null"] else t1_processor_data.get("pounds_shipped")} {t1_processor_data.get("unit", "")}'
+                    row.extend([
+                        t1_processor_data.get("shipment_id", ""), crop_data, weight_data, format_date(t1_processor_data.get("date", "")), t1_processor_data.get("grower", "")
+                    ])
+                else:
+                    row.extend([""] * 5)
+
+            # In Mill Data
+            if "In Mill: Mill" in headers:
+                if i < len(in_mill_data):
+                    mill_data = in_mill_data[i]
+                    crop_data = f'{mill_data.get("crop", "")}'
+                    weight_data = f'{mill_data.get("received_weight") if mill_data.get("received_weight") else mill_data.get("weight_or_product")} {mill_data.get("weight_of_product_unit", "")}'
+                    row.extend([
+                        mill_data.get("processor2_name", ""), mill_data.get("shipment_id", ""), crop_data, weight_data, mill_data.get("lot_number", "")
+                    ])
+                else:
+                    row.extend([""] * 5)
+            
+            # Outbound5 Data
+            if "Assigned Lot Number: Mill" in headers:
+                if i < len(outbound5):
+                    outbound5_data = outbound5[i]
+                    crop_data = "\n".join(
+                        f"{crop['crop_name']}" 
+                        for crop in outbound5_data.get("crops", [])
+                    )
+                    weight_data = "\n".join(
+                        f"{crop['net_weight']} {crop['weight_unit']}"
+                        for crop in outbound5_data.get("crops", [])
+                    )
+                    lot_number_data = "\n".join(
+                        f"{crop['lot_number']}"
+                        for crop in outbound5_data.get("crops", [])
+                    )
+                    row.extend([
+                        outbound5_data.get("processor_entity_name", ""), crop_data, weight_data, lot_number_data, outbound5_data.get("shipment_id")
+                    ])
+                else:
+                    row.extend([""] * 5)
+                    
+            if "Shipped To Warehouse/Customer: Shipment ID" in headers:
+                if i < len(outbound5):
+                    outbound5_data = outbound5[i]                
+                    crop_data = "\n".join(
+                        f"{crop['crop_name']}" 
+                        for crop in outbound5_data.get("crops", [])
+                    )
+                    weight_data = "\n".join(
+                        f"{crop['net_weight']} {crop['weight_unit']}"
+                        for crop in outbound5_data.get("crops", [])
+                    )
+                    new_waybill_number_data = "\n".join(
+                        f"{crop['new_waybill_number']}"
+                        for crop in outbound5_data.get("crops", [])
+                    )
+                    row.extend([
+                        outbound5_data.get("shipment_id", ""), crop_data, weight_data, outbound5_data.get("carrier_id", ""), 
+                        new_waybill_number_data, format_date(outbound5_data.get("date_pulled", ""))
+                    ])
+                else:
+                    row.extend([""] * 6)
+
+            # Inbound5 Data
+            if "Received By Warehouse: Warehouse Name" in headers:
+                if i < len(inbound5):
+                    inbound5_data = inbound5[i]
+                    crop_data = "\n".join(
+                        f"{crop['crop_name']}" 
+                        for crop in inbound5_data.get("crops", [])
+                    )
+                    weight_data = "\n".join(
+                        f"{crop['net_weight']} {crop['weight_unit']}"
+                        for crop in inbound5_data.get("crops", [])
+                    )
+                    row.extend([
+                        inbound5_data.get("warehouse_name", ""), inbound5_data.get("warehouse_id", ""), 
+                        format_date(inbound5_data.get("distributor_receive_date", "")), crop_data, weight_data, inbound5_data.get("shipment_id", "")
+                    ])
+                else:
+                    row.extend([""] * 6)
+
+            # Outbound6 Data
+            if "Shipped To Customer: Shipment ID" in headers:
+                if i < len(outbound6):
+                    outbound6_data = outbound6[i]
+                    crop_data = "\n".join(
+                        f"{crop['crop_name']}" 
+                        for crop in outbound6_data.get("crops", [])
+                    )
+                    weight_data = "\n".join(
+                        f"{crop['net_weight']} {crop['weight_unit']}"
+                        for crop in outbound6_data.get("crops", [])
+                    )
+                    new_waybill_number_data = "\n".join(
+                        f"{crop['new_waybill_number']}"
+                        for crop in outbound6_data.get("crops", [])
+                    )
+                    row.extend([
+                        outbound6_data.get("shipment_id", ""), crop_data, weight_data, outbound6_data.get("carrier_id", ""), 
+                        new_waybill_number_data, format_date(outbound6_data.get("date_pulled", ""))
+                    ])
+                else:
+                    row.extend([""] * 6)
+
+            # Inbound6 Data
+            if "Received By Customer: Customer Name" in headers:
+                if i < len(inbound6):
+                    inbound6_data = inbound6[i]
+                    crop_data = "\n".join(
+                        f"{crop['crop_name']}" 
+                        for crop in inbound6_data.get("crops", [])
+                    )
+                    weight_data = "\n".join(
+                        f"{crop['net_weight']} {crop['weight_unit']}"
+                        for crop in inbound6_data.get("crops", [])
+                    )
+                    row.extend([
+                        inbound6_data.get("customer_name", ""), inbound6_data.get("customer_id", ""), 
+                        format_date(inbound6_data.get("customer_receive_date", "")), crop_data, weight_data, inbound6_data.get("shipment_id", "")
+                    ])
+                else:
+                    row.extend([""] * 6)
+
+            # Write the row to the CSV
+            writer.writerow(row)
+            
+    return response
+
+
+@login_required()
+def generate_csv_for_recent_shipments(request, from_date, to_date):
+    
+    filename = 'RECENT SHIPMENTS TRACEABILITY.csv'
+    response = HttpResponse(
+        content_type='text/csv',
+        headers={'Content-Disposition': 'attachment; filename="{}"'.format(filename)},
+    )
+    writer = csv.writer(response)
+
+    grower_shipments = GrowerShipment.objects.values(
+        'id', 'date_time', 'shipment_id', 'grower__name', 'grower_id',
+            'processor__id', 'processor__entity_name', 'approval_date', 'status', 'crop', 'received_amount', 'unit_type'
+    ).annotate(
+        date_field=F('date_time'),
+        shipment_type=Value('GrowerShipment')
+    )
+    unique_grower_shipments = list({s["shipment_id"]: s for s in grower_shipments}.values())
+    
+    processor_shipments = ShipmentManagement.objects.values(
+        'id', 'date_pulled', 'shipment_id', 'processor_idd', 'processor_e_name',
+            'sender_processor_type', 'processor2_idd', 'processor2_name', 'recive_delivery_date', 'crop', 'status', 'lot_number', 'received_weight', 'weight_of_product_unit'
+    ).annotate(
+        date_field=F('date_pulled'),
+        shipment_type=Value('ShipmentManagement')
+    )
+    unique_processor_shipments = list({s["shipment_id"]: s for s in processor_shipments}.values())
+   
+    contract_processor_shipments = ProcessorWarehouseShipment.objects.values(
+        'id', 'date_pulled', 'shipment_id', 'processor_id', 'processor_entity_name', 'warehouse_id', 'warehouse_name', 'customer_id', 'customer_name', 'status', 'distributor_receive_date'
+    ).annotate(
+        date_field=F('date_pulled'),
+        shipment_type=Value('ProcessorWarehouseShipment')
+    )
+    unique_contract_processor_shipments = list({s["shipment_id"]: s for s in contract_processor_shipments}.values())
+    final_processor_shipments = []
+    for shipment in unique_contract_processor_shipments:        
+
+        # Fetch all crops for this shipment
+        crops = ProcessorShipmentCrops.objects.filter(
+            shipment_id=shipment["id"]
+        ).values("id", "crop", "lot_number", "net_weight", "weight_unit", "waybill_number")
+
+        for crop in crops:
+            # Fetch diversions for the crop
+            diversions = ProcessorShipmentDiversionTracking.objects.filter(
+                shipment_id=shipment["id"],
+                crop_id=crop["id"]
+            ).order_by("-id")
+
+            if diversions.exists():
+                for diversion in diversions:
+                    entry = shipment.copy()
+                    entry["crop_id"] = crop["id"]
+                    entry["diversion_id"] = diversion.id
+                    final_processor_shipments.append(entry)
+            else:
+                entry = shipment.copy()
+                entry["crop_id"] = crop["id"]
+                entry["diversion_id"] = 0
+                final_processor_shipments.append(entry)
+   
+    contract_warehouse_shipments = WarehouseCustomerShipment.objects.values(
+        'id', 'date_pulled', 'shipment_id', 'warehouse_id', 'warehouse_name', 'customer_id', 'customer_name', 'status', 'customer_receive_date', 
+    ).annotate(
+        date_field=F('date_pulled'),
+        shipment_type=Value('WarehouseCustomerShipment')
+    )
+    unique_contract_warehouse_shipments = list({s["shipment_id"]: s for s in contract_warehouse_shipments}.values())
+    final_warehouse_shipments = []
+    for shipment in unique_contract_warehouse_shipments:        
+
+        # Fetch all crops for this shipment
+        crops = WarehouseShipmentCrops.objects.filter(
+            shipment_id=shipment["id"]
+        ).values("id", "crop", "lot_number", "net_weight", "weight_unit", "waybill_number")
+
+        for crop in crops:
+            diversions = WarehouseShipmentDiversionTracking.objects.filter(
+                shipment_id=shipment["id"],
+                crop_id=crop["id"]
+            ).order_by("-id")
+
+            if diversions.exists():
+                for diversion in diversions:
+                    entry = shipment.copy()
+                    entry["crop_id"] = crop["id"]
+                    entry["diversion_id"] = diversion.id
+                    final_warehouse_shipments.append(entry)
+            else:
+                entry = shipment.copy()
+                entry["crop_id"] = crop["id"]
+                entry["diversion_id"] = 0
+                final_warehouse_shipments.append(entry)
+   
+    combined_shipments = chain(
+        unique_grower_shipments,
+        unique_processor_shipments,
+        final_processor_shipments,
+        final_warehouse_shipments,
+    )
+    sorted_shipments = sorted(combined_shipments, key=itemgetter('date_field'), reverse=True)
+
+    recent_shipments = sorted_shipments[:10]
+   
+    from_date =  date(2023, 4, 1) 
+    to_date = date.today()  
+    
+    for shipment in recent_shipments:        
+        shipment_id = shipment['shipment_id']
+        shipment_type = shipment.get('shipment_type')
+
+        if shipment_type in ["ProcessorWarehouseShipment", "WarehouseCustomerShipment"]:
+            crop_id = shipment.get('crop_id', 0)
+            diversion_id = shipment.get('diversion_id', 0)
+            context = shipmentid_response(shipment_id, from_date, to_date, crop_id, diversion_id)            
+            
+        else:
+            context = shipmentid_response(shipment_id, from_date, to_date)
+
+
+        # new_context.update(context)
+        # print(new_context)
+        writer.writerow([""])
+        writer.writerow([f"Shipment ID = {shipment_id}"])
+        writer.writerow([""])
+
+        excluded_key = "no_rec_found_msg" 
+        filtered_context = {key: value for key, value in context.items() if key != excluded_key}
+    
+        headers = []
+
+        if "origin_context" in filtered_context and len(filtered_context["origin_context"]) > 0:
+            headers.extend(["Origin: Field", "Grower"])
+
+        if "t1_processor" in filtered_context and len(filtered_context["t1_processor"]) > 0:
+            headers.extend(["Inbound Mill: Shipment ID", "Crop", "Weight", "Date", "Grower"])
+        
+        if "inbound3_wip" in filtered_context and len(filtered_context["inbound3_wip"]) > 0 and "inbound4_wip" in filtered_context and len(filtered_context["inbound4_wip"])> 0:
+            headers.extend(["In Mill: Mill", "Shipment ID", "Crop", "Weight", "Lot Number"])
+        
+        elif "inbound2_wip" in filtered_context and len(filtered_context["inbound2_wip"]) > 0 and "inbound4_wip" in filtered_context and len(filtered_context["inbound4_wip"])> 0:
+            headers.extend(["In Mill: Mill", "Shipment ID", "Crop", "Weight", "Lot Number"])
+
+        elif "inbound2_wip" in filtered_context and len(filtered_context["inbound2_wip"]) > 0 and "inbound3_wip" in filtered_context and len(filtered_context["inbound3_wip"])> 0:
+            headers.extend(["In Mill: Mill", "Shipment ID", "Crop", "Weight","Lot Number"]) 
+
+        elif "inbound4_wip" in filtered_context and len(filtered_context["inbound4_wip"]) > 0:
+            headers.extend(["In Mill: Mill", "Shipment ID","Crop", "Weight", "Lot Number"])
+
+        elif "inbound3_wip" in filtered_context and len(filtered_context["inbound3_wip"]) > 0:
+            headers.extend(["In Mill: Mill", "Shipment ID","Crop", "Weight", "Lot Number"])
+
+        elif "inbound2_wip" in filtered_context and len(filtered_context["inbound2_wip"]) > 0:
+            headers.extend(["In Mill: Mill", "Shipment ID", "Crop", "Weight","Lot Number"])
+
+        if "outbound5_wip" in filtered_context and len(filtered_context["outbound5_wip"]) > 0:
+            headers.extend(["Assigned Lot Number: Mill", "Crop", "Weight","Lot Number", "Shipment ID"])
+            headers.extend(["Shipped To Warehouse/Customer: Shipment ID", "Crop", "Weight", "Transit ID", "New Waybill Number", "Date"])
+
+        if "inbound5_wip" in filtered_context and len(filtered_context["inbound5_wip"]) > 0:
+            headers.extend(["Received By Warehouse: Warehouse Name", "Warehouse ID", "Receive Date", "Crop", "Weight", "Shipment ID"])
+
+        if "outbound6_wip" in filtered_context and len(filtered_context["outbound6_wip"]) > 0:
+            headers.extend(["Shipped To Customer: Shipment ID", "Crop", "Weight", "Transit ID", "New Lot Number", "Date"])
+
+        if "inbound6_wip" in filtered_context and len(filtered_context["inbound6_wip"]) > 0:
+            headers.extend(["Received By Customer: Customer Name", "Customer ID", "Receive Date", "Crop", "Weight", "Shipment ID"])
+
+        writer.writerow(headers)
+        writer.writerow([""])
+        
+        origin_context = context.get("origin_context", [])
+        t1_processor = context.get("t1_processor", [])
+        outbound5 = context.get("outbound5_wip", [])
+        inbound5 = context.get("inbound5_wip", [])
+        outbound6 = context.get("outbound6_wip", [])
+        inbound6 = context.get("inbound6_wip", [])
+        in_mill_data = []
+
+        if "inbound3_wip" in filtered_context and len(filtered_context["inbound3_wip"]) > 0 and "inbound4_wip" in filtered_context and len(filtered_context["inbound4_wip"])> 0 :
+            in_mill_data = context.get("inbound4_wip")
+
+        elif "inbound2_wip" in filtered_context and len(filtered_context["inbound2_wip"]) > 0 and "inbound4_wip" in filtered_context and len(filtered_context["inbound4_wip"])> 0 :
+            in_mill_data = context.get("inbound4_wip")
+
+        elif "inbound2_wip" in filtered_context and len(filtered_context["inbound2_wip"]) > 0 and "inbound3_wip" in filtered_context and len(filtered_context["inbound3_wip"])> 0:
+            in_mill_data = context.get("inbound3_wip")   
+
+        elif "inbound4_wip" in filtered_context and len(filtered_context["inbound4_wip"]) > 0:
+            in_mill_data = context.get("inbound4_wip")  
+
+        elif "inbound3_wip" in filtered_context and len(filtered_context["inbound3_wip"]) > 0 :
+            in_mill_data = context.get("inbound3_wip")   
+        
+        elif "inbound2_wip" in filtered_context and len(filtered_context["inbound2_wip"]) > 0:
+            in_mill_data = context.get("inbound2_wip")
+        
+        max_rows = max(len(origin_context), len(t1_processor),len(in_mill_data),len(outbound5), len(inbound5), len(outbound6), len(inbound6))
+        
+    # Populate rows dynamically
+        for i in range(max_rows):
+            row = []
+
+            # Origin Data
+            if "Origin: Field" in headers and "Grower" in headers:
+                if i < len(origin_context):
+                    origin = origin_context[i]
+                    row.extend([
+                        origin.get("field_name", ""), origin.get("grower_name", "")
+                    ])
+                else:
+                    row.extend([""] * 2)
+
+            # T1 Processor Data
+            if "Inbound Mill: Shipment ID" in headers:
+                if i < len(t1_processor):
+                    t1_processor_data = t1_processor[i]
+                    crop_data = f'{t1_processor_data.get("crop", "")}'
+                    weight_data = f'{t1_processor_data.get("pounds_received") if t1_processor_data.get("pounds_received") not in ["None", None, "", "null"] else t1_processor_data.get("pounds_shipped")} {t1_processor_data.get("unit", "")}'
+                    row.extend([
+                        t1_processor_data.get("shipment_id", ""), crop_data, weight_data, format_date(t1_processor_data.get("date", "")), t1_processor_data.get("grower", "")
+                    ])
+                else:
+                    row.extend([""] * 5)
+
+            # In Mill Data
+            if "In Mill: Mill" in headers:
+                if i < len(in_mill_data):
+                    mill_data = in_mill_data[i]
+                    crop_data = f'{mill_data.get("crop", "")}'
+                    weight_data = f'{mill_data.get("received_weight") if mill_data.get("received_weight") else mill_data.get("weight_or_product")} {mill_data.get("weight_of_product_unit", "")}'
+                    row.extend([
+                        mill_data.get("processor2_name", ""), mill_data.get("shipment_id", ""), crop_data, weight_data, mill_data.get("lot_number", "")
+                    ])
+                else:
+                    row.extend([""] * 5)
+            
+            # Outbound5 Data
+            if "Assigned Lot Number: Mill" in headers:
+                if i < len(outbound5):
+                    outbound5_data = outbound5[i]
+                    crop_data = "\n".join(
+                        f"{crop['crop_name']}" 
+                        for crop in outbound5_data.get("crops", [])
+                    )
+                    weight_data = "\n".join(
+                        f"{crop['net_weight']} {crop['weight_unit']}"
+                        for crop in outbound5_data.get("crops", [])
+                    )
+                    lot_number_data = "\n".join(
+                        f"{crop['lot_number']}"
+                        for crop in outbound5_data.get("crops", [])
+                    )
+                    row.extend([
+                        outbound5_data.get("processor_entity_name", ""), crop_data, weight_data, lot_number_data, outbound5_data.get("shipment_id")
+                    ])
+                else:
+                    row.extend([""] * 5)
+                    
+            if "Shipped To Warehouse/Customer: Shipment ID" in headers:
+                if i < len(outbound5):
+                    outbound5_data = outbound5[i]                
+                    crop_data = "\n".join(
+                        f"{crop['crop_name']}" 
+                        for crop in outbound5_data.get("crops", [])
+                    )
+                    weight_data = "\n".join(
+                        f"{crop['net_weight']} {crop['weight_unit']}"
+                        for crop in outbound5_data.get("crops", [])
+                    )
+                    new_waybill_number_data = "\n".join(
+                        f"{crop['new_waybill_number']}"
+                        for crop in outbound5_data.get("crops", [])
+                    )
+                    row.extend([
+                        outbound5_data.get("shipment_id", ""), crop_data, weight_data, outbound5_data.get("carrier_id", ""), 
+                        new_waybill_number_data, format_date(outbound5_data.get("date_pulled", ""))
+                    ])
+                else:
+                    row.extend([""] * 6)
+
+            # Inbound5 Data
+            if "Received By Warehouse: Warehouse Name" in headers:
+                if i < len(inbound5):
+                    inbound5_data = inbound5[i]
+                    crop_data = "\n".join(
+                        f"{crop['crop_name']}" 
+                        for crop in inbound5_data.get("crops", [])
+                    )
+                    weight_data = "\n".join(
+                        f"{crop['net_weight']} {crop['weight_unit']}"
+                        for crop in inbound5_data.get("crops", [])
+                    )
+                    row.extend([
+                        inbound5_data.get("warehouse_name", ""), inbound5_data.get("warehouse_id", ""), 
+                        format_date(inbound5_data.get("distributor_receive_date", "")), crop_data, weight_data, inbound5_data.get("shipment_id", "")
+                    ])
+                else:
+                    row.extend([""] * 6)
+
+            # Outbound6 Data
+            if "Shipped To Customer: Shipment ID" in headers:
+                if i < len(outbound6):
+                    outbound6_data = outbound6[i]
+                    # print(outbound6_data)
+                    crop_data = "\n".join(
+                        f"{crop['crop_name']}" 
+                        for crop in outbound6_data.get("crops", [])
+                    )
+                    weight_data = "\n".join(
+                        f"{crop['net_weight']} {crop['weight_unit']}"
+                        for crop in outbound6_data.get("crops", [])
+                    )
+                    new_waybill_number_data = "\n".join(
+                        f"{crop['new_waybill_number']}"
+                        for crop in outbound6_data.get("crops", [])
+                    )
+                    row.extend([
+                        outbound6_data.get("shipment_id", ""), crop_data, weight_data, outbound6_data.get("carrier_id", ""), 
+                        new_waybill_number_data, format_date(outbound6_data.get("date_pulled", ""))
+                    ])
+                else:
+                    row.extend([""] * 6)
+
+            # Inbound6 Data
+            if "Received By Customer: Customer Name" in headers:
+                if i < len(inbound6):
+                    inbound6_data = inbound6[i]
+                    crop_data = "\n".join(
+                        f"{crop['crop_name']}" 
+                        for crop in inbound6_data.get("crops", [])
+                    )
+                    weight_data = "\n".join(
+                        f"{crop['net_weight']} {crop['weight_unit']}"
+                        for crop in inbound6_data.get("crops", [])
+                    )
+                    row.extend([
+                        inbound6_data.get("customer_name", ""), inbound6_data.get("customer_id", ""), 
+                        format_date(inbound6_data.get("customer_receive_date", "")), crop_data, weight_data, inbound6_data.get("shipment_id", "")
+                    ])
+                else:
+                    row.extend([""] * 6)
+
+            # Write the row to the CSV
+            writer.writerow(row)
+    return response

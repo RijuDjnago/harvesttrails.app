@@ -264,6 +264,10 @@
             padding-right: 10px;
             font-size: 16px;
         }
+    .bootstrap-select .dropdown-menu li.disabled.selected{display: none;}
+    .dropdown.bootstrap-select.form-control .btn{border: 1px solid #B2BEB5; padding: 6px 8px;}
+    .bootstrap-select .dropdown-menu{max-width: 280px;}
+    .bootstrap-select .dropdown-menu li.selected.active .dropdown-item.active.selected{margin-left: 0;padding: 0;}
   </style>
     <main>
         {% include '_alerts.html' %}
@@ -432,7 +436,7 @@
                                       <span class="fas fa-trash"></span></a>
                                   </li>
                                   {% endif %}
-                                  {% if 'Field View' in request.user.get_role_perm or request.user.is_superuser %}
+                                  {% if 'Field View' in request.user.get_role_perm or request.user.is_superuser  %}
                                   <li> <a href="{% url 'field-detail' field.pk %}" alt="view field" title="view field"><span class="fas fa-eye"></span> </a></li>
                                   {% endif %}
                                   {% if field.get_polydata_count > 0 %}

@@ -6,6 +6,8 @@
 {% block extrahead %}
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-Y3EWVPF7PQ"></script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAfBo6-cZlOpKGrD1ZYwISIGjYvhH_wPmk&libraries=places"></script>
+
 <script>
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
@@ -38,12 +40,24 @@
 .ui-menu::-webkit-scrollbar{width:6px;max-height:20px;padding-right: 10px;}
 .ui-menu::-webkit-scrollbar-track{background:#ccc}
 .ui-menu:-webkit-scrollbar-thumb{background-color:#000;border-radius:20px;min-height:20px}
+.no-resize{resize: none;}
+.bootstrap-select .dropdown-menu li.disabled.selected{display: none;}
+.dropdown.bootstrap-select.form-control .btn{border: 1px solid; padding: 16px 10px; border-radius: 0;}
+.bootstrap-select .dropdown-menu{max-width: 280px;}
+.bootstrap-select .dropdown-menu li.selected.active .dropdown-item.active.selected{margin-left: 0;padding: 0;}
 
 </style>
 <div class="main-content">
     {% include 'header.html' %} {% load crispy_forms_tags %}
     <main>
-        <span class="farm headingtop">Edit Shipment</span>
+        <div class="page-title-with-or-without-btn">
+            <span class="farm headingtop">Edit Shipment</span>
+            {% if not shipment.invoice_approval and shipment.customer_id %}
+                <div class="flex-header-btn">
+                    <a href="{% url 'generate_invoice' shipment.id 'processor' %}" class="btn-close-cancel">Generate Invoice</a>
+                </div>
+            {% endif %}
+        </div>
         <div class="card farm-fields-container">
             {% include '_alerts.html' %}
             <nav aria-label="breadcrumb m-5">
@@ -66,19 +80,29 @@
                     {% csrf_token %}                   
                     <div class="row mb-2">  
                         <h2 style="background-color: #d7d5d5;color: #0b6c39;font-size: 22px;font-weight: 600;margin: 20px 0;padding: 12px 0;text-align: center">Contract Details</h2>                                            
-                        <div class="col-md-6">
+                        <div class="col-md-3">
                             <div class="form-group">
                                 <label for="selected_contract">Select Contract<span class="asteriskField">*</span></label>
-                                <select name="selected_contract" id="selected_contract" class="form-control" required readonly>                                                                    
+                                <select name="selected_contract" id="selected_contract" class="form-control selectpicker" required readonly>                                                                    
                                     
                                     <option value="{{contract.id}}" selected>{{contract.secret_key}}- {{contract.processor_entity_name}}</option>
                                  
                                 </select>
                             </div>
                         </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label for="crop_id">Crop<span class="asteriskField">*</span></label>
+                                <select name="crop_id" id="crop_id" class="form-control" required onchange="this.form.submit()">                                 
+                                    {% for crop in crops %}
+                                    <option value="{{crop.id}}"{% if shipment.crop_id == crop.id %} selected {% endif %}>{{crop.crop}} - {{crop.crop_type}}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
                         <div class="col-md-4">
                             <div class="form-group">
-                                <label for="processor_id">Processor</label>
+                                <label for="processor_id">Processor<span class="asteriskField">*</span></label>
                                 <input type="text" name="processor_id" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{contract.processor_entity_name}}" readonly>
                             </div>
                         </div>
@@ -122,7 +146,7 @@
                         <h2 style="background-color: #d7d5d5;color: #0b6c39;font-size: 22px;font-weight: 600;margin: 20px 0;padding: 12px 0;text-align: center">Destination</h2>
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label for="selected_destination">Destination Type</label>
+                                <label for="selected_destination">Destination Type<span class="asteriskField">*</span></label>
                                 <select name="selected_destination" id="selected_destination" class="form-control" required onchange="this.form.submit()">                                 
                                     <option value="warehouse"{% if selected_destination == 'warehouse'%} selected {% endif %}>Warehouse</option>
                                     <option value="customer"{% if selected_destination == 'customer'%} selected {% endif %}>Customer</option>
@@ -131,11 +155,22 @@
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label for="destination_id">Destination</label>
+                                <label for="destination_id">Destination<span class="asteriskField">*</span></label>
                                 <select name="destination_id" id="destination_id" class="form-control" required>  
                                                                  
                                     {% for destination in destination_list %}
                                     <option value="{{destination.id}}"{% if destination_id  == destination.id  %}selected{% endif %}>{{destination.name}}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6 customer_contract_select" style="display: none;">
+                            <div class="form-group">
+                                <label for="customer_contract">Customer Contract<span class="asteriskField">*</span></label>
+                                <select name="customer_contract" id="customer_contract" class="form-control">
+                                    <option value="" selected disabled>Select Customer Contract</option>
+                                    {% for contract in customer_contracts %}
+                                        <option value="{{ contract.id }}"{% if customer_contract.id == contract.id %} selected {% endif %}>{{ contract.secret_key }} - {{ contract.customer_name }}</option>
                                     {% endfor %}
                                 </select>
                             </div>
@@ -145,7 +180,7 @@
                         <h2 style="background-color: #d7d5d5;color: #0b6c39;font-size: 22px;font-weight: 600;margin: 20px 0;padding: 12px 0;text-align: center">Delivery details</h2>
                         <div class="col-md-4">
                             <div class="form-group">
-                                <label for="outbound_type">Outbound Type</label>
+                                <label for="outbound_type">Outbound Type<span class="asteriskField">*</span></label>
                                 <select name="outbound_type" id="outbound_type" class="form-control" required>                                 
                                     <option value="Domestic"{% if shipmet.outbound_type == 'Domestic'%} selected {% endif %}>Domestic</option>
                                     <option value="International"{% if shipment.outbound_type == 'International'%} selected {% endif %}>International</option>
@@ -154,7 +189,7 @@
                         </div>
                         <div class="col-md-4">
                             <div class="form-group">
-                                <label for="carrier_type">Carrier type</label>
+                                <label for="carrier_type">Carrier type<span class="asteriskField">*</span></label>
                                 <select name="carrier_type" id="carrier_type" class="form-control" required>                                 
                                     <option value="Rail Car"{% if shipment.carrier_type == 'Rail Car'%} selected {% endif %}>Rail Car</option>
                                     <option value="Truck/Trailer"{% if shipment.carrier_type == 'Truck/Trailer'%} selected {% endif %}>Truck/Trailer</option>
@@ -163,43 +198,33 @@
                         </div>
                         <div class="col-md-4">
                             <div class="form-group">
-                                <label for="carrier_id">Carrier ID </label>
+                                <label for="carrier_id">Carrier ID<span class="asteriskField">*</span></label>
                                 <input type="text" name="carrier_id" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{carrier_id}}">
                             </div>
-                        </div>                       
+                        </div>                  
                         
                         <div class="col-md-4">
                             <div class="form-group">
-                                <label for="crop_id">Crop</label>
-                                <select name="crop_id" id="crop_id" class="form-control" required>                                 
-                                    {% for crop in crops %}
-                                    <option value="{{crop.id}}"{% if shipment.crop_id == crop.id %} selected {% endif %}>{{crop.crop}}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                <label for="purchase_order_name">Purchase Order Name </label>
+                                <label for="purchase_order_name">Purchase Order Name<span class="asteriskField">*</span></label>
                                 <input type="text" name="purchase_order_name" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{shipment.purchase_order_name}}">
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="form-group">
-                                <label for="purchase_order_number">Purchase Order Number </label>
+                                <label for="purchase_order_number">Purchase Order Number<span class="asteriskField">*</span></label>
                                 <input type="number" name="purchase_order_number" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{shipment.purchase_order_number}}">
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="form-group">
-                                <label for="lot_number">Lot Number </label>
+                                <label for="lot_number">Lot Number<span class="asteriskField">*</span></label>
                                 <input type="text" name="lot_number" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{shipment.lot_number}}">
                             </div>
                         </div>
                     
                         <div class="col-md-4 rail">
                             <div class="form-group">
-                                <label for="weight">Weight</label>
+                                <label for="weight">Weight<span class="asteriskField">*</span></label>
                                 <div class="d-flex">
                                 <input type="number" step="0.01" name="weight" class="textinput textInput form-control" value="{{shipment.net_weight}}" style="margin-top:0; border-top-right-radius:0 !important; border-bottom-right-radius:0 !important" >
                                 <select name="amount_unit" id="unitSelction" class="form-select" style="border-top-left-radius:0 !important; border-bottom-left-radius:0 !important; border-left:0; width:90px;" required>                                   
@@ -212,7 +237,7 @@
                                            
                         <div class="col-md-4 truck">
                             <div class="form-group">
-                                <label for="gross_weight">Gross Weight</label>
+                                <label for="gross_weight">Gross Weight<span class="asteriskField">*</span></label>
                                 <div class="d-flex">
                                 <input type="number" step="0.01" name="gross_weight" class="textinput textInput form-control" value="{{shipment.gross_weight}}" style="margin-top:0; border-top-right-radius:0 !important; border-bottom-right-radius:0 !important">
                                 <select name="amount_unit" id="unitSelction" class="form-select" style="border-top-left-radius:0 !important; border-bottom-left-radius:0 !important; border-left:0; width:90px;" required>                                   
@@ -224,7 +249,7 @@
                         </div>
                         <div class="col-md-4 truck">
                             <div class="form-group">
-                                <label for="ship_weight">Ship Weight</label>
+                                <label for="ship_weight">Ship Weight<span class="asteriskField">*</span></label>
                                 <div class="d-flex">
                                 <input type="number" step="0.01" name="ship_weight" class="textinput textInput form-control" value="{{shipment.ship_weight}}" style="margin-top:0; border-top-right-radius:0 !important; border-bottom-right-radius:0 !important">
                                 <select name="amount_unit" id="unitSelction" class="form-select" style="border-top-left-radius:0 !important; border-bottom-left-radius:0 !important; border-left:0; width:90px;" required>                                   
@@ -236,14 +261,14 @@
                         </div>
                         <div class="col-md-4 truck">
                             <div class="form-group">
-                                <label for="ship_quantity">Ship Quantity</label>
+                                <label for="ship_quantity">Ship Quantity<span class="asteriskField">*</span></label>
                                 <input type="number" name="ship_quantity" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{shipment.ship_quantity}}">
                             </div>
                         </div>                       
                                                
                         <div class="col-md-4">
                             <div class="form-group">
-                                <label for="status">Status</label>                                
+                                <label for="status">Status<span class="asteriskField">*</span></label>                                
                                 <select name="status" id="status" class="form-select" style="width: 100%;padding-left:10px ;" required>                                   
                                     <option value="Released"{% if shipment.status == 'Released' %}selected {% endif %}>Released</option>
                                     <option value="At Border"{% if shipment.status == 'At Border' %}selected {% endif %}>At Border</option>
@@ -299,9 +324,15 @@
                                 <input type="date" name="processor_receive_date" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{shipment.processor_receive_date|date:'Y-m-d'}}">
                             </div>
                         </div>
+                        <div class="col-md-4 customer_contract_select" style="display:none;">
+                            <div class="form-group">
+                                <label for="final_payment_date">Final Payment Date</label>
+                                <input type="date" name="final_payment_date" class="textinput textInput form-control" style="width: 100%;padding-left:10px ;" value="{{shipment.final_payment_date|date:'Y-m-d'}}">
+                            </div>
+                        </div>
                         <div class="col-md-4 mb-2">
                             <div class="form-group">
-                                <label for="multi_file">Upload File <span class="asteriskField">*</span></label>
+                                <label for="multi_file">Upload File</label>
                                 <input type="file" name="files" multiple accept=".jpg,.png,.xlsx,.csv,.pdf" id="multi_file" class="textinput textInput form-control" >
                                 <div class="col-md-8 mb-2"> 
                                     <div id="file_names_container" style="margin-bottom: 10px;">
@@ -323,6 +354,125 @@
                             </div>
                         </div>
                     </div>
+                    
+                    <div class="row">
+                        <div class="col-12 mb-2">
+                            <div class="d-flex justify-content-between align-items-center" style="background-color: #d7d5d5; padding: 12px; width: 100%;">
+                                <h2 class="m-0" style="color: #0b6c39; font-size: 22px; font-weight: 600; flex-grow: 1; text-align: center;">
+                                    Lot Number Tracking
+                                </h2>
+                                <button type="button" class="btn btn-sm font-weight-bold btn-primary add-field" style="flex-shrink: 0;">
+                                    +
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="field_details_container" class="row">
+                        {% if additional_lots %}
+                        {% for entry in additional_lots %}
+                            <div class="col-md-12 mb-2" id="field_row_{{ forloop.counter }}">
+                                <div class="row align-items-center">
+                                    <div class="col-4">
+                                        <div class="form-group">
+                                            <label for="lot_number_{{ forloop.counter }}">Lot Number</label>
+                                            <input type="text" name="lot_number[]" class="form-control" placeholder="Lot Number" value="{{ entry.additional_lot_number }}" style="height: 52px !important;">
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="form-group">
+                                            <label for="address_{{ forloop.counter }}">Address</label>
+                                            <textarea name="address[]" class="form-control address-input no-resize" id="address_{{ forloop.counter }}" rows="1" cols="25">{{ entry.address }}</textarea>
+                                        </div>
+                                    </div>
+                                    <div class="col-3">
+                                        <div class="form-group">
+                                            <label for="description_{{ forloop.counter }}">Description</label>
+                                            <textarea name="description[]" class="form-control no-resize" rows="1" cols="25">{{ entry.description }}</textarea>
+                                        </div>
+                                    </div>
+                                    <div class="col-1">
+                                        <button type="button" class="btn btn-sm font-weight-bold btn-danger remove-field mt-2">-</button>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                        {% endif %}
+                    </div>                   
+                    
+                    <script>
+                        let fieldIndex = {{ additional_lots|length }}; // Initialize field counter based on existing rows
+                    
+                        document.addEventListener('click', function(e) {
+                            if (e.target && e.target.classList.contains('add-field')) {
+                                fieldIndex++;
+                    
+                                // Create a new row div and add content
+                                const newFieldRow = document.createElement('div');
+                                newFieldRow.classList.add('col-md-12', 'mb-2');
+                                newFieldRow.id = `field_row_${fieldIndex}`;
+                    
+                                newFieldRow.innerHTML = `
+                                    <div class="row align-items-center">
+                                        <div class="col-4">
+                                            <div class="form-group">
+                                                <label for="lot_number_${fieldIndex}">Lot Number</label>
+                                                <input type="text" name="lot_number[]" class="form-control" placeholder="Lot Number">
+                                            </div>
+                                        </div>
+                                        <div class="col-4">
+                                            <div class="form-group">
+                                                <label for="address_${fieldIndex}">Address</label>
+                                                <textarea name="address[]" class="form-control address-input no-resize" id="address_${fieldIndex}" rows="1" cols="25"></textarea>
+                                            </div>
+                                        </div>
+                                        <div class="col-3">
+                                            <div class="form-group">
+                                                <label for="description_${fieldIndex}">Description</label>
+                                                <textarea name="description[]" class="form-control no-resize" rows="1" cols="25"></textarea>
+                                            </div>
+                                        </div>
+                                        <div class="col-1">
+                                            <button type="button" class="btn btn-sm font-weight-bold btn-danger remove-field mt-2">-</button>
+                                        </div>
+                                    </div>
+                                `;
+                    
+                                // Append the new row to the container
+                                document.querySelector('#field_details_container').appendChild(newFieldRow);
+                    
+                                // Initialize Google Maps Autocomplete on the new address field
+                                initAutocomplete(document.getElementById(`address_${fieldIndex}`));
+                            } else if (e.target && e.target.classList.contains('remove-field')) {
+                                // Remove the field row
+                                e.target.closest('.col-md-12').remove();
+                            }
+                        });
+                    
+                        // Initialize autocomplete for a specific input element
+                        function initAutocomplete(inputElement) {
+                            if (!inputElement) return;
+                    
+                            const autocomplete = new google.maps.places.Autocomplete(inputElement, {
+                                types: ["address"],       // Restrict results to addresses
+                               //componentRestrictions: { country: "us" } // Example restriction to US
+                            });
+                    
+                            autocomplete.addListener("place_changed", () => {
+                                const place = autocomplete.getPlace();
+                                if (place.geometry) {
+                                    console.log("Selected address:", place.formatted_address);
+                                    console.log("Location coordinates:", place.geometry.location.toString());
+                                } else {
+                                    console.log("No details available for the selected address.");
+                                }
+                            });
+                        }
+                    
+                        // Initialize autocomplete for any pre-existing address fields on page load
+                        document.querySelectorAll('.address-input').forEach(initAutocomplete);
+                    </script>                               
+
                     <div class="row">
                         <h2 style="background-color: #d7d5d5; color: #0b6c39; font-size: 22px; font-weight: 600; margin: 20px 0; padding: 12px 0; text-align: center">Updated Details</h2>
                         <div id="field_details_container" class="row">
@@ -424,7 +574,7 @@
                 <div class="col-md-4 mb-2 sender_sku_item">
                     <div class='d-flex align-items-end'>
                         <div class='w-100'>
-                            <label for="sender_sku_id_${skuCount}">Sender Storage Bin ID (SKU ID) <span class="asteriskField">*</span></label>
+                            <label for="sender_sku_id_${skuCount}">Sender Storage Bin ID (SKU ID) </label>
                             <input type="text" id="sender_sku_id_${skuCount}" name="sender_sku_id" class="textinput textInput form-control" list="suggestions_${skuCount}" autocomplete="off" placeholder="Sender SKU ID">
                             <datalist id="suggestions_${skuCount}">
                                 {% for data in sender_sku_id_list %}
@@ -540,6 +690,28 @@
     
         // Initial call to set the correct fields based on the current value
         toggleFields();
+    });
+</script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const destinationSelect = document.getElementById('selected_destination');
+        const customerContractSelect = document.querySelectorAll('.customer_contract_select');
+
+        function toggleCustomerContract() {
+            customerContractSelect.forEach(function(contractSelect) {
+                if (destinationSelect.value === 'customer') {
+                    contractSelect.style.display = 'block';
+                } else {
+                    contractSelect.style.display = 'none';
+                }
+            });
+        }
+
+        // Initial check
+        toggleCustomerContract();
+
+        // Update on change
+        destinationSelect.addEventListener('change', toggleCustomerContract);
     });
 </script>
 

@@ -57,7 +57,7 @@
         </div>
         <div class="card card-padding">
             <div class="main-simple-table-with-search">
-                {% if 'Processor2' in request.user.get_role and not request.user.is_superuser %}
+                {% if 'Processor2' in request.user.get_role and not request.user.is_superuser or not 'SubAdmin' in request.user.get_role or not 'SuperUser' in request.user.get_role %}
                 {% else %}
                 <div class="form-inline justify-content-start">
                     <form action="" method="get" class="">

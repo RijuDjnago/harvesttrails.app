@@ -55,7 +55,10 @@
         background: #e4e4e4;
         pointer-events: none;
     }
-
+    .bootstrap-select .dropdown-menu li.disabled.selected{display: none;}
+    .dropdown.bootstrap-select.form-control .btn{border: 1px solid #B2BEB5; padding: 15px 8px; border-radius:0;}
+    .bootstrap-select .dropdown-menu{max-width: 280px;}
+    .bootstrap-select .dropdown-menu li.selected.active .dropdown-item.active.selected{margin-left: 0;padding: 0;}
 </style>
 <div class="main-content">
     {% include 'header.html' %} {% load crispy_forms_tags %}
@@ -130,7 +133,7 @@
                             <div id="div_id_grower" class="form-group">
                                 <label for="id_grower" class=" requiredField">Grower<span class="asteriskField">*</span></label>
                                 <div>
-                                    <select name="grower" class="select form-control" id="id_grower" required>
+                                    <select name="grower" class="select form-control selectpicker" id="id_grower" data-live-search="true" required>
                                         {% for gwdp in growers_dpdwn %}
                                         <option value="{{gwdp.id}}" {% if selected_grower == gwdp.id %}selected{% endif %}>{{gwdp.name}}-{{gwdp.id}}</option>
                                         {% endfor %}
@@ -190,33 +193,10 @@
                         <div class="col-md-4 mt-3">
                             <label for="id_crop" class=" requiredField">Crop<span class="asteriskField">*</span></label>
                             <select name="crop" class="select form-control readonly" id="id_crop" >
-                                {% if new_update_field.crop == 'COTTON' %}
-                                <option value="COTTON" selected>COTTON</option>
-                                <option value="RICE">RICE</option>
-                                <option value="WHEAT">WHEAT</option>
-                                <option value="PEANUT">PEANUT</option>
-                                {% elif new_update_field.crop == 'RICE' %}
-                                <option value="COTTON">COTTON</option>
-                                <option value="RICE" selected>RICE</option>
-                                <option value="WHEAT">WHEAT</option>
-                                <option value="PEANUT">PEANUT</option>
-                                {% elif new_update_field.crop == 'WHEAT' %}
-                                <option value="COTTON">COTTON</option>
-                                <option value="RICE">RICE</option>
-                                <option value="WHEAT" selected>WHEAT</option>
-                                <option value="PEANUT">PEANUT</option>
-                                {% elif new_update_field.crop == 'PEANUT' %}
-                                <option value="COTTON">COTTON</option>
-                                <option value="RICE">RICE</option>
-                                <option value="WHEAT">WHEAT</option>
-                                <option value="PEANUT" selected>PEANUT</option>
-                                {% else %}
-                                <option value="">------</option>
-                                <option value="COTTON">COTTON</option>
-                                <option value="RICE">RICE</option>
-                                <option value="WHEAT">WHEAT</option>
-                                <option value="PEANUT">PEANUT</option>
-                                {% endif %}
+                                {% for crop in crops %}
+                                <option value="{{crop.code}}" {% if new_update_field.crop == crop.code  %}selected {% endif %}>{{crop.code}}</option>
+                                {% endfor %}
+                                
                             </select>
                             <!-- <input type="text" name="crop" id="id_crop" class="textinput textInput form-control" value='{% if update_field.crop %}{{update_field.crop}}{% else %}{% endif %}' required> -->
                             <!-- as_crispy_field -->
@@ -335,12 +315,7 @@
                             <div>
                                 <select name="variety" class="select form-control" id="id_variety2">
                                     <option value="" selected>Select</option>
-                                    <!-- <option value="Pre_Fert">Pre Fert</option>
-                                    <option value="Early_Post_Fert">Early Post Fert</option>
-                                    <option value="Foliar_Fert_App">Foliar Fert App</option>
-                                    <option value="Pre_Flood_Fert">Pre Flood Fert</option>
-                                    <option value="Post_Flood_Mid_Season_Fert">Post Flood / Mid Season Fert</option>
-                                    <option value="Boot_Fertilizer">Boot Fertilizer</option> -->
+                                   
                                     <option value="Burndown_Chemical">Burndown Chemical</option>
                                     <option value="Preemergence_Chemical">Preemergence Chemical</option>
                                     <option value="Emergence_Chemical">Emergence Chemical</option>
@@ -545,280 +520,7 @@
 
                         </div>
                     </div>
-                </div>
-                
-                
-                <!--1 field_Pre_Fert -->
-                <!-- {% if field_Pre_Fert|length > 0 %}
-                <div id="pre_fert_table_1" class="pre-table mb-4">
-                    <h4 id="root">Pre Fert</h4>
-                    <table class="table table-striped table-bordered dt-responsive nowrap">
-                        <thead>
-                            <tr>
-                                <th>Date of Activity</th>
-                                <th>Mode of Application</th>
-                                <th>Label Name</th>
-                                <th>Amount Per Acre</th>
-                                <th>UoM</th>
-                                <th>Special Notes</th>
-                                <th>ACTION</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for i in field_Pre_Fert %}
-                            <tr>
-                                <td>{{ i.date_of_activity }}</td>
-                                <td>{{ i.mode_of_application }}</td>
-                                <td>{{ i.label_name }}</td>
-                                <td>{{ i.amount_per_acre }}</td>
-                                <td>{{ i.unit_of_acre }}</td>
-                                <td>{{ i.special_notes }}</td>
-                                <td>
-                                    <a onclick="delActivityField('{% url 'fieldActivity-delete' i.id  %}')" href="javascript:void(0)"
-                                    data-mdb-toggle="modal" data-mdb-target="#deleteModal"><span class="fas fa-trash"></span></a>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                            <tr>
-                                <td>Total</td>
-                                <td></td>
-                                <td></td>
-                                <td>{{ sum_Pre_Fert }}</td>
-                                <td>LBS / acre</td>
-                                <td></td>
-                                <td></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-                {% endif %} -->
-                    
-                <!--2 Early_Post_Fert  -->
-                <!-- {% if field_activity_Early_Post_Fert|length > 0 %}
-                <div id="pre_fert_table_1" class="pre-table mb-4">
-                    <h4 id="root">Early Post Fert</h4>
-                    <table class="table table-striped table-bordered dt-responsive nowrap">
-                        <thead>
-                            <tr>
-                                <th>Date of Activity</th>
-                                <th>Mode of Application</th>
-                                <th>Label Name</th>
-                                <th>Amount Per Acre</th>
-                                <th>UoM</th>
-                                <th>Special Notes</th>
-                                <th>ACTION</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for i in field_activity_Early_Post_Fert %}
-                            <tr>
-                                <td>{{ i.date_of_activity }}</td>
-                                <td>{{ i.mode_of_application }}</td>
-                                <td>{{ i.label_name }}</td>
-                                <td>{{ i.amount_per_acre }}</td>
-                                <td>LBS / acre</td>
-                                <td>{{ i.special_notes }}</td>
-                                <td>
-                                <a onclick="delActivityField('{% url 'fieldActivity-delete' i.id  %}')" href="javascript:void(0)"
-                                data-mdb-toggle="modal" data-mdb-target="#deleteModal"><span class="fas fa-trash"></span></a>
-                            </td>
-                            </tr>
-                            {% endfor %}
-                            <tr>
-                                <td>Total</td>
-                                <td></td>
-                                <td></td>
-                                <td>{{sum_Early_Post_Fert}}</td>
-                                <td>LBS / acre</td>
-                                <td></td>
-                                <td></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-                {% endif %} -->
-
-                <!--3 Foliar Fert App  -->
-                <!-- {% if field_activity_Foliar_Fert_App|length > 0 %}
-                <div id="pre_fert_table_1" class="pre-table mb-4">
-                    <h4 id="root">Foliar Fert App</h4>
-                    <table class="table table-striped table-bordered dt-responsive nowrap">
-                        <thead>
-                            <tr>
-                                <th>Date of Activity</th>
-                                <th>Mode of Application</th>
-                                <th>Label Name</th>
-                                <th>Amount Per Acre</th>
-                                <th>UoM</th>
-                                <th>Special Notes</th>
-                                <th>ACTION</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for i in field_activity_Foliar_Fert_App %}
-                            <tr>
-                                <td>{{ i.date_of_activity }}</td>
-                                <td>{{ i.mode_of_application }}</td>
-                                <td>{{ i.label_name }}</td>
-                                <td>{{ i.amount_per_acre }}</td>
-                                <td>LBS / acre</td>
-                                <td>{{ i.special_notes }}</td>
-                                <td>
-                                <a onclick="delActivityField('{% url 'fieldActivity-delete' i.id  %}')" href="javascript:void(0)"
-                                data-mdb-toggle="modal" data-mdb-target="#deleteModal"><span class="fas fa-trash"></span></a>
-                            </td>
-                            </tr>
-                            {% endfor %}
-                            <tr>
-                                <td>Total</td>
-                                <td></td>
-                                <td></td>
-                                <td>{{sum_Foliar_Fert_App}}</td>
-                                <td>LBS / acre</td>
-                                <td></td>
-                                <td></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-                {% endif %} -->
-
-                <!--4 Pre Flood Fert  -->
-                <!-- {% if field_activity_Pre_Flood_Fert|length > 0 %}
-                <div id="pre_fert_table_1" class="pre-table mb-4">
-                    <h4 id="root">Pre Flood Fert</h4>
-                    <table class="table table-striped table-bordered dt-responsive nowrap">
-                        <thead>
-                            <tr>
-                                <th>Date of Activity</th>
-                                <th>Mode of Application</th>
-                                <th>Label Name</th>
-                                <th>Amount Per Acre</th>
-                                <th>UoM</th>
-                                <th>Special Notes</th>
-                                <th>ACTION</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for i in field_activity_Pre_Flood_Fert %}
-                            <tr>
-                                <td>{{ i.date_of_activity }}</td>
-                                <td>{{ i.mode_of_application }}</td>
-                                <td>{{ i.label_name }}</td>
-                                <td>{{ i.amount_per_acre }}</td>
-                                <td>LBS / acre</td>
-                                <td>{{ i.special_notes }}</td>
-                                <td>
-                                <a onclick="delActivityField('{% url 'fieldActivity-delete' i.id  %}')" href="javascript:void(0)"
-                                data-mdb-toggle="modal" data-mdb-target="#deleteModal"><span class="fas fa-trash"></span></a>
-                            </td>
-                            </tr>
-                            {% endfor %}
-                            <tr>
-                                <td>Total</td>
-                                <td></td>
-                                <td></td>
-                                <td>{{sum_Pre_Flood_Fert}}</td>
-                                <td>LBS / acre</td>
-                                <td></td>
-                                <td></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-                {% endif %} -->
-
-                <!--5 Post Flood / Mid Season Fert  -->
-                <!-- {% if field_activity_Post_Flood_Mid_Season_Fert|length > 0 %}
-                <div id="pre_fert_table_1" class="pre-table mb-4">
-                    <h4 id="root">Post Flood / Mid Season Fert</h4>
-                    <table class="table table-striped table-bordered dt-responsive nowrap">
-                        <thead>
-                            <tr>
-                                <th>Date of Activity</th>
-                                <th>Mode of Application</th>
-                                <th>Label Name</th>
-                                <th>Amount Per Acre</th>
-                                <th>UoM</th>
-                                <th>Special Notes</th>
-                                <th>ACTION</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for i in field_activity_Post_Flood_Mid_Season_Fert %}
-                            <tr>
-                                <td>{{ i.date_of_activity }}</td>
-                                <td>{{ i.mode_of_application }}</td>
-                                <td>{{ i.label_name }}</td>
-                                <td>{{ i.amount_per_acre }}</td>
-                                <td>LBS / acre</td>
-                                <td>{{ i.special_notes }}</td>
-                                <td>
-                                <a onclick="delActivityField('{% url 'fieldActivity-delete' i.id  %}')" href="javascript:void(0)"
-                                data-mdb-toggle="modal" data-mdb-target="#deleteModal"><span class="fas fa-trash"></span></a>
-                            </td>
-                            </tr>
-                            {% endfor %}
-                            <tr>
-                                <td>Total</td>
-                                <td></td>
-                                <td></td>
-                                <td>{{sum_Flood_Mid_Season_Fert}}</td>
-                                <td>LBS / acre</td>
-                                <td></td>
-                                <td></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-                {% endif %} -->
-
-
-                <!--6 Boot Fertilizer  -->
-                <!-- {% if field_activity_Boot_Fertilizer|length > 0 %}
-                <div id="pre_fert_table_1" class="pre-table mb-4">
-                    <h4 id="root">Boot Fertilizer</h4>
-                    <table class="table table-striped table-bordered dt-responsive nowrap">
-                        <thead>
-                            <tr>
-                                <th>Date of Activity</th>
-                                <th>Mode of Application</th>
-                                <th>Label Name</th>
-                                <th>Amount Per Acre</th>
-                                <th>UoM</th>
-                                <th>Special Notes</th>
-                                <th>ACTION</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for i in field_activity_Boot_Fertilizer %}
-                            <tr>
-                                <td>{{ i.date_of_activity }}</td>
-                                <td>{{ i.mode_of_application }}</td>
-                                <td>{{ i.label_name }}</td>
-                                <td>{{ i.amount_per_acre }}</td>
-                                <td>LBS / acre</td>
-                                <td>{{ i.special_notes }}</td>
-                                <td>
-                                <a onclick="delActivityField('{% url 'fieldActivity-delete' i.id  %}')" href="javascript:void(0)"
-                                data-mdb-toggle="modal" data-mdb-target="#deleteModal"><span class="fas fa-trash"></span></a>
-                            </td>
-                            </tr>
-                            {% endfor %}
-                            <tr>
-                                <td>Total</td>
-                                <td></td>
-                                <td></td>
-                                <td>{{sum_Boot_Fertilizer}}</td>
-                                <td>LBS / acre</td>
-                                <td></td>
-                                <td></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-                {% endif %} -->
-
+                </div>               
 
                 <!--7 Burndown Chemical  -->
                 {% if field_activity_Burndown_Chemical|length > 0 %}
@@ -1358,56 +1060,39 @@
     selectElement.classList.remove("readonly");
     {% endif %}
 </script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script
+  src="https://code.jquery.com/jquery-3.6.3.min.js"
+  integrity="sha256-pvPw+upLPUjgMXY0G+8O0xUf+/Im1MZjXxxgOcBQBXU="
+  crossorigin="anonymous"></script>
 <script>
-    $(document).ready(function(e){
-        //$('#id_variety').val('');
-        $('#id_variety').find('option').prop('disabled', false);
-        var crop_val = $('#id_crop').val();
-        if(crop_val == 'RICE')
-        {
-            $('#id_variety option').filter('[value="DG 2425 XF"],[value="DG 3450 B2XF"],[value="DG 3470 B3XF"],[value="DG 3570 B3XF"],[value="DG 3635 B2XF"],[value="DG 3544 B2XF"],[value="DG 3651NR B2XF"],[value="DG 3109 B2XF"],[value="DG 3387 B3XF"],[value="DG 3421 B3XF"],[value="DG H929 B3XF"],[value="DG 3555 B3XF"],[value="DG 3402 B3XF"],[value="DG H959 B3XF"],[value="DG 3469 B3XF"],[value="DG 3615 B3XF"],[value="DG P224 B3XF"],[value="DG 3385 B2XF"],[value="DG 3422 B3XF"],[value="DG 3799 B3XF"],[value="DG-Wheat"],[value="DG 1464"],[value="DG3605"],[value="DG 3215 B3XF"]').prop('disabled', true);
-        }
+    $(document).ready(function () {
+        // Attach change event listener to the crop field
+        $('#id_crop').change(function () {
+            var cropCode = $(this).val();  // Get the selected crop code
+            var varietySelect = $('#id_variety');  // Get the variety field
 
-        if(crop_val == 'COTTON')
-        {
-            $('#id_variety option').filter('[value="DG-263L"],[value="DG-Wheat"]').prop('disabled', true);
-        }
-        if(crop_val == 'PEANUT')
-        {
-            $('#id_variety option').filter('[value="DG-263L"],[value="DG-Wheat"],[value="DG 2425 XF"],[value="DG 3450 B2XF"],[value="DG 3470 B3XF"],[value="DG 3570 B3XF"],[value="DG 3635 B2XF"],[value="DG 3544 B2XF"],[value="DG 3651NR B2XF"],[value="DG 3109 B2XF"],[value="DG 3387 B3XF"],[value="DG 3421 B3XF"],[value="DG H929 B3XF"],[value="DG 3555 B3XF"],[value="DG 3402 B3XF"],[value="DG H959 B3XF"],[value="DG 3469 B3XF"],[value="DG 3615 B3XF"],[value="DG P224 B3XF"],[value="DG 3385 B2XF"],[value="DG 3422 B3XF"],[value="DG 3799 B3XF"],[value="DG-Wheat"],[value="DG 1464"],[value="DG3605"],[value="DG 3215 B3XF"]').prop('disabled', true);
-        }
-        if(crop_val == 'BEAN')
-        {
-            $('#id_variety option').filter('[value="DG-263L"],[value="DG-Wheat"],[value="DG 2425 XF"],[value="DG 3450 B2XF"],[value="DG 3470 B3XF"],[value="DG 3570 B3XF"],[value="DG 3635 B2XF"],[value="DG 3544 B2XF"],[value="DG 3651NR B2XF"],[value="DG 3109 B2XF"],[value="DG 3387 B3XF"],[value="DG 3421 B3XF"],[value="DG H929 B3XF"],[value="DG 3555 B3XF"],[value="DG 3402 B3XF"],[value="DG H959 B3XF"],[value="DG 3469 B3XF"],[value="DG 3615 B3XF"],[value="DG P224 B3XF"],[value="DG 3385 B2XF"],[value="DG 3422 B3XF"],[value="DG 3799 B3XF"],[value="DG-Wheat"],[value="DG 1464"],[value="DG3605"],[value="DG 3215 B3XF"]').prop('disabled', true);
-        }
+            // Clear current variety options
+            varietySelect.empty();
+            varietySelect.append('<option value="">Select Variety</option>');
 
-    });
-    
-    $('#id_crop').on('change', function(e){
-        $('#id_variety').val('');
-        $('#id_variety').find('option').prop('disabled', false);
-        var crop_val = $(this).val();
-        if(crop_val == 'RICE')
-        {
-            $('#id_variety option').filter('[value="DG 2425 XF"],[value="DG 3450 B2XF"],[value="DG 3470 B3XF"],[value="DG 3570 B3XF"],[value="DG 3635 B2XF"],[value="DG 3544 B2XF"],[value="DG 3651NR B2XF"],[value="DG 3109 B2XF"],[value="DG 3387 B3XF"],[value="DG 3421 B3XF"],[value="DG H929 B3XF"],[value="DG 3555 B3XF"],[value="DG 3402 B3XF"],[value="DG H959 B3XF"],[value="DG 3469 B3XF"],[value="DG 3615 B3XF"],[value="DG P224 B3XF"],[value="DG 3385 B2XF"],[value="DG 3422 B3XF"],[value="DG 3799 B3XF"],[value="DG-Wheat"],[value="DG 1464"],[value="DG3605"],[value="DG 3215 B3XF"]').prop('disabled', true);
-        }
-
-        if(crop_val == 'COTTON')
-        {
-            $('#id_variety option').filter('[value="DG-263L"],[value="DG-Wheat"]').prop('disabled', true);
-        }
-        if(crop_val == 'WHEAT')
-        {
-            $('#id_variety option').filter('[value="DG-263L"],[value="DG 2425 XF"],[value="DG 3450 B2XF"],[value="DG 3470 B3XF"],[value="DG 3570 B3XF"],[value="DG 3635 B2XF"],[value="DG 3544 B2XF"],[value="DG 3651NR B2XF"],[value="DG 3109 B2XF"],[value="DG 3387 B3XF"],[value="DG 3421 B3XF"],[value="DG H929 B3XF"],[value="DG 3555 B3XF"],[value="DG 3402 B3XF"],[value="DG H959 B3XF"],[value="DG 3469 B3XF"],[value="DG 3615 B3XF"],[value="DG P224 B3XF"],[value="DG 3385 B2XF"],[value="DG 3422 B3XF"],[value="DG 3799 B3XF"],[value="DG 1464"],[value="DG3605"],[value="DG 3215 B3XF"]').prop('disabled', true);
-        }
-        if(crop_val == 'PEANUT')
-        {
-            $('#id_variety option').filter('[value="DG-263L"],[value="DG-Wheat"],[value="DG 2425 XF"],[value="DG 3450 B2XF"],[value="DG 3470 B3XF"],[value="DG 3570 B3XF"],[value="DG 3635 B2XF"],[value="DG 3544 B2XF"],[value="DG 3651NR B2XF"],[value="DG 3109 B2XF"],[value="DG 3387 B3XF"],[value="DG 3421 B3XF"],[value="DG H929 B3XF"],[value="DG 3555 B3XF"],[value="DG 3402 B3XF"],[value="DG H959 B3XF"],[value="DG 3469 B3XF"],[value="DG 3615 B3XF"],[value="DG P224 B3XF"],[value="DG 3385 B2XF"],[value="DG 3422 B3XF"],[value="DG 3799 B3XF"],[value="DG-Wheat"],[value="DG 1464"],[value="DG3605"],[value="DG 3215 B3XF"]').prop('disabled', true);
-        }
-        if(crop_val == 'BEAN')
-        {
-            $('#id_variety option').filter('[value="DG-263L"],[value="DG-Wheat"],[value="DG 2425 XF"],[value="DG 3450 B2XF"],[value="DG 3470 B3XF"],[value="DG 3570 B3XF"],[value="DG 3635 B2XF"],[value="DG 3544 B2XF"],[value="DG 3651NR B2XF"],[value="DG 3109 B2XF"],[value="DG 3387 B3XF"],[value="DG 3421 B3XF"],[value="DG H929 B3XF"],[value="DG 3555 B3XF"],[value="DG 3402 B3XF"],[value="DG H959 B3XF"],[value="DG 3469 B3XF"],[value="DG 3615 B3XF"],[value="DG P224 B3XF"],[value="DG 3385 B2XF"],[value="DG 3422 B3XF"],[value="DG 3799 B3XF"],[value="DG-Wheat"],[value="DG 1464"],[value="DG3605"],[value="DG 3215 B3XF"]').prop('disabled', true);
-        }
+            if (cropCode) {
+                // Make an AJAX request to get the varieties for the selected crop
+                $.ajax({
+                    url: `/field/get-varieties/${cropCode}/`, // Django view URL
+                    type: 'GET',
+                    success: function (data) {
+                        // Populate the variety dropdown with the returned data
+                        $.each(data, function (index, variety) {
+                            varietySelect.append('<option value="' + variety.id + '">' + variety.variety_name + '</option>');
+                        });
+                    },
+                    error: function () {
+                        console.log('Error loading crop varieties');
+                    }
+                });
+            }
+        });
     });
 </script>
 <script>

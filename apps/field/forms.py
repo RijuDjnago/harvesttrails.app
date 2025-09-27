@@ -4,14 +4,20 @@ from django.forms.widgets import ChoiceWidget
 
 from . import models
 
-class FarmForm(forms.ModelForm):
+class FarmForm(forms.ModelForm):    
 
     def __init__(self, *args, **kwargs):
-        # first call parent's constructor
-        super(FarmForm, self).__init__(*args, **kwargs)
-        # there's a `fields` property now
-        self.fields['crop'].choices = [(crop.code, crop.code) for crop in models.Crop.objects.all()]
-        self.fields['crop'].required = True
+        
+        super(FarmForm, self).__init__(*args, **kwargs)  
+        crop_choices = [('', 'Select Crop')] + [(crop.code, crop.code) for crop in models.Crop.objects.all()]
+        print(models.Crop.objects.all())
+       
+        self.fields['crop'] = forms.ChoiceField(
+            choices=crop_choices,
+            label="Select Crop",
+            required=True,
+            widget=forms.Select(attrs={'class': 'form-control'})
+        )
         self.fields['fsa_farm_number'].required = True
         self.fields['fsa_tract_number'].required = True
         self.fields['fsa_field_number'].required = True

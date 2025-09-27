@@ -23,7 +23,7 @@
          {% endif %}
          <!-- 03-06-23 -->
          {% if request.user.is_authenticated %}
-         {% if 'Grower Management' in request.user.get_role_perm or request.user.is_superuser %}
+         {% if 'Grower Management' in request.user.get_role_perm or request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
          <li class="for-drop">
             <a id="User-Management-active" href="javascript:void(0)" class="parent-nav19"><span class="rightimg"><i class="fa fa-user"></i></span>
             <span class="forn-none19">Users   <!-- User Management -->
@@ -33,7 +33,7 @@
                {% if 'User Management' in request.user.get_role_perm or request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role%}
                <li><a id="user-list" href="{% url 'user-list' %}">User Management</a></li>
                {% endif %}
-               {% if 'Role Management' in request.user.get_role_perm or request.user.is_superuser %}
+               {% if 'Role Management' in request.user.get_role_perm or request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
                <li><a id="role-list" href="{% url 'role-list' %}">Role Management</a></li>
                {% endif %}
                {% comment %} {% if 'Permissions Management' in request.user.get_role_perm or request.user.is_superuser %}
@@ -46,14 +46,14 @@
 
 
          {% if request.user.is_authenticated %}
-         {% if 'Grower Management' in request.user.get_role_perm or request.user.is_superuser %}
+         {% if 'Grower Management' in request.user.get_role_perm or request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
          <li class="for-drop">
             <a id="Grower-Configuration-active" href="javascript:void(0)" class="parent-nav2"><span class="rightimg"><i class="fa fa-users"></i></span>
             <span class="forn-none1">Growers       <!-- Grower Configuration  -->
             <span id="Grower-Configuration-down" class="fas fa-chevron-right pull-right pull_right_new"></span></span> </a>
             
             <ul id="Grower-Configuration-sub" class="dropdown-2">
-               {% if 'Grower Management' in request.user.get_role_perm or request.user.is_superuser %}
+               {% if 'Grower Management' in request.user.get_role_perm or request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
                <li><a id="Grower-Management" href="{% url 'account-list' %}">Grower Management</a></li>
                {% endif %}
                <!-- 03-06-23 -->
@@ -61,10 +61,10 @@
                <li><a id="Grower-Dashboard" href="{% url 'grower_dashboard_com' 'all' %}">Grower Dashboard</a></li>
                {% endif %}
                <!-- 03-06-23 -->
-               {% if 'Checklist Comparison' in request.user.get_role_perm or request.user.is_superuser%}
+               {% if 'Checklist Comparison' in request.user.get_role_perm or request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role%}
                <li><a id="Checklist-Comparison" href="{% url 'checklist_comparison' %}">Checklist Comparison</a></li>
                {% endif %}
-               {% if 'Report Management' in request.user.get_role_perm or request.user.is_superuser %}
+               {% if 'Report Management' in request.user.get_role_perm or request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
                <li><a id="Report-Management" href="{% url 'reports' %}">Report Management</a></li>
                {% endif %}
             </ul>
@@ -74,20 +74,20 @@
 
 
          {% if request.user.is_authenticated %}
-         {% if 'Farm Management' in request.user.get_role_perm or request.user.is_superuser %}
+         {% if 'Farm Management' in request.user.get_role_perm or request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
          <li class="for-drop">
             <a id="Farm-Configuration-active" href="javascript:void(0)" class="parent-nav22"> <span class="rightimg"><i class="fas fa-tractor"></i></span>
             <span class="forn-none2">Farms     <!--Farm Configuration-->
             <span id="Farm-Configuration-down" class="fas fa-chevron-right pull-right rotate2"></span></span> </a>
             
             <ul id="Farm-Configuration-sub" class="dropdown-22">
-               {% if 'Farm Management' in request.user.get_role_perm or request.user.is_superuser %}
+               {% if 'Farm Management' in request.user.get_role_perm or request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
                <li><a id="Farm-Management" href="{% url 'farm-list' %}">Farm Management</a></li>
                {% endif %}
-               {% if 'Farm Grouping' in request.user.get_role_perm or request.user.is_superuser %}
+               {% if 'Farm Grouping' in request.user.get_role_perm or request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
                <li><a id="Farm-Grouping" href="{% url 'grouping' %}">Farm Grouping</a></li>
                {% endif %}
-               {% if 'Field Management' in request.user.get_role_perm or request.user.is_superuser %}
+               {% if 'Field Management' in request.user.get_role_perm or request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
                <li><a id="Field-Management" href="{% url 'field-list' %}">Field Management</a></li>
                {% endif %}
             </ul>
@@ -96,24 +96,24 @@
          {% endif %}
 
          {% if request.user.is_authenticated %}
-         {% if 'Storage management' in request.user.get_role_perm or request.user.is_superuser or request.user.is_consultant %}
+         {% if 'Storage management' in request.user.get_role_perm or request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role or request.user.is_consultant %}
          <li class="for-drop">
             <a id="Storage-Management-active" href="javascript:void(0)" class="parent-nav88"><span class="rightimg"><i class="fas fa-box"></i></span>
             <span class="forn-none8">Storage    <!-- Storage Management -->
             <span id="Storage-Management-down" class="fas fa-chevron-right pull-right rotate8"></span></span> </a>
             
             <ul id="Storage-Management-sub" class="dropdown-88" style="display: none;">
-               {% if 'Storage list' in request.user.get_role_perm or request.user.is_superuser or request.user.is_consultant %}
+               {% if 'Storage list' in request.user.get_role_perm or request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role or request.user.is_consultant %}
                <li><a id="Storage-List" href="{% url 'storage-list' %}">Storage List</a></li>
                {% endif %}
-               {% if 'Storage add' in request.user.get_role_perm or request.user.is_superuser or request.user.is_consultant %}
+               {% if 'Storage add' in request.user.get_role_perm or request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role or request.user.is_consultant %}
                <li><a id="Storage-Add" href="{% url 'storage-create' %}">Storage Add</a></li>
                {% endif %}
                
-               {% if 'Storage feed list' in request.user.get_role_perm or request.user.is_superuser or 'Grower' in request.user.get_role or request.user.is_consultant %}
+               {% if 'Storage feed list' in request.user.get_role_perm or request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role or 'Grower' in request.user.get_role or request.user.is_consultant %}
                <li><a id="Storage-Feed-List" href="{% url 'storage_feed_list' %}">Storage Feed List</a></li>
                {% endif %}
-               {% if 'Storage Feed CSV' in request.user.get_role_perm or request.user.is_superuser or 'Grower' in request.user.get_role or request.user.is_consultant %}
+               {% if 'Storage Feed CSV' in request.user.get_role_perm or request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role or 'Grower' in request.user.get_role or request.user.is_consultant %}
                <li><a id="Storage-Feed-Csv" href="{% url 'assign_feed_csv' %}">Storage Feed CSV</a></li>
                {% endif %}
                
@@ -136,7 +136,7 @@
          {% endif %}
 
          {% if request.user.is_authenticated %}
-         {% if 'Grower Payments' in request.user.get_role_perm or request.user.is_superuser %}
+         {% if 'Grower Payments' in request.user.get_role_perm or request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
          <li class="for-drop">
             <a id="Growers-Payments-active" href="javascript:void(0)" class="parent-nav18"><span class="rightimg"><i class="fas fa-file-invoice-dollar"></i></span>
             <span class="forn-none18">Payments    <!-- Grower Payment -->
@@ -160,7 +160,7 @@
          {% endif %}
 
          {% if request.user.is_authenticated %}
-         {% if request.user.is_superuser or request.user.is_consultant %}  
+         {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role or request.user.is_consultant %}  
          <!-- <li>
             <a href="{% url 'grower_dashboard' %}"> <span class="rightimg"><i class="fa fa-file"></i></span> <span class="forn-none3">Grower Dashboard</span>
             </a>
@@ -170,7 +170,7 @@
 
 
          {% if request.user.is_authenticated %} 
-         {% if 'Survey Configuration' in request.user.get_role_perm or request.user.is_superuser %}
+         {% if 'Survey Configuration' in request.user.get_role_perm or request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
             <!-- {% comment %}
             <li><a href="{% url 'survey' %}"> <span class="rightimg"><i class="fas fa-poll"></i></span>
                <span>Survey Configuration</span></a>
@@ -190,7 +190,7 @@
          {% endif %}
 
          {% if request.user.is_authenticated %} 
-         {% if 'Sustainbility' in request.user.get_role_perm or request.user.is_superuser %}
+         {% if 'Sustainbility' in request.user.get_role_perm or request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role%}
          <li class="for-drop">
             <a id="Sustainability-active" href="javascript:void(0)" class="parent-nav44"> <span class="rightimg"><i class="fas fa-chart-line"></i></span>
             <span class="forn-none4">Sustainability
@@ -218,14 +218,14 @@
             <span id="Documents-and-Photos-down" class="fas fa-chevron-right pull-right rotate6"></span></span> </a>
 
             <ul id="Documents-and-Photos-sub" class="dropdown-55" style="display: none;">
-               {% if 'Folder List' in request.user.get_role_perm  or request.user.is_superuser %}
+               {% if 'Folder List' in request.user.get_role_perm  or request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
                <li><a id="Folder-List" href="{% url 'folder-list' %}">Folder List</a></li>
                {% endif %}
-               {% if 'Document List' in request.user.get_role_perm or request.user.is_superuser %}
+               {% if 'Document List' in request.user.get_role_perm or request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
                <li><a id="Document-List" href="{% url 'document-list' %}">Document List</a></li>
                {% endif %}
                <li><a id="Contracts-List" href="{% url 'contract-list' %}">Contracts List</a></li>
-                  {% if 'Contracts' in request.user.get_role_perm or request.user.is_superuser %}
+                  {% if 'Contracts' in request.user.get_role_perm or request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
                      <li><a id="Add-Contracts" href="{% url 'contract-add' %}">Add Contracts</a></li>
                   {% endif %}
                 <li><a id="Signed-Contracts" href="{% url 'signed-contract-list' %}">Signed Contracts</a></li>
@@ -240,20 +240,20 @@
          {% endif %}
 
          {% if request.user.is_authenticated %}
-         {% if request.user.is_superuser or request.user.is_processor or request.user.is_processor2 or request.user.is_customer %}
+         {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role or request.user.is_processor or request.user.is_processor2 or request.user.is_customer %}
          <li class="for-drop">
             <a id="Contracts-active" href="javascript:void(0)" class="parent-nav66"> <span class="rightimg"><i class="fas fa-file-signature"></i></span>
                <span class="forn-none6">Contracts
                <span id="Contracts-down" class="fas fa-chevron-right pull-right rotate7"></span></span> </a>
                <ul id="Contracts-sub" class="dropdown-66" style="display: none;">
-                  {% if request.user.is_superuser or request.user.is_processor or request.user.is_processor2 %}
+                  {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role or request.user.is_processor or request.user.is_processor2 %}
                     <li><a id="Contract-List" href="{% url 'list-contract' %}">Admin-Processor Contracts</a></li>
                   {% endif %}
 
-                  {% if request.user.is_superuser or request.user.is_customer %}
+                  {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role or request.user.is_customer %}
                      <li><a id="Customer-Contract-List" href="{% url 'admin-customer-contract-list' %}">Admin-Customer Contracts</a></li>
                   {% endif %}
-                  {% if 'Contracts' in request.user.get_role_perm or request.user.is_superuser %}
+                  {% if 'Contracts' in request.user.get_role_perm or request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
                      <li><a id="Add-Contracts" href="{% url 'add-contract' %}">Add Admin-Processor Contract</a></li>
                      <li><a id="Add-Customer-Contract" href="{% url 'add-admin-customer-contract' %}">Add Admin-Customer Contract</a></li>
                   {% endif %}
@@ -290,7 +290,7 @@
          {% endif %} -->
 
          {% if request.user.is_authenticated %}
-         {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role %}
+         {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
          <li class="for-drop">            
             <a id="Processor-active" href="javascript:void(0)" class="parent-nav99"> <span class="rightimg"><i class="fas fa-warehouse"></i></span>
             <span class="forn-none9">T1 Processor<!--Processor -->               
@@ -419,7 +419,7 @@
     {% endif %}
 
       {% if request.user.is_authenticated %}
-      {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or request.user.is_processor or request.user.is_processor2 or request.user.is_distributor or request.user.is_warehouse_manager or request.user.is_customer %}
+      {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role or request.user.is_processor or request.user.is_processor2 or request.user.is_distributor or request.user.is_warehouse_manager or request.user.is_customer %}
       <li class="for-drop">            
          <a id="Warehouse-active" href="javascript:void(0)" class="parent-nav1014">
              <span class="rightimg"><i class="fas fa-warehouse"></i></span>
@@ -434,7 +434,7 @@
              <li><a id="warehouse-management" href="{% url 'list-warehouse' %}">Warehouse Management</a></li>
 
              <li><a id="Processor-Shipment" href="{% url 'list-processor-shipment' %}">Processor Shipment</a></li>
-             {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or request.user.is_processor or request.user.is_processor2 %}
+             {% if request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role or request.user.is_processor or request.user.is_processor2 %}
              <li><a id="Processor-Shipment-Add" href="{% url 'add-processor-shipment' %}">Add Processor Shipment</a></li>
              {% endif %}
          </ul>
@@ -461,7 +461,7 @@
          {% endif %}
 
          {% if request.user.is_authenticated %} 
-            {% if 'Settings Configuration' in request.user.get_role_perm or request.user.is_superuser %}
+            {% if 'Settings Configuration' in request.user.get_role_perm or request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
                <li class="for-drop">
                   <a id="Setting-Configuration-active" href="javascript:void(0)" class="parent-nav77"> <span class="rightimg"><i class="fa fa-cog"></i></span>
                   <span class="forn-none7">Admin  <!--Setting Configuration-->

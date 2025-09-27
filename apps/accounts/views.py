@@ -1,7 +1,7 @@
 from ast import Not
 from difflib import context_diff
 from platform import release
-from tkinter.messagebox import NO
+# from tkinter.messagebox import NO
 from typing import Tuple
 from django.contrib.auth.views import LoginView
 from django.views import View
@@ -240,64 +240,45 @@ class AccountDetailView(LoginRequiredMixin, DetailView):
 
     
     def get(self, request, pk):
+        context = {}
         if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
-            object = Grower.objects.filter(id=pk)
-            context = {'object':object}
             obj = Grower.objects.get(id=pk)
+        
+            # Pass the grower object to the context
+            context['object'] = obj
+            
+            # Get consultant objects related to this grower
             consultant_obj = obj.consultant.all()
-            for i in consultant_obj:
-                print(i.name)
             context['consultant_obj'] = consultant_obj
-            growerChecklist_Grower_Contract = GrowerChecklist.objects.filter(grower_id=pk).filter(item_name='Grower_Contract')
-            context['growerChecklist_Grower_Contract'] = growerChecklist_Grower_Contract
+            
+            # Checklist items filtered by grower_id
+            context['growerChecklist_Grower_Contract'] = GrowerChecklist.objects.filter(grower_id=pk, item_name='Grower_Contract')
+            context['growerChecklist_Onboarding_Survey_1'] = GrowerChecklist.objects.filter(grower_id=pk, item_name='Onboarding_Survey_1')
+            context['growerChecklist_FSA_ID_information'] = GrowerChecklist.objects.filter(grower_id=pk, item_name='FSA_ID_information')
+            context['growerChecklist_Account_information'] = GrowerChecklist.objects.filter(grower_id=pk, item_name='Account_information')
+            context['growerChecklist_Farm_fully_set_up'] = GrowerChecklist.objects.filter(grower_id=pk, item_name='Farm_fully_set_up')
+            context['growerChecklist_Field_fully_set_up'] = GrowerChecklist.objects.filter(grower_id=pk, item_name='Field_fully_set_up')
+            context['growerChecklist_Shapefile_upload_for_all_fields'] = GrowerChecklist.objects.filter(grower_id=pk, item_name='Shapefile_upload_for_all_fields')
 
-            growerChecklist_Onboarding_Survey_1 = GrowerChecklist.objects.filter(grower_id=pk).filter(item_name='Onboarding_Survey_1')
-            context['growerChecklist_Onboarding_Survey_1'] = growerChecklist_Onboarding_Survey_1
-
-            growerChecklist_FSA_ID_information = GrowerChecklist.objects.filter(grower_id=pk).filter(item_name='FSA_ID_information')
-            context['growerChecklist_FSA_ID_information'] = growerChecklist_FSA_ID_information
-
-            growerChecklist_Account_information = GrowerChecklist.objects.filter(grower_id=pk).filter(item_name='Account_information')
-            context['growerChecklist_Account_information'] = growerChecklist_Account_information
-
-            growerChecklist_Farm_fully_set_up = GrowerChecklist.objects.filter(grower_id=pk).filter(item_name='Farm_fully_set_up')
-            context['growerChecklist_Farm_fully_set_up'] = growerChecklist_Farm_fully_set_up
-
-            growerChecklist_Field_fully_set_up = GrowerChecklist.objects.filter(grower_id=pk).filter(item_name='Field_fully_set_up')
-            context['growerChecklist_Field_fully_set_up'] = growerChecklist_Field_fully_set_up
-
-            growerChecklist_Shapefile_upload_for_all_fields = GrowerChecklist.objects.filter(grower_id=pk).filter(item_name='Shapefile_upload_for_all_fields')
-            context['growerChecklist_Shapefile_upload_for_all_fields'] = growerChecklist_Shapefile_upload_for_all_fields
-
-            return render (request,'accounts/account_detail.html',context)
+            return render(request, 'accounts/account_detail.html', context)
         if self.request.user.is_consultant:
             context = {}
             consultant_obj = Consultant.objects.filter(email=self.request.user.email)
             context['consultant_obj'] = consultant_obj
     
-            object = Grower.objects.filter(id=pk)
-            context['object'] = object
+            obj = Grower.objects.get(id=pk)
+        
+            # Pass the grower object to the context
+            context['object'] = obj
 
-            growerChecklist_Grower_Contract = GrowerChecklist.objects.filter(grower_id=pk).filter(item_name='Grower_Contract')
-            context['growerChecklist_Grower_Contract'] = growerChecklist_Grower_Contract
-
-            growerChecklist_Onboarding_Survey_1 = GrowerChecklist.objects.filter(grower_id=pk).filter(item_name='Onboarding_Survey_1')
-            context['growerChecklist_Onboarding_Survey_1'] = growerChecklist_Onboarding_Survey_1
-
-            growerChecklist_FSA_ID_information = GrowerChecklist.objects.filter(grower_id=pk).filter(item_name='FSA_ID_information')
-            context['growerChecklist_FSA_ID_information'] = growerChecklist_FSA_ID_information
-
-            growerChecklist_Account_information = GrowerChecklist.objects.filter(grower_id=pk).filter(item_name='Account_information')
-            context['growerChecklist_Account_information'] = growerChecklist_Account_information
-
-            growerChecklist_Farm_fully_set_up = GrowerChecklist.objects.filter(grower_id=pk).filter(item_name='Farm_fully_set_up')
-            context['growerChecklist_Farm_fully_set_up'] = growerChecklist_Farm_fully_set_up
-
-            growerChecklist_Field_fully_set_up = GrowerChecklist.objects.filter(grower_id=pk).filter(item_name='Field_fully_set_up')
-            context['growerChecklist_Field_fully_set_up'] = growerChecklist_Field_fully_set_up
-
-            growerChecklist_Shapefile_upload_for_all_fields = GrowerChecklist.objects.filter(grower_id=pk).filter(item_name='Shapefile_upload_for_all_fields')
-            context['growerChecklist_Shapefile_upload_for_all_fields'] = growerChecklist_Shapefile_upload_for_all_fields
+            # Checklist items filtered by grower_id
+            context['growerChecklist_Grower_Contract'] = GrowerChecklist.objects.filter(grower_id=pk, item_name='Grower_Contract')
+            context['growerChecklist_Onboarding_Survey_1'] = GrowerChecklist.objects.filter(grower_id=pk, item_name='Onboarding_Survey_1')
+            context['growerChecklist_FSA_ID_information'] = GrowerChecklist.objects.filter(grower_id=pk, item_name='FSA_ID_information')
+            context['growerChecklist_Account_information'] = GrowerChecklist.objects.filter(grower_id=pk, item_name='Account_information')
+            context['growerChecklist_Farm_fully_set_up'] = GrowerChecklist.objects.filter(grower_id=pk, item_name='Farm_fully_set_up')
+            context['growerChecklist_Field_fully_set_up'] = GrowerChecklist.objects.filter(grower_id=pk, item_name='Field_fully_set_up')
+            context['growerChecklist_Shapefile_upload_for_all_fields'] = GrowerChecklist.objects.filter(grower_id=pk, item_name='Shapefile_upload_for_all_fields')
             
             return render (request,'accounts/account_detail.html',context)
         
@@ -817,8 +798,16 @@ def dashboard(request):
     contract_count = None
     warehouse_count = None
     distributor_warehouses = None
-    unpaid_shipments = None
-    total_amount = None
+    unpaid_warehouse_shipments = None
+    unpaid_processor_shipments = None
+    total_warehouse_amount = None
+    total_processor_amount = None
+
+    total_grower_count = Grower.objects.all().count()
+    total_processor_count = int(Processor.objects.all().count()) + (Processor2.objects.all().count())
+    total_warehouse_count = Warehouse.objects.all().count()
+    total_customer_count = Customer.objects.all().count()
+
     # recent_users = User.objects.all().order_by('-id')[:10]
     
     
@@ -892,12 +881,18 @@ def dashboard(request):
         customer = Customer.objects.get(id=customer_user.customer_id)
         contract_count = AdminProcessorContract.objects.all().count()
         warehouse_count = Warehouse.objects.all().count()
-        unpaid_shipments = WarehouseCustomerShipment.objects.filter(customer_id=customer.id, is_paid=False, invoice_approval=True)
-        total_amount = 0
-        for shipment in unpaid_shipments:
+        unpaid_warehouse_shipments = WarehouseCustomerShipment.objects.filter(customer_id=customer.id, is_paid=False, invoice_approval=True)
+        total_warehouse_amount = 0
+        total_processor_amount = 0
+        for shipment in unpaid_warehouse_shipments:
             shipment.amount = (float(shipment.total_payment) + float(shipment.tax_amount)) if customer.is_tax_payable else float(shipment.total_payment)
             shipment.due_date = shipment.approval_time + timedelta(days=int(customer.credit_terms))
-            total_amount += shipment.amount
+            total_warehouse_amount += shipment.amount
+        unpaid_processor_shipments = ProcessorWarehouseShipment.objects.filter(customer_id=customer.id, is_paid=False, invoice_approval=True)
+        for shipment in unpaid_processor_shipments:
+            shipment.amount = (float(shipment.total_payment) + float(shipment.tax_amount)) if customer.is_tax_payable else float(shipment.total_payment)
+            shipment.due_date = shipment.approval_time + timedelta(days=int(customer.credit_terms))
+            total_processor_amount += shipment.amount
 
     if request.user.is_consultant:
         consultant_id = Consultant.objects.get(
@@ -1336,8 +1331,14 @@ def dashboard(request):
         'contract_count': contract_count,
         'warehouse_count': warehouse_count,
         'distributor_warehouses':distributor_warehouses,
-        'unpaid_shipments':unpaid_shipments,
-        "total_amount":total_amount
+        'unpaid_warehouse_shipments':unpaid_warehouse_shipments,
+        'unpaid_processor_shipments':unpaid_processor_shipments,
+        "total_warehouse_amount":total_warehouse_amount,
+        "total_processor_amount": total_processor_amount,
+        "total_grower_count": total_grower_count,
+        "total_processor_count": total_processor_count,
+        "total_warehouse_count": total_warehouse_count,
+        "total_customer_count": total_customer_count
     })
 
 

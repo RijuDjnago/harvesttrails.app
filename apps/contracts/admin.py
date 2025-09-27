@@ -100,3 +100,5 @@ class AdminCustomerContractDocumentsAdmin(admin.ModelAdmin):
     list_display = ('contract', 'document', 'uploaded_at')
     search_fields = ('contract__customer_id',)
     readonly_fields = ('uploaded_at',)
+
+admin.site.register(models.ShipmentItem)

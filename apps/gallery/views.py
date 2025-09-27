@@ -75,7 +75,7 @@ class GalleryView(LoginRequiredMixin,View):
 
             grower_list = Grower.objects.all()
 
-            if request.user.is_superuser:
+            if request.user.is_superuser :
                 selected_grower = Grower.objects.first()
 
 
@@ -118,7 +118,7 @@ class GalleryView(LoginRequiredMixin,View):
 
 
         try:
-            if request.user.is_superuser:
+            if request.user.is_superuser :
                 grower_list = Grower.objects.all()
                 selected_grower = int(request.POST.get('grower'))
 

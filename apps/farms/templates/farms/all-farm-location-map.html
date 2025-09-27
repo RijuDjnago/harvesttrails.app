@@ -22,6 +22,10 @@
         height: calc(100vh - 260px);
         width: 100%;
     }
+    .bootstrap-select .dropdown-menu li.disabled.selected{display: none;}
+    .dropdown.bootstrap-select.form-control .btn{border: 1px solid #B2BEB5; padding: 10px 8px;border-radius:0;}
+    .bootstrap-select .dropdown-menu{max-width: 280px;}
+    .bootstrap-select .dropdown-menu li.selected.active .dropdown-item.active.selected{margin-left: 0;padding: 0;}
     </style>
 <main>
     <div class="page-title-with-or-without-btn">
@@ -44,7 +48,7 @@
         <!-- Tab panes -->
           <div class="table-filter-row d-flex align-items-center" style="margin-bottom: 30px;">
             <div class="table-filter-col d-flex align-items-center">
-              <select class="select250 mt-0" name="savings" style="border-radius:5px;" id="grower_drop">
+              <select class="select250 mt-0 selectpicker" name="savings" style="border-radius:5px;" id="grower_drop" data-live-search="true">
                 <option value="0">Select All</option>
                 {% for grower in get_growers %}
                 <option value="{{grower.id}}" {% if selected_grower == grower.id %}selected{% endif %}>{{grower.name}}-{{grower.id}}</option>

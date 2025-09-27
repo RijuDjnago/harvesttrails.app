@@ -46,6 +46,10 @@
         margin-top: 0px;
         height: 50px;
     }
+    .bootstrap-select .dropdown-menu li.disabled.selected{display: none;}
+    .dropdown.bootstrap-select.form-control .btn{border: 1px solid #B2BEB5; padding: 12px 8px;border-radius:0;}
+    .bootstrap-select .dropdown-menu{max-width: 280px;}
+    .bootstrap-select .dropdown-menu li.selected.active .dropdown-item.active.selected{margin-left: 0;padding: 0;}
 </style>
 
 <div class="main-content">
@@ -75,9 +79,9 @@
                         {% if request.user.is_processor2 %}
                         {% else %}
                         <div class="col-md-4">
-                            <lable>Select Processor <span class="asteriskField">*</span></lable>
+                            <label>Select Processor <span class="asteriskField">*</span></label>
                             <br>
-                            <select id="growerSelction" name="processor_id" class="gro_dd " data-live-search="true" style="width: 100%;padding-left:10px ;">
+                            <select id="growerSelction" name="processor_id" class="gro_dd form-control selectpicker" data-live-search="true" style="width: 100%;padding-left:10px ;">
                                 <option value=''> Select All Processors </option>
                                 {% for processor in processor %}
                                 <option value="{{ processor.pk }}">{{processor.entity_name}} - {{ processor.pk }}</option>

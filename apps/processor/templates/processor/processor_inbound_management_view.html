@@ -57,7 +57,7 @@
 
         <div class="card farm-fields-container">
             <div class="container-fluid">
-                {% if request.user.is_processor or request.user.is_superuser %}
+                {% if request.user.is_processor or request.user.is_superuser or 'SubAdmin' in request.user.get_role or 'SuperUser' in request.user.get_role %}
                 {% for grower_shipment in grower_shipment %}
                     <div class="row" style="margin-bottom: 20px;">
                         <div class="col-md-3" style="margin-bottom: 10px;">

@@ -77,7 +77,9 @@ urlpatterns = [
     path('assistantapp/', include('apps.assistantapp.urls')),
     path('tracemodule/', include('apps.tracemodule.urls')),
     path('warehouse/', include('apps.warehouseManagement.urls')),
-    path('quickbooks/', include('apps.quickbooks_integration.urls')),
+    path('quickbooks/', include('apps.quickbooks_integration.urls')),  
+
+    path("select2/", include("django_select2.urls")),  
 ]
 
 

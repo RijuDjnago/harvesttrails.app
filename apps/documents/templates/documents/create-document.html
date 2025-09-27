@@ -1,6 +1,12 @@
 {% extends "base.html" %}
 {% load static %} {% block title %} Create Document {% endblock title %} {% block content %}
 {% include 'navbar.html' %}
+<style>
+    .bootstrap-select .dropdown-menu li.disabled.selected{display: none;}
+    .dropdown.bootstrap-select.form-control .btn{border: 1px solid #B2BEB5; padding: 15px 8px; border-radius:0;}
+    .bootstrap-select .dropdown-menu{max-width: 280px;}
+    .bootstrap-select .dropdown-menu li.selected.active .dropdown-item.active.selected{margin-left: 0;padding: 0;}
+</style>
 <div class="main-content">
     {% include 'header.html' %}
     <link href="https://unpkg.com/@yaireo/tagify/dist/tagify.css" rel="stylesheet" type="text/css" />
@@ -29,7 +35,7 @@
                             Folder (required)
                         </label>
                         <div class="">
-                            <select name="Folder" class="select form-control" id="Folder" required >
+                            <select name="Folder" class="select form-control selectpicker" id="Folder" required data-live-search="true">
                               <option value="">Select</option>
                               {% for folder in folder_data %}
                               <option value="{{folder.id}}">{{folder.name}}</option>
@@ -45,7 +51,7 @@
                             Grower (required)
                         </label>
                         <div class="">
-                            <select name="Grower" class="select form-control" id="Grower" required >
+                            <select name="Grower" class="select form-control selectpicker" id="Grower" required data-live-search="true">
                               <option value="">Select</option>
                               {% for grower in get_growers %}
                               <option value="{{grower.id}}">{{grower.name}}</option>

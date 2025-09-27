@@ -19,103 +19,122 @@
             <div class="table-responsive tblborder">
               <table
                 class="
-                  table table-bordered table-hover
-                  footable
-                  account-footable-table
+                  table table-striped table-bordered
+                  dt-responsive
+                  us-table
                 "
                 id="userDetails"
               >
+                
                 <thead>
-                  <tr style="border-bottom: 2px solid #e0e0e0">
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Phone</th>
-                    <th data-breakpoints="xs sm md lg">Physical Address</th>
-                    <th data-breakpoints="xs sm md lg">Mailing Address</th>
-                    <th data-breakpoints="xs sm md lg">Notes</th>
-                    <th data-breakpoints="xs sm md lg">Created Date</th>
-                    <th data-breakpoints="xs sm md lg">Modified Date</th>
-                    <th data-breakpoints="xs sm md lg">Grower Contract</th>
-                    <th data-breakpoints="xs sm md lg">Onboarding Survey 1</th>
-                    <th data-breakpoints="xs sm md lg">FSA ID information</th>
-                    <!-- <th data-breakpoints="xs sm md lg">Account information </th> -->
-                    <th data-breakpoints="xs sm md lg">Farm fully set up</th>
-                    <th data-breakpoints="xs sm md lg">Field fully set up</th>
-                    <th data-breakpoints="xs sm md lg">Shapefile upload for all fields</th>
-                    
-                  </tr>
+                    <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Physical Address</th>
+                        <th>Mailing Address</th>
+                        <th>Notes</th>
+                        <th>Created Date</th>
+                        <th>Modified Date</th>
+                        <th>Grower Contract </th>
+                        <th>Onboarding Survey 1</th>
+                        <th>FSA ID Information </th>
+                        <th>Farm Fully Set Up </th>
+                        <th>Field Fully Set Up </th>
+                        <th>Shapefile Upload </th>
+                    </tr>
                 </thead>
                 <tbody>
-                  
-                  <tr>
-                    {% for object in object %}
-                    <td>{{object.name}}</td>
-                    <td>{{object.email}}</td>
-                    <td>{{object.phone}}</td>
-                    <td>{{object.physical_address}}</td>
-                    <td>{{object.mailing_address}}</td>
-                    <td>{{object.notes}}</td>
-                    <td>{{object.created_date}}</td>
-                    <td>{{object.modified_date}}</td>
-                    {% endfor %}
-
-                    {% for growerChecklist_Grower_Contract in growerChecklist_Grower_Contract %}
-                    {% if growerChecklist_Grower_Contract.checkstatus == True %}
-                    <td><i class="fas fa-check-square"></i></td>
-                    {% else %}
-                    <td><i class="far fa-square"></td>
-                    {% endif %}
-                    {% endfor %}
-                    
-                    
-                    {% for growerChecklist_Onboarding_Survey_1 in growerChecklist_Onboarding_Survey_1 %}
-                    {% if growerChecklist_Onboarding_Survey_1.checkstatus == True %}
-                    <td><i class="fas fa-check-square"></i></td>
-                    {% else %}
-                    <td><i class="far fa-square"></td>
-                    {% endif %}
-                    {% endfor %}
-                    
-
-                    {% for growerChecklist_FSA_ID_information in growerChecklist_FSA_ID_information %}
-                    {% if growerChecklist_FSA_ID_information.checkstatus == True %}
-                    <td><i class="fas fa-check-square"></i></td>
-                    {% else %}
-                    <td><i class="far fa-square"></td>
-                    {% endif %}
-                    {% endfor %}
-
-
-                    <!-- <td><i class="far fa-square"></i></td> -->
-
-
-                    {% for growerChecklist_Farm_fully_set_up in growerChecklist_Farm_fully_set_up %}
-                    {% if growerChecklist_Farm_fully_set_up.checkstatus == True %}
-                    <td><i class="fas fa-check-square"></i></td>
-                    {% else %}
-                    <td><i class="far fa-square"></td>
-                    {% endif %}
-                    {% endfor %}
-
-                    {% for i in growerChecklist_Field_fully_set_up %}
-                    {% if i.checkstatus == True %}
-                    <td><i class="fas fa-check-square"></i></td>
-                    {% else %}
-                    <td><i class="far fa-square"></td>
-                    {% endif %}
-                    {% endfor %}
-
-                    
-                    {% for i in growerChecklist_Shapefile_upload_for_all_fields %}
-                    {% if i.checkstatus == True %}
-                    <td><i class="fas fa-check-square"></i></td>
-                    {% else %}
-                    <td><i class="far fa-square"></td>
-                    {% endif %}
-                    {% endfor %}
-                  </tr>
+                    <tr>
+                        <td>{{ object.name }}</td>
+                        <td>{{ object.email }}</td>
+                        <td>{{ object.phone }}</td>
+                        <td>{{ object.physical_address }}</td>
+                        <td>{{ object.mailing_address }}</td>
+                        <td>{{ object.notes }}</td>
+                        <td>{{ object.created_date }}</td>
+                        <td>{{ object.modified_date }}</td>
+            
+                        <!-- Grower Contract Checklist -->
+                        <td>
+                            {% for growerChecklist_Grower_Contract in growerChecklist_Grower_Contract %}
+                                {% if growerChecklist_Grower_Contract.checkstatus == True %}
+                                    <i class="fas fa-check-square"></i>
+                                {% else %}
+                                    <i class="far fa-square"></i>
+                                {% endif %}
+                            {% empty %}
+                                <i class="far fa-square"></i> <!-- Default if no checklist exists -->
+                            {% endfor %}
+                        </td>
+            
+                        <!-- Onboarding Survey Checklist -->
+                        <td>
+                            {% for growerChecklist_Onboarding_Survey_1 in growerChecklist_Onboarding_Survey_1 %}
+                                {% if growerChecklist_Onboarding_Survey_1.checkstatus == True %}
+                                    <i class="fas fa-check-square"></i>
+                                {% else %}
+                                    <i class="far fa-square"></i>
+                                {% endif %}
+                            {% empty %}
+                                <i class="far fa-square"></i>
+                            {% endfor %}
+                        </td>
+            
+                        <!-- FSA ID Information Checklist -->
+                        <td>
+                            {% for growerChecklist_FSA_ID_information in growerChecklist_FSA_ID_information %}
+                                {% if growerChecklist_FSA_ID_information.checkstatus == True %}
+                                    <i class="fas fa-check-square"></i>
+                                {% else %}
+                                    <i class="far fa-square"></i>
+                                {% endif %}
+                            {% empty %}
+                                <i class="far fa-square"></i>
+                            {% endfor %}
+                        </td>
+            
+                        <!-- Farm Fully Set Up Checklist -->
+                        <td>
+                            {% for growerChecklist_Farm_fully_set_up in growerChecklist_Farm_fully_set_up %}
+                                {% if growerChecklist_Farm_fully_set_up.checkstatus == True %}
+                                    <i class="fas fa-check-square"></i>
+                                {% else %}
+                                    <i class="far fa-square"></i>
+                                {% endif %}
+                            {% empty %}
+                                <i class="far fa-square"></i>
+                            {% endfor %}
+                        </td>
+            
+                        <!-- Field Fully Set Up Checklist -->
+                        <td>
+                            {% for i in growerChecklist_Field_fully_set_up %}
+                                {% if i.checkstatus == True %}
+                                    <i class="fas fa-check-square"></i>
+                                {% else %}
+                                    <i class="far fa-square"></i>
+                                {% endif %}
+                            {% empty %}
+                                <i class="far fa-square"></i>
+                            {% endfor %}
+                        </td>
+            
+                        <!-- Shapefile Upload for All Fields Checklist -->
+                        <td>
+                            {% for i in growerChecklist_Shapefile_upload_for_all_fields %}
+                                {% if i.checkstatus == True %}
+                                    <i class="fas fa-check-square"></i>
+                                {% else %}
+                                    <i class="far fa-square"></i>
+                                {% endif %}
+                            {% empty %}
+                                <i class="far fa-square"></i>
+                            {% endfor %}
+                        </td>
+                    </tr>
                 </tbody>
-              </table>
+            </table>
             </div>
           </div>
         </div>

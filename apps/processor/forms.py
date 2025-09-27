@@ -3,9 +3,12 @@ from django import forms
 from . import models
 
 def crop_choices():
-    from apps.field.models import Crop
-    crops = Crop.objects.all()
-    return [(crop.code, crop.name) for crop in crops]
+    try:
+        from apps.field.models import Crop
+        crops = Crop.objects.all()
+        return [(crop.code, crop.name) for crop in crops]
+    except:
+        return []
 
 VARIETY_CHOICES = (
                 ('DG-263L', 'DG-263L'),
@@ -32,7 +35,8 @@ VARIETY_CHOICES = (
             )
 class ProcessorForm(forms.ModelForm):
     main_number = forms.IntegerField()
-    main_fax=forms.IntegerField()
+    main_fax=forms.IntegerField(required=False)
+    main_email = forms.CharField()
     # contact_phone=forms.IntegerField()
     # contact_fax=forms.IntegerField()
     # contact_email=forms.EmailField()
@@ -64,7 +68,7 @@ class ProcessorForm(forms.ModelForm):
         #     "contact_fax": "Contact Fax",
         # }
         fields = [
-            'fein', 'entity_name', 'billing_address', 'shipping_address', 'main_number', 'main_fax',
+            'fein', 'entity_name', 'billing_address', 'shipping_address', 'main_number', 'main_fax', 'main_email',
             'website'
         ]
         widgets = {

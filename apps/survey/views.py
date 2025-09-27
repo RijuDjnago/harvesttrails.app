@@ -407,7 +407,7 @@ class SustainabilityListView(LoginRequiredMixin, View):
             if len(growers)<1:
                 return render (request,'survey/missing_details.html')
         #If user in not linked with any grower
-        elif request.user.is_superuser:
+        elif request.user.is_superuser :
             linked_grower= []
             for _grower in Grower.objects.all():
                 linked_grower.append((_grower.pk,_grower.name))

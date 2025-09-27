@@ -76,6 +76,46 @@
                         
                         <hr class="mt-2">
                         <div class="col-md-4 mb-2">
+                            <div>
+                                <label for="storage_bin_id">Sender Storage Bin ID (SKU ID)<span class="asteriskField">*</span></label>
+                                <input type="text" id="storage_bin_id" name="storage_bin_id" class="textinput textInput form-control" value="{{selected_sku}}" list="suggestions" autocomplete="off" onchange="this.form.submit()">
+                                <datalist id="suggestions">
+                                    {% for data in sender_sku_id_list %}
+                                    <option value="{{data}}">                                        
+                                    {% endfor %}
+                                </datalist>
+                                {% if select_processor_name %} 
+                                    <p id="alert_msg3" style="color:red"></p>                               
+                                    {% else %}
+                                    <p id="warning" style="color:grey;"> <i>First select bin pull</i> </p> 
+                                    {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <label for="id_crop">Crop<span class="asteriskField">*</span></label>
+                            <select name="id_crop" id="id_crop"  class="form-control " onchange="this.form.submit()">
+                                <option value="all" selected disabled>Select Crop</option>
+                                {% for crop in crops %}
+                                <option value="{{crop.code}}" {% if selected_crop == crop.code %}selected {% endif %}>{{crop.code}}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <div id="div_id_variety" class="form-group">
+                                <label for="id_variety" class=" requiredField">
+                                    Variety<span class="asteriskField">*</span>
+                                </label>
+                                <div>
+                                    <select name="variety" class="select form-control" required id="id_variety">
+                                        <option value="all" selected disabled>Select Variety</option>
+                                        {% for variety in varieties %}
+                                        <option value="{{variety}}" {% if variety == variety %}selected {% endif %}>{{variety}}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-2">
                             <label for="id_date">Date Pulled<span class="asteriskField">*</span></label>
                             <input type="date" name="id_date" id="id_date" class="textinput textInput form-control" value="{{id_date}}">
                             <p id="alert_msg0" style="color:red"></p>
@@ -98,22 +138,7 @@
                                 <p id="alert_msg1" style="color:red"></p>
                             </div>
                         </div>
-                        <div class="col-md-4 mb-2">
-                            <div>
-                                <label for="storage_bin_id">Sender Storage Bin ID (SKU ID)<span class="asteriskField">*</span></label>
-                                <input type="text" id="storage_bin_id" name="storage_bin_id" class="textinput textInput form-control" value="{{selected_sku}}" list="suggestions" autocomplete="off" onchange="this.form.submit()">
-                                <datalist id="suggestions">
-                                    {% for data in sender_sku_id_list %}
-                                    <option value="{{data}}">                                        
-                                    {% endfor %}
-                                </datalist>
-                                {% if select_processor_name %} 
-                                    <p id="alert_msg3" style="color:red"></p>                               
-                                    {% else %}
-                                    <p id="warning" style="color:grey;"> <i>First select bin pull</i> </p> 
-                                    {% endif %}
-                            </div>
-                        </div>
+                        
                         <div class="col-md-4 mb-2">
                             <label for="weight_prod">Weight Of Product<span class="asteriskField">*</span></label>
                             <div class="d-flex">

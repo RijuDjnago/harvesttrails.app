@@ -128,7 +128,7 @@ function createSelect(){
             </div>
         </div>
         <div class="col-md-6">            
-                <label for="contact_phone${counter}">Contact Phone</label>
+                <label for="contact_phone${counter}">Contact Phone<span class="asteriskField">*</span></label>
             <div class="d-flex">
                 <select name="country_code${counter}" id="country_code${counter}" class="form-control" style="border-top-left-radius:0 !important; border-bottom-left-radius:0 !important; width:135px;" required>                    
                     <option value="" selected disabled>Country Code</option>
@@ -371,7 +371,7 @@ function createSelect(){
         <div class="col-md-6" style="margin-bottom: 15px;">
             <div>
                 <label for="contact_fax${counter}">Contact Fax</label>
-                <input type="number" name="contact_fax${counter}" id="contact_fax${counter}" class="textinput textInput form-control" required>
+                <input type="number" name="contact_fax${counter}" id="contact_fax${counter}" class="textinput textInput form-control">
             </div>
         </div>
     </div>`);

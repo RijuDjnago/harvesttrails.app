@@ -740,7 +740,7 @@ class GorwerDashboardViewMain(View):
     def get(self, request):
         '''Default function for get request'''
 
-        if request.user.is_superuser:
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
             grower_names = Grower.objects.values_list(
                 'name', flat=True).distinct().order_by('name')
 
@@ -761,7 +761,7 @@ class GorwerDashboardView1(View):
     def get(self, request):
         '''Default function for get request'''
 
-        if request.user.is_superuser:
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
             grower_names = Grower.objects.values_list(
                 'name', flat=True).distinct().order_by('name')
             default_grower = grower_names[0]
@@ -797,7 +797,7 @@ class GorwerDashboardView2(View):
     def get(self, request):
         '''Default function for get request'''
 
-        if request.user.is_superuser:
+        if request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
             grower_names = Grower.objects.values_list(
                 'name', flat=True).distinct().order_by('name')
             default_grower = grower_names[0]

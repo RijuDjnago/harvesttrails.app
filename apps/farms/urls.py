@@ -18,4 +18,10 @@ urlpatterns = [
     path('farms_location_map_view/<int:pk>/<int:grower_id>/', views.FarmLocationMap.as_view(), name='farm-location-map-view'),
     path('all_farms_location_map_view/<int:grower_id>/', views.AllFarmLocationMap.as_view(), name='all-farm-location-map-view'),
 
+    path('crop_management_list/', views.crop_management, name="crop_management_list"),
+    path('create_crop/', views.create_crop, name="create_crop"),
+    path('edit_crop/<int:crop_id>/', views.edit_crop, name='edit_crop'),
+    path('view_crop/<int:crop_id>/', views.view_crop, name='view_crop'),
+    path('delete-crop/<int:crop_id>/', views.delete_crop, name='delete_crop'),
+
 ]

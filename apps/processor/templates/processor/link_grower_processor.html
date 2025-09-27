@@ -36,7 +36,7 @@
             <div class="inline-apply-filter">
               <div class="three-fields-with-label">
                 <label for="processorSelction">Select Processor</label>
-                <select id="processorSelction" name="processor_id" class="mb-0" style="border-radius:0px !important; width: 50%;">
+                <select id="processorSelction" name="processor_id" class="mb-0" style="border-radius:0px !important; width: 350px;">
                   <option value='' selected> Select Processor</option>
                   {% for processor in processor %}
                   {% if processor == selectedprocessor %}
@@ -56,7 +56,7 @@
             <div class="inline-apply-filter">
               <div class="three-fields-with-label">
                 <label for="growerSelction">Select Grower</label>
-                <select id="growerSelction" name="grower_id1" class="mb-0" style="border-radius:0px !important">
+                <select id="growerSelction" name="grower_id1" class="mb-0" style="border-radius:0px !important; width:350px;">
                   <option value='' selected> Select Grower</option>
                   {% for grower in grower %}
                   {% if grower == selectedgrower %}
@@ -78,7 +78,7 @@
           </div>
           <div class="row">
             <div class="form-btn-row">
-                <a href="" class="btn-close-cancel btn-space">Cancel</a>
+                <a href="{% url "grower_processor_management" %}" class="btn-close-cancel btn-space">Cancel</a>
                 <input style="display: none;" type="submit" id="btn_submit" class="btn-save-submit" value="Save">
                 <input type="button" class="btn-save-submit" value="Save" onclick="save()">
             </div>

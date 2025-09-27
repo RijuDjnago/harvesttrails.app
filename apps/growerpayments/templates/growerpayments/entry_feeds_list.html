@@ -37,30 +37,6 @@
 
         <div class="card card-padding">
             <div class="main-simple-table-with-search col-12">
-                
-                <!-- <div class="row">
-                    <form method="post" class="farm-fields-form">
-                        {% csrf_token %}
-                        <div class="col-md-4 mb-3">
-                            <div>
-                                <label for="">Grower<span class="asteriskField">*</span></label>
-                                <select id="growerSelction" name="grower_id" class="textinput textInput form-control" required>
-                                    <option value='all' selected disabled> Select All Growers </option>
-                                    {% for grower in growers %}
-                                    {% if grower == selectedGrower %}
-                                    <option selected value="{{ grower.pk }}">{{grower.name}} - {{grower.id}}</option>
-                                    {% else %}
-                                    <option value="{{ grower.pk }}">{{grower.name}} - {{grower.id}}</option>
-                                    {% endif %}
-                                    {% endfor %}
-                                </select>
-                                <input type="text" style="display: none;" value="{{selectedGrower}}" id="getselectedGrower">                            
-                            </div>
-                        </div>
-                        <input style="display: none;" id="submitBtn2" type="submit" class="btn-save-submit" value="Save"> 
-                    </form>
-                </div>
-                 -->
                 <div class="both-data-in" style="display: inherit;">
                     <div class="simple-responsive-table">
                         <table id="processorList_tbl" class="table table-striped dt-responsive nowrap"
@@ -111,6 +87,56 @@
                            
                         </table>
                     </div>
+
+                    <!-- Custom Pagination -->
+                    {% if entery.has_other_pages %}
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination justify-content-center">
+                            {% if entery.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page=1">&laquo;&laquo;</a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ entery.previous_page_number }}">&laquo;</a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <a class="page-link" href="#">&laquo;&laquo;</a>
+                                </li>
+                                <li class="page-item disabled">
+                                    <a class="page-link" href="#">&laquo;</a>
+                                </li>
+                            {% endif %}
+
+                            {% for num in entery.paginator.get_elided_page_range %}
+                                {% if num == entery.paginator.ELLIPSIS %}
+                                    <li class="page-item disabled"><a class="page-link" href="#">...</a></li>
+                                {% else %}
+                                    <li class="page-item {% if entery.number == num %}active{% endif %}">
+                                        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                                    </li>
+                                {% endif %}
+                                {% endfor %}
+
+                            {% if entery.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ entery.next_page_number }}">&raquo;</a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ entery.paginator.num_pages }}">&raquo;&raquo;</a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <a class="page-link" href="#">&raquo;</a>
+                                </li>
+                                <li class="page-item disabled">
+                                    <a class="page-link" href="#">&raquo;&raquo;</a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+
                 </div>
 
             </div>
@@ -151,13 +177,6 @@
 {% endblock content %}
 
 {% block scripts %}
-<!-- <script src="https://cdn.datatables.net/1.11.0/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/1.11.0/js/dataTables.bootstrap4.min.js"></script>
-<script src="https://cdn.datatables.net/responsive/2.2.9/js/dataTables.responsive.min.js"></script>
-<script src="https://cdn.datatables.net/responsive/2.2.9/js/responsive.bootstrap4.min.js"></script>
-
-<script src="{% static 'js/farm/farm_list.js' %}"></script> -->
-
 
 <script src="https://cdn.datatables.net/1.11.0/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.11.0/js/dataTables.bootstrap4.min.js"></script>

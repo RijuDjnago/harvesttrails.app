@@ -18,5 +18,7 @@ urlpatterns = [
 	path('sustainable_product_claims/',views.sustainable_product_claims,name='sustainable_product_claims'),
  	path('sustainable_get_certificate/<str:corps>/<str:field_id>/<str:grower_id>/',views.sustainable_get_certificate,name='sustainable_get_certificate'),
  	path('seUser/',views.seUser,name='seUser'),
+     
+	path('export_growers_to_csv/', views.export_growers_to_excel, name='export_growers_to_csv'),
 ]
 

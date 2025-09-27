@@ -8,7 +8,7 @@
       <span class="farm headingtop">Upcoming Date Listing</span>
       <!-- Create button for Account-->
       <div class="flex-header-btn">
-        {% if 'Upcoming Date Edit' in request.user.get_role_perm or request.user.is_superuser %}
+        {% if 'Upcoming Date Edit' in request.user.get_role_perm or request.user.is_superuser  %}
         <a href="{% url 'upcoming-date-create' %}" class="btn-add-green"
           >+ Create Upcoming Date</a
         >
@@ -50,14 +50,14 @@
                   {% endif %}
                 </td>
                 <td class="backk1">
-                  {% if 'Upcoming Date Edit' in request.user.get_role_perm or request.user.is_superuser %}
+                  {% if 'Upcoming Date Edit' in request.user.get_role_perm or request.user.is_superuser  %}
                   <li>
                     <a href="{% url 'upcoming-date-update' relnote.pk %}"
                       ><span class="fas fa-edit"> </span
                     ></a>
                   </li>
                   {% endif %}
-                  {% if 'Upcoming Date Delete' in request.user.get_role_perm or request.user.is_superuser %}
+                  {% if 'Upcoming Date Delete' in request.user.get_role_perm or request.user.is_superuser  %}
                   <a href="javascript:void(0)" onclick="deleteComment('{{relnote.pk}}')">
                     <span class="fas fa-trash"></span>
                   </a>

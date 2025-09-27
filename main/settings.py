@@ -34,6 +34,8 @@ DEBUG = True
 
 ALLOWED_HOSTS = ["*"]
 
+MAP_API_KEY = 'AIzaSyAfBo6-cZlOpKGrD1ZYwISIGjYvhH_wPmk'
+
 #Test
 STRIPE_PUBLIC_KEY = 'pk_test_ceE9AJ99mz5febdoTmcq5C38'
 STRIPE_SECRET_KEY = 'sk_test_Uw0pOrG2d2LwQT18Ielu6Gqk'
@@ -42,6 +44,7 @@ STRIPE_SECRET_KEY = 'sk_test_Uw0pOrG2d2LwQT18Ielu6Gqk'
 # STRIPE_PUBLIC_KEY = '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'
 # STRIPE_SECRET_KEY ='pk_live_51PsUqzBODua7a1xietkmsrmP7zEXLJ35LG6eftcjJ00jphFiYyaXsd0wUQ0ytAoC5FvhXMAkxSTEB0GKZoqK3tH500d1IhTedk'
 
+#QuickBooks settings
 os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
 QUICKBOOKS_CLIENT_ID = "ABPRBiMNdM2uQjtIOhbYJ1SipuZNBOYkEOFvExdiCvz1phGysJ"
 QUICKBOOKS_CLIENT_SECRET = "pFc5iMKnfCsX4sgf5DllQkrKS6L4TpaUoAjHob7N"
@@ -49,6 +52,11 @@ QUICKBOOKS_REDIRECT_URI = 'http://localhost:8000/quickbooks/callback'
 QUICKBOOKS_ENVIRONMENT = 'sandbox'  
 QUICKBOOKS_SCOPES = ['com.intuit.quickbooks.accounting', 'openid', 'profile', 'email']
 
+# QUICKBOOKS_CLIENT_ID = "ABVADzXwU4pjtflUGRHEDEHfwvT74CExLzvrtjSukVTrU8aIHG"
+# QUICKBOOKS_CLIENT_SECRET = "u4d8uLHQJNh8zVVjx35Bim5OugbvoxyoOd3aKfog"
+# QUICKBOOKS_REDIRECT_URI = 'http://localhost:8000/quickbooks/callback'
+# QUICKBOOKS_ENVIRONMENT = 'production'  
+# QUICKBOOKS_SCOPES = ['com.intuit.quickbooks.accounting', 'openid', 'profile','email']
 
 
 # Application definition
@@ -70,6 +78,7 @@ INSTALLED_APPS = [
     'import_export',
     'corsheaders',
     "crispy_bootstrap4",
+    'django_select2',
     # 'bootstrap4',
     # our apps
     'apps.accounts',
@@ -95,7 +104,7 @@ INSTALLED_APPS = [
     'apps.assistantapp',
     'apps.tracemodule',
     'apps.warehouseManagement',
-    'apps.quickbooks_integration'
+    'apps.quickbooks_integration',    
 
 ]
 
@@ -220,7 +229,12 @@ LOGIN_URL = 'login'
 # LOGOUT_REDIRECT_URL = 'logout'
 
 CRISPY_TEMPLATE_PACK = 'bootstrap4'
-SESSION_COOKIE_AGE = 60 * 60 * 24 * 7 # One week
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+SESSION_COOKIE_AGE = 1209600  # Two weeks
+SESSION_COOKIE_SECURE = False  # If you're using HTTPS
+SESSION_SAVE_EVERY_REQUEST = False # Optional, saves session on every request
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False # One week
+DEFAULT_TOKEN_EXPIRY = 3600
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.0/topics/i18n/
@@ -258,16 +272,12 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Email Conf
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-# DEFAULT_FROM_EMAIL = 'techsupportUS@agreeta.com'
-DEFAULT_FROM_EMAIL = 'abc@abc.com'
-# EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_HOST = 'smtp.abc.com'
+DEFAULT_FROM_EMAIL = 'rijughosh.claymindsolution@gmail.com'
+EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_USE_TLS = True
 EMAIL_PORT = 587
-# EMAIL_HOST_USER = 'techsupportUS@agreeta.com'
-EMAIL_HOST_USER = 'abc@abc.com'
-# EMAIL_HOST_PASSWORD = 'winISfun2022!'
-EMAIL_HOST_PASSWORD = 'abc'
+EMAIL_HOST_USER = 'rijughosh.claymindsolution@gmail.com'
+EMAIL_HOST_PASSWORD = 'zsjl auyv nyjk qcvh'
 
 #Django stores date and time information in UTC
 USE_TZ = True
@@ -344,3 +354,4 @@ CELERY_TIMEZONE = TIME_ZONE
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+

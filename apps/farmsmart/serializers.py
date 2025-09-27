@@ -4,6 +4,8 @@ from apps.processor2.models import *
 from apps.growerpayments.models import EntryFeeds , GrowerPayments
 from apps.growerpayments.models import NasdaqApiData
 from datetime import timedelta ,datetime ,date 
+from apps.warehouseManagement.models import *
+from apps.contracts.models import *
 
 class GrowerPaymentsSerializer(serializers.ModelSerializer):
     
@@ -386,7 +388,7 @@ class ProcessorUserSerializer(serializers.ModelSerializer):
 class Processor2Serializer(serializers.ModelSerializer):
     class Meta:
         model = Processor2
-        fields = '__all__'  # This will include all the fields of the Processor model
+        fields = '__all__'  
 
 class ProcessorUser2Serializer(serializers.ModelSerializer):
     processor2 = Processor2Serializer()
@@ -396,18 +398,343 @@ class ProcessorUser2Serializer(serializers.ModelSerializer):
         fields = '__all__' 
 
 
+class CropDetailsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CropDetails
+        fields = [
+            'id', 
+            'crop', 
+            'crop_type', 
+            'contract_amount', 
+            'amount_unit', 
+            'per_unit_rate', 
+            'left_amount',
+        ]
+
+class AdminProcessorContractDocumentsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AdminProcessorContractDocuments
+        fields = [
+            'id', 
+            'name', 
+            'document', 
+            'document_status', 
+            'uploaded_at',
+        ]
+
+class AdminProcessorContractSerializer(serializers.ModelSerializer):
+    contractCrop = CropDetailsSerializer(many=True, read_only=True)  
+    contractDocuments = AdminProcessorContractDocumentsSerializer(many=True, read_only=True)  
+
+    class Meta:
+        model = AdminProcessorContract
+        fields = [
+            'id', 
+            'secret_key', 
+            'processor_id', 
+            'processor_type', 
+            'processor_entity_name', 
+            'contract_type', 
+            'total_price', 
+            'contract_start_date', 
+            'contract_period', 
+            'contract_period_choice', 
+            'end_date', 
+            'status', 
+            'reason_for_rejection', 
+            'created_at', 
+            'updated_at', 
+            'created_by', 
+            'is_signed',
+            'contractCrop',  
+            'contractDocuments',
+        ]
+        read_only_fields = ['secret_key', 'created_at', 'updated_at', 'end_date']
+
+    
+class CustomerContractCropDetailsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomerContractCropDetails
+        fields = [
+            'id', 
+            'crop', 
+            'crop_type', 
+            'contract_amount', 
+            'amount_unit', 
+            'per_unit_rate', 
+            'left_amount',
+        ]
+
+class AdminCustomerContractDocumentsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AdminCustomerContractDocuments
+        fields = [
+            'id', 
+            'name', 
+            'document', 
+            'document_status', 
+            'uploaded_at',
+        ]
+
+class AdminCustomerContractSerializer(serializers.ModelSerializer):
+    customerContractCrop = CustomerContractCropDetailsSerializer(many=True, read_only=True)  
+    customerContractDocuments = AdminCustomerContractDocumentsSerializer(many=True, read_only=True)  
+
+    class Meta:
+        model = AdminCustomerContract
+        fields = [
+            'id', 
+            'secret_key', 
+            'customer_id',             
+            'customer_name', 
+            'contract_type', 
+            'total_price', 
+            'contract_start_date', 
+            'contract_period', 
+            'contract_period_choice', 
+            'end_date', 
+            'status', 
+            'reason_for_rejection', 
+            'created_at', 
+            'updated_at', 
+            'created_by', 
+            'is_signed',
+            'customerContractCrop',  
+            'customerContractDocuments', 
+        ]
+        read_only_fields = ['secret_key', 'created_at', 'updated_at', 'end_date']
 
 
+class ProcessorShipmentCropsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProcessorShipmentCrops
+        fields = [
+            'id',
+            'crop_id',
+            'crop',
+            'crop_type',
+            'ship_quantity',
+            'ship_weight',
+            'gross_weight',
+            'net_weight',
+            'weight_unit',
+            'contract_weight_left',
+            'payment_amount',
+        ]
 
 
+class ProcessorShipmentLotNumberTrackingSerializer(serializers.ModelSerializer):
+    class Meta:
+        # model = ProcessorShipmentLotNumberTracking
+        fields = [
+            'id',
+            'additional_lot_number',
+            'address',
+            'description',
+            'status',
+        ]
 
 
+class ProcessorWarehouseShipmentDocumentsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProcessorWarehouseShipmentDocuments
+        fields = [
+            'id',
+            'document_name',
+            'document_file',
+            'uploaded_at',
+        ]
 
 
+class CarrierDetailsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CarrierDetails
+        fields = [
+            'id',
+            'carrier_id',
+            'description',
+        ]
 
 
+class ProcessorShipmentLogSerializer(serializers.ModelSerializer):
+    updated_by = serializers.StringRelatedField()  
+
+    class Meta:
+        model = ProcessorShipmentLog
+        fields = [
+            'id',
+            'description',
+            'updated_at',
+            'changes',
+            'updated_by',
+        ]
 
 
+class ProcessorWarehouseShipmentSerializer(serializers.ModelSerializer):
+    processor_shipment_crop = ProcessorShipmentCropsSerializer(many=True, read_only=True)
+    shipment_carrier = CarrierDetailsSerializer(many=True, read_only=True)
+    shipment_log = ProcessorShipmentLogSerializer(many=True, read_only=True)
+    documents = ProcessorWarehouseShipmentDocumentsSerializer(many=True, source='processorwarehouseshipmentdocuments_set', read_only=True)
+    additional_lot_numbers = ProcessorShipmentLotNumberTrackingSerializer(many=True, source='processorshipmentlotnumbertracking_set', read_only=True)
+
+    class Meta:
+        model = ProcessorWarehouseShipment
+        fields = [
+            'id',
+            'shipment_id',
+            'invoice_id',
+            'contract',        
+            'processor_id',
+            'processor_type',
+            'processor_entity_name',
+            'processor_sku_list',
+            'carrier_type',
+            'outbound_type',
+            'date_pulled',
+            'purchase_order_name',
+            'purchase_order_number',            
+            'shipment_type',
+            'border_receive_date',
+            'border_leaving_date',
+            'distributor_receive_date',
+            'distributor_leaving_date',
+            'border_back_receive_date',
+            'border_back_leaving_date',
+            'processor_receive_date',
+            'status',
+            'distributor_id',
+            'distributor_entity_name',
+            'customer_id',
+            'customer_name',
+            'warehouse_id',
+            'warehouse_name',
+            'warehouse_order_id',
+            'product_payment_amount',
+            'total_payment',
+            'tax_amount',
+            'is_paid',
+            'invoice_approval',
+            'approval_time',
+            'updated_at',
+            'customer_contract',
+            'final_payment_date',
+            'processor_shipment_crop',
+            'shipment_carrier',
+            'shipment_log',
+            'documents',
+            'additional_lot_numbers',
+        ]
 
 
+class WarehouseShipmentCropsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WarehouseShipmentCrops
+        fields = [
+            'id',
+            'crop_id',
+            'crop',
+            'crop_type',
+            'ship_quantity',
+            'ship_weight',
+            'gross_weight',
+            'net_weight',
+            'weight_unit',
+            'contract_weight_left',
+            'payment_amount',
+        ]
+
+
+class WarehouseShipmentLotNumberTrackingSerializer(serializers.ModelSerializer):
+    class Meta:
+        # model = WarehouseShipmentLotNumberTracking
+        fields = [
+            'id',
+            'additional_lot_number',
+            'address',
+            'description',
+            'status',
+        ]
+
+
+class WarehouseCustomerShipmentDocumentsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WarehouseCustomerShipmentDocuments
+        fields = [
+            'id',
+            'document_name',
+            'document_file',
+            'uploaded_at',
+        ]
+
+
+class CarrierDetails2Serializer(serializers.ModelSerializer):
+    class Meta:
+        model = CarrierDetails2
+        fields = [
+            'id',
+            'carrier_id',
+            'description',
+        ]
+
+
+class WarehouseShipmentLogSerializer(serializers.ModelSerializer):
+    updated_by = serializers.StringRelatedField()  
+
+    class Meta:
+        model = WarehouseShipmentLog
+        fields = [
+            'id',
+            'description',
+            'updated_at',
+            'changes',
+            'updated_by',
+        ]
+
+
+class WarehouseCustomerShipmentSerializer(serializers.ModelSerializer):
+    warehouse_shipment_crop = WarehouseShipmentCropsSerializer(many=True, read_only=True)
+    customer_shipment_carrier = CarrierDetails2Serializer(many=True, read_only=True)
+    shipmentLog = WarehouseShipmentLogSerializer(many=True, read_only=True)
+    documents = WarehouseCustomerShipmentDocumentsSerializer(many=True, source='warehousecustomershipmentdocuments_set', read_only=True)
+    additional_lot_numbers = WarehouseShipmentLotNumberTrackingSerializer(many=True, source='warehouseshipmentlotnumbertracking_set', read_only=True)
+
+    class Meta:
+        model = WarehouseCustomerShipment
+        fields = [
+            'id',
+            'shipment_id',
+            'invoice_id',
+            'contract',  
+            'warehouse_id',
+            'warehouse_name',         
+            'carrier_type',
+            'outbound_type',
+            'date_pulled',
+            'purchase_order_name',
+            'purchase_order_number',
+            'shipment_type',
+            'border_receive_date',
+            'border_leaving_date',
+            'customer_receive_date',
+            'customer_leaving_date',
+            'border_back_receive_date',
+            'border_back_leaving_date',
+            'warehouse_receive_date',
+            'status',            
+            'customer_id',
+            'customer_name',              
+            'product_payment_amount',
+            'total_payment',
+            'tax_amount',
+            'is_paid',
+            'invoice_approval',
+            'approval_time',
+            'updated_at',           
+            'final_payment_date',
+            'warehouse_shipment_crop',
+            'customer_shipment_carrier',
+            'shipmentLog',
+            'documents',
+            'additional_lot_numbers',
+        ]
 

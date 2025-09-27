@@ -50,6 +50,12 @@
                     </div>
                     <div class="col-md-4 mb-3">
                         <div>
+                            <label for="">Main Email<span class="asteriskField">*</span></label>
+                            <input type="text" value="{{processor.main_email}}" id="" class="textinput textInput form-control" readonly>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div>
                             <label for="">Main number<span class="asteriskField">*</span></label>
                             <input type="text" value="{{processor.main_number}}" id="" class="textinput textInput form-control" readonly>
                         </div>
@@ -175,14 +181,14 @@ function createSelect(){
         </div>
         <div class="col-md-3">
             <div>
-                <label for="contact_phone${counter}">Contact Phone</label>
+                <label for="contact_phone${counter}">Contact Phone<span class="asteriskField">*</span></label>
                 <input type="number" name="contact_phone${counter}" id="contact_phone${counter}" class="textinput textInput form-control" required>
             </div>
         </div>
         <div class="col-md-3" style="margin-bottom: 15px;">
             <div>
                 <label for="contact_fax${counter}">Contact Fax</label>
-                <input type="number" name="contact_fax${counter}" id="contact_fax${counter}" class="textinput textInput form-control" required>
+                <input type="number" name="contact_fax${counter}" id="contact_fax${counter}" class="textinput textInput form-control" >
             </div>
         </div>
     </div>`);

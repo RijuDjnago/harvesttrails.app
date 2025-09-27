@@ -6,13 +6,13 @@ from django.db.models import Avg, Count, Q
 from django.shortcuts import render, redirect
 from django.views import View
 from django.http import JsonResponse
-from apps.field.models import Field
 from apps.grower.models import Consultant, Grower, GrowerChecklist
 from apps.farms.models import Farm
 from main.settings import MEDIA_ROOT, MEDIA_URL
 from apps.accounts.models import User, Role, SubSuperUser
 from apps.contracts.models import GrowerContracts, SignedContracts
-from apps.field.models import Field, ShapeFileDataCo,FieldUpdated,FieldActivity
+from apps.field.models import Field,FieldUpdated,FieldActivity
+from apps.field.models import ShapeFileDataCo as ShapeFile
 from apps.growersurvey.models import TypeSurvey, QuestionSurvey, OptionSurvey, SustainabilitySurvey, NameSurvey
 from django.shortcuts import HttpResponse
 import csv
@@ -29,8 +29,7 @@ from django.db.models import ExpressionWrapper, F, FloatField
 from django.template.loader import get_template
 from xhtml2pdf import pisa
 from io import BytesIO
-
-
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
 savings_types = ('Water Use Savings', 'Land Use Savings', 'Co2 Savings')
 
@@ -358,7 +357,7 @@ def checklist_comparison_update(request, pk):
             # Shapefile upload for all fields  ......
             if GrowerChecklist.objects.filter(grower_id=grower_id).filter(item_name='Shapefile_upload_for_all_fields').count() == 0:
                 field_id = Field.objects.filter(grower_id=grower_id)
-                shp = ShapeFileDataCo.objects.filter(field_id__in=field_id)
+                shp = ShapeFile.objects.filter(field_id__in=field_id)
                 if field_id.count() == shp.count() and shp.count() > 0:
                     GrowerChecklist(grower_id=pk, item_name='Shapefile_upload_for_all_fields',
                                     checkstatus=True, module='onboarding').save()
@@ -376,7 +375,7 @@ def checklist_comparison_update(request, pk):
             # Shapefile upload for all fields  ......
             if GrowerChecklist.objects.filter(grower_id=grower_id).filter(item_name='Shapefile_upload_for_all_fields').count() != 0:
                 field_id = Field.objects.filter(grower_id=grower_id)
-                shp = ShapeFileDataCo.objects.filter(field_id__in=field_id)
+                shp = ShapeFile.objects.filter(field_id__in=field_id)
                 var = GrowerChecklist.objects.filter(grower_id=grower_id).filter(
                     item_name='Shapefile_upload_for_all_fields')
                 var_id = [i.id for i in var][0]
@@ -677,7 +676,7 @@ def checklist_comparison_update(request, pk):
             # Shapefile upload for all fields  ......
             if GrowerChecklist.objects.filter(grower_id=grower_id).filter(item_name='Shapefile_upload_for_all_fields').count() == 0:
                 field_id = Field.objects.filter(grower_id=grower_id)
-                shp = ShapeFileDataCo.objects.filter(field_id__in=field_id)
+                shp = ShapeFile.objects.filter(field_id__in=field_id)
                 if field_id.count() == shp.count() and shp.count() > 0:
                     GrowerChecklist(grower_id=pk, item_name='Shapefile_upload_for_all_fields',
                                     checkstatus=True, module='onboarding').save()
@@ -695,7 +694,7 @@ def checklist_comparison_update(request, pk):
             # Shapefile upload for all fields  ......
             if GrowerChecklist.objects.filter(grower_id=grower_id).filter(item_name='Shapefile_upload_for_all_fields').count() != 0:
                 field_id = Field.objects.filter(grower_id=grower_id)
-                shp = ShapeFileDataCo.objects.filter(field_id__in=field_id)
+                shp = ShapeFile.objects.filter(field__in=field_id)
                 var = GrowerChecklist.objects.filter(grower_id=grower_id).filter(
                     item_name='Shapefile_upload_for_all_fields')
                 var_id = [i.id for i in var][0]
@@ -732,11 +731,17 @@ def checklist_comparison(request):
             context = {}
             consultant_id = Consultant.objects.get(email=request.user.email).id
             grower = Grower.objects.filter(consultant=consultant_id)
-            context['grower'] = grower
+            paginator = Paginator(grower, 100)  
+            page_number = request.GET.get('page')
+            grower_page = paginator.get_page(page_number)
+            context['growers'] = grower_page
         elif request.user.is_superuser or 'SubAdmin' in request.user.get_role() or 'SuperUser' in request.user.get_role():
             context = {}
             grower = Grower.objects.all().order_by('name')
-            context['grower'] = grower
+            paginator = Paginator(grower, 100)  
+            page_number = request.GET.get('page')
+            grower_page = paginator.get_page(page_number)
+            context['growers'] = grower_page
         return render(request,'grower/checklist_comparison.html',context)
     else:
         return redirect('login')
@@ -748,7 +753,7 @@ class GorwerDashboardViewMain(View):
     def get(self, request):
         '''Default function for get request'''
 
-        if request.user.is_superuser:
+        if request.user.is_superuser :
             grower_names = Grower.objects.values_list(
                 'name', flat=True).distinct().order_by('name')
 
@@ -769,7 +774,7 @@ class GorwerDashboardView1(View):
     def get(self, request):
         '''Default function for get request'''
 
-        if request.user.is_superuser:
+        if request.user.is_superuser :
             grower_names = Grower.objects.values_list(
                 'name', flat=True).distinct().order_by('name')
             default_grower = grower_names[0]
@@ -798,6 +803,7 @@ class GorwerDashboardView1(View):
                        'excel_file_path': excel_file_path,
                        'savings_types': savings_types,
                        'default_grower': default_grower})
+
 
 class GorwerDashboardView2(View):
     '''For displaying detailed chart view of Grower Dashboard'''
@@ -834,7 +840,6 @@ class GorwerDashboardView2(View):
                        'excel_file_path': excel_file_path,
                        'savings_types': savings_types,
                        'default_grower': default_grower})
-
 
 
 def chart1(request):
@@ -975,6 +980,7 @@ def chart2(request):
         'data': value_data,
         'year': 2021,
         })
+
 
 def chart2_detail(request):
     '''Function for detailed view of Highest Yield Variety Chart
@@ -1125,12 +1131,18 @@ def grower_dashboard_com(request,web_get_grower) :
             # grower_payments
             grower_payments = get_Grower_Payments(grower_id)
             context['grower_payments'] = grower_payments
-            if len([i.id for i in grower_fields]) > 0  and chat_field_id == None :
-                context['grower_Field_Vegetation_Chart'] = grower_Field_Vegetation_Chart([i.id for i in grower_fields][0])
-                context['grower_Field_Shipment_Chart'] = grower_Field_Shipment_Chart([i.id for i in grower_fields][0])
-                context['grower_Field_Shipment_Details'] = grower_Field_Shipment_Details([i.id for i in grower_fields][0])
+            if len(grower_fields) > 0  and chat_field_id == None :
+                context['grower_Field_Vegetation_Chart'] = grower_Field_Vegetation_Chart(grower_fields.first().id)
+                context['grower_Field_Shipment_Chart'] = grower_Field_Shipment_Chart(grower_fields.first().id)
+                context['grower_Field_Shipment_Details'] = grower_Field_Shipment_Details(grower_fields.first().id)
                 # grower_surveys
-                context['grower_surveys'] = grower_Field_Surveys_Details([i.id for i in grower_fields][0])
+                context['grower_surveys'] = grower_Field_Surveys_Details(grower_fields.first().id)
+            elif len(grower_fields) == 0  and chat_field_id == None :
+                context['grower_Field_Vegetation_Chart'] = None
+                context['grower_Field_Shipment_Chart'] = None
+                context['grower_Field_Shipment_Details'] = None
+                # grower_surveys
+                context['grower_surveys'] = None
             else:
                 if chat_field_id :
                     check_field = Field.objects.filter(id=chat_field_id,grower_id=get_grower)
@@ -1140,16 +1152,20 @@ def grower_dashboard_com(request,web_get_grower) :
                         context['grower_Field_Shipment_Details'] = grower_Field_Shipment_Details(chat_field_id)
                         context['grower_surveys'] = grower_Field_Surveys_Details(chat_field_id)
                         context['selcted_filed'] = Field.objects.get(id=chat_field_id)
-
-            all_points = list(context['grower_Field_Vegetation_Chart'][0].values())
-            all_points.pop(0)
-            converted_list = [ int(i) for i in all_points]
-            sorted_list = sorted(converted_list, reverse=True)
-            min_break_point = int(sorted_list[1] * 1.1)
-            max_break_point = int(sorted_list[0] * 0.9)
-            context['break_startValue'] = min_break_point 
-            context['break_endValue'] = max_break_point 
-            context['maximum_y'] = sorted_list[0] + 1000
+            if 'grower_Field_Vegetation_Chart' in context and context['grower_Field_Vegetation_Chart']:
+                all_points = list(context['grower_Field_Vegetation_Chart'][0].values())
+                all_points.pop(0)
+                converted_list = [ int(i) for i in all_points]
+                sorted_list = sorted(converted_list, reverse=True)
+                min_break_point = int(sorted_list[1] * 1.1)
+                max_break_point = int(sorted_list[0] * 0.9)
+                context['break_startValue'] = min_break_point 
+                context['break_endValue'] = max_break_point 
+                context['maximum_y'] = sorted_list[0] + 1000
+            else:
+                context['break_startValue'] = None
+                context['break_endValue'] = None 
+                context['maximum_y'] = None
         # /all/    
         else:
             if request.method == 'POST' :
@@ -1159,12 +1175,12 @@ def grower_dashboard_com(request,web_get_grower) :
                 
                 # Dropdown Grower Search
                 if get_grower and get_grower != '' :
-                    check_grower = Grower.objects.filter(id = get_grower)
+                    check_grower = Grower.objects.filter(id = int(get_grower))
                     
-                    if len(check_grower) == 1 :
-                        grower_id = [i.id for i in check_grower][0]
+                    if check_grower.exists() :
+                        grower_id = check_grower.first().id
                         context['select_get_grower_id'] = grower_id
-                        context['select_get_grower_name'] = [i.name for i in check_grower][0]
+                        context['select_get_grower_name'] = check_grower.first().name
                         grower_farms = get_Grower_Farms(grower_id)
                         context['grower_farms'] = grower_farms
                         grower_fields = get_Grower_Fields(grower_id)
@@ -1175,12 +1191,18 @@ def grower_dashboard_com(request,web_get_grower) :
                         grower_payments = get_Grower_Payments(grower_id)
                         context['grower_payments'] = grower_payments
         
-                        if len([i.id for i in grower_fields]) > 0  and chat_field_id == None :
-                            context['grower_Field_Vegetation_Chart'] = grower_Field_Vegetation_Chart([i.id for i in grower_fields][0])
-                            context['grower_Field_Shipment_Chart'] = grower_Field_Shipment_Chart([i.id for i in grower_fields][0])
-                            context['grower_Field_Shipment_Details'] = grower_Field_Shipment_Details([i.id for i in grower_fields][0])
+                        if len(grower_fields) > 0  and chat_field_id == None :
+                            context['grower_Field_Vegetation_Chart'] = grower_Field_Vegetation_Chart(grower_fields.first().id)
+                            context['grower_Field_Shipment_Chart'] = grower_Field_Shipment_Chart(grower_fields.first().id)
+                            context['grower_Field_Shipment_Details'] = grower_Field_Shipment_Details(grower_fields.first().id)
                             # grower_surveys
-                            context['grower_surveys'] = grower_Field_Surveys_Details([i.id for i in grower_fields][0])
+                            context['grower_surveys'] = grower_Field_Surveys_Details(grower_fields.first().id)
+                        elif len(grower_fields) == 0  and chat_field_id == None :
+                            context['grower_Field_Vegetation_Chart'] = None
+                            context['grower_Field_Shipment_Chart'] = None
+                            context['grower_Field_Shipment_Details'] = None
+                            # grower_surveys
+                            context['grower_surveys'] = None
                         else:
                             if chat_field_id :
                                 check_field = Field.objects.filter(id=chat_field_id,grower_id=get_grower)
@@ -1191,21 +1213,27 @@ def grower_dashboard_com(request,web_get_grower) :
                                     context['grower_surveys'] = grower_Field_Surveys_Details(chat_field_id)
                                     context['selcted_filed'] = Field.objects.get(id=chat_field_id)
                         
-                        all_points = list(context['grower_Field_Vegetation_Chart'][0].values())
-                        all_points.pop(0)
-                        converted_list = [ int(i) for i in all_points]
-                        sorted_list = sorted(converted_list, reverse=True)
-                        min_break_point = int(sorted_list[1] * 1.1)
-                        max_break_point = int(sorted_list[0] * 0.9)
-                        context['break_startValue'] = min_break_point 
-                        context['break_endValue'] = max_break_point 
-                        context['maximum_y'] = sorted_list[0] + 1000 
+                        if 'grower_Field_Vegetation_Chart' in context and context['grower_Field_Vegetation_Chart']:
+                            all_points = list(context['grower_Field_Vegetation_Chart'][0].values())
+                            all_points.pop(0)
+                            converted_list = [ int(i) for i in all_points]
+                            sorted_list = sorted(converted_list, reverse=True)
+                            min_break_point = int(sorted_list[1] * 1.1)
+                            max_break_point = int(sorted_list[0] * 0.9)
+                            context['break_startValue'] = min_break_point 
+                            context['break_endValue'] = max_break_point 
+                            context['maximum_y'] = sorted_list[0] + 1000
+                        else:
+                            context['break_startValue'] = None
+                            context['break_endValue'] = None 
+                            context['maximum_y'] = None 
                     else:
                         messages.error(request,f' {len(check_grower)} Growers found with same name !!')
                 else:
                     pass
             
         return render(request, 'grower/grower_dashboard_com.html', context)
+    
     elif 'Grower' in request.user.get_role() and not request.user.is_superuser:
         userid = request.user.id
         try:
@@ -1229,12 +1257,19 @@ def grower_dashboard_com(request,web_get_grower) :
             # grower_payments
             grower_payments = get_Grower_Payments(grower_id)
             context['grower_payments'] = grower_payments
-            if len([i.id for i in grower_fields]) > 0  and chat_field_id == None :
-                context['grower_Field_Vegetation_Chart'] = grower_Field_Vegetation_Chart([i.id for i in grower_fields][0])
-                context['grower_Field_Shipment_Chart'] = grower_Field_Shipment_Chart([i.id for i in grower_fields][0])
-                context['grower_Field_Shipment_Details'] = grower_Field_Shipment_Details([i.id for i in grower_fields][0])
+
+            if len(grower_fields) > 0  and chat_field_id == None :
+                context['grower_Field_Vegetation_Chart'] = grower_Field_Vegetation_Chart(grower_fields.first().id)
+                context['grower_Field_Shipment_Chart'] = grower_Field_Shipment_Chart(grower_fields.first().id)
+                context['grower_Field_Shipment_Details'] = grower_Field_Shipment_Details(grower_fields.first().id)
                 # grower_surveys
-                context['grower_surveys'] = grower_Field_Surveys_Details([i.id for i in grower_fields][0])
+                context['grower_surveys'] = grower_Field_Surveys_Details(grower_fields.first().id)
+            elif len(grower_fields) == 0  and chat_field_id == None :
+                context['grower_Field_Vegetation_Chart'] = None
+                context['grower_Field_Shipment_Chart'] = None
+                context['grower_Field_Shipment_Details'] = None
+                # grower_surveys
+                context['grower_surveys'] = None
             else:
                 if chat_field_id :
                     check_field = Field.objects.filter(id=chat_field_id,grower_id=get_grower)
@@ -1244,15 +1279,21 @@ def grower_dashboard_com(request,web_get_grower) :
                         context['grower_Field_Shipment_Details'] = grower_Field_Shipment_Details(chat_field_id)
                         context['grower_surveys'] = grower_Field_Surveys_Details(chat_field_id)
                         context['selcted_filed'] = Field.objects.get(id=chat_field_id)
-            all_points = list(context['grower_Field_Vegetation_Chart'][0].values())
-            all_points.pop(0)
-            converted_list = [ int(i) for i in all_points]
-            sorted_list = sorted(converted_list, reverse=True)
-            min_break_point = int(sorted_list[1] * 1.1)
-            max_break_point = int(sorted_list[0] * 0.9)
-            context['break_startValue'] = min_break_point 
-            context['break_endValue'] = max_break_point 
-            context['maximum_y'] = sorted_list[0] + 1000 
+
+            if 'grower_Field_Vegetation_Chart' in context and context['grower_Field_Vegetation_Chart']:
+                all_points = list(context['grower_Field_Vegetation_Chart'][0].values())
+                all_points.pop(0)
+                converted_list = [ int(i) for i in all_points]
+                sorted_list = sorted(converted_list, reverse=True)
+                min_break_point = int(sorted_list[1] * 1.1)
+                max_break_point = int(sorted_list[0] * 0.9)
+                context['break_startValue'] = min_break_point 
+                context['break_endValue'] = max_break_point 
+                context['maximum_y'] = sorted_list[0] + 1000
+            else:
+                context['break_startValue'] = None
+                context['break_endValue'] = None 
+                context['maximum_y'] = None 
         except:
             pass
      
@@ -1267,11 +1308,11 @@ def grower_dashboard_com(request,web_get_grower) :
                 chat_field_id = request.POST.get('chat_field_id')
                 context['show_grower'] = get_grower
                 if get_grower and get_grower != '' :
-                    check_grower = growers.filter(id=get_grower)
-                    if len(check_grower) == 1 :
-                        grower_id = [i.id for i in check_grower][0]
+                    check_grower = growers.filter(id=int(get_grower))
+                    if check_grower.exists():
+                        grower_id = check_grower.first().id
                         context['select_get_grower_id'] = grower_id
-                        context['select_get_grower_name'] = [i.name for i in check_grower][0]
+                        context['select_get_grower_name'] = check_grower.first().name
                         grower_farms = get_Grower_Farms(grower_id)
                         context['grower_farms'] = grower_farms
                         grower_fields = get_Grower_Fields(grower_id)
@@ -1282,12 +1323,18 @@ def grower_dashboard_com(request,web_get_grower) :
                         grower_payments = get_Grower_Payments(grower_id)
                         context['grower_payments'] = grower_payments
         
-                        if len([i.id for i in grower_fields]) > 0  and chat_field_id == None :
-                            context['grower_Field_Vegetation_Chart'] = grower_Field_Vegetation_Chart([i.id for i in grower_fields][0])
-                            context['grower_Field_Shipment_Chart'] = grower_Field_Shipment_Chart([i.id for i in grower_fields][0])
-                            context['grower_Field_Shipment_Details'] = grower_Field_Shipment_Details([i.id for i in grower_fields][0])
+                        if len(grower_fields) > 0  and chat_field_id == None :
+                            context['grower_Field_Vegetation_Chart'] = grower_Field_Vegetation_Chart(grower_fields.first().id)
+                            context['grower_Field_Shipment_Chart'] = grower_Field_Shipment_Chart(grower_fields.first().id)
+                            context['grower_Field_Shipment_Details'] = grower_Field_Shipment_Details(grower_fields.first().id)
                             # grower_surveys
-                            context['grower_surveys'] = grower_Field_Surveys_Details([i.id for i in grower_fields][0])
+                            context['grower_surveys'] = grower_Field_Surveys_Details(grower_fields.first().id)
+                        elif len(grower_fields) == 0  and chat_field_id == None :
+                            context['grower_Field_Vegetation_Chart'] = None
+                            context['grower_Field_Shipment_Chart'] = None
+                            context['grower_Field_Shipment_Details'] = None
+                            # grower_surveys
+                            context['grower_surveys'] = None
                         else:
                             if chat_field_id :
                                 check_field = Field.objects.filter(id=chat_field_id,grower_id=get_grower)
@@ -1297,15 +1344,21 @@ def grower_dashboard_com(request,web_get_grower) :
                                     context['grower_Field_Shipment_Details'] = grower_Field_Shipment_Details(chat_field_id)
                                     context['grower_surveys'] = grower_Field_Surveys_Details(chat_field_id)
                                     context['selcted_filed'] = Field.objects.get(id=chat_field_id)
-                        all_points = list(context['grower_Field_Vegetation_Chart'][0].values())
-                        all_points.pop(0)
-                        converted_list = [ int(i) for i in all_points]
-                        sorted_list = sorted(converted_list, reverse=True)
-                        min_break_point = int(sorted_list[1] * 1.1)
-                        max_break_point = int(sorted_list[0] * 0.9)
-                        context['break_startValue'] = min_break_point 
-                        context['break_endValue'] = max_break_point 
-                        context['maximum_y'] = sorted_list[0] + 1000 
+                                    
+                        if 'grower_Field_Vegetation_Chart' in context and context['grower_Field_Vegetation_Chart']:
+                            all_points = list(context['grower_Field_Vegetation_Chart'][0].values())
+                            all_points.pop(0)
+                            converted_list = [ int(i) for i in all_points]
+                            sorted_list = sorted(converted_list, reverse=True)
+                            min_break_point = int(sorted_list[1] * 1.1)
+                            max_break_point = int(sorted_list[0] * 0.9)
+                            context['break_startValue'] = min_break_point 
+                            context['break_endValue'] = max_break_point 
+                            context['maximum_y'] = sorted_list[0] + 1000
+                        else:
+                            context['break_startValue'] = None
+                            context['break_endValue'] = None 
+                            context['maximum_y'] = None 
                     else:
                         messages.error(request,f' {len(check_grower)} Growers found with same name !!')
         else:
@@ -1314,44 +1367,43 @@ def grower_dashboard_com(request,web_get_grower) :
     else:
         return redirect ('dashboard')
     
+
 def get_Grower_Farms(g_id):
     farms = Farm.objects.filter(grower_id = g_id).order_by('name')
     return farms
+
+
 def get_Grower_Fields(g_id):
     fields = Field.objects.filter(grower_id = g_id).order_by('name')
     return fields
+
+
 def get_Grower_Stogares(g_id):
     storages = Storage.objects.filter(grower_id = g_id).order_by('storage_name')
     return storages
+
 
 def get_Grower_Payments(g_id):
     g_payment = GrowerPayments.objects.filter(grower_id=g_id)
     entry = EntryFeeds.objects.filter(grower_id=g_id)
     g_payment_option = []
-    for i in entry :
-        g_payment_option.append({"payment_option":i.contracted_payment_option,"payment_option_from_date":i.from_date,"payment_option_to_date":i.to_date})
-      
-    # payment_option = [i.contracted_payment_option for i in entry]
-    # payment_option_from_date = [i.from_date for i in entry]
-    # payment_option_to_date = [i.to_date for i in entry]
+    if entry.exists():
+        for i in entry :
+            g_payment_option.append({"payment_option":i.contracted_payment_option,"payment_option_from_date":i.from_date,"payment_option_to_date":i.to_date})
     
     lst_delivery_lbs =[]
-    for i in g_payment :
-        if i.delivery_lbs :
-            lst_delivery_lbs.append(float(i.delivery_lbs))
+    if g_payment.exists():
+        for i in g_payment :
+            if i.delivery_lbs :
+                lst_delivery_lbs.append(float(i.delivery_lbs))    
     
-    # g_payee = GrowerPayee.objects.filter(grower_id=g_id)
-    # lien_holder_count = g_payee.filter(lien_holder_status='YES')
-    # payment_split_count = g_payee.filter(payment_split_status='YES')
     sum_delivery_lbs = f'{sum(lst_delivery_lbs)} LBS'
-    sum_delivered_value = f'$ {sum([int(float(i.payment_amount)) for i in g_payment])}'
+    sum_delivered_value = f'$ {sum([int(float(i.payment_amount)) for i in g_payment])}' if g_payment.exists() else f'$ 0'
 
-    res = {"sum_delivery_lbs":sum_delivery_lbs,"sum_deliverys_count":g_payment.count(),"sum_deliverd_value":sum_delivered_value,"g_payment_option":g_payment_option}
-
-           
-
+    res = {"sum_delivery_lbs":sum_delivery_lbs,"sum_deliverys_count":g_payment.count(),"sum_deliverd_value":sum_delivered_value,"g_payment_option":g_payment_option} 
 
     return res
+
 
 def grower_Field_Surveys_Details(f_id) :
     sus = SustainabilitySurvey.objects.filter(field_id=f_id)
@@ -1359,31 +1411,30 @@ def grower_Field_Surveys_Details(f_id) :
     for i in sus :
         if i.field.crop == 'COTTON' :
             pass
-        elif i.field.crop == 'RICE' :
-            pass
         else:
-            pass
+            pass        
         res.append({"sus_name":i.namesurvey,"sus_score":i.surveyscore,"crop":i.field.crop})
     # res = [{"sus_count":sus.count()}]
   
     return res
 
+
 def grower_Field_Vegetation_Chart(f_id):
     field = Field.objects.get(id=f_id)
     print("field",field)
     name = field.name
-    gal_water_saved  = str(field.gal_water_saved).strip().replace(',','') if field.gal_water_saved and field.gal_water_saved != 'nan' and field.gal_water_saved != 'None' else 0
-    water_lbs_saved = str(field.water_lbs_saved).strip().replace(',','') if field.water_lbs_saved and field.water_lbs_saved != 'nan' and field.water_lbs_saved != 'None' else 0
-    co2_eq_reduced = str(field.co2_eq_reduced).strip().replace(',','') if field.co2_eq_reduced and field.co2_eq_reduced != 'nan' and field.co2_eq_reduced != 'None' else 0
-    increase_nitrogen = str(field.increase_nitrogen).strip().replace(',','') if field.increase_nitrogen and field.increase_nitrogen != 'nan' and field.increase_nitrogen != 'None' else 0
-    ghg_reduction = str(field.ghg_reduction).strip().replace(',','') if field.ghg_reduction and field.ghg_reduction != 'nan' and field.ghg_reduction != 'None' else 0
-    land_use_efficiency = str(field.land_use_efficiency).strip().replace(',','') if field.land_use_efficiency and field.land_use_efficiency != 'nan' and field.land_use_efficiency != 'None' else 0
-    grower_premium_percentage = str(field.grower_premium_percentage).strip().replace(',','') if field.grower_premium_percentage and field.grower_premium_percentage != 'nan' and field.grower_premium_percentage != 'None' else 0
-    grower_dollar_premium = str(field.grower_dollar_premium).strip().replace(',','') if field.grower_dollar_premium and field.grower_dollar_premium != 'nan' and field.grower_dollar_premium != 'None' else 0
+    gal_water_saved  = str(field.gal_water_saved).strip().replace(',','') if field.gal_water_saved not in ['', ' ', 'None', 'nan', 'null', None] else 0
+    water_lbs_saved = str(field.water_lbs_saved).strip().replace(',','') if field.water_lbs_saved not in ['', ' ', 'None', 'nan', 'null', None] else 0
+    co2_eq_reduced = str(field.co2_eq_reduced).strip().replace(',','') if field.co2_eq_reduced not in ['', ' ', 'None', 'nan', 'null', None] else 0
+    increase_nitrogen = str(field.increase_nitrogen).strip().replace(',','') if field.increase_nitrogen not in ['', ' ', 'None', 'nan', 'null', None] else 0
+    ghg_reduction = str(field.ghg_reduction).strip().replace(',','') if field.ghg_reduction not in ['', ' ', 'None', 'nan', 'null', None] else 0
+    land_use_efficiency = str(field.land_use_efficiency).strip().replace(',','') if field.land_use_efficiency not in ['', ' ', 'None', 'nan', 'null', None] else 0
+    grower_premium_percentage = str(field.grower_premium_percentage).strip().replace(',','') if field.grower_premium_percentage not in ['', ' ', 'None', 'nan', 'null', None] else 0
+    grower_dollar_premium = str(field.grower_dollar_premium).strip().replace(',','') if field.grower_dollar_premium not in ['', ' ', 'None', 'nan', 'null', None] else 0
+
     return [{'name':name,'gal_water_saved':gal_water_saved,'water_lbs_saved':water_lbs_saved,'co2_eq_reduced':co2_eq_reduced,
              'increase_nitrogen':increase_nitrogen,'ghg_reduction':ghg_reduction,'land_use_efficiency':land_use_efficiency,
              'grower_premium_percentage':grower_premium_percentage,'grower_dollar_premium':grower_dollar_premium}]
-
 
 
 def grower_Field_Shipment_Details(f_id) :
@@ -1396,7 +1447,50 @@ def grower_Field_Shipment_Details(f_id) :
     lien_holder_count = g_payee.filter(lien_holder_status='YES').count()
     payment_split_count = g_payee.filter(payment_split_status='YES').count()
     # shipment_delivered_count
-    if field.crop == 'RICE' :
+    if field.crop == 'COTTON' :
+        shipment = BaleReportFarmField.objects.filter(ob4=f_id)
+        shipment_wt = [float(i.net_wt) for i in shipment]
+        lls = shipment.filter(level='Llano Super').count()
+        gold = shipment.filter(level='Gold').count()
+        silver = shipment.filter(level='Silver').count()
+        bronze = shipment.filter(level='Bronze').count()
+        nonee = shipment.filter(level='None').count()
+
+        delivered_shipment = shipment.exclude(level='None')
+        shipment_delivered_count = delivered_shipment.count()
+
+        shipment_delivered_wt = [float(i.net_wt) for i in delivered_shipment]
+
+        per_lls = round((lls / shipment_delivered_count), 4) * 100 if lls !=0 else 0
+        per_gold = round((gold / shipment_delivered_count), 4) * 100 if gold !=0 else 0
+        per_silver = round((silver / shipment_delivered_count), 4) * 100 if silver !=0 else 0
+        per_bronze = round((bronze / shipment_delivered_count), 4) * 100 if bronze !=0 else 0
+
+        per_nonee = round((nonee / shipment.count()), 4) * 100 if nonee !=0 else 0
+        per_delivered = 100 - per_nonee
+
+        if projected_yield :
+            actual_yield = sum(shipment_delivered_wt)
+            yield_delta =  float(actual_yield) - float(projected_yield)
+
+        else:
+            projected_yield = None
+            actual_yield = sum(shipment_wt)
+            yield_delta = 'N/A'
+
+        chartShipmentDeliverdText = "Shipments Info - Delivered Level vs None Level"
+        shipmentLevelText = "Shipments Info - Delivered Level"
+
+        res = {"name":name,"crop":"COTTON","shipment_count":shipment.count(),"shipment_wt": f"{sum(shipment_wt)} LBS",
+               "lls":lls,"gold":gold,"silver":silver,"bronze":bronze,"nonee":nonee,"shipment_delivered_count":shipment_delivered_count,
+               "shipment_delivered_wt":f"{sum(shipment_delivered_wt)} LBS","per_lls":per_lls,"per_gold":per_gold,"per_silver":per_silver,
+               "per_bronze":per_bronze,"shipmentLevelText":shipmentLevelText,"chartShipmentDeliverdText":chartShipmentDeliverdText,
+               "per_nonee":per_nonee,"per_delivered":per_delivered,"projected_yield":projected_yield,"actual_yield":actual_yield,
+               "yield_delta":yield_delta,"g_payee_count":g_payee_count,"lien_holder_count":lien_holder_count,"payment_split_count":payment_split_count}
+               
+        return res
+    
+    else:
         shipment = GrowerShipment.objects.filter(field_id=f_id)
         approved_shipment = shipment.filter(status='APPROVED')
         disapproved_shipment = shipment.filter(status='DISAPPROVED')
@@ -1440,83 +1534,12 @@ def grower_Field_Shipment_Details(f_id) :
                "projected_yield":projected_yield,"actual_yield":actual_yield,"yield_delta":yield_delta,"g_payee_count":g_payee_count,
                "lien_holder_count":lien_holder_count,"payment_split_count":payment_split_count,"shipment_delivered_count":count_approved_shipment}
         return res
-    elif field.crop == 'COTTON' :
-        shipment = BaleReportFarmField.objects.filter(ob4=f_id)
-        shipment_wt = [float(i.net_wt) for i in shipment]
-        lls = shipment.filter(level='Llano Super').count()
-        gold = shipment.filter(level='Gold').count()
-        silver = shipment.filter(level='Silver').count()
-        bronze = shipment.filter(level='Bronze').count()
-        nonee = shipment.filter(level='None').count()
-
-        delivered_shipment = shipment.exclude(level='None')
-        shipment_delivered_count = delivered_shipment.count()
-
-        shipment_delivered_wt = [float(i.net_wt) for i in delivered_shipment]
-
-        per_lls = round((lls / shipment_delivered_count), 4) * 100 if lls !=0 else 0
-        per_gold = round((gold / shipment_delivered_count), 4) * 100 if gold !=0 else 0
-        per_silver = round((silver / shipment_delivered_count), 4) * 100 if silver !=0 else 0
-        per_bronze = round((bronze / shipment_delivered_count), 4) * 100 if bronze !=0 else 0
-
-        per_nonee = round((nonee / shipment.count()), 4) * 100 if nonee !=0 else 0
-        per_delivered = 100 - per_nonee
-
-        if projected_yield :
-            actual_yield = sum(shipment_delivered_wt)
-            yield_delta =  float(actual_yield) - float(projected_yield)
-
-        else:
-            projected_yield = None
-            actual_yield = sum(shipment_wt)
-            yield_delta = 'N/A'
-
-        chartShipmentDeliverdText = "Shipments Info - Delivered Level vs None Level"
-        shipmentLevelText = "Shipments Info - Delivered Level"
-
-        res = {"name":name,"crop":"COTTON","shipment_count":shipment.count(),"shipment_wt": f"{sum(shipment_wt)} LBS",
-               "lls":lls,"gold":gold,"silver":silver,"bronze":bronze,"nonee":nonee,"shipment_delivered_count":shipment_delivered_count,
-               "shipment_delivered_wt":f"{sum(shipment_delivered_wt)} LBS","per_lls":per_lls,"per_gold":per_gold,"per_silver":per_silver,
-               "per_bronze":per_bronze,"shipmentLevelText":shipmentLevelText,"chartShipmentDeliverdText":chartShipmentDeliverdText,
-               "per_nonee":per_nonee,"per_delivered":per_delivered,"projected_yield":projected_yield,"actual_yield":actual_yield,
-               "yield_delta":yield_delta,"g_payee_count":g_payee_count,"lien_holder_count":lien_holder_count,"payment_split_count":payment_split_count}
-               
-        return res
-    else:
-        return [{'name':name}]
-    
-
-
+  
 
 def grower_Field_Shipment_Chart(f_id):
     field = Field.objects.get(id=f_id)
     name = field.name
-    if field.crop == 'RICE' :
-        shipment = GrowerShipment.objects.filter(field_id=f_id)
-        res = []
-        for i in shipment :
-            finale_date = i.date_time
-            if GrowerPayments.objects.filter(delivery_id=i.shipment_id).exists():
-                payment_status = 'Paid'
-                payment_amount = f'$ {[i.payment_amount for i in GrowerPayments.objects.filter(delivery_id=i.shipment_id)][0]}'
-            elif i.status == "DISAPPROVED" :
-                payment_status = 'N/A ( DISAPPROVED )'
-                payment_amount = 'N/A'
-            else:
-                payment_status = 'Due'
-                payment_amount = 'Due'
-
-            if i.status == "APPROVED" :
-                shipment_wt = i.received_amount
-            else :
-                shipment_wt = i.total_amount
-
-            res.append({'name':name,'shipment_wt':shipment_wt,'shipment_dt':i.approval_date,
-                        'payment_status':payment_status,'payment_amount':payment_amount,
-                        'stats':i.status,'shipment_id':i.shipment_id,"finale_date":finale_date})
-        return res
-    
-    elif field.crop == 'COTTON' :
+    if field.crop == 'COTTON' :
         shipment = BaleReportFarmField.objects.filter(ob4=f_id).order_by('-id')
         res = []
         for i in shipment :
@@ -1566,8 +1589,30 @@ def grower_Field_Shipment_Chart(f_id):
         return res
     
     else:
-        return [{'name':name}]
-    
+        shipment = GrowerShipment.objects.filter(field_id=f_id)
+        res = []
+        for i in shipment :
+            finale_date = i.date_time
+            if GrowerPayments.objects.filter(delivery_id=i.shipment_id).exists():
+                payment_status = 'Paid'
+                payment_amount = f'$ {[i.payment_amount for i in GrowerPayments.objects.filter(delivery_id=i.shipment_id)][0]}'
+            elif i.status == "DISAPPROVED" :
+                payment_status = 'N/A ( DISAPPROVED )'
+                payment_amount = 'N/A'
+            else:
+                payment_status = 'Due'
+                payment_amount = 'Due'
+
+            if i.status == "APPROVED" :
+                shipment_wt = i.received_amount
+            else :
+                shipment_wt = i.total_amount
+
+            res.append({'name':name,'shipment_wt':shipment_wt,'shipment_dt':i.approval_date,
+                        'payment_status':payment_status,'payment_amount':payment_amount,
+                        'stats':i.status,'shipment_id':i.shipment_id,"finale_date":finale_date})
+        return res 
+      
 
 def calculation_water_savings_gal(ans):
     data = []
@@ -1592,6 +1637,7 @@ def calculation_water_savings_gal(ans):
          data.append({'gal_lbs_flag':False,'gal_lbs_value':''})
     return data
 
+
 def calculation_co2eq_reduction(ans):
     pattern = r'fuel use:\s*(<\d+\.\d+|\d+\.\d+\s+to\s+\d+\.\d+)\s+gal./a'
     # pattern = r'fuel use:\s*(<?\d+\.\d+\s*(?:to\s+\d+\.\d+)?)\s+gal./a'
@@ -1601,7 +1647,8 @@ def calculation_co2eq_reduction(ans):
         return {"co2eq_reduction_flag":True,"co2eq_reduction_value":value}
     else:
         return {"co2eq_reduction_flag":False,"co2eq_reduction_value":""}
-    
+
+
 def calculation_less_ghg(ans):
     pattern = r'(\d+-\d+)'
     match = re.search(pattern, ans)
@@ -1696,23 +1743,6 @@ def calculation_water_savings_gal_rice(ans):
     print("data.......................",data)
     return data 
 
-# def calculation_less_ghg_rice(ans):
-#     print('..............ans1',ans)
-#     # ans = ans.split("â€“") 
-#     ans = str(ans).split(" - ")
-#     print('..............ans2',ans)
-#     try:
-#         v1 = ans[0].strip()[-3:]
-#         v2 = ans[1].strip()[:3]
-#         print('..............',v1,v2)
-#         value = int(v1) + int(v2) / 2
-#     except :
-#         value = 150
-#     if value:
-#         return {"less_ghg_flag":True,"less_ghg_value":value}
-#     else:
-#         return {"less_ghg_flag":False,"less_ghg_value":""}
-
 
 def calculation_less_ghg_rice(ans):
     print('..............ans1',ans)
@@ -1726,7 +1756,6 @@ def calculation_less_ghg_rice(ans):
         return {"less_ghg_flag":True,"less_ghg_value":value}
     else:
         return {"less_ghg_flag":False,"less_ghg_value":""}    
-
 
 
 @login_required()
@@ -1888,13 +1917,13 @@ def sustainable_product_claims(request):
                         context["color_code"]= color_code[str(len(main_data)+1)]
                         # print("avg_water_savings_efficiency",avg_water_savings_efficiency)
                         return render(request, 'grower/sustainable_product_claims.html', context)
-                    if context['corps'] and context['corps'] == 'RICE' :
+                    else:
                         for i in fields :
                             grower_input = InputSurvey.objects.filter(field_id=i.id,questionsurvey_id=141)
                             grower_input_co2 = InputSurvey.objects.filter(field_id=i.id,questionsurvey_id=150)
                             grower_input_no2 = InputSurvey.objects.filter(field_id=i.id,questionsurvey_id=145)
                             get_bale = GrowerShipment.objects.filter(grower_id=i.grower.id,field_id=i.id,
-                                                                    crop='RICE',status="APPROVED").values("received_amount")
+                                                                    crop=context['corps'],status="APPROVED").values("received_amount")
                             total_net_wt = sum(float(item['received_amount']) for item in get_bale)
                             total_gallons_water_saved = 0
                             water_savings_efficiency = 0
@@ -2155,7 +2184,7 @@ def sustainable_product_claims(request):
                                     context["total_less_ghg_value"] = 100 - net_value
                         else:
                             context['error_msg'] = "Survey data not found"
-                    if context['corps'] and context['corps'] == 'RICE' :                        
+                    else:                        
                         grower_input = InputSurvey.objects.filter(field_id=context['selectedField'].id,questionsurvey_id=141)
                         grower_input_co2 = InputSurvey.objects.filter(field_id=context['selectedField'].id,questionsurvey_id=150)
                         # grower_input_no2 = InputSurvey.objects.filter(field_id=context['selectedField'].id,questionsurvey_id=145)
@@ -2163,7 +2192,7 @@ def sustainable_product_claims(request):
                         # grower_input_no2 = InputSurvey.objects.filter(field_id=context['selectedField'].id).values("questionsurvey__id","questionsurvey__questionname")
                         # print("grower_input_no2=================",grower_input_no2)
                         get_bale = GrowerShipment.objects.filter(grower_id=context['selectedGrower'].id,field_id=context['selectedField'].id,
-                                                                 crop='RICE',status="APPROVED").values("received_amount")
+                                                                 crop=context['corps'],status="APPROVED").values("received_amount")
                         
                         total_net_wt = sum(float(item['received_amount']) for item in get_bale)
                         # Water savings (gal) RICE 
@@ -2251,7 +2280,7 @@ def sustainable_product_claims(request):
                                 grower_premium = (delta_claim_price / 1.38) * 100
 
                                 # new logic add 05.04.2024
-                                grower_shipment = GrowerShipment.objects.filter(grower_id=context['selectedGrower'].id,crop='RICE',status='APPROVED',field=context['selectedField'].id)
+                                grower_shipment = GrowerShipment.objects.filter(grower_id=context['selectedGrower'].id,crop=context['corps'],status='APPROVED',field=context['selectedField'].id)
                                 if grower_shipment.exists():
                                     for i in grower_shipment:
                                         process_date_int = i.approval_date.strftime("%m/%d/%y")
@@ -2268,6 +2297,7 @@ def sustainable_product_claims(request):
                                             var = EntryFeeds.objects.get(id = check_entry_id)
                                         else:
                                             pass    
+                                        total_price_init = 0
                                         if var.contracted_payment_option == 'Acreage Release' :
                                             cpb_lbs = var.contract_base_price
                                             sp_lbs = var.sustainability_premium
@@ -2480,7 +2510,8 @@ def sustainable_product_claims(request):
         return render(request, 'grower/sustainable_product_claims.html', context)
     else:
         return redirect ('dashboard')
-    
+
+
 @login_required()
 def sustainable_get_certificate(request,corps,field_id,grower_id):
     context = {}
@@ -2496,6 +2527,8 @@ def sustainable_get_certificate(request,corps,field_id,grower_id):
     less_ghg_value = request.GET.get('less_ghg_value')
     co2eq_claims = request.GET.get('co2eq_claims')
     grower_premium_percent1 = request.GET.get('grower_premium_percent1')
+    if not grower_premium_percent1:
+        grower_premium_percent1 = 0
      
     template = get_template('grower/sustainable_get_certificate.html')
     html_content = template.render({'main_static_url': main_static_url,"grower_name":get_grower.name,"field_name":get_field.name,"corp":get_field.crop,
@@ -2519,6 +2552,7 @@ def sustainable_get_certificate(request,corps,field_id,grower_id):
     response.write(pdf)
     return response
     # return render(request, 'grower/sustainable_get_certificate.html', context)
+
 
 @login_required()
 def seUser(request):
@@ -2545,3 +2579,35 @@ def seUser(request):
         guser.is_active = False
         guser.save()
     return HttpResponse (1)
+
+
+import openpyxl
+from django.http import HttpResponse
+from .models import Grower
+
+
+def export_growers_to_excel(request):
+    # Create a new workbook and select the active worksheet
+    workbook = openpyxl.Workbook()
+    worksheet = workbook.active
+    worksheet.title = "Growers"
+
+    # Define the column headers
+    headers = ["Name", "Phone", "Email"]
+    worksheet.append(headers)
+
+    # Query all Growers and write to sheet
+    for grower in Grower.objects.all():
+        worksheet.append([grower.name, grower.phone, grower.email])
+
+    # Prepare HTTP response with Excel content
+    response = HttpResponse(
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    response["Content-Disposition"] = 'attachment; filename="growers.xlsx"'
+
+    # Save workbook to response
+    workbook.save(response)
+
+    return response
+
